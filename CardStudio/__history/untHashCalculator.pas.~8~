@@ -1,0 +1,98 @@
+unit untHashCalculator;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Imaging.pngimage,
+  Vcl.ExtCtrls;
+
+type
+  TfrmHashCalculator = class(TForm)
+    Panel1: TPanel;
+    Image1: TImage;
+    Label1: TLabel;
+    Label2: TLabel;
+    Panel2: TPanel;
+    btnHelp: TButton;
+    btnCalculate: TButton;
+    gbHash: TGroupBox;
+    cbAlgorithm: TComboBox;
+    gbInput: TGroupBox;
+    memInput: TMemo;
+    gbOutput: TGroupBox;
+    memOutput: TMemo;
+    procedure FormCreate(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure btnCalculateClick(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  frmHashCalculator: TfrmHashCalculator;
+
+implementation
+
+{$R *.dfm}
+
+uses System.Hash, untCRC32;
+
+{*******************************************************}
+{                  Form Create Event                    }
+{*******************************************************}
+procedure TfrmHashCalculator.FormCreate(Sender: TObject);
+var
+  I : Integer;
+begin
+  // Set width and height
+  Width  := 550;
+  Height := 400;
+  // Clear memo's
+  memInput.Clear;
+  memOutput.Clear;
+end;
+
+{*******************************************************}
+{                   Form Close Event                    }
+{*******************************************************}
+procedure TfrmHashCalculator.FormClose(Sender: TObject;
+  var Action: TCloseAction);
+begin
+  Action := caFree;
+  Release;
+end;
+
+{*******************************************************}
+{                    Calculate Hash                     }
+{*******************************************************}
+procedure TfrmHashCalculator.btnCalculateClick(Sender: TObject);
+
+  function CRC32(const S: string) : Longint;
+  var
+    I   : Integer;
+    CRC : Longint;
+  begin
+    CRC32Init(CRC);
+    for I := 1 to Length(S) do CRC32Update(CRC, @S[I], SizeOf(S[I]));
+    CRC32Final(CRC);
+    Result := CRC;
+  end;
+
+begin
+  case cbAlgorithm.ItemIndex of
+    0 : memOutput.Text := THashSHA1.GetHashString(memInput.Text).ToUpper;
+    1 : memOutput.Text := THashSHA2.GetHashString(memInput.Text, THashSHA2.TSHA2Version.SHA224).ToUpper;
+    2 : memOutput.Text := THashSHA2.GetHashString(memInput.Text, THashSHA2.TSHA2Version.SHA256).ToUpper;
+    3 : memOutput.Text := THashSHA2.GetHashString(memInput.Text, THashSHA2.TSHA2Version.SHA384).ToUpper;
+    4 : memOutput.Text := THashSHA2.GetHashString(memInput.Text, THashSHA2.TSHA2Version.SHA512).ToUpper;
+    5 : memOutput.Text := THashSHA2.GetHashString(memInput.Text, THashSHA2.TSHA2Version.SHA512_224).ToUpper;
+    6 : memOutput.Text := THashSHA2.GetHashString(memInput.Text, THashSHA2.TSHA2Version.SHA512_256).ToUpper;
+    7 : memOutput.Text := THashMD5.GetHashString(memInput.Text).ToUpper;
+    8 : memOutput.Text := IntToStr(CRC32(memInput.Text));
+  end;
+end;
+
+end.

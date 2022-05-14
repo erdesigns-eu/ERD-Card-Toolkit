@@ -1,0 +1,53 @@
+object frmCardStudioProject: TfrmCardStudioProject
+  Left = 0
+  Top = 0
+  Caption = 'frmCardStudioProject'
+  ClientHeight = 535
+  ClientWidth = 800
+  Color = clBtnFace
+  Font.Charset = ANSI_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'Segoe UI'
+  Font.Style = []
+  FormStyle = fsMDIChild
+  OldCreateOrder = False
+  Position = poDefault
+  ScreenSnap = True
+  Visible = True
+  OnClose = FormClose
+  OnCreate = FormCreate
+  PixelsPerInch = 96
+  TextHeight = 13
+  object Button1: TButton
+    Left = 0
+    Top = 0
+    Width = 800
+    Height = 25
+    Align = alTop
+    Caption = 'Read'
+    TabOrder = 0
+    OnClick = Button1Click
+    ExplicitLeft = 16
+    ExplicitTop = 16
+    ExplicitWidth = 75
+  end
+  object Memo1: TMemo
+    Left = 0
+    Top = 25
+    Width = 800
+    Height = 510
+    Align = alClient
+    Lines.Strings = (
+      'Memo1')
+    TabOrder = 1
+    ExplicitLeft = 16
+    ExplicitTop = 47
+    ExplicitWidth = 769
+    ExplicitHeight = 474
+  end
+  object OpenDialog1: TOpenDialog
+    Left = 392
+    Top = 272
+  end
+end

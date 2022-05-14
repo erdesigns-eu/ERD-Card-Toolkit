@@ -1,0 +1,66 @@
+unit untCardStudioProject;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.StdCtrls;
+
+type
+  TfrmCardStudioProject = class(TForm)
+    Button1: TButton;
+    OpenDialog1: TOpenDialog;
+    procedure Button1Click(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  frmCardStudioProject: TfrmCardStudioProject;
+
+implementation
+
+{$R *.dfm}
+
+uses untCardStudioFile;
+
+procedure TfrmCardStudioProject.Button1Click(Sender: TObject);
+var
+  F : TCardStudioFile;
+begin
+  F := TCardStudioFile.Create;
+  try
+    if Opendialog1.Execute(Handle) then
+    begin
+      F.LoadFromFile(Opendialog1.FileName);
+    end;
+  finally
+    F.Free;
+  end;
+end;
+
+{*******************************************************}
+{                  Form Create Event                    }
+{*******************************************************}
+procedure TfrmCardStudioProject.FormCreate(Sender: TObject);
+begin
+  // Set width and height
+  Width  := 640;
+  Height := 480;
+end;
+
+{*******************************************************}
+{                   Form Close Event                    }
+{*******************************************************}
+procedure TfrmCardStudioProject.FormClose(Sender: TObject;
+  var Action: TCloseAction);
+begin
+  Action := caFree;
+  Release;
+end;
+
+end.

@@ -1,0 +1,135 @@
+{*******************************************************}
+{                                                       }
+{                    CardStudio 2022                    }
+{                 Copyright: ERD (c) 2022               }
+{                                                       }
+{       CardStudio is software for Cloning              }
+{       bank cards, credit cards, and various           }
+{       tools for MagStripe/EMV/NFC cards.              }
+{                                                       }
+{       This software is a Proof of Concept,            }
+{       and should not be used in real life!            }
+{                                                       }
+{       The author (ERD) is NOT responsible for         }
+{       the results and/or any damage done by           }
+{       the use of this application.                    }
+{                                                       }
+{       Cloning creditcards that do not belong to       }
+{       you is a CRIMINAL OFFENSE! The author can       }
+{       not be held liable for the users actions!       }
+{                                                       }
+{*******************************************************}
+
+program CardStudio;
+
+uses
+  Vcl.Forms,
+  Vcl.Controls,
+  untConst in 'untConst.pas',
+  untLIB160 in 'untLIB160.pas',
+  untMSR_API in 'untMSR_API.pas',
+  untUSB in 'untUSB.pas',
+  untBIN in 'untBIN.pas',
+  untBIN_AMEX in 'untBIN_AMEX.pas',
+  untBIN_DINERSCLUB in 'untBIN_DINERSCLUB.pas',
+  untBIN_DISCOVER in 'untBIN_DISCOVER.pas',
+  untBIN_JCB in 'untBIN_JCB.pas',
+  untBIN_MAESTRO in 'untBIN_MAESTRO.pas',
+  untBIN_MASTERCARD in 'untBIN_MASTERCARD.pas',
+  untBIN_VISA in 'untBIN_VISA.pas',
+  untLicense in 'untLicense.pas',
+  SQLite3 in 'SQLite3.pas',
+  SQLite3Utils in 'SQLite3Utils.pas',
+  SQLite3Wrap in 'SQLite3Wrap.pas',
+  untCRC16 in 'untCRC16.pas',
+  untCRC32 in 'untCRC32.pas',
+  untATR in 'untATR.pas',
+  untATRList in 'untATRList.pas',
+  untPCSC in 'untPCSC.pas',
+  SCardErr in 'SCardErr.pas',
+  WinSCard in 'WinSCard.pas',
+  WinSmCrd in 'WinSmCrd.pas',
+  untEMVTools in 'untEMVTools.pas',
+  untCipher in 'untCipher.pas',
+  untGP in 'untGP.pas',
+  untGPConnection in 'untGPConnection.pas',
+  untGPSecurity in 'untGPSecurity.pas',
+  untGPErrorCodes in 'untGPErrorCodes.pas',
+  untAPDUParser in 'untAPDUParser.pas',
+  untASNParser in 'untASNParser.pas',
+  untCardStudioFile in 'untCardStudioFile.pas',
+  untMain in 'untMain.pas' {frmMain},
+  untMagStripeRead in 'untMagStripeRead.pas' {frmMagStripeRead},
+  untMagStripeWrite in 'untMagStripeWrite.pas' {frmMagStripeWrite},
+  untDecodeTracks in 'untDecodeTracks.pas' {frmTracksDecode},
+  untEncodeTracks in 'untEncodeTracks.pas' {frmTracksEncode},
+  untGenerateCC in 'untGenerateCC.pas' {frmGenerateCC},
+  untBINCheck in 'untBINCheck.pas' {frmCheckBIN},
+  untEnterLicense in 'untEnterLicense.pas' {frmEnterLicense},
+  untSettings in 'untSettings.pas' {frmSettings},
+  untDatabase in 'untDatabase.pas' {frmDatabase},
+  untDatabaseAdd in 'untDatabaseAdd.pas' {frmDatabaseAdd},
+  untDatabaseEdit in 'untDatabaseEdit.pas' {frmDatabaseEdit},
+  untDatabaseSearch in 'untDatabaseSearch.pas' {frmDatabaseSearch},
+  untHashCalculator in 'untHashCalculator.pas' {frmHashCalculator},
+  untUDKCalculator in 'untUDKCalculator.pas' {frmUDKCalculator},
+  untCSKCalculator in 'untCSKCalculator.pas' {frmCSKCalculator},
+  untARQCCalculator in 'untARQCCalculator.pas' {frmARQCCalculator},
+  untATRChanger in 'untATRChanger.pas' {frmChangeATR},
+  untFormarCard in 'untFormarCard.pas' {frmFormatCard},
+  untParseAPDU in 'untParseAPDU.pas' {frmParseAPDU},
+  untNew in 'untNew.pas' {frmNew},
+  untCardStudioProject in 'untCardStudioProject.pas' {frmCardStudioProject},
+  untMemoryCardRead in 'untMemoryCardRead.pas' {frmMemoryCardRead},
+  untMemoryCardWrite in 'untMemoryCardWrite.pas' {frmMemoryCardWrite},
+  untMemoryCardChangePIN in 'untMemoryCardChangePIN.pas' {frmMemoryCardChangePIN},
+  untSmartCardRead in 'untSmartCardRead.pas' {frmSmartCardRead},
+  untAbout in 'untAbout.pas' {frmAbout},
+  untEMV in 'untEMV.pas';
+
+{$R *.res}
+
+{$WARN IMPLICIT_STRING_CAST OFF}
+{$WARN IMPLICIT_STRING_CAST_LOSS OFF}
+
+{$IFDEF RELEASE}
+var
+  L : string;
+{$ENDIF}
+begin
+  Application.Initialize;
+  Application.MainFormOnTaskbar := True;
+  Application.Title := 'CardStudio';
+  {$IFDEF RELEASE}
+  // License key
+  L := PKV_LicenseKeyFromRegistry;
+  // Check if license key is stored, and validate License Key
+  if (Length(L) = 0) or (PKV_CheckKey(L) <> KEY_VALID) then
+  begin
+    with TfrmEnterLicense.Create(Application) do
+    if Execute = MROK then
+    begin
+      L := LicenseKey;
+      // If License Key is valid - store Key in the registry
+      // and load the mainform.
+      if PKV_CheckKey(L) = KEY_VALID then
+      begin
+        // Store License Key
+        PVK_LicenseKeyStoreRegistry(L);
+        // Load mainform
+        Application.CreateForm(TfrmMain, frmMain);
+      end else
+        // Error invalid License Key
+        PVK_LicenseKeyError(Application.Handle);
+    end;
+  end else
+  // License key found, Valid checksum - enter application.
+  begin
+    Application.CreateForm(TfrmMain, frmMain);
+  end;
+  {$ENDIF}
+  {$IFDEF DEBUG}
+  Application.CreateForm(TfrmMain, frmMain);
+  {$ENDIF}
+  Application.Run;
+end.

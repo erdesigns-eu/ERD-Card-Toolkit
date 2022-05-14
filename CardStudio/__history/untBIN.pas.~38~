@@ -1,0 +1,2032 @@
+{*******************************************************}
+{                                                       }
+{                       untBIN                          }
+{                     Author: ERD                       }
+{                                                       }
+{       Various types and functions to find/identify    }
+{       schemes, country codes and currency codes.      }
+{                                                       }
+{*******************************************************}
+
+unit untBIN;
+
+interface
+
+uses
+  WinApi.Windows,
+  System.SysUtils,
+  System.Classes;
+
+{*******************************************************}
+{               Card Type (CREDIT/DEBIT)                }
+{*******************************************************}
+type
+  TCardType = 0..9;
+
+{*******************************************************}
+{                      Card Types                       }
+{*******************************************************}
+const
+  ctUNKNOWN = 00;
+  ctDEBIT   = 01;
+  ctCREDIT  = 02;
+  ctCHARGE  = 03;
+
+{*******************************************************}
+{                   Card Scheme Type                    }
+{*******************************************************}
+type
+  TCardScheme = 0..99;
+
+{*******************************************************}
+{                     Card Schemes                      }
+{*******************************************************}
+const
+  csUNKNOWN                 = 00;
+  csAMEX                    = 01;
+  csATMCARD                 = 02;
+  csATOS                    = 03;
+  csAURA                    = 04;
+  csBANKCARD                = 05;
+  csBPFUELCARD              = 06;
+  csCABAL                   = 07;
+  csCARNET                  = 08;
+  csCHINAUNIONPAY           = 09;
+  csCHJONESFUELCARD         = 10;
+  csCIRRUS                  = 11;
+  csCOMPROCARD              = 12;
+  csDANKORT                 = 13;
+  csDINACARD                = 14;
+  csDINERSCLUBINTERNATIONAL = 15;
+  csDISCOVER                = 16;
+  csDUET                    = 17;
+  csEFTPOS                  = 18;
+  csELO                     = 19;
+  csEUROSHELLFUELCARD       = 20;
+  csFUELCARD                = 21;
+  csGECAPITAL               = 22;
+  csGLOBALBC                = 23;
+  csHIPERCARD               = 24;
+  csHRGSTORECARD            = 25;
+  csHYPOVEREINSBANK         = 26;
+  csJCB                     = 27;
+  csLUKOILFUELCARD          = 28;
+  csMADA                    = 29;
+  csMAESTRO                 = 30;
+  csMASTERCARD              = 31;
+  csNEWDAY                  = 32;
+  csNSPKMIR                 = 33;
+  csOUROCARD                = 34;
+  csPHHFUELCARD             = 35;
+  csRBSGIFTCARD             = 36;
+  csREDFUELCARD             = 37;
+  csREDLIQUIDFUELCARD       = 38;
+  csRUPAY                   = 39;
+  csSBERCARD                = 40;
+  csSODEXO                  = 41;
+  csSTARREWARDS             = 42;
+  csTROY                    = 43;
+  csUATP                    = 44;
+  csUKFUELCARD              = 45;
+  csUNIONPAY                = 46;
+  csVISA                    = 47;
+  csVPAY                    = 48;
+  csVERVE                   = 49;
+  csMIR                     = 50;
+
+const
+  CardSchemes : array [0..50] of TCardScheme = (
+    csUNKNOWN,
+    csAMEX,
+    csATMCARD,
+    csATOS,
+    csAURA,
+    csBANKCARD,
+    csBPFUELCARD,
+    csCABAL,
+    csCARNET,
+    csCHINAUNIONPAY,
+    csCHJONESFUELCARD,
+    csCIRRUS,
+    csCOMPROCARD,
+    csDANKORT,
+    csDINACARD,
+    csDINERSCLUBINTERNATIONAL,
+    csDISCOVER,
+    csDUET,
+    csEFTPOS,
+    csELO,
+    csEUROSHELLFUELCARD,
+    csFUELCARD,
+    csGECAPITAL,
+    csGLOBALBC,
+    csHIPERCARD,
+    csHRGSTORECARD,
+    csHYPOVEREINSBANK,
+    csJCB,
+    csLUKOILFUELCARD,
+    csMADA,
+    csMAESTRO,
+    csMASTERCARD,
+    csNEWDAY,
+    csNSPKMIR,
+    csOUROCARD,
+    csPHHFUELCARD,
+    csRBSGIFTCARD,
+    csREDFUELCARD,
+    csREDLIQUIDFUELCARD,
+    csRUPAY,
+    csSBERCARD,
+    csSODEXO,
+    csSTARREWARDS,
+    csTROY,
+    csUATP,
+    csUKFUELCARD,
+    csUNIONPAY,
+    csVISA,
+    csVPAY,
+    csVERVE,
+    csMIR
+  );
+
+{*******************************************************}
+{                  Country Code Type                    }
+{*******************************************************}
+type
+  TCountryCode = 0..999;
+
+{*******************************************************}
+{                    Country Codes                      }
+{*******************************************************}
+const
+  ccUNKNOWN                     = 000;
+  ccAFGHANISTAN                 = 004;
+  ccARINGLANDISLANDS            = 248;
+  ccALBANIA                     = 008;
+  ccALGERIA                     = 012;
+  ccAMERICANSAMOA               = 016;
+  ccANDORRA                     = 020;
+  ccANGOLA                      = 024;
+  ccANGUILLA                    = 660;
+  ccANTARTICA                   = 010;
+  ccANTIGUAANDBARBUDA           = 028;
+  ccARGENTINA                   = 032;
+  ccARMENIA                     = 051;
+  ccARUBA                       = 533;
+  ccAUSTRALIA                   = 036;
+  ccAUSTRIA                     = 040;
+  ccAZERBAIJAN                  = 031;
+  ccBAHAMAS                     = 044;
+  ccBAHRAIN                     = 048;
+  ccBANGLADESH                  = 050;
+  ccBARBADOS                    = 052;
+  ccBELARUS                     = 112;
+  ccBELGIUM                     = 056;
+  ccBELIZE                      = 084;
+  ccBENIN                       = 204;
+  ccBERMUDA                     = 060;
+  ccBHUTAN                      = 064;
+  ccBOLIVIA                     = 068;
+  ccBONAIRE                     = 535;
+  ccBOSNIA                      = 070;
+  ccBOTSWANA                    = 072;
+  ccBOUVET                      = 074;
+  ccBRAZIL                      = 076;
+  ccBRITISHINDIANOCEANTERRITORY = 086;
+  ccBRUNEI                      = 096;
+  ccBULGARIA                    = 100;
+  ccBURKINAFASO                 = 854;
+  ccBURUNDI                     = 108;
+  ccCABOVERDE                   = 132;
+  ccCAMBODIA                    = 116;
+  ccCAMEROON                    = 120;
+  ccCANADA                      = 124;
+  ccCAYMANISLANDS               = 136;
+  ccCENTRALAFRICANREPUBLIC      = 140;
+  ccCHAD                        = 148;
+  ccCHILE                       = 152;
+  ccCHINA                       = 156;
+  ccCHRISTMASISLAND             = 162;
+  ccCOCOSISLANDS                = 166;
+  ccCOLOMBIA                    = 170;
+  ccCOMOROS                     = 174;
+  ccCONGODEMOCRATICREPUBLIC     = 180;
+  ccCONGO                       = 178;
+  ccCOOKISLANDS                 = 184;
+  ccCOSTARICA                   = 188;
+  ccCOCIRCTEDIVOIRE             = 384;
+  ccCROATIA                     = 191;
+  ccCUBA                        = 192;
+  ccCURACAO                     = 531;
+  ccCYPRUS                      = 196;
+  ccCZECHIA                     = 203;
+  ccDENMARK                     = 208;
+  ccDJIBOUTI                    = 262;
+  ccDOMINICA                    = 212;
+  ccDOMINICANREPUBLIC           = 214;
+  ccECUADOR                     = 218;
+  ccEGYPT                       = 818;
+  ccELSALVADOR                  = 222;
+  ccEQUATORIALGUINEA            = 226;
+  ccERITREA                     = 232;
+  ccESTONIA                     = 233;
+  ccESWATINI                    = 748;
+  ccETHIOPIA                    = 231;
+  ccFALKLANDISLANDS             = 238;
+  ccFAROEISLANDS                = 234;
+  ccFIJI                        = 242;
+  ccFINLAND                     = 246;
+  ccFRANCE                      = 250;
+  ccFRENCHGUIANA                = 254;
+  ccFRENCHPOLYNESIA             = 258;
+  ccFRENCHSOUTHERNTERRITORIES   = 260;
+  ccGABON                       = 266;
+  ccGAMBIA                      = 270;
+  ccGEORGIA                     = 268;
+  ccGERMANY                     = 276;
+  ccGHANA                       = 288;
+  ccGIBALTAR                    = 292;
+  ccGREECE                      = 300;
+  ccGREENLAND                   = 304;
+  ccGRENADA                     = 308;
+  ccGUANDELOUPE                 = 312;
+  ccGUAM                        = 316;
+  ccGUATEMALA                   = 320;
+  ccGUERNSEY                    = 831;
+  ccGUINEA                      = 324;
+  ccGUINEABISSAU                = 624;
+  ccGUYANA                      = 328;
+  ccHAITI                       = 332;
+  ccHEARDISLAND                 = 334;
+  ccHOLYSEE                     = 336;
+  ccHONDURAS                    = 340;
+  ccHONGKONG                    = 344;
+  ccHUNGARY                     = 348;
+  ccICELAND                     = 352;
+  ccINDIA                       = 356;
+  ccINDONESIA                   = 360;
+  ccIRAN                        = 364;
+  ccIRAQ                        = 368;
+  ccIRELAND                     = 372;
+  ccISLEOFMAN                   = 833;
+  ccISRAEL                      = 376;
+  ccITALY                       = 380;
+  ccJAMAICA                     = 388;
+  ccJAPAN                       = 392;
+  ccJERSEY                      = 832;
+  ccJORDAN                      = 400;
+  ccKAZAKHSTAN                  = 398;
+  ccKENYA                       = 404;
+  ccKIRIBATI                    = 296;
+  ccKOREADEMOCRATICPEOPLE       = 408;
+  ccKOREAREPUBLIC               = 410;
+  ccKUWAIT                      = 414;
+  ccKYRGYZSTAN                  = 417;
+  ccLAOPEOPLESDEMOCRATIC        = 418;
+  ccLATVIA                      = 428;
+  ccLEBANON                     = 422;
+  ccLESOTHO                     = 426;
+  ccLIBERIA                     = 430;
+  ccLIBYA                       = 434;
+  ccLIECTENSTEIN                = 438;
+  ccLITHUANIA                   = 440;
+  ccLUXEMBOURG                  = 442;
+  ccMACAO                       = 446;
+  ccNORTHMACEDONIA              = 807;
+  ccMADAGASCAR                  = 450;
+  ccMALAWI                      = 454;
+  ccMALAYSIA                    = 458;
+  ccMALDIVES                    = 462;
+  ccMALI                        = 466;
+  ccMALTA                       = 470;
+  ccMARSHALLISLANDS             = 584;
+  ccMARTINIQUE                  = 474;
+  ccMAURITANIA                  = 478;
+  ccMAURITIUS                   = 480;
+  ccMAYOTTE                     = 175;
+  ccMEXICO                      = 484;
+  ccMICRONESIA                  = 583;
+  ccMOLDOVA                     = 498;
+  ccMONACO                      = 492;
+  ccMONGOLIA                    = 496;
+  ccMONTENEGRO                  = 499;
+  ccMONTSERRAT                  = 500;
+  ccMOROCCO                     = 504;
+  ccMOZAMBIQUE                  = 508;
+  ccMYANMAR                     = 104;
+  ccNAMIBIA                     = 516;
+  ccNAURU                       = 520;
+  ccNEPAL                       = 524;
+  ccNETHERLANDS                 = 528;
+  ccNEWCALEDONIA                = 540;
+  ccNEWZEALAND                  = 554;
+  ccNICARAGUA                   = 558;
+  ccNIGER                       = 562;
+  ccNIGERIA                     = 566;
+  ccNIUE                        = 570;
+  ccNORFOLKISLAND               = 574;
+  ccNORTHERNMARIANAISLAND       = 580;
+  ccNORWAY                      = 578;
+  ccOMAN                        = 512;
+  ccPAKISTAN                    = 586;
+  ccPALAU                       = 585;
+  ccPALESTINE                   = 275;
+  ccPANAMA                      = 591;
+  ccPAPUANEWGUINEA              = 598;
+  ccPARAGUAY                    = 600;
+  ccPERU                        = 604;
+  ccPHILIPPINES                 = 608;
+  ccPITCAIRN                    = 612;
+  ccPOLAND                      = 616;
+  ccPORTUGAL                    = 620;
+  ccPUERTORICO                  = 630;
+  ccQATAR                       = 634;
+  ccREUNION                     = 638;
+  ccROMANIA                     = 642;
+  ccRUSSIANFEDERATION           = 643;
+  ccRWANDA                      = 646;
+  ccSAINTBARTHELEMY             = 652;
+  ccSAINTHELENA                 = 654;
+  ccSAINTKITTSANDNEVIS          = 659;
+  ccSAINTLUCIA                  = 662;
+  ccSAINTMARTIN                 = 663;
+  ccSAINTPIERREANDMIQUELON      = 666;
+  ccSAINTVINCENT                = 670;
+  ccSAMOA                       = 882;
+  ccSANMARINO                   = 674;
+  ccSAOTOMEANDPRINCIPE          = 678;
+  ccSAUDIARABIA                 = 682;
+  ccSENEGAL                     = 686;
+  ccSERBIA                      = 688;
+  ccSEYCHELLES                  = 690;
+  ccSIERRALEONE                 = 694;
+  ccSINGAPORE                   = 702;
+  ccSINTMAARTEN                 = 534;
+  ccSLOVAKIA                    = 703;
+  ccSLOVENIA                    = 705;
+  ccSOLOMONISLANDS              = 090;
+  ccSOMALIA                     = 706;
+  ccSOUTHAFRICA                 = 710;
+  ccSOUTHGEORGIA                = 239;
+  ccSOUTHSUDAN                  = 728;
+  ccSPAIN                       = 724;
+  ccSRILANKA                    = 144;
+  ccSUDAN                       = 729;
+  ccSURINAME                    = 740;
+  ccSVALBARD                    = 744;
+  ccSWEDEN                      = 752;
+  ccSWITZERLAND                 = 756;
+  ccSYRIA                       = 760;
+  ccTAIWAN                      = 158;
+  ccTAJIKISTAN                  = 762;
+  ccTANZANIA                    = 834;
+  ccTHAILAND                    = 764;
+  ccTIMORLESTE                  = 626;
+  ccTOGO                        = 768;
+  ccTOKELAU                     = 772;
+  ccTONGA                       = 776;
+  ccTRINIDADANDTOBAGO           = 780;
+  ccTUNISIA                     = 788;
+  ccTURKEY                      = 792;
+  ccTURKMENISTAN                = 795;
+  ccTURKSANDCAICOSISLANDS       = 796;
+  ccTUVALU                      = 798;
+  ccUGANDA                      = 800;
+  ccUKRAINE                     = 804;
+  ccUNITEDARABEMIRATES          = 784;
+  ccUNITEDKINGDOM               = 826;
+  ccUNITEDSTATESMINOROUTLYING   = 581;
+  ccUNITEDSTATESOFAMERICA       = 840;
+  ccURUGUAY                     = 858;
+  ccUZBEKISTAN                  = 860;
+  ccVANUATU                     = 548;
+  ccVENEZUELA                   = 862;
+  ccVIETNAM                     = 704;
+  ccVIRGINISLANDSBRITISH        = 092;
+  ccVIRGINISLANDSUS             = 850;
+  ccWALLISANDFUTUNA             = 876;
+  ccWESTERNSAHARA               = 732;
+  ccYEMEN                       = 887;
+  ccZAMBIA                      = 894;
+  ccZIMBABWE                    = 716;
+
+const
+  CountryCodes : array [0..249] of TCountryCode = (
+    ccUNKNOWN,
+    ccAFGHANISTAN,
+    ccARINGLANDISLANDS,
+    ccALBANIA,
+    ccALGERIA,
+    ccAMERICANSAMOA,
+    ccANDORRA,
+    ccANGOLA,
+    ccANGUILLA,
+    ccANTARTICA,
+    ccANTIGUAANDBARBUDA,
+    ccARGENTINA,
+    ccARMENIA,
+    ccARUBA,
+    ccAUSTRALIA,
+    ccAUSTRIA,
+    ccAZERBAIJAN,
+    ccBAHAMAS,
+    ccBAHRAIN,
+    ccBANGLADESH,
+    ccBARBADOS,
+    ccBELARUS,
+    ccBELGIUM,
+    ccBELIZE,
+    ccBENIN,
+    ccBERMUDA,
+    ccBHUTAN,
+    ccBOLIVIA,
+    ccBONAIRE,
+    ccBOSNIA,
+    ccBOTSWANA,
+    ccBOUVET,
+    ccBRAZIL,
+    ccBRITISHINDIANOCEANTERRITORY,
+    ccBRUNEI,
+    ccBULGARIA,
+    ccBURKINAFASO,
+    ccBURUNDI,
+    ccCABOVERDE,
+    ccCAMBODIA,
+    ccCAMEROON,
+    ccCANADA,
+    ccCAYMANISLANDS,
+    ccCENTRALAFRICANREPUBLIC,
+    ccCHAD,
+    ccCHILE,
+    ccCHINA,
+    ccCHRISTMASISLAND,
+    ccCOCOSISLANDS,
+    ccCOLOMBIA,
+    ccCOMOROS,
+    ccCONGODEMOCRATICREPUBLIC,
+    ccCONGO,
+    ccCOOKISLANDS,
+    ccCOSTARICA,
+    ccCOCIRCTEDIVOIRE,
+    ccCROATIA,
+    ccCUBA,
+    ccCURACAO,
+    ccCYPRUS,
+    ccCZECHIA,
+    ccDENMARK,
+    ccDJIBOUTI,
+    ccDOMINICA,
+    ccDOMINICANREPUBLIC,
+    ccECUADOR,
+    ccEGYPT,
+    ccELSALVADOR,
+    ccEQUATORIALGUINEA,
+    ccERITREA,
+    ccESTONIA,
+    ccESWATINI,
+    ccETHIOPIA,
+    ccFALKLANDISLANDS,
+    ccFAROEISLANDS,
+    ccFIJI,
+    ccFINLAND,
+    ccFRANCE,
+    ccFRENCHGUIANA,
+    ccFRENCHPOLYNESIA,
+    ccFRENCHSOUTHERNTERRITORIES,
+    ccGABON,
+    ccGAMBIA,
+    ccGEORGIA,
+    ccGERMANY,
+    ccGHANA,
+    ccGIBALTAR,
+    ccGREECE,
+    ccGREENLAND,
+    ccGRENADA,
+    ccGUANDELOUPE,
+    ccGUAM,
+    ccGUATEMALA,
+    ccGUERNSEY,
+    ccGUINEA,
+    ccGUINEABISSAU,
+    ccGUYANA,
+    ccHAITI,
+    ccHEARDISLAND,
+    ccHOLYSEE,
+    ccHONDURAS,
+    ccHONGKONG,
+    ccHUNGARY,
+    ccICELAND,
+    ccINDIA,
+    ccINDONESIA,
+    ccIRAN,
+    ccIRAQ,
+    ccIRELAND,
+    ccISLEOFMAN,
+    ccISRAEL,
+    ccITALY,
+    ccJAMAICA,
+    ccJAPAN,
+    ccJERSEY,
+    ccJORDAN,
+    ccKAZAKHSTAN,
+    ccKENYA,
+    ccKIRIBATI,
+    ccKOREADEMOCRATICPEOPLE,
+    ccKOREAREPUBLIC,
+    ccKUWAIT,
+    ccKYRGYZSTAN,
+    ccLAOPEOPLESDEMOCRATIC,
+    ccLATVIA,
+    ccLEBANON,
+    ccLESOTHO,
+    ccLIBERIA,
+    ccLIBYA,
+    ccLIECTENSTEIN,
+    ccLITHUANIA,
+    ccLUXEMBOURG,
+    ccMACAO,
+    ccNORTHMACEDONIA,
+    ccMADAGASCAR,
+    ccMALAWI,
+    ccMALAYSIA,
+    ccMALDIVES,
+    ccMALI,
+    ccMALTA,
+    ccMARSHALLISLANDS,
+    ccMARTINIQUE,
+    ccMAURITANIA,
+    ccMAURITIUS,
+    ccMAYOTTE,
+    ccMEXICO,
+    ccMICRONESIA,
+    ccMOLDOVA,
+    ccMONACO,
+    ccMONGOLIA,
+    ccMONTENEGRO,
+    ccMONTSERRAT,
+    ccMOROCCO,
+    ccMOZAMBIQUE,
+    ccMYANMAR,
+    ccNAMIBIA,
+    ccNAURU,
+    ccNEPAL,
+    ccNETHERLANDS,
+    ccNEWCALEDONIA,
+    ccNEWZEALAND,
+    ccNICARAGUA,
+    ccNIGER,
+    ccNIGERIA,
+    ccNIUE,
+    ccNORFOLKISLAND,
+    ccNORTHERNMARIANAISLAND,
+    ccNORWAY,
+    ccOMAN,
+    ccPAKISTAN,
+    ccPALAU,
+    ccPALESTINE,
+    ccPANAMA,
+    ccPAPUANEWGUINEA,
+    ccPARAGUAY,
+    ccPERU,
+    ccPHILIPPINES,
+    ccPITCAIRN,
+    ccPOLAND,
+    ccPORTUGAL,
+    ccPUERTORICO,
+    ccQATAR,
+    ccREUNION,
+    ccROMANIA,
+    ccRUSSIANFEDERATION,
+    ccRWANDA,
+    ccSAINTBARTHELEMY,
+    ccSAINTHELENA,
+    ccSAINTKITTSANDNEVIS,
+    ccSAINTLUCIA,
+    ccSAINTMARTIN,
+    ccSAINTPIERREANDMIQUELON,
+    ccSAINTVINCENT,
+    ccSAMOA,
+    ccSANMARINO,
+    ccSAOTOMEANDPRINCIPE,
+    ccSAUDIARABIA,
+    ccSENEGAL,
+    ccSERBIA,
+    ccSEYCHELLES,
+    ccSIERRALEONE,
+    ccSINGAPORE,
+    ccSINTMAARTEN,
+    ccSLOVAKIA,
+    ccSLOVENIA,
+    ccSOLOMONISLANDS,
+    ccSOMALIA,
+    ccSOUTHAFRICA,
+    ccSOUTHGEORGIA,
+    ccSOUTHSUDAN,
+    ccSPAIN,
+    ccSRILANKA,
+    ccSUDAN,
+    ccSURINAME,
+    ccSVALBARD,
+    ccSWEDEN,
+    ccSWITZERLAND,
+    ccSYRIA,
+    ccTAIWAN,
+    ccTAJIKISTAN,
+    ccTANZANIA,
+    ccTHAILAND,
+    ccTIMORLESTE,
+    ccTOGO,
+    ccTOKELAU,
+    ccTONGA,
+    ccTRINIDADANDTOBAGO,
+    ccTUNISIA,
+    ccTURKEY,
+    ccTURKMENISTAN,
+    ccTURKSANDCAICOSISLANDS,
+    ccTUVALU,
+    ccUGANDA,
+    ccUKRAINE,
+    ccUNITEDARABEMIRATES,
+    ccUNITEDKINGDOM,
+    ccUNITEDSTATESMINOROUTLYING,
+    ccUNITEDSTATESOFAMERICA,
+    ccURUGUAY,
+    ccUZBEKISTAN,
+    ccVANUATU,
+    ccVENEZUELA,
+    ccVIETNAM,
+    ccVIRGINISLANDSBRITISH,
+    ccVIRGINISLANDSUS,
+    ccWALLISANDFUTUNA,
+    ccWESTERNSAHARA,
+    ccYEMEN,
+    ccZAMBIA,
+    ccZIMBABWE
+  );
+
+{*******************************************************}
+{                  Currency Code Type                   }
+{*******************************************************}
+type
+  TCurrencyCode = 0..999;
+
+{*******************************************************}
+{                   Currency Codes                      }
+{*******************************************************}
+const
+  ccUNK = 000;
+  ccADP = 020;
+  ccAED = 784;
+  ccAFN = 971;
+  ccALL = 008;
+  ccAMD = 051;
+  ccANG = 532;
+  ccAOA = 973;
+  ccARS = 032;
+  ccATS = 040;
+  ccAUD = 036;
+  ccAWG = 533;
+  ccAZN = 944;
+  ccBAM = 977;
+  ccBBD = 052;
+  ccBDT = 050;
+  ccBEF = 056;
+  ccBGN = 975;
+  ccBHD = 048;
+  ccBIF = 108;
+  ccBMD = 060;
+  ccBND = 096;
+  ccBOB = 068;
+  ccBOV = 984;
+  ccBRL = 986;
+  ccBSD = 044;
+  ccBTN = 064;
+  ccBWP = 072;
+  ccBYN = 933;
+  ccBZD = 084;
+  ccCAD = 124;
+  ccCDF = 976;
+  ccCHF = 756;
+  ccCLF = 990;
+  ccCLP = 152;
+  ccCNY = 156;
+  ccCOP = 170;
+  ccCRC = 188;
+  ccCUP = 192;
+  ccCVE = 132;
+  ccCYP = 196;
+  ccCZK = 203;
+  ccDEM = 280;
+  ccDJF = 262;
+  ccDKK = 208;
+  ccDOP = 214;
+  ccDZD = 012;
+  ccEEK = 233;
+  ccEGP = 818;
+  ccERN = 232;
+  ccESP = 724;
+  ccETB = 230;
+  ccEUR = 978;
+  ccFIM = 246;
+  ccFJD = 242;
+  ccFKP = 238;
+  ccFRF = 250;
+  ccGBP = 826;
+  ccGEL = 981;
+  ccGHS = 936;
+  ccGIP = 292;
+  ccGMD = 270;
+  ccGNF = 324;
+  ccGRD = 300;
+  ccGTQ = 320;
+  ccGYD = 328;
+  ccHKD = 344;
+  ccHNL = 340;
+  ccHRK = 191;
+  ccHTG = 332;
+  ccHUF = 348;
+  ccIDR = 360;
+  ccIEP = 372;
+  ccILS = 376;
+  ccINR = 356;
+  ccIQD = 368;
+  ccIRR = 364;
+  ccISK = 352;
+  ccITL = 380;
+  ccJMD = 388;
+  ccJOD = 400;
+  ccJPY = 392;
+  ccKES = 404;
+  ccKGS = 417;
+  ccKHR = 116;
+  ccKMF = 174;
+  ccKPW = 408;
+  ccKRW = 410;
+  ccKWD = 414;
+  ccKYD = 136;
+  ccKZT = 398;
+  ccLAK = 418;
+  ccLBP = 422;
+  ccLKR = 144;
+  ccLRD = 430;
+  ccLSL = 426;
+  ccLTL = 440;
+  ccLUF = 442;
+  ccLVL = 428;
+  ccLYD = 434;
+  ccMAD = 504;
+  ccMDL = 498;
+  ccMGA = 969;
+  ccMKD = 807;
+  ccMMK = 104;
+  ccMNT = 496;
+  ccMOP = 446;
+  ccMRO = 478;
+  ccMTL = 470;
+  ccMUR = 480;
+  ccMVR = 462;
+  ccMWK = 454;
+  ccMXN = 484;
+  ccMYR = 458;
+  ccMZN = 943;
+  ccNAD = 516;
+  ccNGN = 566;
+  ccNIO = 558;
+  ccNLG = 528;
+  ccNOK = 578;
+  ccNPR = 524;
+  ccNZD = 554;
+  ccOMR = 512;
+  ccPAB = 590;
+  ccPEN = 604;
+  ccPGK = 598;
+  ccPHP = 608;
+  ccPKR = 586;
+  ccPLN = 985;
+  ccPTE = 620;
+  ccPYG = 600;
+  ccQAR = 634;
+  ccRON = 946;
+  ccRSD = 941;
+  ccRUB = 643;
+  ccRWF = 646;
+  ccSAR = 682;
+  ccSBD = 090;
+  ccSCR = 690;
+  ccSDG = 938;
+  ccSEK = 752;
+  ccSGD = 702;
+  ccSHP = 654;
+  ccSIT = 705;
+  ccSKK = 703;
+  ccSLL = 694;
+  ccSOS = 706;
+  ccSRD = 968;
+  ccSTD = 678;
+  ccSVC = 222;
+  ccSYP = 760;
+  ccSZL = 748;
+  ccTHB = 764;
+  ccTJS = 972;
+  ccTMT = 934;
+  ccTND = 788;
+  ccTOP = 776;
+  ccTRY = 949;
+  ccTTD = 780;
+  ccTWD = 901;
+  ccTZS = 834;
+  ccUAH = 980;
+  ccUGX = 800;
+  ccUSD = 840;
+  ccUYU = 858;
+  ccUZS = 860;
+  ccVEF = 937;
+  ccVND = 704;
+  ccVUV = 548;
+  ccWST = 882;
+  ccXAF = 950;
+  ccXCD = 951;
+  ccXOF = 952;
+  ccXPF = 953;
+  ccYER = 886;
+  ccZAR = 710;
+  ccZMW = 967;
+  ccZWL = 932;
+
+const
+  CurrencyCodes : array [0..177] of TCurrencyCode = (
+    ccUNK,
+    ccADP,
+    ccAED,
+    ccAFN,
+    ccALL,
+    ccAMD,
+    ccANG,
+    ccAOA,
+    ccARS,
+    ccATS,
+    ccAUD,
+    ccAWG,
+    ccAZN,
+    ccBAM,
+    ccBBD,
+    ccBDT,
+    ccBEF,
+    ccBGN,
+    ccBHD,
+    ccBIF,
+    ccBMD,
+    ccBND,
+    ccBOB,
+    ccBOV,
+    ccBRL,
+    ccBSD,
+    ccBTN,
+    ccBWP,
+    ccBYN,
+    ccBZD,
+    ccCAD,
+    ccCDF,
+    ccCHF,
+    ccCLF,
+    ccCLP,
+    ccCNY,
+    ccCOP,
+    ccCRC,
+    ccCUP,
+    ccCVE,
+    ccCYP,
+    ccCZK,
+    ccDEM,
+    ccDJF,
+    ccDKK,
+    ccDOP,
+    ccDZD,
+    ccEEK,
+    ccEGP,
+    ccERN,
+    ccESP,
+    ccETB,
+    ccEUR,
+    ccFIM,
+    ccFJD,
+    ccFKP,
+    ccFRF,
+    ccGBP,
+    ccGEL,
+    ccGHS,
+    ccGIP,
+    ccGMD,
+    ccGNF,
+    ccGRD,
+    ccGTQ,
+    ccGYD,
+    ccHKD,
+    ccHNL,
+    ccHRK,
+    ccHTG,
+    ccHUF,
+    ccIDR,
+    ccIEP,
+    ccILS,
+    ccINR,
+    ccIQD,
+    ccIRR,
+    ccISK,
+    ccITL,
+    ccJMD,
+    ccJOD,
+    ccJPY,
+    ccKES,
+    ccKGS,
+    ccKHR,
+    ccKMF,
+    ccKPW,
+    ccKRW,
+    ccKWD,
+    ccKYD,
+    ccKZT,
+    ccLAK,
+    ccLBP,
+    ccLKR,
+    ccLRD,
+    ccLSL,
+    ccLTL,
+    ccLUF,
+    ccLVL,
+    ccLYD,
+    ccMAD,
+    ccMDL,
+    ccMGA,
+    ccMKD,
+    ccMMK,
+    ccMNT,
+    ccMOP,
+    ccMRO,
+    ccMTL,
+    ccMUR,
+    ccMVR,
+    ccMWK,
+    ccMXN,
+    ccMYR,
+    ccMZN,
+    ccNAD,
+    ccNGN,
+    ccNIO,
+    ccNLG,
+    ccNOK,
+    ccNPR,
+    ccNZD,
+    ccOMR,
+    ccPAB,
+    ccPEN,
+    ccPGK,
+    ccPHP,
+    ccPKR,
+    ccPLN,
+    ccPTE,
+    ccPYG,
+    ccQAR,
+    ccRON,
+    ccRSD,
+    ccRUB,
+    ccRWF,
+    ccSAR,
+    ccSBD,
+    ccSCR,
+    ccSDG,
+    ccSEK,
+    ccSGD,
+    ccSHP,
+    ccSIT,
+    ccSKK,
+    ccSLL,
+    ccSOS,
+    ccSRD,
+    ccSTD,
+    ccSVC,
+    ccSYP,
+    ccSZL,
+    ccTHB,
+    ccTJS,
+    ccTMT,
+    ccTND,
+    ccTOP,
+    ccTRY,
+    ccTTD,
+    ccTWD,
+    ccTZS,
+    ccUAH,
+    ccUGX,
+    ccUSD,
+    ccUYU,
+    ccUZS,
+    ccVEF,
+    ccVND,
+    ccVUV,
+    ccWST,
+    ccXAF,
+    ccXCD,
+    ccXOF,
+    ccXPF,
+    ccYER,
+    ccZAR,
+    ccZMW,
+    ccZWL
+  );
+
+{*******************************************************}
+{                    BIN Record Type                    }
+{*******************************************************}
+type
+  TBINRec = packed record
+    iin_start      : Integer;
+    iin_end        : Integer;
+    iin_scheme     : TCardScheme;
+    iin_type       : TCardType;
+    iin_country    : TCountryCode;
+    iin_currency   : TCurrencyCode;
+    iin_issuer     : string;
+    iin_issuer_url : string;
+    iin_category   : string;
+  end;
+
+{*******************************************************}
+{             Convert to String Functions               }
+{*******************************************************}
+function CardTypeToStr(const CardType: TCardType) : string;
+function CardSchemeToStr(const CardScheme: TCardScheme) : string;
+function CountryCodeToStr(const CountryCode: TCountryCode) : string;
+function CurrencyCodeToStr(const CurrencyCode: TCurrencyCode) : string;
+function MajorIndustryIdentifierToStr(const MajorIndustryIdentifier: integer) : string;
+
+{*******************************************************}
+{               Clean String Functions                  }
+{*******************************************************}
+function CleanNumber(const N: string) : string;
+
+{*******************************************************}
+{           Recognize Card Scheme Functions             }
+{*******************************************************}
+function Is_AMEX(const N: string) : Boolean;
+function Is_MASTERCARD(const N: string) : Boolean;
+function Is_MAESTRO(const N: string) : Boolean;
+function Is_VISA(const N: string) : Boolean;
+function Is_DISCOVER(const N: string) : Boolean;
+function Is_DINERSCLUB(const N: string) : Boolean;
+function Is_JCB(const N: string) : Boolean;
+function Is_UNIONPAY(const N: string) : Boolean;
+function Is_RUPAY(const N: string) : Boolean;
+function Is_TROY(const N: string) : Boolean;
+function Is_DINACARD(const N: string) : Boolean;
+function Is_VERVE(const N: string) : Boolean;
+function Is_MIR(const N: string) : Boolean;
+
+{*******************************************************}
+{                 LUHN Check Functions                  }
+{*******************************************************}
+function LuhnAlgorithmCheckDigit(const N: string ) : Integer;
+function IsLuhnValid(const N: string ) : Boolean;
+
+{*******************************************************}
+{            Find BIN in array of TBINRec               }
+{*******************************************************}
+function FindBIN(const BINS: array of TBINRec; const BIN: string) : Integer;
+
+{*******************************************************}
+{                  Find Card Scheme                     }
+{*******************************************************}
+function FindCardScheme(const N: string) : TCardScheme;
+
+{*******************************************************}
+{                     Format PAN                        }
+{*******************************************************}
+function FormatPAN(const N: string; const S: TCardScheme) : string;
+
+implementation
+
+{*******************************************************}
+{                 Card Type to String                   }
+{*******************************************************}
+function CardTypeToStr(const CardType: TCardType) : string;
+begin
+  case CardType of
+    01 : Result := 'DEBIT';
+    02 : Result := 'CREDIT';
+    03 : Result := 'CHARGE';
+
+    else Result := 'Unknown';
+  end;
+end;
+
+{*******************************************************}
+{                Card Scheme to String                  }
+{*******************************************************}
+function CardSchemeToStr(const CardScheme: TCardScheme) : string;
+begin
+  case CardScheme of
+    01 : Result := 'AMERICAN EXPRESS';
+    02 : Result := 'ATM CARD';
+    03 : Result := 'ATOS';
+    04 : Result := 'AURA';
+    05 : Result := 'BANKCARD';
+    06 : Result := 'BP FUEL CARD';
+    07 : Result := 'CABAL';
+    08 : Result := 'CARNET';
+    09 : Result := 'CHINA UNION PAY';
+    10 : Result := 'CHJONES FUEL CARD';
+    11 : Result := 'CIRRUS';
+    12 : Result := 'COMPROCARD';
+    13 : Result := 'DANKORT';
+    14 : Result := 'DINACARD';
+    15 : Result := 'DINERS CLUB INTERNATIONAL';
+    16 : Result := 'DISCOVER';
+    17 : Result := 'DUET';
+    18 : Result := 'EFTPOS';
+    19 : Result := 'ELO';
+    20 : Result := 'EUROSHELL FUEL CARD';
+    21 : Result := 'FUEL CARD';
+    22 : Result := 'GE CAPITAL';
+    23 : Result := 'GLOBAL BC';
+    24 : Result := 'HIPERCARD';
+    25 : Result := 'HRG STORE CARD';
+    26 : Result := 'HYPOVEREINSBANK';
+    27 : Result := 'JCB';
+    28 : Result := 'LUKOIL FUEL CARD';
+    29 : Result := 'MADA';
+    30 : Result := 'MAESTRO';
+    31 : Result := 'MASTERCARD';
+    32 : Result := 'NEWDAY';
+    33 : Result := 'NSPK MIR';
+    34 : Result := 'OUROCARD';
+    35 : Result := 'PHH FUEL CARD';
+    36 : Result := 'RBS GIFT CARD';
+    37 : Result := 'RED FUEL CARD';
+    38 : Result := 'RED LIQUID FUEL CARD';
+    39 : Result := 'RUPAY';
+    40 : Result := 'SBERCARD';
+    41 : Result := 'SODEXO';
+    42 : Result := 'STAR REWARDS';
+    43 : Result := 'TROY';
+    44 : Result := 'UATP';
+    45 : Result := 'UK FUEL CARD';
+    46 : Result := 'UNIONPAY';
+    47 : Result := 'VISA';
+    48 : Result := 'VPAY';
+    49 : Result := 'VERVE';
+    50 : Result := 'MIR';
+
+    else Result := 'Unknown';
+  end;
+end;
+
+{*******************************************************}
+{                Country Code to String                 }
+{*******************************************************}
+function CountryCodeToStr(const CountryCode: TCountryCode) : string;
+begin
+  case CountryCode of
+    004 : Result := 'Afghanistan';
+    248 : Result := 'Aringland Islands';
+    008 : Result := 'Albania';
+    012 : Result := 'Algeria';
+    016 : Result := 'American Samoa';
+    020 : Result := 'Andorra';
+    024 : Result := 'Angola';
+    660 : Result := 'Anguilla';
+    010 : Result := 'Antarctica';
+    028 : Result := 'Antigua and Barbuda';
+    032 : Result := 'Argentina';
+    051 : Result := 'Armenia';
+    533 : Result := 'Aruba';
+    036 : Result := 'Australia';
+    040 : Result := 'Austria';
+    031 : Result := 'Azerbaijan';
+    044 : Result := 'Bahamas';
+    048 : Result := 'Bahrain';
+    050 : Result := 'Bangladesh';
+    052 : Result := 'Barbados';
+    112 : Result := 'Belarus';
+    056 : Result := 'Belgium';
+    084 : Result := 'Belize';
+    204 : Result := 'Benin';
+    060 : Result := 'Bermuda';
+    064 : Result := 'Bhutan';
+    068 : Result := 'Bolivia';
+    535 : Result := 'Bonaire';
+    070 : Result := 'Bosnia and Herzegovina';
+    072 : Result := 'Botswana';
+    074 : Result := 'Bouvet Island';
+    076 : Result := 'Brazil';
+    086 : Result := 'British Indian Ocean Territory';
+    096 : Result := 'Brunei Darussalam';
+    100 : Result := 'Bulgaria';
+    854 : Result := 'Burkina Faso';
+    108 : Result := 'Burundi';
+    132 : Result := 'Cabo Verde';
+    116 : Result := 'Cambodia';
+    120 : Result := 'Cameroon';
+    124 : Result := 'Canada';
+    136 : Result := 'Cayman Islands';
+    140 : Result := 'Central African Republic';
+    148 : Result := 'Chad';
+    152 : Result := 'Chile';
+    156 : Result := 'China';
+    162 : Result := 'Christmas Island';
+    166 : Result := 'Cocos Islands';
+    170 : Result := 'Colombia';
+    174 : Result := 'Comoros';
+    180 : Result := 'Congo (Democratic Republic of)';
+    178 : Result := 'Congo';
+    184 : Result := 'Cook Islands';
+    188 : Result := 'Costa Rica';
+    384 : Result := 'Ivory Coast';
+    191 : Result := 'Croatia';
+    192 : Result := 'Cuba';
+    531 : Result := 'Curacao';
+    196 : Result := 'Cyprus';
+    203 : Result := 'Czechia';
+    208 : Result := 'Denmark';
+    262 : Result := 'Djibouti';
+    212 : Result := 'Dominica';
+    214 : Result := 'Dominican Republic';
+    218 : Result := 'Ecuador';
+    818 : Result := 'Egypt';
+    222 : Result := 'El Salvador';
+    226 : Result := 'Equatorial Guinea';
+    232 : Result := 'Eritrea';
+    233 : Result := 'Estonia';
+    748 : Result := 'Eswatini';
+    231 : Result := 'Ethiopia';
+    238 : Result := 'Falkland Islands';
+    234 : Result := 'Faroe Islands';
+    242 : Result := 'Fiji';
+    246 : Result := 'Finland';
+    250 : Result := 'France';
+    254 : Result := 'French Guiana';
+    258 : Result := 'French Polynesia';
+    260 : Result := 'French Southern Territories';
+    266 : Result := 'Gabon';
+    270 : Result := 'Gambia';
+    268 : Result := 'Georgia';
+    276 : Result := 'Germany';
+    288 : Result := 'Ghana';
+    292 : Result := 'Gibraltar';
+    300 : Result := 'Greece';
+    304 : Result := 'Greenland';
+    308 : Result := 'Grenada';
+    312 : Result := 'Guadeloupe';
+    316 : Result := 'Guam';
+    320 : Result := 'Guatemala';
+    831 : Result := 'Guernsey';
+    324 : Result := 'Guinea';
+    624 : Result := 'Guinea-Bissau';
+    328 : Result := 'Guyana';
+    332 : Result := 'Haiti';
+    334 : Result := 'Heard Island and McDonald Islands';
+    336 : Result := 'Holy See';
+    340 : Result := 'Honduras';
+    344 : Result := 'Hong Kong';
+    348 : Result := 'Hungary';
+    352 : Result := 'Iceland';
+    356 : Result := 'India';
+    360 : Result := 'Indonesia';
+    364 : Result := 'Iran';
+    368 : Result := 'Iraq';
+    372 : Result := 'Ireland';
+    833 : Result := 'Isle of Man';
+    376 : Result := 'Israel';
+    380 : Result := 'Italy';
+    388 : Result := 'Jamaica';
+    392 : Result := 'Japan';
+    832 : Result := 'Jersey';
+    400 : Result := 'Jordan';
+    398 : Result := 'Kazakhstan';
+    404 : Result := 'Kenya';
+    296 : Result := 'Kiribati';
+    408 : Result := 'North Korea';
+    410 : Result := 'South Korea';
+    414 : Result := 'Kuwait';
+    417 : Result := 'Kyrgyzstan';
+    418 : Result := 'Lao People''s Democratic Republic';
+    428 : Result := 'Latvia';
+    422 : Result := 'Lebanon';
+    426 : Result := 'Lesotho';
+    430 : Result := 'Liberia';
+    434 : Result := 'Libya';
+    438 : Result := 'Liechtenstein';
+    440 : Result := 'Lithuania';
+    442 : Result := 'Luxembourg';
+    446 : Result := 'Macao';
+    807 : Result := 'Republic of North Macedonia';
+    450 : Result := 'Madagascar';
+    454 : Result := 'Malawi';
+    458 : Result := 'Malaysia';
+    462 : Result := 'Maldives';
+    466 : Result := 'Mali';
+    470 : Result := 'Malta';
+    584 : Result := 'Marshall Islands';
+    474 : Result := 'Martinique';
+    478 : Result := 'Mauritania';
+    480 : Result := 'Mauritius';
+    175 : Result := 'Mayotte';
+    484 : Result := 'Mexico';
+    583 : Result := 'Micronesia';
+    498 : Result := 'Moldova';
+    492 : Result := 'Monaco';
+    496 : Result := 'Mongolia';
+    499 : Result := 'Montenegro';
+    500 : Result := 'Montserrat';
+    504 : Result := 'Morocco';
+    508 : Result := 'Mozambique';
+    104 : Result := 'Myanmar';
+    516 : Result := 'Namibia';
+    520 : Result := 'Nauru';
+    524 : Result := 'Nepal';
+    528 : Result := 'Netherlands';
+    540 : Result := 'New Caledonia';
+    554 : Result := 'New Zealand';
+    558 : Result := 'Nicaragua';
+    562 : Result := 'Niger';
+    566 : Result := 'Nigeria';
+    570 : Result := 'Niue';
+    574 : Result := 'Norfolk Island';
+    580 : Result := 'Northern Mariana Islands';
+    578 : Result := 'Norway';
+    512 : Result := 'Oman';
+    586 : Result := 'Pakistan';
+    585 : Result := 'Palau';
+    275 : Result := 'Palestine, State of';
+    591 : Result := 'Panama';
+    598 : Result := 'Papua New Guinea';
+    600 : Result := 'Paraguay';
+    604 : Result := 'Peru';
+    608 : Result := 'Philippines (the)';
+    612 : Result := 'Pitcairn';
+    616 : Result := 'Poland';
+    620 : Result := 'Portugal';
+    630 : Result := 'Puerto Rico';
+    634 : Result := 'Qatar';
+    638 : Result := 'Reunion';
+    642 : Result := 'Romania';
+    643 : Result := 'Russian Federation';
+    646 : Result := 'Rwanda';
+    652 : Result := 'Saint Barthelemy';
+    654 : Result := 'Saint Helena';
+    659 : Result := 'Saint Kitts and Nevis';
+    662 : Result := 'Saint Lucia';
+    663 : Result := 'Saint Martin';
+    666 : Result := 'Saint Pierre and Miquelon';
+    670 : Result := 'Saint Vincent and the Grenadines';
+    882 : Result := 'Samoa';
+    674 : Result := 'San Marino';
+    678 : Result := 'Sao Tome and Principe';
+    682 : Result := 'Saudi Arabia';
+    686 : Result := 'Senegal';
+    688 : Result := 'Serbia';
+    690 : Result := 'Seychelles';
+    694 : Result := 'Sierra Leone';
+    702 : Result := 'Singapore';
+    534 : Result := 'Sint Maarten';
+    703 : Result := 'Slovakia';
+    705 : Result := 'Slovenia';
+    090 : Result := 'Solomon Islands';
+    706 : Result := 'Somalia';
+    710 : Result := 'South Africa';
+    239 : Result := 'South Georgia and the South Sandwich Islands';
+    728 : Result := 'South Sudan';
+    724 : Result := 'Spain';
+    144 : Result := 'Sri Lanka';
+    729 : Result := 'Sudan';
+    740 : Result := 'Suriname';
+    744 : Result := 'Svalbard and Jan Mayen';
+    752 : Result := 'Sweden';
+    756 : Result := 'Switzerland';
+    760 : Result := 'Syrian Arab Republic';
+    158 : Result := 'Taiwan';
+    762 : Result := 'Tajikistan';
+    834 : Result := 'Tanzania, United Republic of';
+    764 : Result := 'Thailand';
+    626 : Result := 'Timor-Leste';
+    768 : Result := 'Togo';
+    772 : Result := 'Tokelau';
+    776 : Result := 'Tonga';
+    780 : Result := 'Trinidad and Tobago';
+    788 : Result := 'Tunisia';
+    792 : Result := 'Turkey';
+    795 : Result := 'Turkmenistan';
+    796 : Result := 'Turks and Caicos Islands';
+    798 : Result := 'Tuvalu';
+    800 : Result := 'Uganda';
+    804 : Result := 'Ukraine';
+    784 : Result := 'United Arab Emirates';
+    826 : Result := 'United Kingdom of Great Britain and Northern Ireland';
+    581 : Result := 'United States Minor Outlying Islands';
+    840 : Result := 'United States of America';
+    858 : Result := 'Uruguay';
+    860 : Result := 'Uzbekistan';
+    548 : Result := 'Vanuatu';
+    862 : Result := 'Venezuela';
+    704 : Result := 'Vietnam';
+    092 : Result := 'Virgin Islands (British)';
+    850 : Result := 'Virgin Islands (U.S.)';
+    876 : Result := 'Wallis and Futuna';
+    732 : Result := 'Western Sahara';
+    887 : Result := 'Yemen';
+    894 : Result := 'Zambia';
+    716 : Result := 'Zimbabwe';
+
+    else Result := 'Unknown';
+  end;
+end;
+
+{*******************************************************}
+{               Currency Code to String                 }
+{*******************************************************}
+function CurrencyCodeToStr(const CurrencyCode: TCurrencyCode) : string;
+begin
+  case CurrencyCode of
+    020 : Result := 'ADP'; // Andorran Peseta
+    784 : Result := 'AED'; // U.A.E. Dirham
+    971 : Result := 'AFN'; // Afghani
+    008 : Result := 'ALL'; // Lek
+    051 : Result := 'AMD'; // Armenian Dram
+    532 : Result := 'ANG'; // Netherland Antillian Guilder
+    973 : Result := 'AOA'; // Kwanza
+    032 : Result := 'ARS'; // Argentine Peso
+    040 : Result := 'ATS'; // Austrian Schilling
+    036 : Result := 'AUD'; // Australian Dollar
+    533 : Result := 'AWG'; // Aruban Guilder
+    944 : Result := 'AZN'; // Azerbaijanian Manat
+    977 : Result := 'BAM'; // Convertible Marks
+    052 : Result := 'BBD'; // Barbados Dollar
+    050 : Result := 'BDT'; // Taka
+    056 : Result := 'BEF'; // Belgian Franc
+    975 : Result := 'BGN'; // Bulgarian Lev
+    048 : Result := 'BHD'; // Bahraini Dinar
+    108 : Result := 'BIF'; // Burundi Franc
+    060 : Result := 'BMD'; // Bermudian Dollar
+    096 : Result := 'BND'; // Brunei Dollar
+    068 : Result := 'BOB'; // Boliviano
+    984 : Result := 'BOV'; // Mvdol
+    986 : Result := 'BRL'; // Brazilian Real
+    044 : Result := 'BSD'; // Bahamanian Dollar
+    064 : Result := 'BTN'; // Ngultrum
+    072 : Result := 'BWP'; // Pula
+    933 : Result := 'BYN'; // Belarussian Ruble
+    084 : Result := 'BZD'; // Belize Dollar
+    124 : Result := 'CAD'; // Canadian Dollar
+    976 : Result := 'CDF'; // Franc Congolais
+    756 : Result := 'CHF'; // Swiss Franc
+    990 : Result := 'CLF'; // Unidades de formento
+    152 : Result := 'CLP'; // Chilean Peso
+    156 : Result := 'CNY'; // Yuan Renminbi
+    170 : Result := 'COP'; // Colombian Peso
+    188 : Result := 'CRC'; // Costa Rican Colon
+    192 : Result := 'CUP'; // Cuban Peso
+    132 : Result := 'CVE'; // Cape Verde Escudo
+    196 : Result := 'CYP'; // Cyprus Pound
+    203 : Result := 'CZK'; // Czech Koruna
+    280 : Result := 'DEM'; // German Mark
+    262 : Result := 'DJF'; // Djibouti Franc
+    208 : Result := 'DKK'; // Danish Krone
+    214 : Result := 'DOP'; // Dominican Republic peso
+    012 : Result := 'DZD'; // Algerian Dinar
+    233 : Result := 'EEK'; // Kroon
+    818 : Result := 'EGP'; // Egyptian Pound
+    232 : Result := 'ERN'; // Nakfa
+    724 : Result := 'ESP'; // Spanish Peseta
+    230 : Result := 'ETB'; // Ethiopian Birr
+    978 : Result := 'EUR'; // Euro
+    246 : Result := 'FIM'; // Finnish Marka
+    242 : Result := 'FJD'; // Fiji Dollar
+    238 : Result := 'FKP'; // Falkland Islands Pound
+    250 : Result := 'FRF'; // French Franc
+    826 : Result := 'GBP'; // Pound Sterling
+    981 : Result := 'GEL'; // Lari
+    936 : Result := 'GHS'; // Cedi
+    292 : Result := 'GIP'; // Gibraltar Pound
+    270 : Result := 'GMD'; // Dalasi
+    324 : Result := 'GNF'; // Guinea Franc
+    300 : Result := 'GRD'; // Greek Drachma
+    320 : Result := 'GTQ'; // Quetzal
+    328 : Result := 'GYD'; // Guyana Dollar
+    344 : Result := 'HKD'; // Hong Kong Dollar
+    340 : Result := 'HNL'; // Lempira
+    191 : Result := 'HRK'; // Croatian Kuna
+    332 : Result := 'HTG'; // Gourde
+    348 : Result := 'HUF'; // Hungarian Forint
+    360 : Result := 'IDR'; // Rupiah
+    372 : Result := 'IEP'; // Irish Punt
+    376 : Result := 'ILS'; // New israeli Shekel
+    356 : Result := 'INR'; // Indian Rupee
+    368 : Result := 'IQD'; // Iraqi Dinar
+    364 : Result := 'IRR'; // Iranian Rial
+    352 : Result := 'ISK'; // Iceland Krona
+    380 : Result := 'ITL'; // Italian Lira
+    388 : Result := 'JMD'; // Jamaican Dollar
+    400 : Result := 'JOD'; // Jordanian Dinar
+    392 : Result := 'JPY'; // Yen
+    404 : Result := 'KES'; // Kenyan Shilling
+    417 : Result := 'KGS'; // Som
+    116 : Result := 'KHR'; // Riel
+    174 : Result := 'KMF'; // Comoros Franc
+    408 : Result := 'KPW'; // North Korean Won
+    410 : Result := 'KRW'; // Won
+    414 : Result := 'KWD'; // Kuwaiti Dinar
+    136 : Result := 'KYD'; // Cayman Islands Dollar
+    398 : Result := 'KZT'; // Tenge
+    418 : Result := 'LAK'; // Kip
+    422 : Result := 'LBP'; // Lebanese Pound
+    144 : Result := 'LKR'; // Sri Lanka Rupee
+    430 : Result := 'LRD'; // Liberian Dollar
+    426 : Result := 'LSL'; // Loti
+    440 : Result := 'LTL'; // Lithuanian Litas
+    442 : Result := 'LUF'; // Luxembourg Franc
+    428 : Result := 'LVL'; // Latvian Lats
+    434 : Result := 'LYD'; // Lybian Dinar
+    504 : Result := 'MAD'; // Moroccan Dirham
+    498 : Result := 'MDL'; // Moldovan Leu
+    969 : Result := 'MGA'; // Malagasy Ariary
+    807 : Result := 'MKD'; // Denar
+    104 : Result := 'MMK'; // Kyat
+    496 : Result := 'MNT'; // Tugrik
+    446 : Result := 'MOP'; // Pataca
+    478 : Result := 'MRO'; // Ouguiya
+    470 : Result := 'MTL'; // Maltese Lira
+    480 : Result := 'MUR'; // Mauritius Rupee
+    462 : Result := 'MVR'; // Rufiyaa
+    454 : Result := 'MWK'; // Kwacha
+    484 : Result := 'MXN'; // Mexican Peso
+    458 : Result := 'MYR'; // Malaysian Ringgit
+    943 : Result := 'MZN'; // Metical
+    516 : Result := 'NAD'; // Namibia Dollar
+    566 : Result := 'NGN'; // Naira
+    558 : Result := 'NIO'; // Cordoba Oro
+    528 : Result := 'NLG'; // Dutch Guilder
+    578 : Result := 'NOK'; // Norwegian Krone
+    524 : Result := 'NPR'; // Nepalese Rupee
+    554 : Result := 'NZD'; // New Zealand Dollar
+    512 : Result := 'OMR'; // Rial Omani
+    590 : Result := 'PAB'; // Balboa
+    604 : Result := 'PEN'; // Nuevo Sol
+    598 : Result := 'PGK'; // Kina
+    608 : Result := 'PHP'; // Philippine Peso
+    586 : Result := 'PKR'; // Pakistan Rupee
+    985 : Result := 'PLN'; // Zloty
+    620 : Result := 'PTE'; // Portuguese Escudo
+    600 : Result := 'PYG'; // Guarani
+    634 : Result := 'QAR'; // Qatari Riyal
+    946 : Result := 'RON'; // Leu
+    941 : Result := 'RSD'; // Serbian Dinar
+    643 : Result := 'RUB'; // Russian Ruble
+    646 : Result := 'RWF'; // Rwanda Franc
+    682 : Result := 'SAR'; // Saudi Riyal
+    090 : Result := 'SBD'; // Solomon Islands Dollar
+    690 : Result := 'SCR'; // Seychelles Rupee
+    938 : Result := 'SDG'; // Sudanese Pound
+    752 : Result := 'SEK'; // Swedish Krona
+    702 : Result := 'SGD'; // Singapore Dollar
+    654 : Result := 'SHP'; // St. Helena Pound
+    705 : Result := 'SIT'; // Tolar
+    703 : Result := 'SKK'; // Slovak Koruna
+    694 : Result := 'SLL'; // Leone
+    706 : Result := 'SOS'; // Somali Schilling
+    968 : Result := 'SRD'; // Suriname Dollar
+    678 : Result := 'STD'; // Dobra
+    222 : Result := 'SVC'; // El Salvador Colon
+    760 : Result := 'SYP'; // Syrian Pound
+    748 : Result := 'SZL'; // Lilangeni
+    764 : Result := 'THB'; // Baht
+    972 : Result := 'TJS'; // Somoni
+    934 : Result := 'TMT'; // New Manat
+    788 : Result := 'TND'; // Tunisian Dinar
+    776 : Result := 'TOP'; // Pa'anga
+    949 : Result := 'TRY'; // Turkish Lira
+    780 : Result := 'TTD'; // Trinidad/Tobago Dollar
+    901 : Result := 'TWD'; // New Taiwan Dollar
+    834 : Result := 'TZS'; // Tanzanian Shilling
+    980 : Result := 'UAH'; // Hryvnia
+    800 : Result := 'UGX'; // Uganda Shilling
+    840 : Result := 'USD'; // US Dollar
+    858 : Result := 'UYU'; // Peso Uruguayo
+    860 : Result := 'UZS'; // Uzbekistan Sum
+    937 : Result := 'VEF'; // Bolivar Fuerte
+    704 : Result := 'VND'; // Dong
+    548 : Result := 'VUV'; // Vatu
+    882 : Result := 'WST'; // Tala
+    950 : Result := 'XAF'; // CFA Franc BEAC
+    951 : Result := 'XCD'; // East Carribean Dollar
+    952 : Result := 'XOF'; // CFA Franc BCEAO
+    953 : Result := 'XPF'; // CFP Franc
+    886 : Result := 'YER'; // Yemeni Rial
+    710 : Result := 'ZAR'; // Rand
+    967 : Result := 'ZMW'; // Zambian Kwacha
+    932 : Result := 'ZWL'; // Zimbabwe Dollar
+
+    else Result := 'Unknown';
+  end;
+end;
+
+{*******************************************************}
+{          Major Industry Identifier to String          }
+{*******************************************************}
+function MajorIndustryIdentifierToStr(const MajorIndustryIdentifier: integer) : string;
+begin
+  case MajorIndustryIdentifier of
+    0 : Result := 'ISO/TC 68 and other industry assignments';
+    1 : Result := 'Airlines';
+    2 : Result := 'Airlines, financial and other future industry assignments';
+    3 : Result := 'Travel and entertainment';
+    4 : Result := 'Banking and financial';
+    5 : Result := 'Banking and financial';
+    6 : Result := 'Merchandising and banking/financial';
+    7 : Result := 'Petroleum and other future industry assignments';
+    8 : Result := 'Healthcare, telecommunications and other future industry assignments';
+    9 : Result := 'For assignment by national standards bodies';
+
+    else Result := 'Unknown';
+  end;
+end;
+
+{*******************************************************}
+{     Clean string - remove everything but numbers      }
+{*******************************************************}
+function CleanNumber(const N: string) : string;
+var
+  Character : Char;
+begin
+  for Character in N do
+  if CharInSet(Character, ['0'..'9']) then
+  Result := Result + Character;
+end;
+
+
+{*******************************************************}
+{             Check if card number is AMEX              }
+{*******************************************************}
+function Is_AMEX(const N: string) : Boolean;
+var
+  X : Integer;
+begin
+  Result := False;
+  if TryStrToInt(Copy(N, 1, 2), X) then
+  begin
+    Result := (Length(N) = 15) and ((X = 37) or (X = 34));
+  end;
+end;
+
+{*******************************************************}
+{          Check if card number is Mastercard           }
+{*******************************************************}
+function Is_MASTERCARD(const N: string) : Boolean;
+var
+  X : Integer;
+begin
+  Result := False;
+  if TryStrToInt(Copy(N, 1, 6), X) then
+  begin
+    Result := (Length(N) = 16) and (
+      ((X >= 222100) and (X <= 272099)) or
+      ((X >= 510000) and (X <= 559999))
+    );
+  end;
+end;
+
+{*******************************************************}
+{           Check if card number is Maestro             }
+{*******************************************************}
+function Is_MAESTRO(const N: string) : Boolean;
+var
+  X, Y : Integer;
+begin
+  Result := False;
+  if TryStrToInt(Copy(N, 1, 6), X) and TryStrToInt(Copy(N, 1, 2), Y) then
+  begin
+    Result := ((Length(N) >= 12) and (Length(N) <= 19)) and (
+      (Y = 50) or
+      ((Y >= 56) and (Y <= 69)) or
+      ((X >= 630000) and (X <= 650000)) or
+      ((X >= 670000) and (X <= 679999))
+    );
+  end;
+end;
+
+{*******************************************************}
+{             Check if card number is VISA              }
+{*******************************************************}
+function Is_VISA(const N: string) : Boolean;
+var
+  X : Integer;
+begin
+  Result := False;
+  if TryStrToInt(Copy(N, 1, 6), X) then
+  begin
+    Result := ((Length(N) = 13) or (Length(N) = 16) or (Length(N) = 19)) and (
+      ((X >= 400000) and (X <= 499999))
+    );
+  end;
+end;
+
+{*******************************************************}
+{         Check if card number is Discover Card         }
+{*******************************************************}
+function Is_DISCOVER(const N: string) : Boolean;
+var
+  X : Integer;
+begin
+  Result := False;
+  if TryStrToInt(Copy(N, 1, 6), X) then
+  begin
+    Result := (Length(N) = 16) and (
+      ((X >= 601100) and (X <= 601103)) or
+      ((X >= 601105) and (X <= 601109)) or
+      ((X >= 601120) and (X <= 601149)) or
+      ((X >= 601174) and (X <= 601174)) or
+      ((X >= 601177) and (X <= 601179)) or
+      ((X >= 601186) and (X <= 601199)) or
+      ((X >= 644000) and (X <= 659999))
+    );
+  end;
+end;
+
+{*******************************************************}
+{          Check if card number is Diners Club          }
+{*******************************************************}
+function Is_DINERSCLUB(const N: string) : Boolean;
+var
+  X : Integer;
+begin
+  Result := False;
+  if TryStrToInt(Copy(N, 1, 6), X) then
+  begin
+    Result := (Length(N) = 14) and (
+      ((X >= 300000) and (X <= 305999)) or
+      ((X >= 309500) and (X <= 309599)) or
+      ((X >= 360000) and (X <= 369999)) or
+      ((X >= 380000) and (X <= 399999))
+    );
+  end;
+end;
+
+{*******************************************************}
+{              Check if card number is JCB              }
+{*******************************************************}
+function Is_JCB(const N: string) : Boolean;
+var
+  X : Integer;
+begin
+  Result := False;
+  if TryStrToInt(Copy(N, 1, 6), X) then
+  begin
+    Result := (Length(N) = 16) and (
+      ((X >= 308800) and (X <= 310299)) or
+      ((X >= 311200) and (X <= 312099)) or
+      ((X >= 315800) and (X <= 315999)) or
+      ((X >= 333700) and (X <= 334999)) or
+      ((X >= 352800) and (X <= 358999))
+    );
+  end;
+end;
+
+{*******************************************************}
+{           Check if card number is UnionPay            }
+{*******************************************************}
+function Is_UNIONPAY(const N: string) : Boolean;
+var
+  X : Integer;
+begin
+  Result := False;
+  if TryStrToInt(Copy(N, 1, 6), X) then
+  begin
+    Result := ((Length(N) >= 16) and (Length(N) <= 19)) and (
+      ((X >= 622126) and (X <= 622925)) or
+      ((X >= 624000) and (X <= 626999)) or
+      ((X >= 628200) and (X <= 628899)) or
+      ((X >= 810000) and (X <= 817199))
+    );
+  end;
+end;
+
+{*******************************************************}
+{            Check if card number is RuPay              }
+{*******************************************************}
+function Is_RUPAY(const N: string) : Boolean;
+var
+  X, Y : Integer;
+begin
+  Result := False;
+  if TryStrToInt(Copy(N, 1, 6), X) and TryStrToInt(Copy(N, 1, 4), Y) then
+  begin
+    Result := (Length(N) = 16) and (
+      ((Y >= 6060) and (Y <= 6080)) or
+      ((X >= 652100) and (X <= 654399))
+    );
+  end;
+end;
+
+{*******************************************************}
+{             Check if card number is Troy              }
+{*******************************************************}
+function Is_TROY(const N: string) : Boolean;
+var
+  X : Integer;
+begin
+  Result := False;
+  if TryStrToInt(Copy(N, 1, 6), X) then
+  begin
+    Result := (Length(N) = 16) and (
+      ((X >= 979200) and (X <= 979289))
+    );
+  end;
+end;
+
+{*******************************************************}
+{           Check if card number is DinaCard            }
+{*******************************************************}
+function Is_DINACARD(const N: string) : Boolean;
+var
+  X : Integer;
+begin
+  Result := False;
+  if TryStrToInt(Copy(N, 1, 6), X) then
+  begin
+    Result := (Length(N) = 16) and (
+      ((X >= 989100) and (X <= 989199))
+    );
+  end;
+end;
+
+{*******************************************************}
+{             Check if card number is Verve             }
+{*******************************************************}
+function Is_VERVE(const N: string) : Boolean;
+var
+  X : Integer;
+begin
+  Result := False;
+  if TryStrToInt(Copy(N, 1, 6), X) then
+  begin
+    Result := ((Length(N) = 16) or (Length(N) = 19)) and (
+      ((X >= 506099) and (X <= 506198)) or
+      ((X >= 650002) and (X <= 650027))
+    );
+  end;
+end;
+
+{*******************************************************}
+{              Check if card number is MIR              }
+{*******************************************************}
+function Is_MIR(const N: string) : Boolean;
+var
+  X : Integer;
+begin
+  Result := False;
+  if TryStrToInt(Copy(N, 1, 6), X) then
+  begin
+    Result := (Length(N) = 16) and (
+      ((X >= 220000) and (X <= 220499))
+    );
+  end;
+end;
+
+{*******************************************************}
+{            Get LUHN Algorihm Check Digit              }
+{*******************************************************}
+function LuhnAlgorithmCheckDigit(const N: string ) : Integer;
+var
+  I, S, X : Integer;
+  T       : string;
+begin
+  S := 0;
+  X := 1;
+  for I := Length(N) downto 1 do
+  begin
+    if Odd(X) then
+      T := T + IntToStr(StrToInt(N[I]) * 2)
+    else
+      T := T + IntToStr(StrToInt(N[I]));
+    Inc(X);
+  end;
+  for I := 1 to Length(T) do Inc(S, StrToInt(T[I]));
+  Result := ((10 - S mod 10) mod 10);
+end;
+
+{*******************************************************}
+{        Check if card number passes LUHN check         }
+{*******************************************************}
+function IsLuhnValid(const N: string ) : Boolean;
+var
+  I, L : Integer;
+begin
+  L := length(N);
+  I := LuhnAlgorithmCheckDigit(Copy(N, 1, L -1));
+  Result := I = StrToInt(N[L]);
+end;
+
+{*******************************************************}
+{            Find BIN in array of TBINRec               }
+{*******************************************************}
+function FindBIN(const BINS: array of TBINRec; const BIN: string) : Integer;
+var
+  I, B : Integer;
+begin
+  Result := -1;
+  if TryStrToInt(Copy(BIN, 1, 6), B) then
+  begin
+    for I := Low(BINS) to High(BINS) do
+    if (BINS[I].iin_start >= B) and (BINS[I].iin_end <= B) then
+    begin
+      Result := I;
+      Break;
+    end;
+  end;
+end;
+
+{*******************************************************}
+{                   Find Card Scheme                    }
+{*******************************************************}
+function FindCardScheme(const N: string) : TCardScheme;
+begin
+  // AMEX
+  if Is_AMEX(N) then
+    Result := csAMEX
+  else
+  // MASTERCARD
+  if Is_MASTERCARD(N) then
+    Result := csMASTERCARD
+  else
+  // MAESTRO
+  if Is_MAESTRO(N) then
+    Result := csMAESTRO
+  else
+  // VISA
+  if Is_VISA(N) then
+    Result := csVISA
+  else
+  // DISCOVER
+  if Is_DISCOVER(N) then
+    Result := csDISCOVER
+  else
+  // DINERSCLUB
+  if Is_DINERSCLUB(N) then
+    Result := csDINERSCLUBINTERNATIONAL
+  else
+  // JCB
+  if Is_JCB(N) then
+    Result := csJCB
+  else
+  // UNIONPAY
+  if Is_UNIONPAY(N) then
+    Result := csUNIONPAY
+  else
+  // RUPAY
+  if Is_RUPAY(N) then
+    Result := csRUPAY
+  else
+  // TROY
+  if Is_TROY(N) then
+    Result := csTROY
+  else
+  // DINACARD
+  if Is_DINACARD(N) then
+    Result := csDINACARD
+  else
+  // VERVE
+  if Is_VERVE(N) then
+    Result := csVERVE
+  else
+  // MIR
+  if Is_MIR(N) then
+    Result := csMIR
+  else
+  // UNKNOWN
+  Result := csUNKNOWN;
+end;
+
+{*******************************************************}
+{                     Format PAN                        }
+{*******************************************************}
+function FormatPAN(const N: string; const S: TCardScheme) : string;
+begin
+  // AMEX
+  if (S = 01) then
+  begin
+    Result := Copy(N, 1, 4) + ' ' + Copy(N, 5, 6) + ' ' + Copy(N, 11, 5);
+  end else
+  // DINERS CLUB
+  if (S = 15) then
+  begin
+    Result := Copy(N, 1, 4) + ' ' + Copy(N, 5, 6) + ' ' + Copy(N, 11, 4);
+  end else
+  // DISCOVER, JCB, MAESTRO, MASTERCARD, VISA
+  if (S = 16) or (S = 27) or (S = 30) or (S = 31) or (S = 47) then
+  begin
+    Result := Copy(N, 1, 4) + ' ' + Copy(N, 5, 4) + ' ' + Copy(N, 9, 4) + ' ' + Copy(N, 13, 4);
+  end else
+  begin
+    Result := N;
+  end;
+end;
+
+end.

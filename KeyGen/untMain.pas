@@ -1,0 +1,84 @@
+unit untMain;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Imaging.pngimage,
+  Vcl.ExtCtrls;
+
+type
+  TForm5 = class(TForm)
+    Panel1: TPanel;
+    Image1: TImage;
+    Label1: TLabel;
+    Label2: TLabel;
+    Panel2: TPanel;
+    btnClose: TButton;
+    btnGenerate: TButton;
+    gbPAN: TGroupBox;
+    edtUsername: TEdit;
+    gbDecodedData: TGroupBox;
+    memLicenseKey: TMemo;
+    procedure FormCreate(Sender: TObject);
+    procedure btnGenerateClick(Sender: TObject);
+    procedure btnCloseClick(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  Form5: TForm5;
+
+implementation
+
+{$R *.dfm}
+
+uses untLicense;
+
+procedure TForm5.FormCreate(Sender: TObject);
+begin
+  // Set window size
+  Width  := 500;
+  Height := 350;
+  // Clear inputs
+  edtUsername.Clear;
+  memLicenseKey.Clear;
+end;
+
+procedure TForm5.btnCloseClick(Sender: TObject);
+begin
+  Close;
+end;
+
+procedure TForm5.btnGenerateClick(Sender: TObject);
+
+  function GetHashCode(const S: string): Int64;
+  var
+    LResult: UInt64;
+    I: Integer;
+  begin
+    LResult := 0;
+    for I := 0 to Length(S) - 1 do
+    begin
+      LResult := (LResult shl 5) or (LResult shr 27);
+      LResult := LResult xor UInt64(S[I]);
+    end;
+    Result := LResult;
+  end;
+
+var
+  Seed : Int64;
+  L    : string;
+begin
+  Seed := GetHashCode(Format('%-15s', [edtUsername.Text]));
+  L := PKV_MakeKey(StrToInt('$' + Copy(IntToStr(Abs(Seed)), 1, 8)));
+  if PKV_CheckKey(L) = KEY_VALID then
+    memLicenseKey.Text := L
+  else
+    memLicenseKey.Text := 'Change username!';
+end;
+
+end.

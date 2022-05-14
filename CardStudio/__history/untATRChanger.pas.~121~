@@ -1,0 +1,413 @@
+unit untATRChanger;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Imaging.pngimage,
+  Vcl.ExtCtrls, untPCSC, untUSB, Registry;
+
+type
+  TfrmChangeATR = class(TForm)
+    Panel1: TPanel;
+    Image1: TImage;
+    Label1: TLabel;
+    Label2: TLabel;
+    Panel2: TPanel;
+    btnHelp: TButton;
+    btnCheck: TButton;
+    btnChangeATR: TButton;
+    gbATR: TGroupBox;
+    edtATR: TEdit;
+    gbReader: TGroupBox;
+    cbReader: TComboBox;
+    gbLog: TGroupBox;
+    memLog: TMemo;
+    Panel4: TPanel;
+    GroupBox1: TGroupBox;
+    cbScheme: TComboBox;
+    GroupBox2: TGroupBox;
+    cbCountry: TComboBox;
+    GroupBox3: TGroupBox;
+    cbIssuer: TComboBox;
+    cbFuse: TCheckBox;
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure FormCreate(Sender: TObject);
+    procedure btnChangeATRClick(Sender: TObject);
+    procedure btnCheckClick(Sender: TObject);
+    procedure cbSchemeChange(Sender: TObject);
+    procedure cbIssuerChange(Sender: TObject);
+  private
+    { Private declarations }
+    PCSC         : TPCSC;
+    FUSBNotifier : TComponentUSB;
+
+    procedure USBArrivalRemoval(Sender: TObject);
+  public
+    { Public declarations }
+  end;
+
+var
+  frmChangeATR: TfrmChangeATR;
+
+implementation
+
+{$R *.dfm}
+
+uses untEMVTools, untATR, untATRList, untConst, untBIN, untBIN_AMEX,
+     untBIN_DINERSCLUB, untBIN_DISCOVER, untBIN_JCB, untBIN_MAESTRO,
+     untBIN_MASTERCARD, untBIN_VISA;
+
+{*******************************************************}
+{               USB Insert/Remove Event                 }
+{*******************************************************}
+procedure TfrmChangeATR.USBArrivalRemoval(Sender: TObject);
+begin
+  // Reload SmartCard Reader/Writers
+  PCSC.Init;
+  // Populate list
+  cbReader.Items.Assign(PCSC.ReaderList);
+  if cbReader.Items.Count > 0 then
+  begin
+    PCSC.UseReaderNum := 0;
+    cbReader.ItemIndex := 0;
+  end;
+  // Disconnect PCSC
+  PCSC.Disconnect;
+  PCSC.Close;
+end;
+
+{*******************************************************}
+{                  Form Create Event                    }
+{*******************************************************}
+procedure TfrmChangeATR.FormCreate(Sender: TObject);
+var
+  I : Integer;
+  R : TRegistry;
+begin
+  // Set width and height
+  Width  := 640;
+  Height := 480;
+  // Create PCSC
+  PCSC := TPCSC.Create;
+  PCSC.Init;
+  // Populate SmartCard readers/writers
+  cbReader.Items.Assign(PCSC.ReaderList);
+  if cbReader.Items.Count > 0 then
+  begin
+    R := TRegistry.Create;
+    try
+      R.RootKey := HKEY_CURRENT_USER;
+      if R.OpenKey(ApplicationRegKey, True) and R.ValueExists(PCSCDefault) then
+      begin
+        cbReader.ItemIndex := cbReader.Items.IndexOf(R.ReadString(PCSCDefault));
+        PCSC.UseReaderNum := cbReader.ItemIndex;
+      end else
+      begin
+        PCSC.UseReaderNum := 0;
+        cbReader.ItemIndex := 0;
+      end;
+    finally
+      R.Free;
+    end;
+  end;
+  // Disconnect PCSC
+  PCSC.Disconnect;
+  PCSC.Close;
+  // Create USB insert/remove notifier component
+  FUSBNotifier := TComponentUSB.Create(Self);
+  FUSBNotifier.OnUSBArrival := USBArrivalRemoval;
+  FUSBNotifier.OnUSBRemove  := USBArrivalRemoval;
+  // Clear Log memo
+  memLog.Clear;
+  // Populate card schemes (AMEX/.../VISA)
+  for I := Low(CardSchemes) to High(CardSchemes) do
+  cbScheme.Items.AddObject(CardSchemeToStr(CardSchemes[I]), TObject(CardSchemes[I]));
+  cbScheme.ItemIndex := 0;
+  // Populate countries
+  for I := Low(CountryCodes) to High(CountryCodes) do
+  cbCountry.Items.AddObject(CountryCodeToStr(CountryCodes[I]), TObject(CountryCodes[I]));
+  cbCountry.ItemIndex := 0;
+  // Load ATR's
+  cbSchemeChange(Sender);
+end;
+
+{*******************************************************}
+{                   Form Close Event                    }
+{*******************************************************}
+procedure TfrmChangeATR.FormClose(Sender: TObject;
+  var Action: TCloseAction);
+begin
+  // Free USB insert/remove notifier component
+  FUSBNotifier.Destroy;
+  // Free PCSC
+  PCSC.Free;
+  // Free Form
+  Action := caFree;
+  Release;
+end;
+
+{*******************************************************}
+{                     Set new ATR                       }
+{*******************************************************}
+procedure TfrmChangeATR.btnChangeATRClick(Sender: TObject);
+
+  function SendADPU(const ADPU: AnsiString) : Boolean;
+  begin
+    Result := Bin2HexExt(PCSC.GetResponseFromCard(Hex2Bin(ADPU))) = '90 00';
+  end;
+
+  function SendHistoricalBytesADPU(const ADPU: AnsiString; const HistoricalBytes: AnsiString; const HBLength: Integer) : Boolean;
+  var
+    L1, L2 : AnsiString;
+  begin
+    L1 := IntToHex(HBLength +1, 2);
+    L2 := IntToHex(HBLength, 2);
+    Result := SendADPU(ADPU + L1 + L2 + Bin2HexExt(HistoricalBytes, False));
+  end;
+
+var
+  R   : Boolean;
+  F   : Boolean;
+  ATR : ATRrec;
+begin
+  if (cbReader.ItemIndex = -1) or (cbIssuer.ItemIndex = -1) then Exit;
+  // Return value
+  R := True;
+  // Create ATR record
+  ATR.Load(Hex2Bin(ATRS[Integer(cbIssuer.Items.Objects[cbIssuer.ItemIndex])].atr_value));
+  // Initialize Card Reader/Writer
+  PCSC.Init;
+  PCSC.UseReaderNum := cbReader.ItemIndex;
+  if PCSC.Open and PCSC.Connect then
+  with memLog.Lines do
+  begin
+    BeginUpdate;
+    Clear;
+    // Header
+    Add(ATRSetHeader);
+    // Old
+    Add(Format(ATRSetOld, [Bin2HexExt(PCSC.AttrCardATR, True, True)]));
+    // New
+    Add(Format(ATRSetNew, [FormatATR(ATRS[Integer(cbIssuer.Items.Objects[cbIssuer.ItemIndex])].atr_value)]));
+    // TK Key                                             
+    if not SendADPU(ATRSetTKKey) then R := False;
+    // Reset to factory defaults
+    Add(ATRSetReset);
+    if not SendADPU(ATRSetResetFact) then R := False;
+    // Unknown 1
+    if not SendADPU(ATRSet1) then R := False;
+    // Unknown 2
+    if not SendADPU(ATRSet2) then R := False;
+    // Unknown 3
+    if not SendADPU(ATRSet3) then R := False;
+    // Unknown 4
+    if not SendADPU(ATRSet4) then R := False;
+    // Unknown 5
+    if not SendADPU(ATRSet5) then R := False;
+    // Unknown 6
+    if not SendADPU(ATRSet6) then R := False;
+    // Set COLD ATR Historical Bytes
+    Add(ATRSetCold);
+    if not SendHistoricalBytesADPU(ATRSetATRCold, ATR.HistoricalBytes, ATR.HistoricalBytesCount) then R := False;
+    // Set HOT ATR istorical Bytes
+    Add(ATRSetHot);
+    if not SendHistoricalBytesADPU(ATRSetATRHot, ATR.HistoricalBytes, ATR.HistoricalBytesCount) then R := False;
+    // Unknown 7
+    if not SendADPU(ATRSet7) then R := False;
+    // Auth Key 1
+    if not SendADPU(ATRSetAuthKey1) then R := False;
+    // Unknown 8
+    if not SendADPU(ATRSet8) then R := False;
+    // Auth Key 2
+    if not SendADPU(ATRSetAuthKey2) then R := False;
+    // unknown 9
+    if not SendADPU(ATRSet9) then R := False;
+    // Auth Key 3
+    if not SendADPU(ATRSetAuthKey3) then R := False; 
+    // Lock
+    // if not SendADPU(ATRSetLock) then R := False;
+    // Fuse card?
+    if cbFuse.Checked then
+    begin
+      F := SendADPU(ATRFuseCard);
+      if not F then R := False;
+      // Success / Fail
+      if R then
+      begin
+        if F then
+          Add(ATRSetFSuccess)
+        else
+          Add(ATRSetSuccess);
+      end else
+        Add(ATRSetError);
+    end else
+    begin
+      if R then Add(ATRSetSuccess) else Add(ATRSetError);
+    end;
+    EndUpdate;
+  end;
+  PCSC.Disconnect;
+  PCSC.Close;
+  // Check if successfull
+  if R then
+  begin
+    if F then
+      Application.MessageBox(ATRSetFSuccess, PChar(Application.Title), MB_ICONINFORMATION + MB_OK)
+    else
+      Application.MessageBox(ATRSetSuccess, PChar(Application.Title), MB_ICONINFORMATION + MB_OK);
+  end else
+    Application.MessageBox(ATRSetError, PChar(Application.Title), MB_ICONWARNING + MB_OK);
+end;
+
+{*******************************************************}
+{                   Get current ATR                     }
+{*******************************************************}
+procedure TfrmChangeATR.btnCheckClick(Sender: TObject);
+
+  function GetTenStr(TI: Byte) : string;
+  begin
+    Result := '';
+
+    if (TI and $01) <> 0 then Result := Result + 'TA ';
+    if (TI and $02) <> 0 then Result := Result + 'TB ';
+    if (TI and $04) <> 0 then Result := Result + 'TC ';
+    if (TI and $08) <> 0 then Result := Result + 'TD ';
+
+    Result := Trim(Result);
+  end;
+
+  function ATRGetDesc(const TypeTC: Byte; const TCIndx: Byte; const Data: Byte) : string;
+  begin
+    Result := '';
+
+    if (TypeTC = 2) and (TCIndx = 0) then
+    begin
+      if Data = 0 then
+        Result := 'VPP is not electrically connected'
+      else
+        Result := 'Since the 2006 edition of the standard VPP must be == 0';
+    end;
+
+    if (TypeTC = 3) and (TCIndx = 0) then
+      Result := 'Extra guard time';
+
+    if TypeTC = 4 then
+      Result := Format('Y(%d) = %s Protocol T = %d', [TCIndx +2, GetTenStr(Data shr 4), Data and $0F]);
+  end;
+
+  function CheckFused : Boolean;
+  var
+    R, F : string;
+  begin
+    // JCOP Identify Applet
+    R := Bin2HexExt(PCSC.GetResponseFromCard(Hex2Bin('00A4040009A000000167413000FF')), False);
+    // Get Data
+    F := Bin2HexExt(PCSC.GetResponseFromCard(Hex2Bin('00C00000' + Copy(R, 3, 2))), False);
+    // Read 14th byte (Fused Status: 01 = FUSED, 00 = UNFUSED)
+    Result := Copy(F, 29, 2) = '01';
+  end;
+
+var
+  ATR : ATRrec;
+  I   : Integer;
+begin
+  if (cbReader.ItemIndex = -1) then Exit;
+  //
+  PCSC.Init;
+  PCSC.UseReaderNum := cbReader.ItemIndex;
+  if PCSC.Open and PCSC.Connect then
+  begin
+    if PCSC.AttrCardATR = '' then
+    begin
+      Application.MessageBox('Please insert a SmartCard and try again.', PChar(Application.Title), MB_ICONWARNING + MB_OK);
+    end else
+    begin
+      ATR.Load(PCSC.AttrCardATR);
+      with memLog.Lines do
+      begin
+        BeginUpdate;
+        Clear;
+        // Header
+        Add(ATRCheckHeader);
+        // ATR
+        Add(Format(ATRCheckATR, [Bin2HexExt(PCSC.AttrCardATR, True, True)]));
+        // Historical Bytes
+        Add(Format(ATRCheckHistBytes, [Bin2HexExt(ATR.HistoricalBytes, True, True)]));
+        // Check if card is fused
+        Add(Format(ATRCheckFused, [BoolToStr(CheckFused, True)]));
+        // Default Data Rate
+        Add(Format(ATRCheckDefDataR, [PCSC.AttrProtocol]));
+        // Default Clock
+        Add(Format(ATRCheckDefCLK, [PCSC.AttrProtocol]));
+        // ATR Valid
+        Add(Format(ATRCheckATRValid, [BoolToStr(ATR.Valid, True)]));
+        // TS
+        if ATR.TS = $3B then
+          Add(Format(ATRCheckTS, ['Direct Convention']))
+        else
+          Add(Format(ATRCheckTS, ['Inverse Convention']));
+        // T0
+        Add(Format(ATRCheckT0, [IntToHex(ATR.T0, 2)]));
+        // T Present
+        Add(Format(ATRCheckTPresent, [GetTenStr(ATR.T0 shr 4)]));
+        // TA - TD
+        for I := 0 to ATR.T.RowCount -1 do
+        begin
+          if ATR.T.TA[I].isPresent then
+            Add(Format(ATRCheckTA, [I +1, IntToHex(ATR.T.TA[I].Data, 2), ATRGetDesc(1, I, ATR.T.TA[I].Data)]));
+          if ATR.T.TB[I].isPresent then
+            Add(Format(ATRCheckTB, [I +1, IntToHex(ATR.T.TB[I].Data, 2), ATRGetDesc(2, I, ATR.T.TB[I].Data)]));
+          if ATR.T.TC[I].isPresent then
+            Add(Format(ATRCheckTC, [I +1, IntToHex(ATR.T.TC[I].Data, 2), ATRGetDesc(3, I, ATR.T.TC[I].Data)]));
+          if ATR.T.TD[I].isPresent then
+            Add(Format(ATRCheckTD, [I +1, IntToHex(ATR.T.TD[I].Data, 2), ATRGetDesc(4, I, ATR.T.TD[I].Data)]));
+          Add('');
+        end;
+        // HistBytes contains TLV data object
+        if ATR.IsHistoricalBytesTLV then Add(ATRCheckTLV);
+        // TCK Present
+        if ATR.IsTCKPresent then
+        begin
+          Add(Format(ATRCheckCSTCK, [BoolToStr(ATR.IsTCKPresent, True)]));
+          // TCK Valid
+          Add(Format(ATRCkeckCSValid, [BoolToStr(ATR.IsTCKCorrect, True)]));
+        end else
+          Add(Format(ATRCheckCSTCK, [BoolToStr(ATR.IsTCKPresent, True)]));
+        EndUpdate;
+      end;
+    end;
+  end;
+  PCSC.Disconnect;
+  PCSC.Close;
+end;
+
+{*******************************************************}
+{                Load List with Issuers                 }
+{*******************************************************}
+procedure TfrmChangeATR.cbSchemeChange(Sender: TObject);
+var
+  I : Integer;
+begin
+  cbIssuer.Clear;
+  for I := Low(ATRS) to High(ATRS) do
+  if (ATRS[I].atr_scheme = TCardScheme(cbScheme.Items.Objects[cbScheme.ItemIndex])) and
+     (ATRS[I].atr_country = TCountryCode(cbCountry.Items.Objects[cbCountry.ItemIndex])) then
+  begin
+    cbIssuer.Items.AddObject(Format('%s'{'%s (%s)'}, [ATRS[I].atr_issuer, CardTypeToStr(ATRS[I].atr_type)]), TObject(I));
+  end;
+end;
+
+{*******************************************************}
+{                      Select ATR                       }
+{*******************************************************}
+procedure TfrmChangeATR.cbIssuerChange(Sender: TObject);
+begin
+  edtATR.Clear;
+  if (cbIssuer.ItemIndex > -1) then
+  begin
+    edtATR.Text := FormatATR(ATRS[Integer(cbIssuer.Items.Objects[cbIssuer.ItemIndex])].atr_value);
+  end;
+end;
+
+end.

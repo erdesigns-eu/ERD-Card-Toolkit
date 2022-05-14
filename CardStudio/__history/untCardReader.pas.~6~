@@ -1,0 +1,2372 @@
+{*******************************************************}
+{                                                       }
+{                    untCardReader                      }
+{                     Author: ERD                       }
+{                                                       }
+{             Read and Parse EMV Card Data              }
+{                                                       }
+{*******************************************************}
+
+unit untCardReader;
+
+interface
+
+uses
+  WinApi.Windows,
+  System.SysUtils,
+  System.Classes,
+  System.Generics.Collections,
+  untEMVTools;
+
+type
+  {*******************************************************}
+  {                     EMV Tag Record                    }
+  {*******************************************************}
+  TEMVTag = record
+    Tag    : string;
+    Name   : string;
+  end;
+
+const
+  {*******************************************************}
+  {                      EMV Tag List                     }
+  {*******************************************************}
+  EMVTagList: array [0..514] of TEMVTag = (
+    (
+      Tag  : '06';
+      Name : 'Object Identifier (OID)';
+    ),
+    (
+      Tag  : '41';
+      Name : 'Country code and national data';
+    ),
+    (
+      Tag  : '42';
+      Name : 'Issuer Identification Number (IIN)';
+    ),
+    (
+      Tag  : '43';
+      Name : 'Card service data';
+    ),
+    (
+      Tag  : '44';
+      Name : 'Initial access data';
+    ),
+    (
+      Tag  : '45';
+      Name : 'Card issuer`s data	';
+    ),
+    (
+      Tag  : '46';
+      Name : 'Pre-issuing data';
+    ),
+    (
+      Tag  : '47';
+      Name : 'Card capabilities';
+    ),
+    (
+      Tag  : '48';
+      Name : 'Status information';
+    ),
+    (
+      Tag  : '4D';
+      Name : 'Extended header list';
+    ),
+    (
+      Tag  : '4F';
+      Name : 'Application Identifier (ADF Name)';
+    ),
+    (
+      Tag  : '50';
+      Name : 'Application Label';
+    ),
+    (
+      Tag  : '51';
+      Name : 'Path';
+    ),
+    (
+      Tag  : '52';
+      Name : 'Command to perform';
+    ),
+    (
+      Tag  : '53';
+      Name : 'Discretionary data, discretionary template';
+    ),
+    (
+      Tag  : '56';
+      Name : 'Track 1 Equivalent Data';
+    ),
+    (
+      Tag  : '57';
+      Name : 'Track 2 Equivalent Data';
+    ),
+    (
+      Tag  : '58';
+      Name : 'Track 3 Equivalent Data';
+    ),
+    (
+      Tag  : '59';
+      Name : 'Card expiration date';
+    ),
+    (
+      Tag  : '5A';
+      Name : 'Application Primary Account Number (PAN)';
+    ),
+    (
+      Tag  : '5B';
+      Name : 'Name of an individual';
+    ),
+    (
+      Tag  : '5C';
+      Name : 'Tag list';
+    ),
+    (
+      Tag  : '5D';
+      Name : 'Header list';
+    ),
+    (
+      Tag  : '5E';
+      Name : 'Proprietary login data';
+    ),
+    (
+      Tag  : '5F20';
+      Name : 'Cardholder Name';
+    ),
+    (
+      Tag  : '5F21';
+      Name : 'Track 1, identical to the data coded';
+    ),
+    (
+      Tag  : '5F22';
+      Name : 'Track 2, identical to the data coded';
+    ),
+    (
+      Tag  : '5F23';
+      Name : 'Track 3, identical to the data coded';
+    ),
+    (
+      Tag  : '5F24';
+      Name : 'Application Expiration Date';
+    ),
+    (
+      Tag  : '5F25';
+      Name : 'Application Effective Date';
+    ),
+    (
+      Tag  : '5F26';
+      Name : 'Date, Card Effective';
+    ),
+    (
+      Tag  : '5F27';
+      Name : 'Interchange control';
+    ),
+    (
+      Tag  : '5F28';
+      Name : 'Issuer Country Code';
+    ),
+    (
+      Tag  : '5F29';
+      Name : 'Interchange profile';
+    ),
+    (
+      Tag  : '5F2A';
+      Name : 'Transaction Currency Code';
+    ),
+    (
+      Tag  : '5F2B';
+      Name : 'Date of birth';
+    ),
+    (
+      Tag  : '5F2C';
+      Name : 'Cardholder nationality	';
+    ),
+    (
+      Tag  : '5F2D';
+      Name : 'Language Preference';
+    ),
+    (
+      Tag  : '5F2E';
+      Name : 'Cardholder biometric data';
+    ),
+    (
+      Tag  : '5F2F';
+      Name : 'PIN usage policy';
+    ),
+    (
+      Tag  : '5F30';
+      Name : 'Service Code';
+    ),
+    (
+      Tag  : '5F32';
+      Name : 'Transaction counter';
+    ),
+    (
+      Tag  : '5F33';
+      Name : 'Date, Transaction';
+    ),
+    (
+      Tag  : '5F34';
+      Name : 'Application Primary Account Number (PAN) Sequence Number (PSN)';
+    ),
+    (
+      Tag  : '5F35';
+      Name : 'Sex (ISO 5218)';
+    ),
+    (
+      Tag  : '5F36';
+      Name : 'Transaction Currency Exponent';
+    ),
+    (
+      Tag  : '5F37';
+      Name : 'Static internal authentication (one-step)';
+    ),
+    (
+      Tag  : '5F38';
+      Name : 'Static internal authentication - first associated data';
+    ),
+    (
+      Tag  : '5F39';
+      Name : 'Static internal authentication - second associated data';
+    ),
+    (
+      Tag  : '5F3A';
+      Name : 'Dynamic internal authentication';
+    ),
+    (
+      Tag  : '5F3B';
+      Name : 'Dynamic external authentication';
+    ),
+    (
+      Tag  : '5F3C';
+      Name : 'Transaction Reference Currency Code';
+    ),
+    (
+      Tag  : '5F3D';
+      Name : 'Transaction Reference Currency Exponent';
+    ),
+    (
+      Tag  : '5F40';
+      Name : 'Cardholder portrait image';
+    ),
+    (
+      Tag  : '5F41';
+      Name : 'Element list';
+    ),
+    (
+      Tag  : '5F42';
+      Name : 'Address';
+    ),
+    (
+      Tag  : '5F43';
+      Name : 'Cardholder handwritten signature image';
+    ),
+    (
+      Tag  : '5F44';
+      Name : 'Application image';
+    ),
+    (
+      Tag  : '5F45';
+      Name : 'Display message';
+    ),
+    (
+      Tag  : '5F46';
+      Name : 'Timer';
+    ),
+    (
+      Tag  : '5F47';
+      Name : 'Message reference';
+    ),
+    (
+      Tag  : '5F48';
+      Name : 'Cardholder private key';
+    ),
+    (
+      Tag  : '5F49';
+      Name : 'Cardholder public key';
+    ),
+    (
+      Tag  : '5F4A';
+      Name : 'Public key of certification authority';
+    ),
+    (
+      Tag  : '5F4B';
+      Name : 'Deprecated';
+    ),
+    (
+      Tag  : '5F4C';
+      Name : 'Certificate holder authorization';
+    ),
+    (
+      Tag  : '5F4D';
+      Name : 'Integrated circuit manufacturer identifier';
+    ),
+    (
+      Tag  : '5F4E';
+      Name : 'Certificate content';
+    ),
+    (
+      Tag  : '5F50';
+      Name : 'Issuer Uniform resource locator (URL)';
+    ),
+    (
+      Tag  : '5F53';
+      Name : 'International Bank Account Number (IBAN)';
+    ),
+    (
+      Tag  : '5F54';
+      Name : 'Bank Identifier Code (BIC)';
+    ),
+    (
+      Tag  : '5F55';
+      Name : 'Issuer Country Code (alpha2 format)';
+    ),
+    (
+      Tag  : '5F56';
+      Name : 'Issuer Country Code (alpha3 format)';
+    ),
+    (
+      Tag  : '5F57';
+      Name : 'Account Type';
+    ),
+    (
+      Tag  : '60';
+      Name : 'Template, Dynamic Authentication';
+    ),
+    (
+      Tag  : '6080';
+      Name : 'Commitment (e.g., a positive number less than the public RSA modulus in use)';
+    ),
+    (
+      Tag  : '6081';
+      Name : 'Challenge (e.g., a number, possibly zero, less than the public RSA exponent in use)';
+    ),
+    (
+      Tag  : '6082';
+      Name : 'Response (e.g., a positive number less than the public RSA modulus in use)';
+    ),
+    (
+      Tag  : '6083';
+      Name : 'Committed challenge (e.g., the hash-code of a commitment data object)';
+    ),
+    (
+      Tag  : '6084';
+      Name : 'Authentication code (e.g., the hash-code of one or more data fields and a commitment data object)';
+    ),
+    (
+      Tag  : '6085';
+      Name : 'Exponential (e.g., a public positive number for establishing a session key by a DH method)';
+    ),
+    (
+      Tag  : '60A0';
+      Name : 'Template, Identification data';
+    ),
+    (
+      Tag  : '61';
+      Name : 'Application Template';
+    ),
+    (
+      Tag  : '62';
+      Name : 'File Control Parameters (FCP) Template';
+    ),
+    (
+      Tag  : '6280';
+      Name : 'Number of data bytes in the file, excluding structural information';
+    ),
+    (
+      Tag  : '6281';
+      Name : 'Number of data bytes in the file, including structural information if any';
+    ),
+    (
+      Tag  : '6282';
+      Name : 'File descriptor byte';
+    ),
+    (
+      Tag  : '6283';
+      Name : 'File identifier';
+    ),
+    (
+      Tag  : '6284';
+      Name : 'DF name';
+    ),
+    (
+      Tag  : '6285';
+      Name : 'Proprietary information, primitive encoding (i.e., not coded in BER-TLV)';
+    ),
+    (
+      Tag  : '6286';
+      Name : 'Security attribute in proprietary format';
+    ),
+    (
+      Tag  : '6287';
+      Name : 'Identifier of an EF containing an extension of the file control information';
+    ),
+    (
+      Tag  : '6288';
+      Name : 'Short EF identifier';
+    ),
+    (
+      Tag  : '628A';
+      Name : 'Life cycle status byte (LCS)';
+    ),
+    (
+      Tag  : '628B';
+      Name : 'Security attribute referencing the expanded format';
+    ),
+    (
+      Tag  : '628C';
+      Name : 'Security attribute in compact format';
+    ),
+    (
+      Tag  : '628D';
+      Name : 'Identifier of an EF containing security environment templates';
+    ),
+    (
+      Tag  : '62A0';
+      Name : 'Template, Security attribute for data objects';
+    ),
+    (
+      Tag  : '62A1';
+      Name : 'Template, Security attribute for physical interfaces';
+    ),
+    (
+      Tag  : '62A2';
+      Name : 'One or more pairs of data objects, short EF identifier (tag 88) - absolute or relative path (tag 51)';
+    ),
+    (
+      Tag  : '62A5';
+      Name : 'Proprietary information, constructed encoding';
+    ),
+    (
+      Tag  : '62AB';
+      Name : 'Security attribute in expanded format';
+    ),
+    (
+      Tag  : '62AC';
+      Name : 'Identifier of a cryptographic mechanism';
+    ),
+    (
+      Tag  : '63';
+      Name : 'Wrapper';
+    ),
+    (
+      Tag  : '64';
+      Name : 'Template, File Management Data (FMD)';
+    ),
+    (
+      Tag  : '65';
+      Name : 'Cardholder related data';
+    ),
+    (
+      Tag  : '66';
+      Name : 'Template, Card data';
+    ),
+    (
+      Tag  : '67';
+      Name : 'Template, Authentication data';
+    ),
+    (
+      Tag  : '68';
+      Name : 'Special user requirements';
+    ),
+    (
+      Tag  : '6A';
+      Name : 'Template, Login';
+    ),
+    (
+      Tag  : '6A80';
+      Name : 'Qualifier';
+    ),
+    (
+      Tag  : '6A81';
+      Name : 'Telephone Number';
+    ),
+    (
+      Tag  : '6A82';
+      Name : 'Text';
+    ),
+    (
+      Tag  : '6A83';
+      Name : 'Delay indicators, for detecting an end of message';
+    ),
+    (
+      Tag  : '6A84';
+      Name : 'Delay indicators, for detecting an absence of response';
+    ),
+    (
+      Tag  : '6B';
+      Name : 'Template, Qualified name';
+    ),
+    (
+      Tag  : '6B06';
+      Name : 'Qualified name';
+    ),
+    (
+      Tag  : '6B80';
+      Name : 'Name';
+    ),
+    (
+      Tag  : '6BA0';
+      Name : 'Name';
+    ),
+    (
+      Tag  : '6C';
+      Name : 'Template, Cardholder image';
+    ),
+    (
+      Tag  : '6D';
+      Name : 'Template, Application image';
+    ),
+    (
+      Tag  : '6E';
+      Name : 'Application related data';
+    ),
+    (
+      Tag  : '6F';
+      Name : 'File Control Information (FCI) Template';
+    ),
+    (
+      Tag  : '6FA5';
+      Name : 'Template, FCI A5';
+    ),
+    (
+      Tag  : '70';
+      Name : 'Application Elementary File (AEF) Data Template';
+    ),
+    (
+      Tag  : '71';
+      Name : 'Template, Issuer Script 1';
+    ),
+    (
+      Tag  : '7186';
+      Name : 'Issuer Script Command';
+    ),
+    (
+      Tag  : '719F18';
+      Name : 'Issuer Script Identifier';
+    ),
+    (
+      Tag  : '72';
+      Name : 'Issuer Script Template 2';
+    ),
+    (
+      Tag  : '73';
+      Name : 'Directory Discretionary Template';
+    ),
+    (
+      Tag  : '77';
+      Name : 'Response Message Template Format 2';
+    ),
+    (
+      Tag  : '78';
+      Name : 'Compatible Tag Allocation Authority';
+    ),
+    (
+      Tag  : '79';
+      Name : 'Coexistent Tag Allocation Authority';
+    ),
+    (
+      Tag  : '7A';
+      Name : 'Template, Security Support (SS)';
+    ),
+    (
+      Tag  : '7A80';
+      Name : 'Card session counter';
+    ),
+    (
+      Tag  : '7A81';
+      Name : 'Session identifier';
+    ),
+    (
+      Tag  : '7A82';
+      Name : 'File selection counter';
+    ),
+    (
+      Tag  : '7A83';
+      Name : 'File selection counter';
+    ),
+    (
+      Tag  : '7A84';
+      Name : 'File selection counter';
+    ),
+    (
+      Tag  : '7A85';
+      Name : 'File selection counter';
+    ),
+    (
+      Tag  : '7A86';
+      Name : 'File selection counter';
+    ),
+    (
+      Tag  : '7A87';
+      Name : 'File selection counter';
+    ),
+    (
+      Tag  : '7A88';
+      Name : 'File selection counter';
+    ),
+    (
+      Tag  : '7A89';
+      Name : 'File selection counter';
+    ),
+    (
+      Tag  : '7A8A';
+      Name : 'File selection counter';
+    ),
+    (
+      Tag  : '7A8B';
+      Name : 'File selection counter';
+    ),
+    (
+      Tag  : '7A8C';
+      Name : 'File selection counter';
+    ),
+    (
+      Tag  : '7A8D';
+      Name : 'File selection counter';
+    ),
+    (
+      Tag  : '7A8E';
+      Name : 'File selection counter';
+    ),
+    (
+      Tag  : '7A93';
+      Name : 'Digital signature counter';
+    ),
+    (
+      Tag  : '7A9F2X';
+      Name : 'Internal progression value ("X"-is a specific index, e.g., an index referencing a counter of file selections)';
+    ),
+    (
+      Tag  : '7A9F3Y';
+      Name : 'External progression value ("Y"-is a specific index, e.g., an index referencing an external time stamp)';
+    ),
+    (
+      Tag  : '7B';
+      Name : 'Template, Security Environment (SE)';
+    ),
+    (
+      Tag  : '7B80';
+      Name : 'SEID byte, mandatory';
+    ),
+    (
+      Tag  : '7B8A';
+      Name : 'LCS byte, optional';
+    ),
+    (
+      Tag  : '7B8C';
+      Name : 'Cryptographic mechanism identifier template, optional';
+    ),
+    (
+      Tag  : '7BA4';
+      Name : 'Control reference template (CRT)';
+    ),
+    (
+      Tag  : '7BAA';
+      Name : 'Control reference template (CRT)';
+    ),
+    (
+      Tag  : '7BB4';
+      Name : 'Control reference template (CRT)';
+    ),
+    (
+      Tag  : '7BB6';
+      Name : 'Control reference template (CRT)';
+    ),
+    (
+      Tag  : '7BB8';
+      Name : 'Control reference template (CRT)';
+    ),
+    (
+      Tag  : '7BB6';
+      Name : 'Control reference template (CRT)';
+    ),
+    (
+      Tag  : '7BB8';
+      Name : 'Control reference template (CRT)';
+    ),
+    (
+      Tag  : '7D';
+      Name : 'Template, Secure Messaging (SM)';
+    ),
+    (
+      Tag  : '7D80';
+      Name : 'Plain value not coded in BER-TLV';
+    ),
+    (
+      Tag  : '7D81';
+      Name : 'Plain value not coded in BER-TLV';
+    ),
+    (
+      Tag  : '7D82';
+      Name : 'Cryptogram (plain value coded in BER-TLV and including secure messaging data objects)';
+    ),
+    (
+      Tag  : '7D83';
+      Name : 'Cryptogram (plain value coded in BER-TLV and including secure messaging data objects)';
+    ),
+    (
+      Tag  : '7D84';
+      Name : 'Cryptogram (plain value coded in BER-TLV, but not including secure messaging data objects)';
+    ),
+    (
+      Tag  : '7D85';
+      Name : 'Cryptogram (plain value coded in BER-TLV, but not including secure messaging data objects)';
+    ),
+    (
+      Tag  : '7D86';
+      Name : 'Padding-content indicator byte followed by cryptogram (plain value not coded in BER-TLV)';
+    ),
+    (
+      Tag  : '7D87';
+      Name : 'Padding-content indicator byte followed by cryptogram (plain value not coded in BER-TLV)';
+    ),
+    (
+      Tag  : '7D8E';
+      Name : 'Cryptographic checksum (at least four bytes)';
+    ),
+    (
+      Tag  : '7D90';
+      Name : 'Hash-code';
+    ),
+    (
+      Tag  : '7D91';
+      Name : 'Hash-code';
+    ),
+    (
+      Tag  : '7D92';
+      Name : 'Certificate (not BER-TLV coded data)';
+    ),
+    (
+      Tag  : '7D93';
+      Name : 'Certificate (not BER-TLV coded data)';
+    ),
+    (
+      Tag  : '7D94';
+      Name : 'Security environment identifier (SEID byte, see 6.5)';
+    ),
+    (
+      Tag  : '7D95';
+      Name : 'Security environment identifier (SEID byte, see 6.5)';
+    ),
+    (
+      Tag  : '7D96';
+      Name : 'Number Le in the unsecured command APDU (one or two bytes)';
+    ),
+    (
+      Tag  : '7D97';
+      Name : 'Number Le in the unsecured command APDU (one or two bytes)';
+    ),
+    (
+      Tag  : '7D99';
+      Name : 'Processing status of the secured response APDU (new SW1-SW2, two bytes)';
+    ),
+    (
+      Tag  : '7D9A';
+      Name : 'Input data element for the computation of a digital signature (the value field is signed)';
+    ),
+    (
+      Tag  : '7D9B';
+      Name : 'Input data element for the computation of a digital signature (the value field is signed)';
+    ),
+    (
+      Tag  : '7D9C';
+      Name : 'Public key';
+    ),
+    (
+      Tag  : '7D9D';
+      Name : 'Public key';
+    ),
+    (
+      Tag  : '7D9E';
+      Name : 'Digital signature';
+    ),
+    (
+      Tag  : '7DA0';
+      Name : 'Input template for the computation of a hash-code (the template is hashed)';
+    ),
+    (
+      Tag  : '7DA1';
+      Name : 'Input template for the computation of a hash-code (the template is hashed)';
+    ),
+    (
+      Tag  : '7DA2';
+      Name : 'Input template for the verification of a cryptographic checksum (the template is integrated)';
+    ),
+    (
+      Tag  : '7DA4';
+      Name : 'Control reference template for authentication (AT)';
+    ),
+    (
+      Tag  : '7DA5';
+      Name : 'Control reference template for authentication (AT)';
+    ),
+    (
+      Tag  : '7DA8';
+      Name : 'Input template for the verification of a digital signature (the template is signed)';
+    ),
+    (
+      Tag  : '7DAA';
+      Name : 'Template, Control reference for hash-code (HT)';
+    ),
+    (
+      Tag  : '7DAB';
+      Name : 'Template, Control reference for hash-code (HT)';
+    ),
+    (
+      Tag  : '7DAC';
+      Name : 'Input template for the computation of a digital signature (the concatenated value fields are signed)';
+    ),
+    (
+      Tag  : '7DAD';
+      Name : 'Input template for the computation of a digital signature (the concatenated value fields are signed)';
+    ),
+    (
+      Tag  : '7DAE';
+      Name : 'Input template for the computation of a certificate (the concatenated value fields are certified)';
+    ),
+    (
+      Tag  : '7DAF';
+      Name : 'Input template for the computation of a certificate (the concatenated value fields are certified)';
+    ),
+    (
+      Tag  : '7DB0';
+      Name : 'Plain value coded in BER-TLV and including secure messaging data objects';
+    ),
+    (
+      Tag  : '7DB1';
+      Name : 'Plain value coded in BER-TLV and including secure messaging data objects';
+    ),
+    (
+      Tag  : '7DB2';
+      Name : 'Plain value coded in BER-TLV, but not including secure messaging data objects';
+    ),
+    (
+      Tag  : '7DB3';
+      Name : 'Plain value coded in BER-TLV, but not including secure messaging data objects';
+    ),
+    (
+      Tag  : '7DB4';
+      Name : 'Control reference template for cryptographic checksum (CCT)';
+    ),
+    (
+      Tag  : '7DB5';
+      Name : 'Control reference template for cryptographic checksum (CCT)';
+    ),
+    (
+      Tag  : '7DB6';
+      Name : 'Control reference template for digital signature (DST)';
+    ),
+    (
+      Tag  : '7DB7';
+      Name : 'Control reference template for digital signature (DST)';
+    ),
+    (
+      Tag  : '7DB8';
+      Name : 'Control reference template for confidentiality (CT)';
+    ),
+    (
+      Tag  : '7DB9';
+      Name : 'Control reference template for confidentiality (CT)';
+    ),
+    (
+      Tag  : '7DBA';
+      Name : 'Response descriptor template';
+    ),
+    (
+      Tag  : '7DBB';
+      Name : 'Response descriptor template';
+    ),
+    (
+      Tag  : '7DBC';
+      Name : 'Input template for the computation of a digital signature (the template is signed)';
+    ),
+    (
+      Tag  : '7DBD';
+      Name : 'Input template for the computation of a digital signature (the template is signed)';
+    ),
+    (
+      Tag  : '7DBE';
+      Name : 'Input template for the verification of a certificate (the template is certified)';
+    ),
+    (
+      Tag  : '7E';
+      Name : 'Template, Nesting Interindustry data objects';
+    ),
+    (
+      Tag  : '7F20';
+      Name : 'Display control template';
+    ),
+    (
+      Tag  : '7F21';
+      Name : 'Cardholder certificate';
+    ),
+    (
+      Tag  : '7F2E';
+      Name : 'Biometric data template';
+    ),
+    (
+      Tag  : '7F49';
+      Name : 'Template, Cardholder public key';
+    ),
+    (
+      Tag  : '7F4980';
+      Name : 'Algorithm reference as used in control reference data objects for secure messaging';
+    ),
+    (
+      Tag  : '7F4981';
+      Name : 'RSA Modulus (a number denoted as n coded on x bytes), or DSA First prime (a number denoted as p coded on y bytes), or ECDSA Prime (a number denoted as p coded on z bytes)';
+    ),
+    (
+      Tag  : '7F4982';
+      Name : 'RSA Public exponent (a number denoted as v, e.g., 65537), or DSA Second prime (a number denoted as q dividing p-1, e.g., 20 bytes), or ECDSA First coefficient (a number denoted as a coded on z bytes)';
+    ),
+    (
+      Tag  : '7F4983';
+      Name : 'DSA Basis (a number denoted as g of order q coded on y bytes), or ECDSA Second coefficient (a number denoted as b coded on z bytes)';
+    ),
+    (
+      Tag  : '7F4984';
+      Name : 'DSA Public key (a number denoted as y equal to g to the power x mod p where x is the private key coded on y bytes), or ECDSA Generator (a point denoted as PB on the curve, coded on 2z bytes)';
+    ),
+    (
+      Tag  : '7F4985';
+      Name : 'ECDSA Order (a prime number denoted as q, order of the generator PB, coded on z bytes)';
+    ),
+    (
+      Tag  : '7F4986';
+      Name : 'ECDSA Public key (a point denoted as PP on the curve, equal to x times PB where x is the private key, coded on 2z bytes)';
+    ),
+    (
+      Tag  : '7F4C';
+      Name : 'Template, Certificate Holder Authorization';
+    ),
+    (
+      Tag  : '7F4E';
+      Name : 'Certificate Body';
+    ),
+    (
+      Tag  : '7F4E42';
+      Name : 'Certificate Authority Reference';
+    ),
+    (
+      Tag  : '7F4E5F20';
+      Name : 'Certificate Holder Reference';
+    ),
+    (
+      Tag  : '7F4E5F24';
+      Name : 'Expiration Date, Certificate';
+    ),
+    (
+      Tag  : '7F4E5F25';
+      Name : 'Effective Date, Certificate';
+    ),
+    (
+      Tag  : '7F4E5F29';
+      Name : 'Certificate Profile Identifier';
+    ),
+    (
+      Tag  : '7F4E65';
+      Name : 'Certificate Extensions';
+    ),
+    (
+      Tag  : '7F60';
+      Name : 'Template, Biometric information';
+    ),
+    (
+      Tag  : '80';
+      Name : 'Response Message Template Format 1';
+    ),
+    (
+      Tag  : '81';
+      Name : 'Amount, Authorised (Binary)';
+    ),
+    (
+      Tag  : '82';
+      Name : 'Application Interchange Profile (AIP)';
+    ),
+    (
+      Tag  : '83';
+      Name : 'Command Template';
+    ),
+    (
+      Tag  : '84';
+      Name : 'Dedicated File (DF) Name';
+    ),
+    (
+      Tag  : '86';
+      Name : 'Issuer Script Command';
+    ),
+    (
+      Tag  : '87';
+      Name : 'Application Priority Indicator';
+    ),
+    (
+      Tag  : '88';
+      Name : 'Short File Identifier (SFI)';
+    ),
+    (
+      Tag  : '89';
+      Name : 'Authorisation Code';
+    ),
+    (
+      Tag  : '8A';
+      Name : 'Authorization Response Code (ARC)	';
+    ),
+    (
+      Tag  : '8C';
+      Name : 'Card Risk Management Data Object List 1 (CDOL1)';
+    ),
+    (
+      Tag  : '8D';
+      Name : 'Card Risk Management Data Object List 2 (CDOL2)';
+    ),
+    (
+      Tag  : '8E';
+      Name : 'Cardholder Verification Method (CVM) List';
+    ),
+    (
+      Tag  : '8F';
+      Name : 'Certification Authority Public Key Index (PKI)';
+    ),
+    (
+      Tag  : '90';
+      Name : 'Issuer Public Key Certificate';
+    ),
+    (
+      Tag  : '91';
+      Name : 'Issuer Authentication Data';
+    ),
+    (
+      Tag  : '92';
+      Name : 'Issuer Public Key Remainder';
+    ),
+    (
+      Tag  : '93';
+      Name : 'Signed Static Application Data (SAD)';
+    ),
+    (
+      Tag  : '94';
+      Name : 'Application File Locator (AFL)';
+    ),
+    (
+      Tag  : '95';
+      Name : 'Terminal Verification Results (TVR)';
+    ),
+    (
+      Tag  : '97';
+      Name : 'Transaction Certificate Data Object List (TDOL)';
+    ),
+    (
+      Tag  : '98';
+      Name : 'Transaction Certificate (TC) Hash Value';
+    ),
+    (
+      Tag  : '99';
+      Name : 'Transaction Personal Identification Number (PIN) Data';
+    ),
+    (
+      Tag  : '9A';
+      Name : 'Transaction Date';
+    ),
+    (
+      Tag  : '9B';
+      Name : 'Transaction Status Information (TSI)';
+    ),
+    (
+      Tag  : '9C';
+      Name : 'Transaction Type';
+    ),
+    (
+      Tag  : '9D';
+      Name : 'Directory Definition File (DDF) Name';
+    ),
+    (
+      Tag  : '9F01';
+      Name : 'Acquirer Identifier';
+    ),
+    (
+      Tag  : '9F02';
+      Name : 'Amount, Authorised (Numeric)';
+    ),
+    (
+      Tag  : '9F03';
+      Name : 'Amount, Other (Numeric)';
+    ),
+    (
+      Tag  : '9F04';
+      Name : 'Amount, Other (Binary)';
+    ),
+    (
+      Tag  : '9F05';
+      Name : 'Application Discretionary Data';
+    ),
+    (
+      Tag  : '9F06';
+      Name : 'Application Identifier (AID), Terminal';
+    ),
+    (
+      Tag  : '9F07';
+      Name : 'Application Usage Control (AUC)';
+    ),
+    (
+      Tag  : '9F08';
+      Name : 'Application Version Number';
+    ),
+    (
+      Tag  : '9F09';
+      Name : 'Application Version Number, Terminal';
+    ),
+    (
+      Tag  : '9F0B';
+      Name : 'Cardholder Name - Extended';
+    ),
+    (
+      Tag  : '9F0D';
+      Name : 'Issuer Action Code - Default';
+    ),
+    (
+      Tag  : '9F0E';
+      Name : 'Issuer Action Code - Denial';
+    ),
+    (
+      Tag  : '9F0F';
+      Name : 'Issuer Action Code - Online';
+    ),
+    (
+      Tag  : '9F10';
+      Name : 'Issuer Application Data (IAD)';
+    ),
+    (
+      Tag  : '9F11';
+      Name : 'Issuer Code Table Index';
+    ),
+    (
+      Tag  : '9F12';
+      Name : 'Application Preferred Name';
+    ),
+    (
+      Tag  : '9F13';
+      Name : 'Last Online Application Transaction Counter (ATC) Register';
+    ),
+    (
+      Tag  : '9F14';
+      Name : 'Lower Consecutive Offline Limit (LCOL)';
+    ),
+    (
+      Tag  : '9F15';
+      Name : 'Merchant Category Code (MCC)';
+    ),
+    (
+      Tag  : '9F16';
+      Name : 'Merchant Identifier';
+    ),
+    (
+      Tag  : '9F17';
+      Name : 'Personal Identification Number (PIN) Try Counter';
+    ),
+    (
+      Tag  : '9F18';
+      Name : 'Issuer Script Identifier';
+    ),
+    (
+      Tag  : '9F19';
+      Name : 'Deleted (see 9F49)';
+    ),
+    (
+      Tag  : '9F1A';
+      Name : 'Terminal Country Code';
+    ),
+    (
+      Tag  : '9F1B';
+      Name : 'Terminal Floor Limit';
+    ),
+    (
+      Tag  : '9F1C';
+      Name : 'Terminal Identification';
+    ),
+    (
+      Tag  : '9F1D';
+      Name : 'Terminal Risk Management Data';
+    ),
+    (
+      Tag  : '9F1E';
+      Name : 'Interface Device (IFD) Serial Number';
+    ),
+    (
+      Tag  : '9F1F';
+      Name : 'Track 1 Discretionary Data';
+    ),
+    (
+      Tag  : '9F20';
+      Name : 'Track 2 Discretionary Data';
+    ),
+    (
+      Tag  : '9F21';
+      Name : 'Transaction Time';
+    ),
+    (
+      Tag  : '9F22';
+      Name : 'Certification Authority Public Key Index (PKI)';
+    ),
+    (
+      Tag  : '9F23';
+      Name : 'Upper Consecutive Offline Limit (UCOL)';
+    ),
+    (
+      Tag  : '9F24';
+      Name : 'Payment Account Reference (PAR) generated or linked directly to the provision request in the token vault';
+    ),
+    (
+      Tag  : '9F26';
+      Name : 'Application Cryptogram (AC)';
+    ),
+    (
+      Tag  : '9F27';
+      Name : 'Cryptogram Information Data (CID)';
+    ),
+    (
+      Tag  : '9F29';
+      Name : 'Extended Selection';
+    ),
+    (
+      Tag  : '9F2A';
+      Name : 'Kernel Identifier';
+    ),
+    (
+      Tag  : '9F2D';
+      Name : 'Integrated Circuit Card (ICC) PIN Encipherment Public Key Certificate';
+    ),
+    (
+      Tag  : '9F2E';
+      Name : 'Integrated Circuit Card (ICC) PIN Encipherment Public Key Exponent';
+    ),
+    (
+      Tag  : '9F2F';
+      Name : 'Integrated Circuit Card (ICC) PIN Encipherment Public Key Remainder';
+    ),
+    (
+      Tag  : '9F32';
+      Name : 'Issuer Public Key Exponent';
+    ),
+    (
+      Tag  : '9F33';
+      Name : 'Terminal Capabilities';
+    ),
+    (
+      Tag  : '9F34';
+      Name : 'Cardholder Verification Method (CVM) Results';
+    ),
+    (
+      Tag  : '9F35';
+      Name : 'Terminal Type';
+    ),
+    (
+      Tag  : '9F36';
+      Name : 'Application Transaction Counter (ATC)';
+    ),
+    (
+      Tag  : '9F37';
+      Name : 'Unpredictable Number (UN)';
+    ),
+    (
+      Tag  : '9F38';
+      Name : 'Processing Options Data Object List (PDOL)';
+    ),
+    (
+      Tag  : '9F39';
+      Name : 'Point-of-Service (POS) Entry Mode';
+    ),
+    (
+      Tag  : '9F3A';
+      Name : 'Amount, Reference Currency (Binary)';
+    ),
+    (
+      Tag  : '9F3B';
+      Name : 'Currency Code, Application Reference';
+    ),
+    (
+      Tag  : '9F3C';
+      Name : 'Currency Code, Transaction Reference';
+    ),
+    (
+      Tag  : '9F3D';
+      Name : 'Currency Exponent, Transaction Reference';
+    ),
+    (
+      Tag  : '9F40';
+      Name : 'Additional Terminal Capabilities (ATC)';
+    ),
+    (
+      Tag  : '9F41';
+      Name : 'Transaction Sequence Counter';
+    ),
+    (
+      Tag  : '9F42';
+      Name : 'Currency Code, Application';
+    ),
+    (
+      Tag  : '9F43';
+      Name : 'Currency Exponent, Application Reference';
+    ),
+    (
+      Tag  : '9F44';
+      Name : 'Currency Exponent, Application';
+    ),
+    (
+      Tag  : '9F45';
+      Name : 'Data Authentication Code';
+    ),
+    (
+      Tag  : '9F46';
+      Name : 'Integrated Circuit Card (ICC) Public Key Certificate';
+    ),
+    (
+      Tag  : '9F47';
+      Name : 'Integrated Circuit Card (ICC) Public Key Exponent';
+    ),
+    (
+      Tag  : '9F48';
+      Name : 'Integrated Circuit Card (ICC) Public Key Remainder';
+    ),
+    (
+      Tag  : '9F49';
+      Name : 'Dynamic Data Authentication Data Object List (DDOL)';
+    ),
+    (
+      Tag  : '9F4A';
+      Name : 'Static Data Authentication Tag List (SDA)';
+    ),
+    (
+      Tag  : '9F4B';
+      Name : 'Signed Dynamic Application Data (SDAD)';
+    ),
+    (
+      Tag  : '9F4C';
+      Name : 'ICC Dynamic Number';
+    ),
+    (
+      Tag  : '9F4D';
+      Name : 'Log Entry';
+    ),
+    (
+      Tag  : '9F4E';
+      Name : 'Merchant Name and Location';
+    ),
+    (
+      Tag  : '9F4F';
+      Name : 'Log Format';
+    ),
+    (
+      Tag  : '9F50';
+      Name : 'Offline Accumulator Balance';
+    ),
+    (
+      Tag  : '9F51';
+      Name : 'Application Currency Code';
+    ),
+    (
+      Tag  : '9F52';
+      Name : 'Application Default Action (ADA)';
+    ),
+    (
+      Tag  : '9F53';
+      Name : 'Consecutive Transaction Counter International Limit (CTCIL)';
+    ),
+    (
+      Tag  : '9F54';
+      Name : 'Cumulative Total Transaction Amount Limit (CTTAL)';
+    ),
+    (
+      Tag  : '9F55';
+      Name : 'Issuer Authentication Flags';
+    ),
+    (
+      Tag  : '9F56';
+      Name : 'Issuer Authentication Indicator';
+    ),
+    (
+      Tag  : '9F57';
+      Name : 'Issuer Country Code';
+    ),
+    (
+      Tag  : '9F58';
+      Name : 'Consecutive Transaction Counter Limit (CTCL)';
+    ),
+    (
+      Tag  : '9F59';
+      Name : 'Consecutive Transaction Counter Upper Limit (CTCUL)';
+    ),
+    (
+      Tag  : '9F5A';
+      Name : 'Application Program Identifier (Program ID)';
+    ),
+    (
+      Tag  : '9F5B';
+      Name : 'Issuer Script Results';
+    ),
+    (
+      Tag  : '9F5C';
+      Name : 'Cumulative Total Transaction Amount Upper Limit (CTTAUL)';
+    ),
+    (
+      Tag  : '9F5D';
+      Name : 'Application Capabilities Information (ACI)';
+    ),
+    (
+      Tag  : '9F5E';
+      Name : 'Consecutive Transaction International Upper Limit (CTIUL)';
+    ),
+    (
+      Tag  : '9F5F';
+      Name : 'Offline Balance';
+    ),
+    (
+      Tag  : '9F60';
+      Name : 'CVC3 (Track1)';
+    ),
+    (
+      Tag  : '9F61';
+      Name : 'CVC3 (Track2)';
+    ),
+    (
+      Tag  : '9F62';
+      Name : 'PCVC3 (Track1)';
+    ),
+    (
+      Tag  : '9F63';
+      Name : 'PUNATC (Track1)';
+    ),
+    (
+      Tag  : '9F64';
+      Name : 'NATC (Track1)';
+    ),
+    (
+      Tag  : '9F65';
+      Name : 'PCVC3 (Track2)';
+    ),
+    (
+      Tag  : '9F66';
+      Name : 'PUNATC (Track2)';
+    ),
+    (
+      Tag  : '9F67';
+      Name : 'NATC (Track2)';
+    ),
+    (
+      Tag  : '9F68';
+      Name : 'Card Additional Processes';
+    ),
+    (
+      Tag  : '9F69';
+      Name : 'UDOL';
+    ),
+    (
+      Tag  : '9F6A';
+      Name : 'Unpredictable Number (Numeric)';
+    ),
+    (
+      Tag  : '9F6B';
+      Name : 'Track 2 Data';
+    ),
+    (
+      Tag  : '9F6C';
+      Name : 'Card Transaction Qualifiers (CTQ)';
+    ),
+    (
+      Tag  : '9F6D';
+      Name : 'Kernel 4 Reader Capabilities';
+    ),
+    (
+      Tag  : '9F6E';
+      Name : 'Form Factor Indicator (FFI)';
+    ),
+    (
+      Tag  : '9F6F';
+      Name : 'DS Slot Management Control';
+    ),
+    (
+      Tag  : '9F70';
+      Name : 'Protected Data Envelope 1';
+    ),
+    (
+      Tag  : '9F71';
+      Name : 'Protected Data Envelope 2';
+    ),
+    (
+      Tag  : '9F72';
+      Name : 'Protected Data Envelope 3';
+    ),
+    (
+      Tag  : '9F73';
+      Name : 'Protected Data Envelope 4';
+    ),
+    (
+      Tag  : '9F74';
+      Name : 'Protected Data Envelope 5';
+    ),
+    (
+      Tag  : '9F75';
+      Name : 'Unprotected Data Envelope 1';
+    ),
+    (
+      Tag  : '9F76';
+      Name : 'Unprotected Data Envelope 2';
+    ),
+    (
+      Tag  : '9F77';
+      Name : 'Unprotected Data Envelope 3';
+    ),
+    (
+      Tag  : '9F78';
+      Name : 'Unprotected Data Envelope 4';
+    ),
+    (
+      Tag  : '9F79';
+      Name : 'Unprotected Data Envelope 5';
+    ),
+    (
+      Tag  : '9F7A';
+      Name : 'VLP Terminal Support Indicator';
+    ),
+    (
+      Tag  : '9F7B';
+      Name : 'VLP Terminal Transaction Limit';
+    ),
+    (
+      Tag  : '9F7C';
+      Name : 'Customer Exclusive Data (CED)';
+    ),
+    (
+      Tag  : '9F7D';
+      Name : 'VISA Applet Data';
+    ),
+    (
+      Tag  : '9F7E';
+      Name : 'Mobile Support Indicator';
+    ),
+    (
+      Tag  : '9F7F';
+      Name : 'DS Unpredictable Number';
+    ),
+    (
+      Tag  : 'A5';
+      Name : 'File Control Information (FCI) Proprietary Template';
+    ),
+    (
+      Tag  : 'BF0C';
+      Name : 'File Control Information (FCI) Issuer Discretionary Data';
+    ),
+    (
+      Tag  : 'BF50';
+      Name : 'Visa Fleet - CDO';
+    ),
+    (
+      Tag  : 'BF60';
+      Name : 'Integrated Data Storage Record Update Template';
+    ),
+    (
+      Tag  : 'C3';
+      Name : 'Card issuer action code -decline';
+    ),
+    (
+      Tag  : 'C4';
+      Name : 'Card issuer action code -default';
+    ),
+    (
+      Tag  : 'C5';
+      Name : 'Card issuer action code online';
+    ),
+    (
+      Tag  : 'C6';
+      Name : 'PIN Try Limit';
+    ),
+    (
+      Tag  : 'C7';
+      Name : 'CDOL 1 Related Data Length';
+    ),
+    (
+      Tag  : 'C8';
+      Name : 'Card risk management country code';
+    ),
+    (
+      Tag  : 'C9';
+      Name : 'Card risk management currency code';
+    ),
+    (
+      Tag  : 'CA';
+      Name : 'Lower cummulative offline transaction amount';
+    ),
+    (
+      Tag  : 'CB';
+      Name : 'Upper cumulative offline transaction amount';
+    ),
+    (
+      Tag  : 'CD';
+      Name : 'Card Issuer Action Code (PayPass) - Default';
+    ),
+    (
+      Tag  : 'CE';
+      Name : 'Card Issuer Action Code (PayPass) - Online';
+    ),
+    (
+      Tag  : 'CF';
+      Name : 'Card Issuer Action Code (PayPass) - Decline';
+    ),
+    (
+      Tag  : 'D1';
+      Name : 'Currency conversion table';
+    ),
+    (
+      Tag  : 'D2';
+      Name : 'Integrated Data Storage Directory (IDSD)';
+    ),
+    (
+      Tag  : 'D3';
+      Name : 'Additional check table';
+    ),
+    (
+      Tag  : 'D5';
+      Name : 'Application Control';
+    ),
+    (
+      Tag  : 'D6';
+      Name : 'Default ARPC response code';
+    ),
+    (
+      Tag  : 'D7';
+      Name : 'Application Control (PayPass)';
+    ),
+    (
+      Tag  : 'D8';
+      Name : 'AIP (PayPass)';
+    ),
+    (
+      Tag  : 'D9';
+      Name : 'AFL (PayPass)';
+    ),
+    (
+      Tag  : 'DA';
+      Name : 'Static CVC3-TRACK1';
+    ),
+    (
+      Tag  : 'DB';
+      Name : 'Static CVC3-TRACK2';
+    ),
+    (
+      Tag  : 'DC';
+      Name : 'IVCVC3-TRACK1';
+    ),
+    (
+      Tag  : 'DE';
+      Name : 'IVCVC3-TRACK2';
+    ),
+    (
+      Tag  : 'DF01';
+      Name : 'Encrypted PIN Block in Tag 9F62 - ISO 95641 Format 0';
+    ),
+    (
+      Tag  : 'DF02';
+      Name : 'PEK Version Number';
+    ),
+    (
+      Tag  : 'DF03';
+      Name : 'PIN Try Limit';
+    ),
+    (
+      Tag  : 'DF04';
+      Name : 'PIN Try Counter (VSDC Application)';
+    ),
+    (
+      Tag  : 'DF05';
+      Name : 'AIP - For VISA Contactless';
+    ),
+    (
+      Tag  : 'DF06';
+      Name : 'Products permitted';
+    ),
+    (
+      Tag  : 'DF07';
+      Name : 'Offline checks mandated';
+    ),
+    (
+      Tag  : 'DF08';
+      Name : 'UDKmac';
+    ),
+    (
+      Tag  : 'DF09';
+      Name : 'UDKenc';
+    ),
+    (
+      Tag  : 'DF0B';
+      Name : 'Retries Permitted Limit';
+    ),
+    (
+      Tag  : 'DF0C';
+      Name : 'Script Message Update';
+    ),
+    (
+      Tag  : 'DF0D';
+      Name : 'Fleet Issuer Action Code - Default';
+    ),
+    (
+      Tag  : 'DF0E';
+      Name : 'Fleet Issuer Action Code - Denial';
+    ),
+    (
+      Tag  : 'DF0F';
+      Name : 'Fleet Issuer Action Code - Online';
+    ),
+    (
+      Tag  : 'DF12';
+      Name : 'Vehicle Registration Number';
+    ),
+    (
+      Tag  : 'DF13';
+      Name : 'DDA Public Modulus	';
+    ),
+    (
+      Tag  : 'DF14';
+      Name : 'Driver Name';
+    ),
+    (
+      Tag  : 'DF15';
+      Name : 'Driver ID';
+    ),
+    (
+      Tag  : 'DF16';
+      Name : 'Max Fill Volume';
+    ),
+    (
+      Tag  : 'DF17';
+      Name : 'DDA Public Modulus Length';
+    ),
+    (
+      Tag  : 'DF18';
+      Name : 'Mileage';
+    ),
+    (
+      Tag  : 'DF20';
+      Name : 'Issuer Proprietary Bitmap (IPB)';
+    ),
+    (
+      Tag  : 'DF21';
+      Name : 'Internet Authentication Flag (IAF)';
+    ),
+    (
+      Tag  : 'DF22';
+      Name : 'Encrypted PEK - RFU';
+    ),
+    (
+      Tag  : 'DF23';
+      Name : 'PEK Key Check Value - RFU';
+    ),
+    (
+      Tag  : 'DF24';
+      Name : 'MDK - Key derivation Index';
+    ),
+    (
+      Tag  : 'DF25';
+      Name : 'VISA DPA - MDK - Key derivation Index';
+    ),
+    (
+      Tag  : 'DF26';
+      Name : 'Encrypted PIN Block - ISO 9564-1 Format 1 PIN Block (Thales P3 Format 05)';
+    ),
+    (
+      Tag  : 'DF40';
+      Name : 'qVSDC AIP';
+    ),
+    (
+      Tag  : 'DF41';
+      Name : 'VSDC AIP';
+    ),
+    (
+      Tag  : 'DF42';
+      Name : 'UDKac';
+    ),
+    (
+      Tag  : 'DF43';
+      Name : 'UDKmac';
+    ),
+    (
+      Tag  : 'DF44';
+      Name : 'UDKenc';
+    ),
+    (
+      Tag  : 'DF47';
+      Name : 'UDKcvc';
+    ),
+    (
+      Tag  : 'DF48';
+      Name : 'UDKac KCV';
+    ),
+    (
+      Tag  : 'DF49';
+      Name : 'UDKmac KCV';
+    ),
+    (
+      Tag  : 'DF4A';
+      Name : 'UDKenc KCV';
+    ),
+    (
+      Tag  : 'DF4B';
+      Name : 'UDKcvc KCV';
+    ),
+    (
+      Tag  : 'DF51';
+      Name : 'Grand Parent AC';
+    ),
+    (
+      Tag  : 'DF52';
+      Name : 'Parent AC';
+    ),
+    (
+      Tag  : 'DF53';
+      Name : 'Grand Parent MAC';
+    ),
+    (
+      Tag  : 'DF54';
+      Name : 'Parent MAC';
+    ),
+    (
+      Tag  : 'DF55';
+      Name : 'Grand Parent ENC';
+    ),
+    (
+      Tag  : 'DF56';
+      Name : 'Parent ENC/Terminal Action Code - Default';
+    ),
+    (
+      Tag  : 'DF57';
+      Name : 'Terminal Action Code - Decline';
+    ),
+    (
+      Tag  : 'DF60';
+      Name : 'DS Input (Card)';
+    ),
+    (
+      Tag  : 'DF61';
+      Name : 'DS Digest H';
+    ),
+    (
+      Tag  : 'DF62';
+      Name : 'DDA Component D1';
+    ),
+    (
+      Tag  : 'DF63';
+      Name : 'DDA Component D2';
+    ),
+    (
+      Tag  : 'DF64';
+      Name : 'DDA Component Q Minus 1 Mod P';
+    ),
+    (
+      Tag  : 'DF65';
+      Name : 'DDA Private Exponent';
+    ),
+    (
+      Tag  : 'DF6B';
+      Name : 'Paypass Contactless';
+    ),
+    (
+      Tag  : 'DF79';
+      Name : 'Dynamic Data Authentication Keys';
+    ),
+    (
+      Tag  : 'DF8101';
+      Name : 'DS Summary 2';
+    ),
+    (
+      Tag  : 'DF8102';
+      Name : 'DS Summary 3';
+    ),
+    (
+      Tag  : 'DF8104';
+      Name : 'Balance Read Before Gen AC';
+    ),
+    (
+      Tag  : 'DF8105';
+      Name : 'Balance Read After Gen AC';
+    ),
+    (
+      Tag  : 'DF8106';
+      Name : 'Data Needed';
+    ),
+    (
+      Tag  : 'DF8107';
+      Name : 'CDOL1 Related Data';
+    ),
+    (
+      Tag  : 'DF8108';
+      Name : 'DS AC Type';
+    ),
+    (
+      Tag  : 'DF8109';
+      Name : 'DS Input (Term)';
+    ),
+    (
+      Tag  : 'DF810A';
+      Name : 'DS ODS Info For Reader';
+    ),
+    (
+      Tag  : 'DF810B';
+      Name : 'DS Summary Status';
+    ),
+    (
+      Tag  : 'DF810C';
+      Name : 'Kernel ID';
+    ),
+    (
+      Tag  : 'DF810D';
+      Name : 'DSVN Term';
+    ),
+    (
+      Tag  : 'DF810E';
+      Name : 'Post-Gen AC Put Data Status';
+    ),
+    (
+      Tag  : 'DF810F';
+      Name : 'Pre-Gen AC Put Data Status';
+    ),
+    (
+      Tag  : 'DF8110';
+      Name : 'Proceed To First Write Flag';
+    ),
+    (
+      Tag  : 'DF8111';
+      Name : 'PDOL Related Data';
+    ),
+    (
+      Tag  : 'DF8112';
+      Name : 'Tags To Read';
+    ),
+    (
+      Tag  : 'DF8113';
+      Name : 'DRDOL Related Data';
+    ),
+    (
+      Tag  : 'DF8114';
+      Name : 'Reference Control Parameter';
+    ),
+    (
+      Tag  : 'DF8115';
+      Name : 'Error Indication';
+    ),
+    (
+      Tag  : 'DF8116';
+      Name : 'User Interface Request Data';
+    ),
+    (
+      Tag  : 'DF8117';
+      Name : 'Card Data Input Capability';
+    ),
+    (
+      Tag  : 'DF8118';
+      Name : 'CVM Capability - CVM Required';
+    ),
+    (
+      Tag  : 'DF8119';
+      Name : 'CVM Capability - No CVM Required';
+    ),
+    (
+      Tag  : 'DF811A';
+      Name : 'Default UDOL';
+    ),
+    (
+      Tag  : 'DF811B';
+      Name : 'Kernel Configuration';
+    ),
+    (
+      Tag  : 'DF811C';
+      Name : 'Max Lifetime of Torn Transaction Log Record';
+    ),
+    (
+      Tag  : 'DF811D';
+      Name : 'Max Number of Torn Transaction Log Records';
+    ),
+    (
+      Tag  : 'DF811E';
+      Name : 'Mag-stripe CVM Capability - CVM Required';
+    ),
+    (
+      Tag  : 'DF811F';
+      Name : 'Security Capability';
+    ),
+    (
+      Tag  : 'DF8120';
+      Name : 'Terminal Action Code - Default';
+    ),
+    (
+      Tag  : 'DF8121';
+      Name : 'Terminal Action Code - Denial';
+    ),
+    (
+      Tag  : 'DF8122';
+      Name : 'Terminal Action Code - Online';
+    ),
+    (
+      Tag  : 'DF8123';
+      Name : 'Reader Contactless Floor Limit';
+    ),
+    (
+      Tag  : 'DF8124';
+      Name : 'Reader Contactless Transaction Limit (No On-device CVM)';
+    ),
+    (
+      Tag  : 'DF8125';
+      Name : 'Reader Contactless Transaction Limit (On-device CVM)';
+    ),
+    (
+      Tag  : 'DF8126';
+      Name : 'Reader CVM Required Limit';
+    ),
+    (
+      Tag  : 'DF8127';
+      Name : 'Time Out Value';
+    ),
+    (
+      Tag  : 'DF8128';
+      Name : 'IDS Status';
+    ),
+    (
+      Tag  : 'DF8129';
+      Name : 'Outcome Parameter Set';
+    ),
+    (
+      Tag  : 'DF812A';
+      Name : 'DD Card (Track1)';
+    ),
+    (
+      Tag  : 'DF812B';
+      Name : 'DD Card (Track2)';
+    ),
+    (
+      Tag  : 'DF812C';
+      Name : 'Mag-stripe CVM Capability - No CVM Required';
+    ),
+    (
+      Tag  : 'DF812D';
+      Name : 'Message Hold Time';
+    ),
+    (
+      Tag  : 'DF8130';
+      Name : 'Hold Time Value';
+    ),
+    (
+      Tag  : 'DF8131';
+      Name : 'Phone Message Table';
+    ),
+    (
+      Tag  : 'FF60';
+      Name : 'Visa International';
+    ),
+    (
+      Tag  : 'FF62';
+      Name : 'Visa Magnetic Stripe';
+    ),
+    (
+      Tag  : 'FF63';
+      Name : 'Visa Quick VSDC';
+    ),
+    (
+      Tag  : 'FF8101';
+      Name : 'Torn Record';
+    ),
+    (
+      Tag  : 'FF8102';
+      Name : 'Tags To Write Before Gen AC';
+    ),
+    (
+      Tag  : 'FF8103';
+      Name : 'Tags To Write After Gen AC';
+    ),
+    (
+      Tag  : 'FF8104';
+      Name : 'Data To Send';
+    ),
+    (
+      Tag  : 'FF8105';
+      Name : 'Data Record';
+    ),
+    (
+      Tag  : 'FF8106';
+      Name : 'Discretionary Data';
+    )
+  );
+
+type
+  // Reference
+  TASNItem = class;
+
+  {*******************************************************}
+  {                     ASN Item List                     }
+  {*******************************************************}
+  TASNItemList = class(TObjectList<TASNItem>);
+
+  {*******************************************************}
+  {                   ASN Universal Tag                   }
+  {*******************************************************}
+  TAsnUniversalTags = (
+    asnEoc             = $00, //0: End-of-contents octets
+    asnBoolean         = $01, //1: Boolean
+    asnInteger         = $02, //2: Integer
+    asnBitString       = $03, //3: Bit string
+    asnOctetString     = $04, //4: Byte string
+    asnNullTag         = $05, //5: Null
+    asnOid             = $06, //6: Object Identifier
+    asnObjDescriptor   = $07, //7: Object Descriptor
+    asnExternal        = $08, //8: External
+    asnReal            = $09, //9: Real
+    asnEnumerated      = $0A, //10: Enumerated
+    asnEmbedded_Pdv    = $0B, //11: Embedded Presentation Data Value
+    asnUtf8String      = $0C, //12: UTF8 string
+    asnSequence        = $10, //16: Sequence/sequence of
+    asnSet             = $11, //17: Set/set of
+    asnNumericString   = $12, //18: Numeric string
+    asnPrintableString = $13, //19: Printable string (ASCII subset)
+    asnT61String       = $14, //20: T61/Teletex string
+    asnVideotexString  = $15, //21: Videotex string
+    asnIA5String       = $16, //22: IA5/ASCII string
+    asnUtcTime         = $17, //23: UTC time
+    asnGeneralizedTime = $18, //24: Generalized time
+    asnGraphicString   = $19, //25: Graphic string
+    asnVisibleString   = $1A, //26: Visible string (ASCII subset)
+    asnGeneralString   = $1B, //27: General string
+    asnUniversalString = $1C, //28: Universal string
+    asnBmpString       = $1E  //30: Basic Multilingual Plane/Unicode string
+  );
+
+  TAsnTagConstructed = (
+    asnPrimitive       = 0,
+    asnConstructed     = 1
+  );
+
+  {*******************************************************}
+  {                       ASN Item                        }
+  {*******************************************************}
+  TASNItem = class
+  private
+    FChildren : TASNItemList;
+    FType     : TAsnUniversalTags;
+    FTag      : string;
+    FValue    : RawByteString;
+    FLength   : Byte;
+    FHLength  : Byte;
+    FFlag     : TAsnTagConstructed;
+  public
+    constructor Create(Tag: string; Value: RawByteString; Length: Byte); overload; virtual;
+    constructor Create; overload; virtual;
+    destructor Destroy; override;
+  end;
+
+  {*******************************************************}
+  {                      ASN Parser                       }
+  {*******************************************************}
+  TASNParser = class
+  private
+    FItems : TASNItemList;
+
+    function ParseItem(const Data: RawByteString; var Index: Integer; var Item: TAsnItem): Boolean;
+    function TryParseItem(const Data: RawByteString; var Item: TAsnItem): Boolean;
+    procedure ParseAsnItem(Parent: TASNItemList; const Data: RawByteString);
+  public
+    constructor Create; virtual;
+    destructor Destroy; override;
+  end;
+
+implementation
+
+const
+  TagNumberMask          = $1F; //Bits 5 - 1
+  TagConstructedFlagMask = $20; //Bit 6
+  TagClassMask           = $C0; //Bits 7 - 8
+  Bit8Mask               = $80; //Indefinite or long form
+  Bits7Mask              = $7F; //Bits 7 - 1
+
+{*******************************************************}
+{                       ASN Item                        }
+{*******************************************************}
+constructor TASNItem.Create(Tag: string; Value: RawByteString; Length: Byte);
+begin
+  inherited Create;
+
+  // Create child list
+  FChildren := TASNItemList.Create(True);
+
+  // Set Tag
+  FTag := Tag;
+  // Set Value
+  FValue := Value;
+  // Set Length
+  FLength := Length;
+end;
+
+constructor TASNItem.Create;
+begin
+  inherited Create;
+
+  // Create Child list
+  FChildren := TASNItemList.Create(True);
+end;
+
+destructor TASNItem.Destroy;
+begin
+  // Free Child list
+  FChildren.Free;
+
+  inherited Destroy;
+end;
+
+{*******************************************************}
+{                      ASN Parser                       }
+{*******************************************************}
+constructor TASNParser.Create;
+begin
+  inherited Create;
+
+  // Create Items list
+  FItems := TASNItemList.Create(True);
+end;
+
+destructor TASNParser.Destroy;
+begin
+  // Free Items list
+  FItems.Free;
+
+  inherited Destroy;
+end;
+
+function TASNParser.ParseItem(const Data: RawByteString; var Index: Integer; var Item: TAsnItem) : Boolean;
+var
+  B1, B2: Integer;
+  LL, LC: Cardinal;
+begin
+  //
+  Result := True;
+
+  //
+  LL := 0;
+
+  // Tag info
+  B1 := Byte(Data[Index]);
+  Inc(Index);
+
+  // Tag Type
+  Item.FType := TAsnUniversalTags(B1 and TagNumberMask);
+  // Constructed Flag
+  Item.FFlag := TAsnTagConstructed((B1 and TagConstructedFlagMask) shr 5);
+
+  // Tag length
+  Item.FLength := Byte(Data[Index]);
+  Inc(Index);
+
+  //
+  if (Item.FLength and Bit8Mask) <> 0 then
+  begin
+    //We have a multiple byte length
+    LL := Item.FLength and Bits7Mask;
+
+    if LL = 0 then
+    begin
+      Result := False;
+    end;
+
+    if LL > 4 then
+    begin
+      Result := False;
+    end;
+
+    Item.FLength := 0;
+    for LC := 0 to LL - 1 do
+    begin
+      B2 := Byte(Data[Index]);
+      Inc(Index);
+      Item.FLength := (Item.FLength shl 8) or B2;
+    end;
+  end;
+  // Header length
+  Item.FLength := LL + 2;
+  // Tag value
+  Item.FValue  := Copy(Data, Index, Item.FLength);
+
+  //
+  Inc(Index, Item.FLength);
+end;
+
+function TASNParser.TryParseItem(const Data: RawByteString; var Item: TAsnItem) : Boolean;
+var
+  Dummy: Integer;
+begin
+  Dummy := 1;
+  try
+    Result := ParseItem(Data, Dummy, Item);
+  except
+    Result := False;
+  end;
+end;
+
+procedure TASNParser.ParseAsnItem(Parent: TASNItemList; const Data: RawByteString);
+var
+  Index : Integer;
+  Item  : TASNItem;
+  Probe : TASNItem;
+  Value : string;
+begin
+  //
+  Index := 1;
+
+  //
+  while Index < Length(Data) do
+  begin
+
+    //
+    Item := TASNItem.Create;
+    ParseItem(Data, Index, Item);
+
+    //
+    if Item.FFlag = asnConstructed then
+    begin
+      ParseAsnItem(Item.FChildren, Item.FValue);
+    end else
+    begin
+
+      case Item.FType of
+        asnEoc: ;
+        asnBoolean: ;
+        asnInteger: ;
+        asnBitString: ;
+        asnOctetString: ;
+        asnNullTag: ;
+        asnOid: ;
+        asnObjDescriptor: ;
+        asnExternal: ;
+        asnReal: ;
+        asnEnumerated: ;
+        asnEmbedded_Pdv: ;
+        asnUtf8String: ;
+        asnSequence: ;
+        asnSet: ;
+        asnNumericString: ;
+        asnPrintableString: ;
+        asnT61String: ;
+        asnVideotexString: ;
+        asnIA5String: ;
+        asnUtcTime: ;
+        asnGeneralizedTime: ;
+        asnGraphicString: ;
+        asnVisibleString: ;
+        asnGeneralString: ;
+        asnUniversalString: ;
+        asnBmpString: ;
+      end;
+
+    end;
+
+    // Add item to parent list
+    Parent.Add(Item);
+
+  end;
+
+end;
+
+end.

@@ -1,0 +1,139 @@
+unit untEnterLicense;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Imaging.pngimage,
+  Vcl.ExtCtrls;
+
+type
+  TEdit = class(Vcl.StdCtrls.TEdit)
+    procedure WMPaste(var Msg: TWMPaste); message WM_PASTE;
+  end;
+
+  TfrmEnterLicense = class(TForm)
+    Panel1: TPanel;
+    Image1: TImage;
+    Label1: TLabel;
+    Label2: TLabel;
+    Panel2: TPanel;
+    btnCancel: TButton;
+    btnOK: TButton;
+    GroupBox1: TGroupBox;
+    edtLicense1: TEdit;
+    Label3: TLabel;
+    Label4: TLabel;
+    edtLicense2: TEdit;
+    edtLicense3: TEdit;
+    Label5: TLabel;
+    edtLicense4: TEdit;
+    Label6: TLabel;
+    edtLicense5: TEdit;
+    procedure FormCreate(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+    function Execute : TModalResult;
+    function LicenseKey : string;
+  end;
+
+var
+  frmEnterLicense: TfrmEnterLicense;
+
+implementation
+
+{$R *.dfm}
+
+uses untConst, ClipBrd, System.RegularExpressions;
+
+{*******************************************************}
+{           Catch PASTE in License Key Edit             }
+{*******************************************************}
+procedure TEdit.WMPaste(var Msg: TWMPaste);
+
+  function IsValidLicenseKeyFormat(const LK: string) : Boolean;
+  begin
+    Result := TRegEx.IsMatch(LK, LicenseKeyRegEx);
+  end;
+
+var
+  LK : string;
+  SL : TStringList;
+begin
+  LK := Clipboard.AsText;
+  //if IsValidLicenseKeyFormat(LK) then
+  begin
+    SL := TStringList.Create;
+    try
+      SL.Delimiter := '-';
+      SL.StrictDelimiter := True;
+      SL.DelimitedText := LK;
+      // Check length
+      if SL.Count = 5 then
+      begin
+        if Assigned(frmEnterLicense) then Caption := 'ASSIGNED';
+        exit;
+        // Part 1
+        frmEnterLicense.edtLicense1.Text := SL[0];
+        // Part 2
+        frmEnterLicense.edtLicense2.Text := SL[1];
+        // Part 3
+        {frmEnterLicense.edtLicense3.Text := SL[2];
+        // Part 4
+        frmEnterLicense.edtLicense4.Text := SL[3];
+        // Part 5
+        frmEnterLicense.edtLicense5.Text := SL[4];}
+      end else
+      begin
+        //
+      end;
+    finally
+      SL.Free;
+    end;
+  end;
+end;
+
+{*******************************************************}
+{                    Execute Modal                      }
+{*******************************************************}
+function TfrmEnterLicense.Execute: TModalResult;
+begin
+  // Clear Edit's
+  edtLicense1.Text := '';
+  edtLicense2.Text := '';
+  edtLicense3.Text := '';
+  edtLicense4.Text := '';
+  edtLicense5.Text := '';
+  // Show Dialog
+  Result := ShowModal;
+end;
+
+{*******************************************************}
+{                   Get License Key                     }
+{*******************************************************}
+function TfrmEnterLicense.LicenseKey: string;
+begin
+  Result := Format('%s-%s-%s-%s-%s', [
+    edtLicense1.Text,
+    edtLicense2.Text,
+    edtLicense3.Text,
+    edtLicense4.Text,
+    edtLicense5.Text
+  ]);
+end;
+
+{*******************************************************}
+{                  Form Create Event                    }
+{*******************************************************}
+procedure TfrmEnterLicense.FormCreate(Sender: TObject);
+var
+  I : Integer;
+begin
+  // Set width and height
+  Width  := 472;
+  Height := 210;
+end;
+
+end.

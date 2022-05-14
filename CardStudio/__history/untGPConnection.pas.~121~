@@ -1,0 +1,78 @@
+{*******************************************************}
+{                                                       }
+{            untGPConnection (connection.h)             }
+{                     Author: ERD                       }
+{                                                       }
+{       Global Platform connection.h translation        }
+{                                                       }
+{*******************************************************}
+
+unit untGPConnection;
+
+interface
+
+uses
+  WinApi.Windows,
+  untGPSecurity,
+  untPCSC;
+
+const
+  GlobalPlatform = 'globalplatform.dll';
+
+const
+  OPGP_ERROR_STATUS_SUCCESS = 0;
+  OPGP_ERROR_STATUS_FAILURE = 1;
+  ERROR_MESSAGE_LENGTH      = 256;
+  MAX_ATR_SIZE              = 33;
+
+const
+  OPGP_CARD_PROTOCOL_T0 = SCARD_PROTOCOL_T0;
+  OPGP_CARD_PROTOCOL_T1 = SCARD_PROTOCOL_T1;
+
+const
+  OPGP_TRACE_MODE_ENABLE  = 1;
+  OPGP_TRACE_MODE_DISABLE = 0;
+
+type
+  OPGP_ERROR_STATUS = record
+    errorStatus  : LONG;
+    errorCode    : LONG;
+    errorMessage : array [0..ERROR_MESSAGE_LENGTH -1] of WideChar;
+  end;
+
+  OPGP_CONNECTION_FUNCTIONS = record
+    establishContext : Pointer;
+    releaseContext   : Pointer;
+    cardConnect      : Pointer;
+    cardDisconnect   : Pointer;
+    listReaders      : Pointer;
+    sendAPDU         : Pointer;
+  end;
+
+  OPGP_CARD_CONTEXT = record
+    librarySpecific     : Pointer;
+    libraryName         : array [0..63] of WideChar;
+    libraryVersion      : array [0..31] of WideChar;
+    libraryHandle       : Pointer;
+    connectionFunctions : OPGP_CONNECTION_FUNCTIONS;
+  end;
+
+  OPGP_CARD_INFO = record
+    ATR             : array [1..MAX_ATR_SIZE] of Byte;
+    ATRLength       : DWORD;
+    logicalChannel  : Byte;
+    specVersion     : Byte;
+    librarySpecific : Pointer;
+  end;
+
+procedure OPGP_enable_trace_mode(enable: DWORD; &out: Pointer); cdecl; external GlobalPlatform;
+function OPGP_establish_context(var cardContext: OPGP_CARD_CONTEXT): OPGP_ERROR_STATUS; cdecl; external GlobalPlatform;
+function OPGP_release_context(var cardContext: OPGP_CARD_CONTEXT): OPGP_ERROR_STATUS; cdecl; external GlobalPlatform;
+function OPGP_list_readers(cardContext: OPGP_CARD_CONTEXT; readerNames: PWideChar; var readerNamesLength: DWORD): OPGP_ERROR_STATUS; cdecl; external GlobalPlatform;
+function OPGP_card_connect(cardContext: OPGP_CARD_CONTEXT; readerName: PWideChar; var cardInfo: OPGP_CARD_INFO; protocol: DWORD): OPGP_ERROR_STATUS; cdecl; external GlobalPlatform;
+function OPGP_card_disconnect(cardContext: OPGP_CARD_CONTEXT; var cardInfo: OPGP_CARD_INFO): OPGP_ERROR_STATUS; cdecl; external GlobalPlatform;
+function OPGP_send_APDU(cardContext: OPGP_CARD_CONTEXT; cardInfo: OPGP_CARD_INFO; var secInfo: GP211_SECURITY_INFO; capdu: PByte; capduLength: DWORD; rapdu: PByte; var rapduLength: DWORD): OPGP_ERROR_STATUS; cdecl; external GlobalPlatform;
+
+implementation
+
+end.

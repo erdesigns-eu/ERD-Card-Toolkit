@@ -1,0 +1,2304 @@
+{*******************************************************}
+{                                                       }
+{                       untEMV                          }
+{                     Author: ERD                       }
+{                                                       }
+{*******************************************************}
+
+unit untEMV;
+
+interface
+
+{$WARN IMPLICIT_STRING_CAST OFF}
+{$WARN IMPLICIT_STRING_CAST_LOSS OFF}
+
+uses
+  WinApi.Windows,
+  System.SysUtils,
+  System.Classes,
+  System.Generics.Collections,
+  untEMVTools,
+  untAPDUParser,
+  untASNParser,
+  untPCSC,
+  untATR, 
+  untATRList,
+  untBIN,
+  Vcl.ComCtrls;
+
+type
+  {*******************************************************}
+  {                  EMV Log Format Tag                   }
+  {*******************************************************}
+  TEMVLogFormatTag = class
+  private
+    FTag    : AnsiString;
+    FName   : String;
+    FLength : Byte;
+  public
+    property Tag: AnsiString read FTag write FTag;
+    property Name: string read FName write FName;
+    property Length: Byte read FLength write FLength;
+    
+    constructor Create(const ATag: AnsiString; const AName: string; const ALength: Byte); virtual;
+  end;
+
+  {*******************************************************}
+  {               EMV Log Format Tag List                 }
+  {*******************************************************}
+  TEMVLogFormatTagList = TObjectList<TEMVLogFormatTag>;
+
+  {*******************************************************}
+  {                      EMV Log Tag                      }
+  {*******************************************************}
+  TEMVLogTag = class
+  private
+    FTag    : AnsiString;
+    FName   : String;
+    FLength : Byte;
+    FValue  : AnsiString;
+  public
+    property Tag: AnsiString read FTag write FTag;
+    property Name: string read FName write FName;
+    property Length: Byte read FLength write FLength;
+    property Value: AnsiString read FValue write FValue;
+    
+    constructor Create(const ATag: AnsiString; const AName: string; const ALength: Byte; const AValue: AnsiString); virtual;
+  end; 
+
+  {*******************************************************}
+  {                   EMV Log Tag List                    }
+  {*******************************************************}
+  TEMVLogTagList = TObjectList<TEMVLogTag>;
+  
+  {*******************************************************}
+  {              EMV Application Log Record               }
+  {*******************************************************}
+  TEMVApplicationLogRecord = class
+  private
+    FIndex : Integer;
+    FValue : AnsiString;
+    FItems : TEMVLogTagList;
+  public
+    property RecordIndex: Integer read FIndex write FIndex;
+    property Value: AnsiString read FValue write FValue;
+    property Items: TEMVLogTagList read FItems;
+
+    procedure ParseLogRecord(const TagList: TEMVLogFormatTagList);
+    
+    constructor Create(const Index: Integer; const Value: AnsiString; const TagList: TEMVLogFormatTagList); overload; virtual;
+    constructor Create(const Index: Integer; const Value: AnsiString); overload; virtual;
+    destructor Destroy; override;
+  end;
+
+  {*******************************************************}
+  {           EMV Application Log Record List             }
+  {*******************************************************}
+  TEMVApplicationLogRecordList = TObjectList<TEMVApplicationLogRecord>;
+
+  {*******************************************************}
+  {               EMV Application Log File                }
+  {*******************************************************}
+  TEMVApplicationLogFile = class
+  private
+    FIndex   : Integer;
+    FRecords : TEMVApplicationLogRecordList;
+  public
+    property FileIndex: Integer read FIndex write FIndex;
+    property Records: TEMVApplicationLogRecordList read FRecords;
+
+    constructor Create(const Index: Integer); virtual;
+    destructor Destroy; override;
+  end;
+
+  {*******************************************************}
+  {             EMV Application Log File List             }
+  {*******************************************************}
+  TEMVApplicationLogFileList = TObjectList<TEMVApplicationLogFile>;
+  
+  {*******************************************************}
+  {              EMV Application File Record              }
+  {*******************************************************}
+  TEMVApplicationFileRecord = class
+  private
+    FIndex : Integer;
+    FItems : TASNItemList;
+  public
+    property RecordIndex: Integer read FIndex write FIndex;
+    property Items: TASNItemList read FItems;
+
+    constructor Create(const Index: Integer); virtual;
+    destructor Destroy; override;
+  end;
+
+  {*******************************************************}
+  {           EMV Application File Record List            }
+  {*******************************************************}
+  TEMVApplicationFileRecordList = TObjectList<TEMVApplicationFileRecord>;
+
+  {*******************************************************}
+  {                 EMV Application File                  }
+  {*******************************************************}
+  TEMVApplicationFile = class
+  private
+    FIndex   : Integer;
+    FRecords : TEMVApplicationFileRecordList;
+  public
+    property FileIndex: Integer read FIndex write FIndex;
+    property Records: TEMVApplicationFileRecordList read FRecords;
+
+    constructor Create(const Index: Integer); virtual;
+    destructor Destroy; override;
+  end;
+
+  {*******************************************************}
+  {              EMV Application File List                }
+  {*******************************************************}
+  TEMVApplicationFileList = TObjectList<TEMVApplicationFile>;
+
+  {*******************************************************}
+  {                    EMV Application                    }
+  {*******************************************************}
+  TEMVApplication = class
+  private
+    FAID    : AnsiString;                 // Application AID
+    FItems  : TASNItemList;               // ASN1/TLV Items
+    FATS    : TASNItemList;               // Answer to Select
+    FPO     : TASNItemList;               // Processing Options
+                                     
+    FATC    : TASNItem;                   // Application Transaction Counter
+    FLOATCR : TASNItem;                   // Last Online ATC Register
+    FPTC    : TASNItem;                   // Pin Try Counter
+    FLF     : TASNItem;                   // Log Format
+    FLFL    : TEMVLogFormatTagList;       // Log Fomat Tag List
+
+    FFiles  : TEMVApplicationFileList;    // List of Files with Records
+    FLFiles : TEMVApplicationLogFileList; // List of Log Files with Records
+  public
+    property AID: AnsiString read FAID write FAID;
+    property Items: TASNItemList read FItems;
+    property AnswerToSelect: TASNItemList read FATS;
+    property ProcessingOptions: TASNItemList read FPO;
+
+    property ATC: TASNItem read FATC write FATC;
+    property LastOnlineATCRegister: TASNItem read FLOATCR write FLOATCR;
+    property PinTryCounter: TASNItem read FPTC write FPTC;
+    property LogFormat: TASNItem read FLF write FLF;
+    property LogFormatTagList: TEMVLogFormatTagList read FLFL;
+
+    property Files: TEMVApplicationFileList read FFiles;
+    property LogFiles: TEMVApplicationLogFileList read FLFiles;
+
+    constructor Create(const AID: AnsiString); virtual;
+    destructor Destroy; override;
+  end;
+
+  {*******************************************************}
+  {                 EMV Application List                  }
+  {*******************************************************}
+  TEMVApplicationList = class(TObjectList<TEMVApplication>);
+
+  {*******************************************************}
+  {                      EMV Card ATR                     }
+  {*******************************************************}
+  TEMVCardATR = class
+  private
+    FScheme   : TCardScheme;
+    FType     : TCardType;
+    FCountry  : TCountryCode;
+    FIssuer   : AnsiString;
+    FCategory : AnsiString;
+    FValue    : AnsiString;
+  public
+    property Scheme: TCardScheme read FScheme write FScheme;
+    property &Type: TCardType read FType write FType;
+    property Country: TCountryCode read FCountry write FCountry;
+    property Issuer: AnsiString read FIssuer write FIssuer;
+    property Category: AnsiString read FCategory write FCategory;
+    property Value: AnsiString read FValue write FValue;
+  
+    procedure ParseATR(const ATR: AnsiString);
+  end;
+
+  {*******************************************************}
+  {                      EMV Card CPCL                    }
+  {*******************************************************}
+  TEMVCardCPCL = class
+  private
+    FValue        : string; // Raw CPCL Data string
+    FICFabricator : string; // Fabricator
+    FICType       : string; // IC Type
+    FOSPI         : string; // Operating System Provider Identifier
+    FOSRD         : string; // Operating System Release Date
+    FOSRL         : string; // Operating System Release Level
+    FICFabDate    : string; // IC Fabrication Date
+    FICSerial     : string; // IC Serial Number
+    FICBatchID    : string; // IC Batch Identifier
+    FICModFab     : string; // IC Module Fabricator
+    FICModPDate   : string; // IC Module Packaging Date
+    FICCManufact  : string; // ICC Manufacturer
+    FICEmbedDate  : string; // IC Embedding Date
+    FPPId         : string; // Prepersonalizer Identifier
+    FPPDate       : string; // Perpersonalization Date
+    FPPEquipment  : string; // Perpersonalization Equipment
+    FPersId       : string; // Personalizer Identifier
+    FPersDate     : string; // Personalization Date
+    FPEquipment   : string; // Personalization Equipment 
+  public
+    property Value: string read FValue write FValue;
+    property ICFabricator: string read FICFabricator write FICFabricator;
+    property ICType: string read FICType write FICType;
+    property OperatingSystemProviderIdentifier: string read FOSPI write FOSPI;
+    property OperatingSystemReleaseDate: string read FOSRD write FOSRD;
+    property OperatingSystemReleaseLevel: string read FOSRL write FOSRL;
+    property ICFabricationDate: string read FICFabDate write FICFabDate;
+    property ICSerialNumber: string read FICSerial write FICSerial;
+    property ICBatchIdentifier: string read FICBatchID write FICBatchID;
+    property ICModuleFabricator: string read FICModFab write FICModFab;
+    property ICModulePackagingDate: string read FICModPDate write FICModPDate;
+    property ICCManufacturer: string read FICCManufact write FICCManufact;
+    property ICEmbeddingDate: string read FICEmbedDate write FICEmbedDate;
+    property PrepersonalizerIdentifier: string read FPPId write FPPId;
+    property PrepersonalizationDate: string read FPPDate write FPPDate;
+    property PrepersonalizationEquipment: string read FPPEquipment write FPPEquipment;
+    property PersonalizerIdentifier: string read FPersId write FPersId;
+    property PersonalizationDate: string read FPersDate write FPersDate;
+    property PersonalizationEquipment: string read FPEquipment write FPEquipment;
+
+    procedure ParseCPCL(const CPCL: AnsiString);
+  end;
+
+  {*******************************************************}
+  {                 UTF8 Encoding for IST                 }
+  {*******************************************************}
+  TNoBOMUTF8 = class(TUTF8Encoding)
+  public
+    function GetPreamble : TBytes; override;
+  end;
+
+  {*******************************************************}
+  {                     On Log Event                      }
+  {*******************************************************}
+  TEMVLogEvent = procedure(Sender: TObject; APDU: AnsiString; Response: AnsiString) of object;
+
+  {*******************************************************}
+  {                       EMV Card                        }
+  {*******************************************************}
+  TEMVCard = class
+  private
+    FCardReader   : TPCSC;
+    FATR          : TEMVCardATR;
+    FCPCL         : TEMVCardCPCL;
+    FApplications : TEMVApplicationList;
+    FLog          : TStrings;
+    FOnLog        : TEMVLogEvent;
+
+    function SendAPDU(const APDU: AnsiString) : AnsiString;
+    function FormatData(const Data: AnsiString) : AnsiString;
+    function SelectApplication(const AID: AnsiString) : AnsiString;
+    function ProcessingOptions(const Application: TEMVApplication;var SW1: Byte; var SW2: Byte) : AnsiString;
+    function ReadRecord(const RecordIndex: Byte; const P2: Byte; var SW1: Byte; var SW2: Byte) : AnsiString;
+    function GetData(const B: Byte; var SW1: Byte; var SW2: Byte) : AnsiString;
+    function GetCPCL : AnsiString;
+    function FindTag(const ASN: TASNItem; const Tag: AnsiString) : TASNItem;
+  public
+    property CardReader: TPCSC read FCardReader;
+    property ATR: TEMVCardATR read FATR;
+    property CPCL: TEMVCardCPCL read FCPCL;
+    property Applications: TEMVApplicationList read FApplications;
+
+    property Log: TStrings read FLog;
+    property OnLog: TEMVLogEvent read FOnLog write FOnLog;
+
+    constructor Create(const PCSC: TPCSC); virtual;
+    destructor Destroy; override;
+
+    procedure Clear;
+    procedure ReadCard;
+    procedure LoadTree(var TreeView: TTreeView);
+
+    procedure LoadFromFile(const Filename: string);
+    procedure SaveToFile(const Filename: string);
+    procedure SaveToISTFile(const Filename: string);
+  end;
+
+const
+  {*******************************************************}
+  {          List of known AID's (from CardPeek)          }
+  {*******************************************************}
+  _AIDList: array [0..61] of String = (
+    'A0000000031010',       // Visa credit or debit
+    'A000000003101001',     // VISA Credit
+    'A000000003101002',     // VISA Debit
+    'A0000000032010',       // Visa electron
+    'A0000000032020',       // V pay
+    'A0000000033010',       // VISA Interlink
+    'A0000000034010',       // VISA Specific
+    'A0000000035010',       // VISA Specific
+    'A0000000036010',       // Domestic Visa Cash Stored Value
+    'A0000000036020',       // International Visa Cash Stored Value
+    'A0000000038002',       // Barclays/HBOS
+    'A0000000038010',       // Visa Plus
+    'A0000000039010',       // VISA Loyalty
+    'A000000003999910',     // VISA ATM
+    'A000000004',           // US Debit (MC)
+    'A0000000041010',       // Mastercard credit or debit
+    'A00000000410101213',   // MasterCard
+    'A00000000410101215',   // MasterCard
+    'A000000004110101213',  // Mastercard Credit
+    'A0000000042010',       // MasterCard Specific
+    'A0000000043010',       // MasterCard Specific
+    'A0000000043060',       // Mastercard Maestro
+    'A0000000044010',       // MasterCard Specific
+    'A0000000045010',       // MasterCard Specific
+    'A0000000046000',       // Mastercard Cirrus
+    'A0000000048002',       // NatWest or SecureCode Auth
+    'A0000000049999',       // Mastercard
+    'A0000000050001',       // UK Domestic Maestro - Switch (debit card) Maestro
+    'A0000000050002',       // UK Domestic Maestro - Switch (debit card) Solo
+    'A0000000250000',       // American Express (Credit/Debit)
+    'A00000002501',         // American Express
+    'A000000025010402',     // American Express
+    'A000000025010701',     // American Express ExpressPay
+    'A000000025010801',     // American Express
+    'A0000000291010',       // ATM card LINK (UK) ATM network
+    'A0000000421010',       // French CB
+    'A0000000422010',       // French CB
+    'A00000006510',         // JCB
+    'A0000000651010',       // JCB
+    'A00000006900',         // FR Moneo
+    'A000000098',           // US Debit (Visa)
+    'A0000000980848',       // Schwab Bank Debit Card
+    'A0000001211010',       // Dankort Danish domestic debit card
+    'A0000001410001',       // Pagobancomat Italian domestic debit card
+    'A000000152',           // US Debit (Discover)
+    'A0000001523010',       // Diners club/Discover
+    'A0000001544442',       // Banricompras Debito (Brazil)
+    'A0000001850002',       // UK Post Office Card Account card
+    'A0000002281010',       // SAMA Saudi Arabia domestic credit/debit card
+    'A0000002282010',       // SAMA Saudi Arabia domestic credit/debit card
+    'A0000002771010',       // Interac
+    'A0000003156020',       // Chipknip
+    'A0000003241010',       // Discover
+    'A0000003591010028001', // ZKA Girocard (Germany)
+    'A0000003710001',       // InterSwitch Verve Card (Nigeria)
+    'A0000004540010',       // Etranzact Genesis Card (Nigeria)
+    'A0000004540011',       // Etranzact Genesis Card 2 (Nigeria)
+    'A0000004766C',         // Google
+    'A0000005241010',       // RuPay (India)
+    'A000000620',           // US Debit (DNA)
+    'D27600002545500100',   // ZKA Girocard (Germany)
+    'D5780000021010'        // BankAxept Norwegian domestic debit card
+  );
+
+const
+  // EMVBook 3 v4.1 - 7.1 Mapping Data Objects
+  
+  // All files accessible using the READ RECORD command as defined in this
+  // specification containing data objects defined in this specification shall use
+  // SFIs in the range 1 to 10.
+  
+  // Files with SFIs in the range 11 to 20 are reserved for proprietary data to be
+  // specified by the individual payment systems.
+  
+  // Files with SFIs in the range 21 to 30 are reserved for proprietary data to be
+  // specified by the issuer.
+
+  {*******************************************************}
+  {              List of SFI (File Records)               }
+  {*******************************************************}
+  _SFIList : array [1..31] of Byte = (
+    $0C, // SFI 1 
+    $14, // SFI 2 
+    $1C, // SFI 3 
+    $24, // SFI 4 
+    $2C, // SFI 5 
+    $34, // SFI 6 
+    $3C, // SFI 7 
+    $44, // SFI 8 
+    $4C, // SFI 9 
+    $54, // SFI 10 
+    $5C, // SFI 11 
+    $64, // SFI 12 
+    $6C, // SFI 13 
+    $74, // SFI 14 
+    $7C, // SFI 15 
+    $84, // SFI 16 
+    $8C, // SFI 17 
+    $94, // SFI 18 
+    $9C, // SFI 19 
+    $A4, // SFI 20 
+    $AC, // SFI 21 
+    $B4, // SFI 22 
+    $BC, // SFI 23 
+    $C4, // SFI 24 
+    $CC, // SFI 25
+    $D4, // SFI 26 
+    $DC, // SFI 27 
+    $E4, // SFI 28 
+    $EC, // SFI 29 
+    $F4, // SFI 30 
+    $FC  // SFI 31
+  );
+
+  
+const
+  {*******************************************************}
+  {       Contact and Contactless Application AID's       }
+  {*******************************************************}
+  AIDP1 = '315041592E5359532E4444463031'; // 1PAY.SYS.DDF01
+  AIDP2 = '315041592E5359532E4444463032'; // 1PAY.SYS.DDF02
+
+implementation
+
+uses untConst, System.Math, System.JSON;
+
+{*******************************************************}
+{                  EMV Log Format Tag                   }
+{*******************************************************}
+constructor TEMVLogFormatTag.Create(const ATag: AnsiString; const AName: string; const ALength: Byte);
+begin
+  inherited Create;
+
+  // 
+  FTag    := ATag;
+  FName   := AName;
+  FLength := ALength;
+end;
+
+{*******************************************************}
+{                      EMV Log Tag                      }
+{*******************************************************}
+constructor TEMVLogTag.Create(const ATag: AnsiString; const AName: string; const ALength: Byte; const AValue: AnsiString);
+begin
+  inherited Create;
+
+  //
+  FTag    := ATag;
+  FName   := AName;
+  FLength := ALength;
+  FValue  := AValue;
+end;
+
+{*******************************************************}
+{              EMV Application Log Record               }
+{*******************************************************}
+constructor TEMVApplicationLogRecord.Create(const Index: Integer; const Value: AnsiString; const TagList: TEMVLogFormatTagList);
+begin
+  inherited Create;
+
+  // Create Log Tag List
+  FItems := TEMVLogTagList.Create(True);
+
+  // Set Record Index
+  FIndex := Index;
+  // Set Record Value
+  FValue := Value;
+
+  // Parse Log Record
+  ParseLogRecord(TagList);
+end;
+
+constructor TEMVApplicationLogRecord.Create(const Index: Integer; const Value: AnsiString);
+begin
+  // Create Log Tag List
+  FItems := TEMVLogTagList.Create(True);
+
+  // Set Record Index
+  FIndex := Index;
+  // Set Record Value
+  FValue := Value;
+end;
+
+destructor TEMVApplicationLogRecord.Destroy;
+begin
+  // Free Log Tag Items List
+  FItems.Free;
+
+  inherited Destroy;
+end;
+
+procedure TEMVApplicationLogRecord.ParseLogRecord(const TagList: TEMVLogFormatTagList);
+var
+  I : Integer;
+  P : Integer;
+begin
+  P := 1;
+  for I := 0 to TagList.Count -1 do
+  begin
+    Items.Add(TEMVLogTag.Create(
+      TagList.Items[I].Tag, 
+      TagList.Items[I].Name, 
+      TagList.Items[I].Length, 
+      Copy(Value, P, TagList.Items[I].Length)
+    ));
+    Inc(P, TagList.Items[I].Length);
+  end;
+end;
+
+{*******************************************************}
+{               EMV Application Log File                }
+{*******************************************************}
+constructor TEMVApplicationLogFile.Create(const Index: Integer);
+begin
+  inherited Create;
+
+  // Set File Index
+  FIndex := Index;
+  // Create list for holding records
+  FRecords := TEMVApplicationLogRecordList.Create(True);
+end;
+
+destructor TEMVApplicationLogFile.Destroy;
+begin
+  // Free list with records
+  FRecords.Free;
+
+  inherited Destroy;
+end;
+
+{*******************************************************}
+{              EMV Application File Record              }
+{*******************************************************}
+constructor TEMVApplicationFileRecord.Create(const Index: Integer);
+begin
+  inherited Create;
+
+  // Set Record Index
+  FIndex := Index;
+  // Create Items list
+  FItems := TASNItemList.Create(True);
+end;
+
+destructor TEMVApplicationFileRecord.Destroy;
+begin
+  // Free Items list
+  FItems.Free;
+
+  inherited Destroy;
+end;
+
+{*******************************************************}
+{                 EMV Application File                  }
+{*******************************************************}
+constructor TEMVApplicationFile.Create(const Index: Integer);
+begin
+  inherited Create;
+
+  // Set File Index
+  FIndex := Index;
+  // Create list for holding records
+  FRecords := TEMVApplicationFileRecordList.Create(True);
+end;
+
+destructor TEMVApplicationFile.Destroy;
+begin
+  // Free list with records
+  FRecords.Free;
+
+  inherited Destroy;
+end;
+
+{*******************************************************}
+{                    EMV Application                    }
+{*******************************************************}
+constructor TEMVApplication.Create(const AID: AnsiString);
+begin
+  inherited Create;
+
+  // Set Application AID
+  FAID := AID;
+  // Create Items list
+  FItems := TASNItemList.Create(True);
+  // Create Answer to Select list
+  FATS   := TASNItemList.Create;
+  // Create Processing Options list
+  FPO    := TASNItemList.Create;
+
+  // Application Transaction Counter
+  FATC := TASNItem.Create;
+  // Last Online ATC Register
+  FLOATCR := TASNItem.Create;
+  // Pin Try Counter
+  FPTC := TASNItem.Create;
+  // Log Format
+  FLF := TASNItem.Create;
+  // Log Format Tag List
+  FLFL := TEMVLogFormatTagList.Create(True);
+
+  // Create Files list
+  FFiles := TEMVApplicationFileList.Create(True);
+  // Create Log Files List
+  FLFiles := TEMVApplicationLogFileList.Create(True);
+end;
+
+destructor TEMVApplication.Destroy;
+begin
+  // Free Items list
+  FItems.Free;
+  // Free Answer to Select list
+  FATS.Free;
+  // Free Processing Options list
+  FPO.Free;
+
+  // Application Transaction Counter
+  FATC.Free;
+  // Last Online ATC Register
+  FLOATCR.Free;
+  // Pin Try Counter
+  FPTC.Free;
+  // Log Format
+  FLF.Free;
+  // Log Format Tag List
+  FLFL.Free;
+
+  // Free Files list
+  FFiles.Free;
+  // Free Log Files list
+  FLFiles.Free;
+
+  inherited Destroy;
+end;
+
+{*******************************************************}
+{                      EMV Card ATR                     }
+{*******************************************************}
+procedure TEMVCardATR.ParseATR(const ATR: AnsiString);
+var
+  X : Integer;
+  I : Integer;
+begin
+  FValue := StringReplace(Bin2HexExt(ATR, True, True), ' ', '', [rfReplaceAll]);
+  //
+  X := -1;
+  // Try and find ATR in list
+  for I := Low(ATRS) to High(ATRS) do
+  begin
+    if AnsiCompareStr(ATRS[I].atr_value, FValue) = 0 then
+    begin
+      X := I;
+      Break;
+    end;
+  end;
+  // 
+  if (X > -1) then
+  begin
+    FScheme   := ATRS[X].atr_scheme;
+    FType     := ATRS[X].atr_type;
+    FCountry  := ATRS[X].atr_country;
+    FIssuer   := ATRS[X].atr_issuer;
+    FCategory := ATRS[X].atr_category;
+  end else
+  begin
+    FScheme   := csUNKNOWN;
+    FType     := ctUNKNOWN;
+    FCountry  := ccUNKNOWN;
+    FIssuer   := '';
+    FCategory := '';
+  end;
+end;
+
+{*******************************************************}
+{                      EMV Card CPCL                    }
+{*******************************************************}
+procedure TEMVCardCPCL.ParseCPCL(const CPCL: AnsiString);
+begin
+  // Set RAW CPCL Data string
+  FValue := String(CPCL);
+  // Make sure we got a full CPCL data string
+  if (Length(CPCL) < 84) then Exit;
+  FICFabricator := Copy(CPCL, 1, 4);   // Fabricator
+  FICType       := Copy(CPCL, 5, 4);   // IC Type
+  FOSPI         := Copy(CPCL, 9, 4);   // Operating System Provider Identifier
+  FOSRD         := Copy(CPCL, 13, 4);  // Operating System Release Date
+  FOSRL         := Copy(CPCL, 17, 4);  // Operating System Release Level
+  FICFabDate    := Copy(CPCL, 21, 4); // IC Fabrication Date
+  FICSerial     := Copy(CPCL, 25, 8); // IC Serial Number
+  FICBatchID    := Copy(CPCL, 33, 4); // IC Batch Identifier
+  FICModFab     := Copy(CPCL, 37, 4); // IC Module Fabricator
+  FICModPDate   := Copy(CPCL, 41, 4); // IC Module Packaging Date
+  FICCManufact  := Copy(CPCL, 45, 4); // ICC Manufacturer
+  FICEmbedDate  := Copy(CPCL, 49, 4); // IC Embedding Date
+  FPPId         := Copy(CPCL, 53, 4); // Prepersonalizer Identifier
+  FPPDate       := Copy(CPCL, 57, 4); // Perpersonalization Date
+  FPPEquipment  := Copy(CPCL, 61, 8); // Perpersonalization Equipment
+  FPersId       := Copy(CPCL, 69, 4); // Personalizer Identifier
+  FPersDate     := Copy(CPCL, 73, 4); // Personalization Date
+  FPEquipment   := Copy(CPCL, 77, 8); // Personalization Equipment 
+end;
+
+{*******************************************************}
+{                 UTF8 Encoding for IST                 }
+{*******************************************************}
+function TNoBOMUTF8.GetPreamble: TBytes;
+begin
+  SetLength(Result, 0);
+end;
+
+{*******************************************************}
+{                        EMV Card                       }
+{*******************************************************}
+constructor TEMVCard.Create(const PCSC: TPCSC);
+begin
+  inherited Create;
+
+  // Assign Card Reader
+  FCardReader := PCSC;
+  // Create ATR
+  FATR := TEMVCardATR.Create;
+  // Create CPCL
+  FCPCL := TEMVCardCPCL.Create;
+  // Create Applications List
+  FApplications := TEMVApplicationList.Create(True);
+  // Create Log Strings
+  FLog := TStringList.Create;
+end;
+
+destructor TEMVCard.Destroy;
+begin
+  // Free ATR
+  FATR.Free;
+  // Free CPCL
+  FCPCL.Free;
+  // Free Applications List
+  FApplications.Free;
+  // FRee Log Strings
+  FLog.Free;
+
+  inherited Destroy;
+end;
+
+function TEMVCard.SendAPDU(const APDU: AnsiString) : AnsiString;
+begin
+  Result := Bin2HexExt(CardReader.GetResponseFromCard(Hex2Bin(APDU)));
+  // Add to Log
+  FLog.Add(Format('SEND: %s', [FormatData(StringReplace(APDU, ' ', '', [rfReplaceAll]))]));
+  FLog.Add(Format('RECV: %s', [FormatData(StringReplace(Result, ' ', '', [rfReplaceAll]))]));
+  // If Log Event is assigned
+  if Assigned(FOnLog) then FOnLog(Self, APDU, Result);
+end;
+
+function TEMVCard.FormatData(const Data: AnsiString) : AnsiString;
+var
+  I, X : Integer;
+begin
+  Result := '';
+  X := 1;
+  for I := 1 to Ceil(Length(Data) / 2) do
+  begin
+    Result := Result + Copy(Data, X, 2) + ' ';
+    Inc(X, 2);
+  end;
+  Result := Trim(Result);
+end;
+
+function TEMVCard.SelectApplication(const AID: AnsiString) : AnsiString;
+var
+  P : TAPDUParser;
+  A : AnsiString;
+label
+  Send;
+begin
+  P := TAPDUParser.Create('', '');
+  try
+    // Clear Result
+    Result := '';
+    // Assemble APDU
+    A := Format('00 A4 04 00 %.*x %s 00', [2, Length(AID) div 2, FormatData(AID)]);
+
+    Send:
+    // Send APDU
+    P := TAPDUParser.Create('', SendAPDU(A));
+    // Switch on response
+    case P.Response.SW1 of
+
+      // OK
+      $90: begin
+             Result := P.Response.Data;
+           end;
+
+      // Wrong Length LE
+      $6C: begin
+             // ReAssemble APDU and send again
+             A := Format('00 A4 04 00 %.*x %s 00', [2, P.Response.SW2, FormatData(AID)]);
+             GoTo Send;
+           end;
+
+      // Response Bytes still available
+      $61: begin
+             // Concatenate
+             A := Format('00 C0 00 00 %.*x', [2, P.Response.SW2]);
+             Result := Result + P.Response.Data;
+             GoTo Send;
+           end;
+
+      // Not Found
+      $6A: begin
+             //
+           end;
+
+    end;
+  finally
+    P.Free;
+  end;
+end;
+
+function TEMVCard.ProcessingOptions(const Application: TEMVApplication; var SW1: Byte; var SW2: Byte) : AnsiString;
+
+  function PDOLDataBlock(const PDOL: AnsiString) : AnsiString;
+  var
+    A : TASNParser;
+    I : Integer;
+    L : Integer;
+    S : AnsiString;
+  begin
+    S := '';
+    A := TASNParser.Create;
+    try
+      A.Parse(PDOL);
+      for I := 0 to A.Items.Count -1 do
+      begin
+        for L := 0 to A.Items.Items[I].Length -1 do
+        S := S + '00';
+      end;
+    finally
+      A.Free;
+    end;
+    Result := Format('83%.*x%s', [2, Length(S) div 2, S]);
+  end;
+
+var
+  P : TAPDUParser;
+  A : TASNItem;
+  X : AnsiString;
+
+  APDU : AnsiString;
+
+label
+  Send;
+begin
+  Result := '';
+  P := TAPDUParser.Create('', '');
+  try
+    X := '';
+    // Default APDU - if no PDOL
+    APDU := '80 A8 00 00 02 83 00 00';
+    // Try find PDOL
+    if (Application.AnswerToSelect.Count > 0) then
+    begin
+      A := FindTag(Application.AnswerToSelect.Items[0], '9F38');
+      // Assemble APDU
+      if Assigned(A) then X := PDOLDataBlock(A.Value);
+      // 
+      if (X <> '') then APDU := Format('80 A8 00 00 %.*x %s 00', [2, Length(X) div 2, FormatData(X)]);
+    end;
+    // Clear Result
+    Result := '';
+
+    Send:
+    // Send APDU
+    P := TAPDUParser.Create('', SendAPDU(APDU));
+    // Switch on response
+    case P.Response.SW1 of
+
+      // OK
+      $90: begin
+             Result := P.Response.Data;
+           end;
+
+      // Wrong Length LE
+      $6C: begin
+             // ReAssemble APDU and send again
+             APDU := Format('80 A8 00 00 %.*x', [2, P.Response.SW2]);
+             GoTo Send;
+           end;
+
+      // Response Bytes still available
+      $61: begin
+             // GET RESPONSE
+             APDU := Format('00 C0 00 00 %.*x', [2, P.Response.SW2]);
+             // Concatenate
+             Result := Result + P.Response.Data;
+             GoTo Send;
+           end;
+
+      // Not Found
+      $6A: begin
+             //
+           end;
+
+    end;
+    //
+    SW1 := P.Response.SW1;
+    SW2 := P.Response.SW2;
+    //
+  finally
+    P.Free;
+  end;
+end;
+
+function TEMVCard.ReadRecord(const RecordIndex: Byte; const P2: Byte; var SW1: Byte; var SW2: Byte) : AnsiString;
+var
+  P : TAPDUParser;
+  A : AnsiString;
+label
+  Send;
+begin
+  Result := '';
+  P := TAPDUParser.Create('', '');
+  try                               
+    // Clear Result
+    Result := '';
+    // Assemble APDU
+    A := Format('00 B2 %.*x %.*x 00', [2, RecordIndex, 2, P2]);
+
+    Send:
+    // Send APDU
+    P := TAPDUParser.Create('', SendAPDU(A));
+    // Switch on response
+    case P.Response.SW1 of
+
+      // OK
+      $90: begin
+             Result := P.Response.Data;
+           end;
+
+      // Wrong Length LE
+      $6C: begin
+             // ReAssemble APDU and send again
+             A := Format('00 B2 %.*x %.*x %.*x', [2, RecordIndex, 2, P2, 2, P.Response.SW2]);
+             GoTo Send;
+           end;
+
+      // Response Bytes still available
+      $61: begin
+             // GET RESPONSE
+             A := Format('00 C0 00 00 %.*x', [2, P.Response.SW2]);
+             // Concatenate
+             Result := Result + P.Response.Data;
+             GoTo Send;
+           end;
+
+      // Not Found
+      $6A: begin
+             //
+           end;
+
+    end;
+    //
+    SW1 := P.Response.SW1;
+    SW2 := P.Response.SW2;
+  finally
+    P.Free;
+  end;
+end;
+
+function TEMVCard.GetData(const B: Byte; var SW1: Byte; var SW2: Byte) : AnsiString;
+var
+  P : TAPDUParser;
+  A : AnsiString;
+label
+  Send;
+begin
+  Result := '';
+  P := TAPDUParser.Create('', '');
+  try
+    // Clear Result
+    Result := '';
+    // Assemble APDU
+    A := Format('80 CA 9F %.*x 00', [2, B]);
+
+    Send:
+    // Send APDU
+    P := TAPDUParser.Create('', SendAPDU(A));
+    // Switch on response
+    case P.Response.SW1 of
+
+      // OK
+      $90: begin
+             Result := P.Response.Data;
+           end;
+
+      // Wrong Length LE
+      $6C: begin
+             // ReAssemble APDU and send again
+             A := Format('80 CA 9F %.*x %.*x', [2, B, 2, P.Response.SW2]);
+             GoTo Send;
+           end;
+
+      // Response Bytes still available
+      $61: begin
+             // GET RESPONSE
+             A := Format('00 C0 00 00 %.*x', [2, P.Response.SW2]);
+             // Concatenate
+             Result := Result + P.Response.Data;
+             GoTo Send;
+           end;
+
+      // Not Found
+      $6A: begin
+             //
+           end;
+
+    end;
+    //
+    SW1 := P.Response.SW1;
+    SW2 := P.Response.SW2;
+  finally
+    P.Free;
+  end;
+end;
+
+function TEMVCard.GetCPCL: AnsiString;
+var
+  P : TAPDUParser;
+  A : AnsiString;
+label
+  Send;
+begin
+  Result := '';
+  P := TAPDUParser.Create('', '');
+  try
+    // Clear Result
+    Result := '';
+    // Assemble APDU
+    A := '80 CA 9F 7F 00';
+
+    Send:
+    // Send APDU
+    P := TAPDUParser.Create('', SendAPDU(A));
+    // Switch on response
+    case P.Response.SW1 of
+
+      // OK
+      $90: begin
+             Result := P.Response.Data;
+           end;
+
+      // Wrong Length LE
+      $6C: begin
+             // ReAssemble APDU and send again
+             A := Format('80 CA 9F 7F %.*x', [2, P.Response.SW2]);
+             GoTo Send;
+           end;
+
+      // Response Bytes still available
+      $61: begin
+             // GET RESPONSE
+             A := Format('00 C0 00 00 %.*x', [2, P.Response.SW2]);
+             // Concatenate
+             Result := Result + P.Response.Data;
+             GoTo Send;
+           end;
+
+      // Not Found
+      $6A: begin
+             //
+           end;
+
+    end;
+  finally
+    P.Free;
+  end;
+end;
+
+function TEMVCard.FindTag(const ASN: TASNItem; const Tag: AnsiString) : TASNItem;
+var
+  I : Integer;
+  A : TASNItem;
+begin
+  Result := nil;
+  if AnsiCompareText(ASN.Tag, Tag) = 0 then
+    Result := ASN
+  else
+    for I := 0 to ASN.Children.Count -1 do
+    begin
+      A := FindTag(ASN.Children.Items[I], Tag);
+      if Assigned(A) then Result := A;
+    end;
+end;
+
+procedure TEMVCard.Clear;
+begin
+  // Clear Log
+  FLog.Clear;
+  // Clear ATR
+  with ATR do
+  begin
+    Scheme   := csUNKNOWN;
+    &Type    := ctUNKNOWN;
+    Country  := ccUNKNOWN;
+    Issuer   := '';
+    Category := '';
+    Value    := '';
+  end;
+  // Clear Applications
+  Applications.Clear;
+  // Clear CPCL Data
+  with CPCL do
+  begin
+    Value                             := '';
+    ICFabricator                      := '';
+    ICType                            := '';
+    OperatingSystemProviderIdentifier := '';
+    OperatingSystemReleaseDate        := '';
+    OperatingSystemReleaseLevel       := '';
+    ICFabricationDate                 := '';
+    ICSerialNumber                    := '';
+    ICBatchIdentifier                 := '';
+    ICModuleFabricator                := '';
+    ICModulePackagingDate             := '';
+    ICCManufacturer                   := '';
+    ICEmbeddingDate                   := '';
+    PrepersonalizerIdentifier         := '';
+    PrepersonalizationDate            := '';
+    PrepersonalizationEquipment       := '';
+    PersonalizerIdentifier            := '';
+    PersonalizationDate               := '';
+    PersonalizationEquipment          := '';
+  end;
+end;
+
+procedure TEMVCard.ReadCard;
+var
+  AIDList : TStringList;
+
+  // Get P2 from SFI
+  function SFIToP2(const Value: AnsiString) : Byte;
+  var
+    B : TBytes;
+  begin
+    SetLength(B, Length(Value) div 2);
+    HexToBin(PAnsiChar(Value), PByte(B), Length(B));
+    Result := Byte(B[0] shl 3) or 4;
+  end;
+
+  // Load initial application and read available applications
+  procedure LoadInitialApplication(const AID: AnsiString; const AIDStr: AnsiString);
+  var
+    I : Integer;
+    P : TASNParser;
+    A : TASNItem;
+    B : Byte;
+
+    Application           : TEMVApplication;
+    ApplicationFile       : TEMVApplicationFile;
+    ApplicationFileRecord : TEMVApplicationFileRecord;
+    RecordIndex           : Integer;
+    RecordSW1             : Byte;
+    RecordSW2             : Byte;
+  begin
+    P := TASNParser.Create;
+    try
+      // Select initial application
+      P.Parse(SelectApplication(AID));
+      // Check if application data is loaded
+      if P.Items.Count > 0 then
+      begin
+        // Create Application
+        Application := TEMVApplication.Create(AIDStr);
+        // Try find tag 88 (SFI) so we can get a list of applications
+        A := FindTag(P.Items.Items[0], '88');
+        if Assigned(A) then
+        begin
+          // Get P2 from SFI
+          B := SFIToP2(A.Value);
+          // Create File
+          ApplicationFile := TEMVApplicationFile.Create(1);
+          // Read Records
+          RecordIndex := 0;
+          //
+          RecordSW1 := $00;
+          RecordSW2 := $00;
+          while (RecordSW1 <> $6A) and (RecordSW2 <> $83) do
+          begin
+            ApplicationFileRecord := TEMVApplicationFileRecord.Create(RecordIndex +1);
+            P.Parse(ReadRecord(RecordIndex +1, B, RecordSW1, RecordSW2), ApplicationFileRecord.Items);
+            if (ApplicationFileRecord.Items.Count > 0) then
+            begin
+              // If the first tag is 70 (AEF)
+              if ApplicationFileRecord.Items.Items[0].Tag = '70' then
+              begin
+                for I := 0 to ApplicationFileRecord.Items[0].Children.Count -1 do
+                if ApplicationFileRecord.Items[0].Children.Items[I].Tag = '61' then
+                begin
+                  // Try find Application Identifier
+                  A := FindTag(ApplicationFileRecord.Items[0].Children.Items[I], '4F');
+                  // If we found the AID, add it to the list.
+                  if Assigned(A) then AIDList.Add(A.Value);
+                end;
+              end;
+              // Add record to Application File
+              ApplicationFile.Records.Add(ApplicationFileRecord);
+            end else
+              ApplicationFileRecord.Free;
+            // Increase record index
+            Inc(RecordIndex);
+          end;
+          // Add Application File to the Application
+          Application.Files.Add(ApplicationFile);
+        end;
+        // Add items to application
+        for I := P.Items.Count -1 downto 0 do
+        Application.Items.Add(P.Items.ExtractAt(I));
+        // Add application to applications list
+        Applications.Add(Application);
+      end;
+    finally
+      P.Free;
+    end;
+  end;
+
+  // Try to split Log Format to Tags
+  procedure ParseLogFormat(const Application: TEMVApplication);
+
+    function FindEMVTag(const Tag: AnsiString) : Integer;
+    var
+      I : Integer;
+    begin
+      // Default
+      Result := -1;
+      // Loop over tag list
+      for I := Low(EMVTagList) to High(EMVTagList) do
+      if EMVTagList[I].Tag = Trim(Uppercase(Tag)) then
+      begin
+        // Found!
+        Result := I;
+        Break;
+      end;
+    end;
+
+  var
+    I : Integer;
+    X : Integer;
+    L : AnsiString;
+  begin
+    I := 1;
+    L := Application.LogFormat.Value;
+    while I < Length(L) do
+    begin
+      X := FindEMVTag(Copy(L, I, 2));
+      if (X > -1) then
+      begin
+        Application.LogFormatTagList.Add(TEMVLogFormatTag.Create(EMVTagList[X].Tag, EMVTagList[X].Name, StrToInt(Copy(L, I +2, 2))));
+        Inc(I, 4);
+      end else
+      begin
+        X := FindEMVTag(Copy(L, I, 4));
+        if (X > -1) then
+        Application.LogFormatTagList.Add(TEMVLogFormatTag.Create(EMVTagList[X].Tag, EMVTagList[X].Name, StrToInt(Copy(L, I +4, 2))));
+        Inc(I, 6);
+      end;
+    end;
+  end;
+
+  // Process found AID's
+  procedure ProcessAID(const AID: AnsiString);
+  var
+    I : Integer;
+    X : Integer;
+    Z : Byte;
+    P : TASNParser;
+
+    Application              : TEMVApplication;
+    ApplicationFile          : TEMVApplicationFile;
+    ApplicationFileRecord    : TEMVApplicationFileRecord;
+
+    ApplicationLogFile       : TEMVApplicationLogFile;
+    ApplicationLogFileRecord : TEMVApplicationLogRecord;
+                             
+    RecordIndex              : Integer;
+    RecordSW1                : Byte;
+    RecordSW2                : Byte;
+
+    ProcessingSW1            : Byte;
+    ProcessingSW2            : Byte;
+
+    GetDataSW1               : Byte;
+    GetDataSW2               : Byte;
+  begin
+    P := TASNParser.Create;
+    try
+      // Select initial application
+      P.Parse(SelectApplication(AID));
+      // Check if application data is loaded
+      if P.Items.Count > 0 then
+      begin
+        // Create Application
+        Application := TEMVApplication.Create(AID);
+        // Add items to application
+        for I := P.Items.Count -1 downto 0 do
+        Application.AnswerToSelect.Add(P.Items.ExtractAt(I));
+        // Get Processing options
+        P.Parse(ProcessingOptions(Application, ProcessingSW1, ProcessingSW2), Application.ProcessingOptions);
+        // Application files + records
+        // Loop SFI 1 - 10
+        for X := 1 to 10 do
+        begin
+          // Create File
+          ApplicationFile := TEMVApplicationFile.Create(X);
+          // Loop Records 1 - 6
+          for Z := 1 to 6 do
+          begin
+            P.Items.Clear;
+            ApplicationFileRecord := TEMVApplicationFileRecord.Create(Z);
+            P.Parse(ReadRecord(Z, _SFIList[X], RecordSW1, RecordSW2), ApplicationFileRecord.Items);
+            if (ApplicationFileRecord.Items.Count > 0) then
+            begin
+              // Add record to Application File
+              ApplicationFile.Records.Add(ApplicationFileRecord);
+            end else
+              ApplicationFileRecord.Free;
+          end;
+          if ApplicationFile.Records.Count > 0 then
+            Application.Files.Add(ApplicationFile)
+          else
+            ApplicationFile.Free;
+        end;
+        // ATC (Application Transaction Counter)
+        P.Parse(GetData($36, GetDataSW1, GetDataSW2));
+        if (GetDataSW1 = $90) and (GetDataSW2 = $00) then
+        begin
+          Application.ATC.Assign(P.Items.Items[0]);
+          P.Items.Clear;
+        end;
+        // Last Online ATC Register
+        P.Parse(GetData($13, GetDataSW1, GetDataSW2));
+        if (GetDataSW1 = $90) and (GetDataSW2 = $00) then
+        begin
+          Application.LastOnlineATCRegister.Assign(P.Items.Items[0]);
+          P.Items.Clear;
+        end;
+        // Pin Try Counter
+        P.Parse(GetData($17, GetDataSW1, GetDataSW2));
+        if (GetDataSW1 = $90) and (GetDataSW2 = $00) then
+        begin
+          Application.PinTryCounter.Assign(P.Items.Items[0]);
+          P.Items.Clear;
+        end;
+        // Log Format
+        P.Parse(GetData($4F, GetDataSW1, GetDataSW2));
+        if (GetDataSW1 = $90) and (GetDataSW2 = $00) then
+        begin
+          Application.LogFormat.Assign(P.Items.Items[0]);
+          // Try to parse Log Format result to Tags
+          ParseLogFormat(Application);
+          P.Items.Clear;
+        end;
+        // Application Log files + records
+        // Loop SFI 11 - 30
+        for X := 11 to 30 do
+        begin
+          // Create Log File
+          ApplicationLogFile := TEMVApplicationLogFile.Create(X);
+          // Loop Records 1 - 10
+          for Z := 1 to 10 do
+          begin
+            ApplicationLogFileRecord := TEMVApplicationLogRecord.Create(Z, ReadRecord(Z, _SFIList[X], RecordSW1, RecordSW2), Application.LogFormatTagList);
+            if (ApplicationLogFileRecord.Value <> '') then
+            begin
+              // Add record to Application Log File
+              ApplicationLogFile.Records.Add(ApplicationLogFileRecord);
+            end else
+              ApplicationLogFileRecord.Free;
+          end;
+          if ApplicationLogFile.Records.Count > 0 then
+            Application.LogFiles.Add(ApplicationLogFile)
+          else
+            ApplicationLogFile.Free;
+        end;
+        // Add application to applications list
+        Applications.Add(Application);
+      end;
+    finally
+      P.Free;
+    end;
+  end;
+
+var
+  I : Integer;
+begin
+  AIDList := TStringList.Create;
+  try
+    // Clear Data
+    Clear;
+    // Try parse and find ATR
+    ATR.ParseATR(CardReader.AttrCardATR);
+    // Try read CPCL Data
+    CPCL.ParseCPCL(GetCPCL);
+    // Try load AID's from Contact Application 
+    LoadInitialApplication(AIDP1, {'1PAY.SYS.DDF01'}AIDP1);
+    // Try load AID's from Contactless Application
+    LoadInitialApplication(AIDP2, {'1PAY.SYS.DDF02'}AIDP2);
+    // If no application AID's are found, add the known AID's to the list
+    if (AIDList.Count = 0) then
+    for I := Low(_AIDLIst) to High(_AIDList) do AIDList.Add(_AIDList[I]);
+    // Process found AID's
+    for I := 0 to AIDList.Count -1 do ProcessAID(AIDList[I]);
+  finally
+    AIDList.Free;
+  end;
+end;
+
+procedure TEMVCard.LoadTree(var TreeView: TTreeView);
+
+  function AddTreeNode(const Parent: TTreeNode; const Caption: string; const ImageIndex: Integer) : TTreeNode;
+  var
+    N : TTreeNode;
+  begin
+    N := TreeView.Items.AddChild(Parent, Caption);
+    N.ImageIndex := ImageIndex;
+    N.SelectedIndex := ImageIndex;
+    N.StateIndex := ImageIndex;
+    N.ExpandedImageIndex := ImageIndex;
+    Result := N;
+  end;
+
+  procedure ASNTree(const ASN: TASNItem; const TreeNode: TTreeNode; const ImageIndex: Integer);
+  var
+    I : Integer;
+    N : TTreeNode;
+  begin
+    // Add TreeNode
+    if ASN.Name <> '' then
+      N := AddTreeNode(TreeNode, ASN.Name, ImageIndex)
+    else
+      N := AddTreeNode(TreeNode, ASN.Tag, ImageIndex);
+    // Add children
+    for I := 0 to ASN.Children.Count -1 do ASNTree(ASN.Children[I], N, ImageIndex);
+  end;
+
+var
+  R : TTreeNode; // Root Node - Card
+  A : TTreeNode; // Application Node
+  F : TTreeNode; // File Node
+  N : TTreeNode; // Other Node
+  I : Integer;
+  X : Integer;
+  Y : Integer;
+  Z : Integer;
+begin
+  // Card - Root Node
+  R := AddTreeNode(nil, 'Card', 0);
+  // Card ATR
+  A := AddTreeNode(R, 'ATR', 0);
+  AddTreeNode(A, 'Scheme', 3);
+  AddTreeNode(A, 'Type', 3);
+  AddTreeNode(A, 'Country', 3);
+  AddTreeNode(A, 'Issuer', 3);
+  AddTreeNode(A, 'Category', 3);
+  // Applications
+  for I := 0 to Applications.Count -1 do
+  begin
+    // Add Application
+    if AnsiCompareStr(Applications.Items[I].AID, AIDP1) = 0 then
+      A := AddTreeNode(R, '1PAY.SYS.DDF01', 1)
+    else
+    if AnsiCompareStr(Applications.Items[I].AID, AIDP1) = 0 then
+      A := AddTreeNode(R, '1PAY.SYS.DDF02', 1)
+    else
+      A := AddTreeNode(R, Applications.Items[I].AID, 1);
+    // Add Items
+    if (Applications.Items[I].Items.Count > 0) then
+    for X := 0 to Applications.Items[I].Items.Count -1 do
+    ASNTree(Applications.Items[I].Items[X], A, 3);
+    // Add Answer to Select
+    if (Applications.Items[I].AnswerToSelect.Count > 0) then
+    begin
+      N := AddTreeNode(A, 'Answer to Select', 2);
+      for X := 0 to Applications.Items[I].AnswerToSelect.Count -1 do
+      ASNTree(Applications.Items[I].AnswerToSelect[X], N, 3);
+    end;
+    // Add Processing Options
+    if (Applications.Items[I].ProcessingOptions.Count > 0) then
+    begin
+      N := AddTreeNode(A, 'Processing Options', 2);
+      for X := 0 to Applications.Items[I].ProcessingOptions.Count -1 do
+      ASNTree(Applications.Items[I].ProcessingOptions[X], N, 3);
+    end;
+    // Add Files
+    if (Applications.Items[I].Files.Count > 0) then
+    for X := 0 to Applications.Items[I].Files.Count -1 do
+    begin
+      F := AddTreeNode(A, Format('File %d', [Applications.Items[I].Files.Items[X].FileIndex]), 2);
+      for Y := 0 to Applications.Items[I].Files.Items[X].Records.Count -1 do
+      begin
+        N := AddTreeNode(F, Format('Record %d', [Applications.Items[I].Files.Items[X].Records.Items[Y].RecordIndex]), 2);
+        for Z := 0 to Applications.Items[I].Files.Items[X].Records.Items[Y].Items.Count -1 do
+        ASNTree(Applications.Items[I].Files.Items[X].Records.Items[Y].Items.Items[Z], N, 3);
+      end;
+    end; 
+    // Add Log Files
+    if (Applications.Items[I].LogFiles.Count > 0) then
+    for X := 0 to Applications.Items[I].LogFiles.Count -1 do
+    begin
+      F := AddTreeNode(A, Format('Log File %d', [Applications.Items[I].LogFiles.Items[X].FileIndex]), 2);
+      for Y := 0 to Applications.Items[I].LogFiles.Items[X].Records.Count -1 do
+      begin
+        N := AddTreeNode(F, Format('Record %d', [Applications.Items[I].LogFiles.Items[X].Records.Items[Y].RecordIndex]), 2);
+        for Z := 0 to Applications.Items[I].LogFiles.Items[X].Records.Items[Y].Items.Count -1 do
+        AddTreeNode(N, Applications.Items[I].LogFiles.Items[X].Records.Items[Y].Items.Items[Z].Name, 3);
+      end;
+    end; 
+    // ATC
+    if (Applications.Items[I].ATC.Name <> '') then
+    AddTreeNode(A, Applications.Items[I].ATC.Name, 3);
+    // Last Online ATC Register
+    if (Applications.Items[I].LastOnlineATCRegister.Name <> '') then
+    AddTreeNode(A, Applications.Items[I].LastOnlineATCRegister.Name, 3);
+    // Pin Try Counter
+    if (Applications.Items[I].PinTryCounter.Name <> '') then
+    AddTreeNode(A, Applications.Items[I].PinTryCounter.Name, 3);
+    // Log Format
+    if (Applications.Items[I].LogFormat.Name <> '') then
+    AddTreeNode(A, Applications.Items[I].LogFormat.Name, 3);
+  end;
+  // Card CPCL
+  A := AddTreeNode(R, 'CPCL', 0);
+  AddTreeNode(A, 'Fabricator', 3);
+  AddTreeNode(A, 'IC Type', 3);
+  AddTreeNode(A, 'Operating System Provider Identifier', 3);
+  AddTreeNode(A, 'Operating System Release Date', 3);
+  AddTreeNode(A, 'Operating System Release Level', 3);
+  AddTreeNode(A, 'IC Fabrication Date', 3);
+  AddTreeNode(A, 'IC Serial Number', 3);
+  AddTreeNode(A, 'IC Batch Identifier', 3);
+  AddTreeNode(A, 'IC Module Fabricator', 3);
+  AddTreeNode(A, 'IC Module Packaging Date', 3);
+  AddTreeNode(A, 'ICC Manufacturer', 3);
+  AddTreeNode(A, 'IC Embedding Date', 3);
+  AddTreeNode(A, 'Prepersonalizer Identifier', 3);
+  AddTreeNode(A, 'Perpersonalization Date', 3);
+  AddTreeNode(A, 'Perpersonalization Equipment', 3);
+  AddTreeNode(A, 'Personalizer Identifier', 3);
+  AddTreeNode(A, 'Personalization Date', 3);
+  AddTreeNode(A, 'Personalization Equipment', 3);
+end;
+
+procedure TEMVCard.LoadFromFile(const Filename: string);
+
+  procedure ASNItem(Parent: TASNItemList; Item: TJSonValue); overload;
+  var
+    I : Integer;
+    A : TJSONArray;
+    N : TASNItem;
+  begin
+    // Create ASN Item
+    N := TASNItem.Create;
+
+    // Read Values
+    N.&Class       := StrToTagClasses((Item as TJSONObject).Get('Class').JsonValue.GetValue<string>);
+    N.Flag         := StrToConstructedFlag((Item as TJSONObject).Get('Constructed Flag').JsonValue.GetValue<string>);
+    N.Name         := (Item as TJSONObject).Get('Name').JsonValue.GetValue<string>;
+    N.Tag          := (Item as TJSONObject).Get('Tag').JsonValue.GetValue<string>;
+    N.Value        := (Item as TJSONObject).Get('Value').JsonValue.GetValue<string>;
+    N.ValueType    := StrToTagValueType((Item as TJSONObject).Get('Value Type').JsonValue.GetValue<string>);
+    N.HeaderLength := (Item as TJSONObject).Get('Header Length').JsonValue.GetValue<Integer>;
+    N.Length       := (Item as TJSONObject).Get('Length').JsonValue.GetValue<Integer>;
+
+    // Create children
+    A := (Item as TJSONObject).Get('Items').JsonValue as TJSONArray;
+    for I := 0 to A.Count -1 do ASNItem(N.Children, (A.Items[I] as TJSONValue));
+    // Add to parent
+    Parent.Add(N);
+  end;
+
+  function ASNItem(const Item: TJSONValue) : TASNItem; overload;
+  var
+    I : Integer;
+    A : TJSONArray;
+  begin
+    // Create ASN Item
+    Result := TASNItem.Create;
+
+    // Read Values
+    Result.&Class       := StrToTagClasses((Item as TJSONObject).Get('Class').JsonValue.GetValue<string>);
+    Result.Flag         := StrToConstructedFlag((Item as TJSONObject).Get('Constructed Flag').JsonValue.GetValue<string>);
+    Result.Name         := (Item as TJSONObject).Get('Name').JsonValue.GetValue<string>;
+    Result.Tag          := (Item as TJSONObject).Get('Tag').JsonValue.GetValue<string>;
+    Result.Value        := (Item as TJSONObject).Get('Value').JsonValue.GetValue<string>;
+    Result.ValueType    := StrToTagValueType((Item as TJSONObject).Get('Value Type').JsonValue.GetValue<string>);
+    Result.HeaderLength := (Item as TJSONObject).Get('Header Length').JsonValue.GetValue<Integer>;
+    Result.Length       := (Item as TJSONObject).Get('Length').JsonValue.GetValue<Integer>;
+
+    // Create children
+    A := (Item as TJSONObject).Get('Items').JsonValue as TJSONArray;
+    for I := 0 to A.Count -1 do ASNItem(Result.Children, (A.Items[I] as TJSONValue));
+  end;
+
+  procedure LogFormatTag(const Item: TJSONValue; const LogFormatTagList: TEMVLogFormatTagList);
+  begin
+    LogFormatTagList.Add(TEMVLogFormatTag.Create(
+      (Item as TJSONObject).Get('Tag').JsonValue.GetValue<string>,
+      (Item as TJSONObject).Get('Name').JsonValue.GetValue<string>,
+      (Item as TJSONObject).Get('Length').JsonValue.GetValue<Integer>
+    ));
+  end;
+
+  procedure ApplicationLogTag(const Item: TJSONValue; const List: TEMVLogTagList);
+  begin
+    List.Add(TEMVLogTag.Create(
+      (Item as TJSONObject).Get('Tag').JsonValue.GetValue<string>,
+      (Item as TJSONObject).Get('Name').JsonValue.GetValue<string>,
+      (Item as TJSONObject).Get('Length').JsonValue.GetValue<Integer>,
+      (Item as TJSONObject).Get('Value').JsonValue.GetValue<string>
+    ));
+  end;
+
+  procedure ApplicationLogFileRecord(const Item: TJSONValue; const Records: TEMVApplicationLogRecordList);
+  var
+    R : TEMVApplicationLogRecord;
+    X : TJSONArray;
+    I : Integer;
+  begin
+    // Create Record
+    R := TEMVApplicationLogRecord.Create(
+      (Item as TJSONObject).Get('Record Index').JsonValue.GetValue<Integer>,
+      (Item as TJSONObject).Get('Value').JsonValue.GetValue<string>
+    );
+    // Add Items to Record
+    X := (Item as TJSONObject).Get('Items').JsonValue as TJSONArray;
+    for I := 0 to X.Count -1 do ApplicationLogTag(X.Items[I], R.Items);
+    // Add File Record to File
+    Records.Add(R);
+  end;
+
+  procedure ApplicationLogFile(const Item: TJSONValue; const LogFileList: TEMVApplicationLogFileList);
+  var
+    F : TEMVApplicationLogFile;
+    X : TJSONArray;
+    I : Integer;
+  begin
+    // Create Application Log File
+    F := TEMVApplicationLogFile.Create((Item as TJSONObject).Get('Log File Index').JsonValue.GetValue<Integer>);
+    // Records
+    X := (Item as TJSONObject).Get('Records').JsonValue as TJSONArray;
+    for I := 0 to X.Count -1 do ApplicationLogFileRecord(X.Items[I], F.Records);
+    // Add File to File List
+    LogFileList.Add(F);
+  end;
+
+  procedure ApplicationFileRecord(const Item: TJSONValue; const Records: TEMVApplicationFileRecordList);
+  var
+    R : TEMVApplicationFileRecord;
+    X : TJSONArray;
+    I : Integer;
+  begin
+    // Create Record
+    R := TEMVApplicationFileRecord.Create((Item as TJSONObject).Get('Record Index').JsonValue.GetValue<Integer>);
+    // Add Items to Record
+    X := (Item as TJSONObject).Get('Items').JsonValue as TJSONArray;
+    for I := 0 to X.Count -1 do ASNItem(R.Items, X.Items[I]);
+    // Add File Record to File
+    Records.Add(R);
+  end;
+
+  procedure ApplicationFile(const Item: TJSONValue; const FileList: TEMVApplicationFileList);
+  var
+    F : TEMVApplicationFile;
+    X : TJSONArray;
+    I : Integer;
+  begin
+    // Create Application File
+    F := TEMVApplicationFile.Create((Item as TJSONObject).Get('File Index').JsonValue.GetValue<Integer>);
+    // Records
+    X := (Item as TJSONObject).Get('Records').JsonValue as TJSONArray;
+    for I := 0 to X.Count -1 do ApplicationFileRecord(X.Items[I], F.Records);
+    // Add File to File List
+    FileList.Add(F);
+  end;
+
+  procedure Application(const Item: TJSONValue);
+  var
+    A : TEMVApplication;
+    X : TJSONArray;
+    I : Integer;
+  begin
+    // Application AID
+    A := TEMVApplication.Create((Item as TJSONObject).Get('AID').JSONValue.GetValue<string>);
+    // Items
+    X := (Item as TJSONObject).Get('Items').JsonValue as TJSONArray;
+    for I := 0 to X.Count -1 do ASNItem(A.Items, X.Items[I]);
+    // Answer to Select
+    X := (Item as TJSONObject).Get('Answer to Select').JsonValue as TJSONArray;
+    for I := 0 to X.Count -1 do ASNItem(A.AnswerToSelect, X.Items[I]);
+    // Processing Options
+    X := (Item as TJSONObject).Get('Processing Options').JsonValue as TJSONArray;
+    for I := 0 to X.Count -1 do ASNItem(A.ProcessingOptions, X.Items[I]);
+    // ATC
+    A.ATC := ASNItem((Item as TJSONObject).Get('ATC').JsonValue);
+    // Last Online ATC Register
+    A.LastOnlineATCRegister := ASNItem((Item as TJSONObject).Get('Last Online ATC Register').JsonValue);
+    // Pin Try Counter
+    A.PinTryCounter := ASNItem((Item as TJSONObject).Get('Pin Try Counter').JsonValue);
+    // Log Format
+    A.LogFormat := ASNItem((Item as TJSONObject).Get('Log Format').JsonValue);
+    // Log Format Tag List
+    X := (Item as TJSONObject).Get('Log Format Tag List').JsonValue as TJSONArray;
+    for I := 0 to X.Count -1 do LogFormatTag(X.Items[I], A.LogFormatTagList);
+    // Files
+    X := (Item as TJSONObject).Get('Files').JsonValue as TJSONArray;
+    for I := 0 to X.Count -1 do ApplicationFile(X.Items[I], A.Files);
+    // Log Files
+    X := (Item as TJSONObject).Get('Log Files').JsonValue as TJSONArray;
+    for I := 0 to X.Count -1 do ApplicationLogFile(X.Items[I], A.LogFiles);
+    // Add Application to Applications List
+    Applications.Add(A);
+  end;
+
+var
+  S : TStringList;
+  F : TJSonValue;
+  X : TJSonValue;
+  A : TJSONArray;
+  I : Integer;
+begin
+  // Clear Data
+  Clear;
+  //
+  S := TStringList.Create;
+  try
+    // Load JSON from File
+    S.LoadFromFile(Filename, TEncoding.UTF8);
+    // Parse JSON
+    F := TJSONObject.ParseJSONValue(S.Text);
+    try
+      // ATR
+      X := (F as TJSONObject).Get('ATR').JsonValue;
+      ATR.Scheme   := StrToCardScheme((X as TJSONObject).Get('Scheme').JSONValue.GetValue<string>);
+      ATR.&Type    := StrToCardType((X as TJSONObject).Get('Type').JSONValue.GetValue<string>);
+      ATR.Country  := (X as TJSONObject).Get('Country').JSONValue.GetValue<Integer>;
+      ATR.Issuer   := (X as TJSONObject).Get('Issuer').JSONValue.GetValue<string>;
+      ATR.Category := (X as TJSONObject).Get('Category').JSONValue.GetValue<string>;
+      ATR.Value    := (X as TJSONObject).Get('Value').JSONValue.GetValue<string>;
+
+      // Applications
+      A := (F as TJSONObject).Get('Applications').JsonValue as TJSONArray;
+      for I := 0 to A.Count -1 do Application(A.Items[I]);
+
+      // CPCL
+      X := (F as TJSONObject).Get('CPCL').JsonValue;
+      CPCL.ICType                            := (X as TJSONObject).Get('IC Type').JSONValue.GetValue<string>;
+      CPCL.OperatingSystemProviderIdentifier := (X as TJSONObject).Get('Operating System Provider Identifier').JSONValue.GetValue<string>;
+      CPCL.OperatingSystemReleaseDate        := (X as TJSONObject).Get('Operating System Release Date').JSONValue.GetValue<string>;
+      CPCL.OperatingSystemReleaseLevel       := (X as TJSONObject).Get('Operating System Release Level').JSONValue.GetValue<string>;
+      CPCL.ICFabricationDate                 := (X as TJSONObject).Get('IC Fabrication Date').JSONValue.GetValue<string>;
+      CPCL.ICSerialNumber                    := (X as TJSONObject).Get('IC Serial Number').JSONValue.GetValue<string>;
+      CPCL.ICBatchIdentifier                 := (X as TJSONObject).Get('IC Batch Identifier').JSONValue.GetValue<string>;
+      CPCL.ICModuleFabricator                := (X as TJSONObject).Get('IC Module Fabricator').JSONValue.GetValue<string>;
+      CPCL.ICModulePackagingDate             := (X as TJSONObject).Get('IC Module Packaging Date').JSONValue.GetValue<string>;
+      CPCL.ICCManufacturer                   := (X as TJSONObject).Get('IC Manufacturer').JSONValue.GetValue<string>;
+      CPCL.ICEmbeddingDate                   := (X as TJSONObject).Get('IC Embedding Date').JSONValue.GetValue<string>;
+      CPCL.PrepersonalizerIdentifier         := (X as TJSONObject).Get('Prepersonalizer Identifier').JSONValue.GetValue<string>;
+      CPCL.PrepersonalizationDate            := (X as TJSONObject).Get('Prepersonalization Date').JSONValue.GetValue<string>;
+      CPCL.PrepersonalizationEquipment       := (X as TJSONObject).Get('Prepersonalization Equipment').JSONValue.GetValue<string>;
+      CPCL.PrepersonalizerIdentifier         := (X as TJSONObject).Get('Personalizer Identifier').JSONValue.GetValue<string>;
+      CPCL.PrepersonalizationDate            := (X as TJSONObject).Get('Personalization Date').JSONValue.GetValue<string>;
+      CPCL.PrepersonalizationEquipment       := (X as TJSONObject).Get('Personalization Equipment').JSONValue.GetValue<string>;
+    finally
+      F.Free;
+    end;
+  finally
+    S.Free;
+  end;
+end;
+
+procedure TEMVCard.SaveToFile(const Filename: string);
+
+  procedure EMVTag(Parent: TJSONArray; Item: TASNItem); overload;
+  var
+    T : TJSONObject;
+    C : TJSONArray;
+    I : Integer;
+  begin
+    T := TJSONObject.Create;
+    C := TJSONArray.Create;
+
+    // EMV Tag Classes
+    T.AddPair('Class', TagClassesToStr(Item.&Class));
+    // Constructed Flag
+    T.AddPair('Constructed Flag', ConstructedFlagToStr(Item.Flag));
+    // Tag Name
+    T.AddPair('Name', Item.Name);
+    // Tag
+    T.AddPair('Tag', Item.Tag);
+    // Value
+    T.AddPair('Value', Item.Value);
+    // Value Type
+    T.AddPair('Value Type', TagValueTypeToStr(Item.ValueType));
+    // Header Length
+    T.AddPair('Header Length', TJSONNumber.Create(Item.HeaderLength));
+    // Value Length
+    T.AddPair('Length', TJSONNumber.Create(Item.Length));
+
+    // Create EMV tag for children
+    for I := 0 to Item.Children.Count -1 do
+    EMVTag(C, Item.Children.Items[I]);
+    // Add children
+    T.AddPair('Items', C);
+    // Add T to Parent
+    Parent.Add(T);
+  end;
+
+  function EMVTag(Item: TASNItem) : TJSONObject; overload;
+  var
+    C : TJSONArray;
+    I : Integer;
+  begin
+    Result := TJSONObject.Create;
+
+    // EMV Tag Classes
+    Result.AddPair('Class', TagClassesToStr(Item.&Class));
+    // Constructed Flag
+    Result.AddPair('Constructed Flag', ConstructedFlagToStr(Item.Flag));
+    // Tag Name
+    Result.AddPair('Name', Item.Name);
+    // Tag
+    Result.AddPair('Tag', Item.Tag);
+    // Value
+    Result.AddPair('Value', Item.Value);
+    // Value Type
+    Result.AddPair('Value Type', TagValueTypeToStr(Item.ValueType));
+    // Header Length
+    Result.AddPair('Header Length', TJSONNumber.Create(Item.HeaderLength));
+    // Value Length
+    Result.AddPair('Length', TJSONNumber.Create(Item.Length));
+
+    // Create EMV tag for children
+    C := TJSONArray.Create;
+    for I := 0 to Item.Children.Count -1 do
+    EMVTag(C, Item.Children.Items[I]);
+    // Add children
+    Result.AddPair('Items', C);
+  end;
+
+  function LogFormatTag(const Item: TEMVLogFormatTag) : TJSONObject;
+  begin
+    Result := TJSONObject.Create;
+    // Tag
+    Result.AddPair('Tag', Item.Tag);
+    // Name
+    Result.AddPair('Name', Item.Name);
+    // Length
+    Result.AddPair('Length', TJSONNumber.Create(Item.Length));
+  end;
+
+  function ApplicationFileRecord(const Item: TEMVApplicationFileRecord) : TJSONObject;
+  var
+    C : TJSONArray;
+    I : Integer;
+  begin
+    Result := TJSONObject.Create;
+    // Record Index
+    Result.AddPair('Record Index', TJSONNumber.Create(Item.RecordIndex));
+    // Items
+    C := TJSONArray.Create;
+    for I := 0 to Item.Items.Count -1 do
+    EMVTag(C, Item.Items[I]);
+    Result.AddPair('Items', C);
+  end;
+
+  function ApplicationFile(const Item: TEMVApplicationFile) : TJSONObject;
+  var
+    C : TJSONArray;
+    I : Integer;
+  begin
+    Result := TJSONObject.Create;
+    // File Index
+    Result.AddPair('File Index', TJSONNumber.Create(Item.FileIndex));
+    // Records
+    C := TJSONArray.Create;
+    for I := 0 to Item.Records.Count -1 do
+    C.Add(ApplicationFileRecord(Item.Records.Items[I]));
+    Result.AddPair('Records', C);
+  end;
+
+  function LogTag(const Item: TEMVLogTag) : TJSONObject;
+  begin
+    Result := TJSONObject.Create;
+    // Tag
+    Result.AddPair('Tag', Item.Tag);
+    // Name
+    Result.AddPair('Name', Item.Name);
+    // Length
+    Result.AddPair('Length', TJSONNumber.Create(Item.Length));
+    // Value
+    Result.AddPair('Value', Item.Value);
+  end;
+
+  function ApplicationLogRecord(const Item: TEMVApplicationLogRecord) : TJSONObject;
+  var
+    C : TJSONArray;
+    I : Integer;
+  begin
+    Result := TJSONObject.Create;
+    // Record Index
+    Result.AddPair('Record Index', TJSONNumber.Create(Item.RecordIndex));
+    // Value
+    Result.AddPair('Value', Item.Value);
+    // Items
+    C := TJSONArray.Create;
+    for I := 0 to Item.Items.Count -1 do
+    C.Add(LogTag(Item.Items[I]));
+    Result.AddPair('Items', C);
+  end;
+
+  function ApplicationLogFile(const Item: TEMVApplicationLogFile) : TJSONObject;
+  var
+    C : TJSONArray;
+    I : Integer;
+  begin
+    Result := TJSONObject.Create;
+    // File Index
+    Result.AddPair('Log File Index', TJSONNumber.Create(Item.FileIndex));
+    // Records
+    C := TJSONArray.Create;
+    for I := 0 to Item.Records.Count -1 do
+    C.Add(ApplicationLogRecord(Item.Records.Items[I]));
+    Result.AddPair('Records', C);
+  end;
+
+var
+  S : TStringList;
+  F : TJSONObject;
+  I : Integer;
+  X : Integer;
+
+  ATRJ, CPCLJ, APPJ                    : TJSONObject;
+  APPA, ITMA, ATSA, POA, LFTA, FA, LFA : TJSONArray;
+begin
+  S := TStringList.Create;
+  F := TJSONObject.Create;
+  try
+    // ATR
+    ATRJ := TJSONObject.Create;
+    ATRJ.AddPair('Scheme', CardSchemeToStr(ATR.Scheme));
+    ATRJ.AddPair('Type', CardTypeToStr(ATR.&Type));
+    ATRJ.AddPair('Country', TJSONNumber.Create(ATR.Country));
+    ATRJ.AddPair('Issuer', ATR.Issuer);
+    ATRJ.AddPair('Category', ATR.Category);
+    ATRJ.AddPair('Value', ATR.Value);
+    F.AddPair('ATR', ATRJ);
+
+    // Applications
+    APPA := TJSONArray.Create;
+    for I := 0 to Applications.Count -1 do
+    begin
+      APPJ := TJSONObject.Create;
+      // Application AID
+      APPJ.AddPair('AID', Applications.Items[I].AID);
+      // Items
+      ITMA := TJSONArray.Create;
+      for X := 0 to Applications.Items[I].Items.Count -1 do
+      EMVTag(ITMA, Applications.Items[I].Items[X]);
+      APPJ.AddPair('Items', ITMA);
+      // Answer to Select
+      ATSA := TJSONArray.Create;
+      for X := 0 to Applications.Items[I].AnswerToSelect.Count -1 do
+      EMVTag(ATSA, Applications.Items[I].AnswerToSelect[X]);
+      APPJ.AddPair('Answer to Select', ATSA);
+      // Processing Options
+      POA := TJSONArray.Create;
+      for X := 0 to Applications.Items[I].ProcessingOptions.Count -1 do
+      EMVTag(POA, Applications.Items[I].ProcessingOptions[X]);
+      APPJ.AddPair('Processing Options', POA);
+      // ATC
+      APPJ.AddPair('ATC', EMVTag(Applications.Items[I].ATC));
+      // Last Online ATC Register
+      APPJ.AddPair('Last Online ATC Register', EMVTag(Applications.Items[I].LastOnlineATCRegister));
+      // PinTryCounter
+      APPJ.AddPair('Pin Try Counter', EMVTag(Applications.Items[I].PinTryCounter));
+      // Log Format
+      APPJ.AddPair('Log Format', EMVTag(Applications.Items[I].LogFormat));
+      // Log Format Tag List
+      LFTA := TJSONArray.Create;
+      for X := 0 to Applications.Items[I].LogFormatTagList.Count -1 do
+      LFTA.Add(LogFormatTag(Applications.Items[I].LogFormatTagList.Items[X]));
+      APPJ.AddPair('Log Format Tag List', LFTA);
+      // Files
+      FA := TJSONArray.Create;
+      for X := 0 to Applications.Items[I].Files.Count -1 do
+      FA.Add(ApplicationFile(Applications.Items[I].Files.Items[X]));
+      APPJ.AddPair('Files', FA);
+      // Log Files
+      LFA := TJSONArray.Create;
+      for X := 0 to Applications.Items[I].LogFiles.Count -1 do
+      LFA.Add(ApplicationLogFile(Applications.Items[I].LogFiles.Items[X]));
+      APPJ.AddPair('Log Files', LFA);
+      // Add Application to Array
+      APPA.Add(APPJ);
+    end;
+    F.AddPair('Applications', APPA);
+
+    // CPCL
+    CPCLJ := TJSONObject.Create;
+    CPCLJ.AddPair('IC Type', CPCL.ICType);
+    CPCLJ.AddPair('Operating System Provider Identifier', CPCL.OperatingSystemProviderIdentifier);
+    CPCLJ.AddPair('Operating System Release Date', CPCL.OperatingSystemReleaseDate);
+    CPCLJ.AddPair('Operating System Release Level', CPCL.OperatingSystemReleaseLevel);
+    CPCLJ.AddPair('IC Fabrication Date', CPCL.ICFabricationDate);
+    CPCLJ.AddPair('IC Serial Number', CPCL.ICSerialNumber);
+    CPCLJ.AddPair('IC Batch Identifier', CPCL.ICBatchIdentifier);
+    CPCLJ.AddPair('IC Module Fabricator', CPCL.ICModuleFabricator);
+    CPCLJ.AddPair('IC Module Packaging Date', CPCL.ICModulePackagingDate);
+    CPCLJ.AddPair('IC Manufacturer', CPCL.ICCManufacturer);
+    CPCLJ.AddPair('IC Embedding Date', CPCL.ICEmbeddingDate);
+    CPCLJ.AddPair('Prepersonalizer Identifier', CPCL.PrepersonalizerIdentifier);
+    CPCLJ.AddPair('Prepersonalization Date', CPCL.PrepersonalizationDate);
+    CPCLJ.AddPair('Prepersonalization Equipment', CPCL.PrepersonalizationEquipment);
+    CPCLJ.AddPair('Personalizer Identifier', CPCL.PersonalizerIdentifier);
+    CPCLJ.AddPair('Personalization Date', CPCL.PersonalizationDate);
+    CPCLJ.AddPair('Personalization Equipment', CPCL.PersonalizationEquipment);
+    F.AddPair('CPCL', CPCLJ);
+
+    // Create JSON
+    S.Text := F.ToJSON;
+    // Save JSON to File
+    S.SaveToFile(Filename, TEncoding.UTF8);
+  finally
+    S.Free;
+    F.Free;
+  end;
+end;
+
+procedure TEMVCard.SaveToISTFile(const Filename: string);
+
+  function ApplicationAPDULine(const Application: TEMVApplication; const Item: TASNItem) : AnsiString;
+  var
+    L : Integer;
+    S : AnsiString;
+    X : AnsiString;
+  begin
+    // Clear Result
+    Result := '';
+    // Format APDU
+    X := Format('%s%.*x%s', [Item.Tag, 2, Length(Item.Value) div 2, Item.Value]);
+    S := Format('00A40400%.*x%s%.*x%s', [2, Length(Application.AID) div 2, Application.AID, 2, Length(X) div 2, X]);
+    L := (Length(S) div 2) +1;
+    // Format Result
+    if (L > 0) then Result := Format('%s00A40102%.*x%.*x%s', [ISTAPDUPrefix, 2, L, 2, L, S]);
+  end;
+
+  function ProcessingOptionsAPDULine(const Item: TASNItem) : AnsiString;
+  var
+    L : Integer;
+    S : AnsiString;
+    X : AnsiString;
+  begin
+    // Clear Result
+    Result := '';
+    // Format APDU
+    X := Format('%s%.*x%s', [Item.Tag, 2, Length(Item.Value) div 2, Item.Value]);
+    S := Format('80A8000000%.*x%s', [2, Length(X) div 2, X]);
+    L := (Length(S) div 2) +1;
+    // Format Result
+    if (L > 0) then Result := Format('%s00A40102%.*x%.*x%s', [ISTAPDUPrefix, 2, L, 2, L, S]);
+  end;
+
+  function RecordAPDULine(const Item: TASNItem; const FileIndex: Integer; const RecordIndex: Integer) : AnsiString;
+  var
+    L : Integer;
+    S : AnsiString;
+    X : AnsiString;
+  begin
+    // Clear Result
+    Result := '';
+
+    //
+    X := Item.Tag;
+    S := Item.Value;
+
+    // Length of Value
+    L := System.Length(Item.Value) div 2;
+    // Format APDU
+    if (L >= 100) then
+      X := Format('%s81%.*x%s', [Item.Tag, 2, L, Item.Value])
+    else
+      X := Format('%s%.*x%s', [Item.Tag, 2, L, Item.Value]);
+    // Format APDU
+    S := Format('00B2%.*x%.*x00%.*x%s', [2, RecordIndex, 2, _SFIList[FileIndex], 2, Length(X) div 2, X]);
+    L := Length(S);
+    L := (Length(S) div 2) +1;
+    // Format Result
+    if (L > 0) then
+    begin
+      if (L > 255) then
+        Result := Format('%s00A40102%.*x%s', [ISTAPDUPrefix, 6, L, S])
+      else
+        Result := Format('%s00A40102%.*x%.*x%s', [ISTAPDUPrefix, 2, L, 2, L, S]);
+    end;
+    //if (L > 0) then Result := Format('%s00A40102%.*x%.*x%s', [ISTAPDUPrefix, 2, L, 2, L, S]);
+  end;
+
+  function ATCAPDULine(const Item: TASNItem) : AnsiString;
+  var
+    L : Integer;
+    S : AnsiString;
+    X : AnsiString;
+  begin
+    // Clear Result
+    Result := '';
+    // Format APDU
+    X := Format('%s%.*x%s', [Item.Tag, 2, Length(Item.Value) div 2, Item.Value]);
+    S := Format('80CA9F3600%.*x%s', [2, Length(X) div 2, X]);
+    L := (Length(S) div 2) +1;
+    // Format Result
+    if (L > 0) then Result := Format('%s00A40102%.*x%.*x%s', [ISTAPDUPrefix, 2, L, 2, L, S]);
+  end;
+
+  function LastOnlineATCRegisterLine(const Item: TASNItem) : AnsiString;
+  var
+    L : Integer;
+    S : AnsiString;
+    X : AnsiString;
+  begin
+    // Clear Result
+    Result := '';
+    // Format APDU
+    X := Format('%s%.*x%s', [Item.Tag, 2, Length(Item.Value) div 2, Item.Value]);
+    S := Format('80CA9F1300%.*x%s', [2, Length(X) div 2, X]);
+    L := (Length(S) div 2) +1;
+    // Format Result
+    if (L > 0) then Result := Format('%s00A40102%.*x%.*x%s', [ISTAPDUPrefix, 2, L, 2, L, S]);
+  end;
+
+  function PinTryCounterLine(const Item: TASNItem) : AnsiString;
+  var
+    L : Integer;
+    S : AnsiString;
+    X : AnsiString;
+  begin
+    // Clear Result
+    Result := '';
+    // Format APDU
+    X := Format('%s%.*x%s', [Item.Tag, 2, Length(Item.Value) div 2, Item.Value]);
+    S := Format('80CA9F1700%.*x%s', [2, Length(X) div 2, X]);
+    L := (Length(S) div 2) +1;
+    // Format Result
+    if (L > 0) then Result := Format('%s00A40102%.*x%.*x%s', [ISTAPDUPrefix, 2, L, 2, L, S]);
+  end;
+
+  function LogFormatLine(const Item: TASNItem) : AnsiString;
+  var
+    L : Integer;
+    S : AnsiString;
+    X : AnsiString;
+  begin
+    // Clear Result
+    Result := '';
+    // Format APDU
+    X := Format('%s%.*x%s', [Item.Tag, 2, Length(Item.Value) div 2, Item.Value]);
+    S := Format('80CA9F4F00%.*x%s', [2, Length(X) div 2, X]);
+    L := (Length(S) div 2) +1;
+    // Format Result
+    if (L > 0) then Result := Format('%s00A40102%.*x%.*x%s', [ISTAPDUPrefix, 2, L, 2, L, S]);
+  end;
+
+  function CPCLLine : AnsiString;
+  var
+    L : Integer;
+    S : AnsiString;
+    X : AnsiString;
+  begin
+    // Clear Result
+    Result := '';
+    // Format APDU
+    X := Format('%s%.*x%s', ['9F7F', 2, Length(CPCL.Value) div 2, CPCL.Value]);
+    S := Format('80CA9F7F00%.*x%s', [2, Length(X) div 2, X]);
+    L := (Length(S) div 2) +1;
+    // Format Result
+    if (L > 0) then Result := Format('%s00A40102%.*x%.*x%s', [ISTAPDUPrefix, 2, L, 2, L, S]);
+  end;
+
+var
+  A : Integer;
+  X : Integer;
+  F : Integer;
+  R : Integer;
+  S : TStringList;
+  E : TNoBOMUTF8;
+begin
+  S := TStringList.Create;
+  try
+    with S do
+    begin
+      // Add Header
+      Add(ISTHeader);
+      Add('');
+      // Mode 211
+      Add('mode_211');
+      // Establish Context
+      Add('establish_context');
+      // Enable Trace
+      Add('enable_trace');
+      // Enable Timer
+      Add('enable_timer');
+      // Connect cardreader
+      Add('card_connect');
+      // Add Applications
+      if Applications.Count > 0 then
+      begin
+        // First AID
+        Add(Format('%s00A40400%.*x%s', [ISTAPDUPrefix, 2, Length(Applications.Items[0].AID) div 2, Applications.Items[0].AID]));
+        // Some Unknown APDU's (See X1 Source: Reader.cpp -> MakeVISA_IST)
+        Add(Format('%s00a401060100', [ISTAPDUPrefix]));
+        Add(Format('%s00a40101', [ISTAPDUPrefix]));
+        Add(Format('%s00a40105', [ISTAPDUPrefix]));
+        // Add Applications
+        for A := 0 to Applications.Count -1 do
+        begin
+          // Application
+          for X := 0 to Applications.Items[A].Items.Count -1 do
+          Add(ApplicationAPDULine(Applications.Items[A], Applications.Items[A].Items[X]));
+          for X := 0 to Applications.Items[A].AnswerToSelect.Count -1 do
+          Add(ApplicationAPDULine(Applications.Items[A], Applications.Items[A].AnswerToSelect[X]));
+          // Processing Options
+          for X := 0 to Applications.Items[A].ProcessingOptions.Count -1 do
+          Add(ProcessingOptionsAPDULine(Applications.Items[A].ProcessingOptions[X]));
+          // Records
+          for F := 0 to Applications.Items[A].Files.Count -1 do
+          for R := 0 to Applications.Items[A].Files[F].Records.Count -1 do
+          for X := 0 to Applications.Items[A].Files[F].Records[R].Items.Count -1 do
+          Add(RecordAPDULine(Applications.Items[A].Files[F].Records[R].Items[X], Applications.Items[A].Files[F].FileIndex, Applications.Items[A].Files[F].Records[R].RecordIndex));
+          // ATC
+          if (Applications.Items[A].ATC.Value <> '') then
+          Add(ATCAPDULine(Applications.Items[A].ATC));
+          // Last ATC Online Register
+          if (Applications.Items[A].LastOnlineATCRegister.Value <> '') then
+          Add(LastOnlineATCRegisterLine(Applications.Items[A].LastOnlineATCRegister));
+          // Pin Try Counter
+          if (Applications.Items[A].PinTryCounter.Value <> '') then
+          Add(PinTryCounterLine(Applications.Items[A].PinTryCounter));
+          // Log Format
+          if (Applications.Items[A].LogFormat.Value <> '') then
+          Add(LogFormatLine(Applications.Items[A].LogFormat));
+          //
+          Add(Format('%s00A40102090900B2%.*X0C00026A83', [ISTAPDUPrefix, 2, X]));
+        end;
+      end;
+      // Add CPCL
+      if (CPCL.Value <> '') then Add(CPCLLine);
+
+      Add(Format('%s00a40102323280ae8000002B77299F2701809F360200499F26088A3470B2406A11489F10120114A500030200003B0F00000000000000FF', [ISTAPDUPrefix]));
+      Add(Format('%s00a40102323280ae4000002B77299F2701409F360200499F2608BA9A9D755485B3EC9F101201146500030200003B0F00000000000000FF', [ISTAPDUPrefix]));
+      Add(Format('%s00a40102323280ae0000002B77299F2701009F360200499F26088A3470B2406A11489F10120114A500030200003B0F00000000000000FF', [ISTAPDUPrefix]));
+      Add(Format('%s00a4010209090020008000029000', [ISTAPDUPrefix]));
+      Add(Format('%s00a401060100', [ISTAPDUPrefix]));
+      // Disconnect cardreader
+      Add('card_disconnect');
+      // Release context
+      Add('release_context');
+    end;
+    // Save IST to File
+    E := TNoBOMUTF8.Create;
+    S.SaveToFile(Filename, E);
+    E.Free;
+  finally
+    S.Free;
+  end;
+end;
+
+{$WARN IMPLICIT_STRING_CAST ON}
+{$WARN IMPLICIT_STRING_CAST_LOSS ON}
+
+end.

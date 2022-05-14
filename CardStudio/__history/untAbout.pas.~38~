@@ -1,0 +1,130 @@
+unit untAbout;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls, Vcl.StdCtrls,
+  Vcl.Imaging.pngimage;
+
+type
+  TfrmAbout = class(TForm)
+    Panel2: TPanel;
+    btnClose: TButton;
+    imgLogo: TImage;
+    lblAppTitle: TLabel;
+    lblAppEdition: TLabel;
+    Panel1: TPanel;
+    Label1: TLabel;
+    lblLicenseKey: TLabel;
+    memVersionInfo: TMemo;
+    lblTG: TLabel;
+    procedure FormCreate(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure btnCloseClick(Sender: TObject);
+    procedure lblTGMouseEnter(Sender: TObject);
+    procedure lblTGMouseLeave(Sender: TObject);
+    procedure lblTGClick(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  frmAbout: TfrmAbout;
+
+implementation
+
+{$R *.dfm}
+
+uses untConst, untBIN_AMEX, untBIN_DINERSCLUB, untBIN_DISCOVER,
+     untBIN_JCB, untBIN_MAESTRO, untBIN_MASTERCARD, untBIN_VISA,
+     untLicense, ShellAPI;
+
+{*******************************************************}
+{                  Form Create Event                    }
+{*******************************************************}
+procedure TfrmAbout.FormCreate(Sender: TObject);
+begin
+  // Set width and height
+  Height := 380;
+  Width  := 500;
+  // Caption
+  Caption := Format('%s %s by %s', [ApplicationTitle, ApplicationBuild, ApplicationAuthor]);
+  // Set labels
+  lblAppTitle.Caption   := Format('%s %s', [ApplicationTitle, ApplicationBuild]);
+  lblAppEdition.Caption := Format('%s (%s)', [ApplicationEdition, ApplicationVersion]);
+  // Load info in memo
+  with memVersionInfo.Lines do
+  begin
+    // Clear Memo
+    Clear;
+    Add(AboutHeader);
+    // Author
+    Add(Format(AboutAuthor, [ApplicationAuthor]));
+    // Copyright
+    Add(Format(AboutCopyright, [2021, CurrentYear, ApplicationAuthor]));
+    // BINS
+    Add(AboutBINHeader);
+    Add(Format(AboutBINSAmex, [Length(BINS_AMEX) / 1.0]));
+    Add(Format(AboutBINSDCI, [Length(BINS_DINERSCLUB) / 1.0]));
+    Add(Format(AboutBINDISC, [Length(BINS_DISCOVER) / 1.0]));
+    Add(Format(AboutBINJCB, [Length(BINS_JCB) / 1.0]));
+    Add(Format(AboutBINMAES, [Length(BINS_MAESTRO) / 1.0]));
+    Add(Format(AboutBINMAST, [Length(BINS_MASTERCARD) / 1.0]));
+    Add(Format(AboutBINVISA, [Length(BINS_VISA) / 1.0]));
+    // Disclaimer
+    Add(AboutDISCHeader);
+    Add(AboutDisclaimer);
+  end;
+  // License Key..
+  lblLicenseKey.Caption := PKV_LicenseKeyFromRegistry;
+  // TG Link
+  lblTG.Caption := ApplicationTGLink;
+end;
+
+{*******************************************************}
+{               (Link) Label Mouse Enter                }
+{*******************************************************}
+procedure TfrmAbout.lblTGMouseEnter(Sender: TObject);
+begin
+  (Sender as TLabel).font.Style := [fsUnderline];
+end;
+
+{*******************************************************}
+{               (Link) Label Mouse Leave                }
+{*******************************************************}
+procedure TfrmAbout.lblTGMouseLeave(Sender: TObject);
+begin
+  (Sender as TLabel).font.Style := [];
+end;
+
+{*******************************************************}
+{                     Visit Link                        }
+{*******************************************************}
+procedure TfrmAbout.lblTGClick(Sender: TObject);
+begin
+  ShellExecute(0, 'open', PChar((Sender as TLabel).Caption), nil, nil, SW_SHOWNORMAL);
+end;
+
+{*******************************************************}
+{                   Form Close Event                    }
+{*******************************************************}
+procedure TfrmAbout.FormClose(Sender: TObject;
+  var Action: TCloseAction);
+begin
+  Action := caFree;
+  Release;
+  frmAbout := nil;
+end;
+
+{*******************************************************}
+{                     Close Dialog                      }
+{*******************************************************}
+procedure TfrmAbout.btnCloseClick(Sender: TObject);
+begin
+  Close;
+end;
+
+end.

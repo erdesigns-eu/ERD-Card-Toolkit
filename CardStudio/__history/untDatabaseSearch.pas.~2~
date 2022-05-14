@@ -1,0 +1,48 @@
+unit untDatabaseSearch;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Imaging.pngimage,
+  Vcl.ExtCtrls, Vcl.ComCtrls;
+
+type
+  TfrmDatabaseSearch = class(TForm)
+    Panel1: TPanel;
+    Image1: TImage;
+    Label1: TLabel;
+    Label2: TLabel;
+    Panel2: TPanel;
+    btnHelp: TButton;
+    btnReset: TButton;
+    btnSearch: TButton;
+    PC: TPageControl;
+    TabSheet1: TTabSheet;
+    TabSheet2: TTabSheet;
+    pnlSearch: TPanel;
+    gbSearch: TGroupBox;
+    edtSearch: TEdit;
+    gbSearchField: TGroupBox;
+    cbSearchField: TComboBox;
+    gbSearchMode: TGroupBox;
+    cbSearchMode: TComboBox;
+    Panel3: TPanel;
+    gbFilterField: TGroupBox;
+    cbFilterField: TComboBox;
+    gbFilterValue: TGroupBox;
+    cbFilterValue: TComboBox;
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  frmDatabaseSearch: TfrmDatabaseSearch;
+
+implementation
+
+{$R *.dfm}
+
+end.

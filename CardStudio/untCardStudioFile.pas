@@ -1,0 +1,394 @@
+{*******************************************************}
+{                                                       }
+{                  untCardStudioFile                    }
+{                     Author: ERD                       }
+{                                                       }
+{              Card Studio File Manager                 }
+{                                                       }
+{*******************************************************}
+
+unit untCardStudioFile;
+
+interface
+
+uses
+  WinApi.Windows,
+  System.SysUtils,
+  System.Classes,
+  System.Generics.Collections,
+  System.JSON,
+  untEMVTools,
+  untASNParser,
+  untBIN;
+
+type
+  {*******************************************************}
+  {            Card Studio File Information               }
+  {*******************************************************}
+  TCardStudioFileInformation = class
+  private
+    FAuthor   : string;
+    FWebsite  : string;
+    FEmail    : string;
+    FTelegram : string;
+    FComments : string;
+  public
+    constructor Create; virtual;
+    destructor Destroy; override;
+
+    property Author: string read FAuthor write FAuthor;
+    property Website: string read FWebsite write FWebsite;
+    property Email: string read FEmail write FEmail;
+    property Telegram: string read FTelegram write FTelegram;
+    property Comments: string read FComments write FComments;
+  end;
+
+  {*******************************************************}
+  {             Card Studio Card Information              }
+  {*******************************************************}
+  TCardStudioCardInformation = class
+  private
+    FCardType   : TCardType;
+    FCardScheme : TCardScheme;
+    FATR        : string;
+    FApplet     : string;
+    FJCOP       : string;
+    FPINCode    : string;
+  public
+    constructor Create; virtual;
+    destructor Destroy; override;
+
+    property CardType: TCardType read FCardType write FCardType;
+    property CardScheme: TCardScheme read FCardScheme write FCardScheme;
+
+    property ATR: string read FATR write FATR;
+    property Applet: string read FApplet write FApplet;
+    property JCOP: string read FJCOP write FJCOP;
+    property PINCode: string read FPINCode write FPINCode;
+  end;
+
+  {*******************************************************}
+  {                Card Studio Magstripe                  }
+  {*******************************************************}
+  TCardStudioMagstripe = class
+  private
+    FTrack1 : string;
+    FTrack2 : string;
+    FTrack3 : string;
+  public
+    constructor Create; virtual;
+    destructor Destroy; override;
+
+    property Track1: string read FTrack1 write FTrack1;
+    property Track2: string read FTrack2 write FTrack2;
+    property Track3: string read FTrack3 write FTrack3;
+  end;
+
+  {*******************************************************}
+  {                   Card Studio EMV                     }
+  {*******************************************************}
+  TCardStudioEMV = class
+  private
+    FItems : TASNItemList;
+  public
+    constructor Create; virtual;
+    destructor Destroy; override;
+
+    property Items: TASNItemList read FItems;
+  end;
+
+type
+  {*******************************************************}
+  {                Card Studio File Class                 }
+  {*******************************************************}
+  TCardStudioFile = class
+  private
+    FFilename        : string;
+
+    FFileInformation : TCardStudioFileInformation;
+    FCardInformation : TCardStudioCardInformation;
+
+    FMagStripe       : TCardStudioMagstripe;
+    FEMV             : TCardStudioEMV;
+  public
+    constructor Create; virtual;
+    destructor Destroy; override;
+
+    procedure LoadFromFile(const Filename: string);
+    procedure SaveToFile(const Filename: string);
+
+    property Filename: string read FFilename write FFilename;
+
+    property FileInformation: TCardStudioFileInformation read FFileInformation;
+    property CardInformation: TCardStudioCardInformation read FCardInformation;
+
+    property MagStripe: TCardStudioMagstripe read FMagStripe;
+    property EMV: TCardStudioEMV read FEMV;
+  end;
+
+implementation
+
+{*******************************************************}
+{            Card Studio File Information               }
+{*******************************************************}
+constructor TCardStudioFileInformation.Create;
+begin
+  inherited Create;
+end;
+
+destructor TCardStudioFileInformation.Destroy;
+begin
+  inherited Destroy;
+end;
+
+{*******************************************************}
+{             Card Studio Card Information              }
+{*******************************************************}
+constructor TCardStudioCardInformation.Create;
+begin
+  inherited Create;
+end;
+
+destructor TCardStudioCardInformation.Destroy;
+begin
+  inherited Destroy;
+end;
+
+{*******************************************************}
+{           Card Studio Magstripe                       }
+{*******************************************************}
+constructor TCardStudioMagstripe.Create;
+begin
+  inherited Create;
+end;
+
+destructor TCardStudioMagstripe.Destroy;
+begin
+  inherited Destroy;
+end;
+
+{*******************************************************}
+{                   Card Studio EMV                     }
+{*******************************************************}
+constructor TCardStudioEMV.Create;
+begin
+  inherited Create;
+
+  // Create Items List
+  FItems := TASNItemList.Create(True);
+end;
+
+destructor TCardStudioEMV.Destroy;
+begin
+  // Free Items List
+  FItems.Free;
+
+  inherited Destroy;
+end;
+
+{*******************************************************}
+{                Card Studio File Class                 }
+{*******************************************************}
+constructor TCardStudioFile.Create;
+begin
+  inherited Create;
+
+  // Create file information class
+  FFileInformation := TCardStudioFileInformation.Create;
+
+  // Create card information class
+  FCardInformation := TCardStudioCardInformation.Create;
+
+  // Create MagStripe class
+  FMagStripe := TCardStudioMagstripe.Create;
+
+  // Create EMV class
+  FEMV := TCardStudioEMV.Create;
+end;
+
+destructor TCardStudioFile.Destroy;
+begin
+  // Free file information class
+  FFileInformation.Free;
+
+  // Free card information class
+  FCardInformation.Free;
+
+  // Free MagStripe class
+  FMagStripe.Free;
+
+  // Free EMV class
+  FEMV.Free;
+
+  inherited Destroy;
+end;
+
+procedure TCardStudioFile.LoadFromFile(const Filename: string);
+
+  procedure CreateASNItem(Parent: TASNItemList; Item: TJSonValue);
+  var
+    I : Integer;
+    A : TJSONArray;
+    N : TASNItem;
+  begin
+    // Create ASN Item
+    N := TASNItem.Create;
+
+    // Read Values
+    N.&Class       := StrToTagClasses((Item as TJSONObject).Get('Class').JsonValue.GetValue<string>);
+    N.Flag         := StrToConstructedFlag((Item as TJSONObject).Get('Constructed Flag').JsonValue.GetValue<string>);
+    N.Name         := (Item as TJSONObject).Get('Name').JsonValue.GetValue<string>;
+    N.Tag          := (Item as TJSONObject).Get('Tag').JsonValue.GetValue<string>;
+    N.Value        := (Item as TJSONObject).Get('Value').JsonValue.GetValue<string>;
+    N.ValueType    := StrToTagValueType((Item as TJSONObject).Get('Value Type').JsonValue.GetValue<string>);
+    N.HeaderLength := (Item as TJSONObject).Get('Header Length').JsonValue.GetValue<Integer>;
+    N.Length       := (Item as TJSONObject).Get('Length').JsonValue.GetValue<Integer>;
+
+    // Create children
+    A := (Item as TJSONObject).Get('Items').JsonValue as TJSONArray;
+    for I := 0 to A.Count -1 do CreateASNItem(N.Children, (A.Items[I] as TJSONValue));
+    // Add to parent
+    Parent.Add(N);
+  end;
+
+var
+  F : TJSonValue;
+  P : TJSonValue;
+  A : TJSONArray;
+  S : TStringList;
+  I : Integer;
+
+begin
+  S := TStringList.Create;
+  try
+    S.LoadFromFile(Filename, TEncoding.UTF8);
+    F := TJSonObject.ParseJSONValue(S.Text);
+    try
+      // File Information
+      P := (F as TJSONObject).Get('File Information').JsonValue;
+      FileInformation.Author   := (P as TJSONObject).Get('Author').JSONValue.GetValue<string>;
+      FileInformation.Website  := (P as TJSONObject).Get('Website').JSONValue.GetValue<string>;
+      FileInformation.Email    := (P as TJSONObject).Get('Email').JSONValue.GetValue<string>;
+      FileInformation.Telegram := (P as TJSONObject).Get('Telegram').JSONValue.GetValue<string>;
+      FileInformation.Comments := (P as TJSONObject).Get('Comments').JSONValue.GetValue<string>;
+
+      // Card Information
+      P := (F as TJSONObject).Get('Card Information').JsonValue;
+      CardInformation.CardType   := StrToCardType((P as TJSONObject).Get('Card Type').JSONValue.GetValue<string>);
+      CardInformation.CardScheme := StrToCardScheme((P as TJSONObject).Get('Card Scheme').JSONValue.GetValue<string>);
+      CardInformation.ATR        := (P as TJSONObject).Get('ATR').JSONValue.GetValue<string>;
+      CardInformation.Applet     := (P as TJSONObject).Get('Applet').JSONValue.GetValue<string>;
+      CardInformation.JCOP       := (P as TJSONObject).Get('JCOP').JSONValue.GetValue<string>;
+      CardInformation.PINCode    := (P as TJSONObject).Get('PIN Code').JSONValue.GetValue<string>;
+
+      // MagStripe
+      P := (F as TJSONObject).Get('MagStripe').JsonValue;
+      MagStripe.Track1 := (P as TJSONObject).Get('Track 1').JSONValue.GetValue<string>;
+      MagStripe.Track2 := (P as TJSONObject).Get('Track 2').JSONValue.GetValue<string>;
+      MagStripe.Track3 := (P as TJSONObject).Get('Track 3').JSONValue.GetValue<string>;
+
+      // EMV
+      P := (F as TJSONObject).Get('EMV').JsonValue;
+      A := (P as TJSONObject).Get('Items').JsonValue as TJSONArray;
+      for I := 0 to A.Count -1 do CreateASNItem(EMV.Items, (A.Items[I] as TJSONValue));
+    finally
+      F.Free;
+    end;
+  finally
+    S.Free;
+  end;
+end;
+
+procedure TCardStudioFile.SaveToFile(const Filename: string);
+
+  procedure CreateEMVTag(Parent: TJSONArray; Item: TASNItem);
+  var
+    T : TJSONObject;
+    C : TJSONArray;
+    I : Integer;
+  begin
+    T := TJSONObject.Create;
+    C := TJSONArray.Create;
+
+    // EMV Tag Classes
+    T.AddPair('Class', TagClassesToStr(Item.&Class));
+    // Constructed Flag
+    T.AddPair('Constructed Flag', ConstructedFlagToStr(Item.Flag));
+    // Tag Name
+    T.AddPair('Name', Item.Name);
+    // Tag
+    T.AddPair('Tag', Item.Tag);
+    // Value
+    T.AddPair('Value', Item.Value);
+    // Value Type
+    T.AddPair('Value Type', TagValueTypeToStr(Item.ValueType));
+    // Header Length
+    T.AddPair('Header Length', TJSONNumber.Create(Item.HeaderLength));
+    // Value Length
+    T.AddPair('Length', TJSONNumber.Create(Item.Length));
+
+    // Create EMV tag for children
+    for I := 0 to Item.Children.Count -1 do
+    CreateEMVTag(C, Item.Children.Items[I]);
+    // Add children
+    T.AddPair('Items', C);
+    // Add T to Parent
+    Parent.Add(T);
+  end;
+
+var
+  F : TJSONObject;
+  S : TStringList;
+  I : Integer;
+
+  //
+  FI, CI, MS, EMV : TJSONObject;
+  EMVItems        : TJSONArray;
+begin
+  F := TJSONObject.Create;
+  S := TStringList.Create;
+  try
+    // File Information
+    FI := TJSONObject.Create;
+    FI.AddPair('Author', FileInformation.Author);
+    FI.AddPair('Website', FileInformation.Website);
+    FI.AddPair('Email', FileInformation.Email);
+    FI.AddPair('Telegram', FileInformation.Telegram);
+    FI.AddPair('Comments', FileInformation.Comments);
+    F.AddPair('File Information', FI);
+
+    // Card Information
+    CI := TJSONObject.Create;
+    CI.AddPair('Card Type', CardTypeToStr(CardInformation.CardType));
+    CI.AddPair('Card Scheme', CardSchemeToStr(CardInformation.CardScheme));
+    CI.AddPair('ATR', CardInformation.ATR);
+    CI.AddPair('Applet', CardInformation.Applet);
+    CI.AddPair('JCOP', CardInformation.JCOP);
+    CI.AddPair('PIN Code', CardInformation.PINCode);
+    F.AddPair('Card Information', CI);
+
+    // MagStripe
+    MS := TJSONObject.Create;
+    MS.AddPair('Track 1', MagStripe.Track1);
+    MS.AddPair('Track 2', MagStripe.Track2);
+    MS.AddPair('Track 3', MagStripe.Track3);
+    F.AddPair('MagStripe', MS);
+
+    // EMV
+    EMV := TJSONObject.Create;
+    EMVItems := TJSONArray.Create;
+    for I := 0 to Self.EMV.Items.Count -1 do CreateEMVTag(EMVItems, Self.EMV.Items.Items[I]);
+    EMV.AddPair('Items', EMVItems);
+    F.AddPair('EMV', EMV);
+
+    // Produce JSON
+    S.Text := F.ToJSON;
+    // Save to file
+    S.SaveToFile(Filename, TEncoding.UTF8);
+  finally
+    F.Free;
+    S.Free;
+  end;
+end;
+
+end.

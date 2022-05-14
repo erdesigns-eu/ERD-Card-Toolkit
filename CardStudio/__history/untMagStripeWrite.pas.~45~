@@ -1,0 +1,285 @@
+unit untMagStripeWrite;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Menus,
+  Vcl.Imaging.pngimage;
+
+type
+  TfrmMagStripeWrite = class(TForm)
+    Panel1: TPanel;
+    Image1: TImage;
+    Label1: TLabel;
+    Label2: TLabel;
+    Panel2: TPanel;
+    btnHelp: TButton;
+    btnWrite: TButton;
+    btnErase: TButton;
+    PopupMenu: TPopupMenu;
+    LoadFromFile1: TMenuItem;
+    LoadFromDB1: TMenuItem;
+    NB: TNotebook;
+    GridPanel1: TGridPanel;
+    gbTrack1: TGroupBox;
+    memTrack1: TMemo;
+    gbTrack2: TGroupBox;
+    memTrack2: TMemo;
+    gbTrack3: TGroupBox;
+    memTrack3: TMemo;
+    Panel3: TPanel;
+    lblReadStatus: TLabel;
+    SelectAll1: TMenuItem;
+    N1: TMenuItem;
+    N2: TMenuItem;
+    N3: TMenuItem;
+    Cut1: TMenuItem;
+    Copy1: TMenuItem;
+    Paste1: TMenuItem;
+    Delete1: TMenuItem;
+    Undo1: TMenuItem;
+    btnCancel: TButton;
+    N4: TMenuItem;
+    OpenDialog: TOpenDialog;
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure FormCreate(Sender: TObject);
+    procedure FormActivate(Sender: TObject);
+    procedure btnEraseClick(Sender: TObject);
+    procedure btnCancelClick(Sender: TObject);
+    procedure btnWriteClick(Sender: TObject);
+    procedure LoadFromFile1Click(Sender: TObject);
+  private
+    { Private declarations }
+    CancelLoop : Boolean;
+  public
+    { Public declarations }
+  end;
+
+var
+  frmMagStripeWrite: TfrmMagStripeWrite;
+
+implementation
+
+{$R *.dfm}
+
+uses untMagStripeRead, untMain, untMSR_API, JSON;
+
+{*******************************************************}
+{                  Form Create Event                    }
+{*******************************************************}
+procedure TfrmMagStripeWrite.FormCreate(Sender: TObject);
+begin
+  // Try to connect to the magstripe reader if not already connected
+  frmMain.TryMagStripeConnect;
+  // Set width and height
+  Width  := 640;
+  Height := 480;
+  // Clear memo's
+  memTrack1.Clear;
+  memTrack2.Clear;
+  memTrack3.Clear;
+  // Set view to page 1
+  NB.PageIndex := 0;
+  // Set Cancel Loop to false
+  CancelLoop := False;
+end;
+
+{*******************************************************}
+{                   Form Close Event                    }
+{*******************************************************}
+procedure TfrmMagStripeWrite.FormClose(Sender: TObject;
+  var Action: TCloseAction);
+begin
+  CancelLoop := True;
+  Action := caFree;
+  Release;
+  frmMagStripeWrite := nil;
+end;
+
+{*******************************************************}
+{                Form Activate Event                    }
+{*******************************************************}
+procedure TfrmMagStripeWrite.FormActivate(Sender: TObject);
+var
+  CanWriteErase : Boolean;
+begin
+  // Check if a magstripe writer is connected
+  CanWriteErase := (frmMain.MSRConnected = True);
+  // Enable / Disable controls
+  memTrack1.Enabled     := CanWriteErase;
+  memTrack2.Enabled     := CanWriteErase;
+  memTrack3.Enabled     := CanWriteErase;
+  btnWrite.Enabled      := CanWriteErase;
+  btnErase.Enabled      := CanWriteErase;
+  LoadFromfile1.Enabled := CanWriteErase;
+  LoadFromDB1.Enabled   := CanWriteErase;
+end;
+
+{*******************************************************}
+{                   Clear MagStripe                     }
+{*******************************************************}
+procedure TfrmMagStripeWrite.btnEraseClick(Sender: TObject);
+var
+  Swiped  : Boolean;
+  Counter : Integer;
+
+  procedure ClearMSR;
+  const
+    Success = 'Successfully erased card!';
+  begin
+    // Set MSR busy status
+    frmMain.MSRBusy := True;
+    // Reset MSR
+    MSR_Reset;
+    // Initiate reading
+    if MSR_Erase($07) = 48 then
+    begin
+      // Set counter to zero
+      Counter := 0;
+      // Set cancel loop to false
+      CancelLoop := False;
+      repeat
+        Swiped := MSR_Get_Write_Erase_Status = 48;
+        if not Swiped then
+        begin
+          // Sleep
+          Sleep(100);
+          // Process messages
+          Application.ProcessMessages;
+        end;
+        Inc(Counter);
+      until Swiped or (Counter >= 100) or CancelLoop;
+    end;
+    // Reset MSR
+    if (not Swiped) and ((Counter >= 100) or CancelLoop) then MSR_Reset;
+    // Back to the first view
+    NB.PageIndex     := 0;
+    btnWrite.Enabled := True;
+    btnErase.Enabled := True;
+    // Set MSR busy status
+    frmMain.MSRBusy := False;
+    // Message when erasing succeeded
+    if Swiped then Application.MessageBox(Success, PChar(Application.Title), MB_ICONINFORMATION + MB_OK);
+  end;
+
+begin
+  // Clear MSR magstripe
+  if frmMain.MSRConnected and (not frmMain.MSRBusy) then
+  begin
+    NB.PageIndex := 1;
+    btnWrite.Enabled := False;
+    btnErase.Enabled := False;
+    ClearMSR;
+  end;
+end;
+
+{*******************************************************}
+{                   Write MagStripe                     }
+{*******************************************************}
+procedure TfrmMagStripeWrite.btnWriteClick(Sender: TObject);
+var
+  Swiped  : Boolean;
+  Counter : Integer;
+
+  function CreateTrackData(const S: String) : AnsiString;
+  begin
+    if Length(S) = 0 then
+      Result := ''
+    else
+      Result := AnsiString(S);
+  end;
+
+  procedure WriteMSR;
+  const
+    Success = 'Card has been written successfully!';
+  var
+    TK1Dat, TK2Dat, TK3Dat : AnsiString;
+  begin
+    // Set MSR busy status
+    frmMain.MSRBusy := True;
+    // Reset MSR
+    MSR_Reset;
+    // Create tracks
+    TK1Dat := CreateTrackData(memTrack1.Text);
+    TK2Dat := CreateTrackData(memTrack2.Text);
+    TK3Dat := CreateTrackData(memTrack3.Text);
+    // Initiate reading
+    if MSR_Write(PAnsiChar(TK1Dat), PAnsiChar(TK2Dat), PAnsiChar(TK3Dat)) = 48 then
+    begin
+      // Set counter to zero
+      Counter := 0;
+      // Set cancel loop to false
+      CancelLoop := False;
+      repeat
+        Swiped := MSR_Get_Write_Erase_Status = 48;
+        if not Swiped then
+        begin
+          // Sleep
+          Sleep(100);
+          // Process messages
+          Application.ProcessMessages;
+        end;
+        Inc(Counter);
+      until Swiped or (Counter >= 100) or CancelLoop;
+    end;
+    // Reset MSR
+    if (not Swiped) and ((Counter >= 100) or CancelLoop) then MSR_Reset;
+    // Back to the first view
+    NB.PageIndex     := 0;
+    btnWrite.Enabled := True;
+    btnErase.Enabled := True;
+    // Set MSR busy status
+    frmMain.MSRBusy := False;
+    // Message when erasing succeeded
+    if Swiped then Application.MessageBox(Success, PChar(Application.Title), MB_ICONINFORMATION + MB_OK);
+  end;
+
+begin
+  // Write MSR magstripe
+  if frmMain.MSRConnected and (not frmMain.MSRBusy) then
+  begin
+    NB.PageIndex := 1;
+    btnWrite.Enabled := False;
+    btnErase.Enabled := False;
+    WriteMSR;
+  end;
+end;
+
+{*******************************************************}
+{           Cancel Erasing/Writing MagStripe            }
+{*******************************************************}
+procedure TfrmMagStripeWrite.btnCancelClick(Sender: TObject);
+begin
+  CancelLoop := True;
+  Application.ProcessMessages;
+end;
+
+{*******************************************************}
+{                Read tracks from file                  }
+{*******************************************************}
+procedure TfrmMagStripeWrite.LoadFromFile1Click(Sender: TObject);
+var
+  TRFile : TJSonValue;
+  TSFile : TStringList;
+begin
+  if OpenDialog.Execute(Handle) then
+  begin
+    TSFile := TStringList.Create;
+    try
+      TSFile.LoadFromFile(OpenDialog.FileName);
+      TRFile := TJSonObject.ParseJSONValue(TSFile.Text);
+      try
+        memTrack1.Text := (TRFile as TJSONObject).Get('t1').JSONValue.GetValue<string>;
+        memTrack2.Text := (TRFile as TJSONObject).Get('t2').JSONValue.GetValue<string>;
+        memTrack3.Text := (TRFile as TJSONObject).Get('t3').JSONValue.GetValue<string>;
+      finally
+        TRFile.Free;
+      end;
+    finally
+      TSFile.Free;
+    end;
+  end;
+end;
+
+end.

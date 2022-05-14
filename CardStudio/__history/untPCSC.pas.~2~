@@ -1,0 +1,27 @@
+{*******************************************************}
+{                                                       }
+{                       untPCSC                         }
+{                     Author: ERD                       }
+{                                                       }
+{      SmartCard Reader/Writer Interface Component      }
+{                                                       }
+{         Helps you access a cardreader through         }
+{                Microsofts SmartCard API               }
+{                                                       }
+{*******************************************************}
+
+unit untPCSC;
+
+interface
+
+uses
+  WinApi.Windows,
+  System.SysUtils,
+  System.Classes,
+  SCardErr,
+  WinSCard,
+  WinSmCrd;
+
+implementation
+
+end.

@@ -1,0 +1,236 @@
+{*******************************************************}
+{                                                       }
+{                      untCipher                        }
+{                     Author: ERD                       }
+{                                                       }
+{*******************************************************}
+
+unit untCipher;
+
+interface
+
+{$WARN IMPLICIT_STRING_CAST OFF}
+{$WARN IMPLICIT_STRING_CAST_LOSS OFF}
+
+uses
+  WinApi.Windows,
+  System.SysUtils,
+  System.Classes,
+  System.AnsiStrings,
+  untEMVTools,
+
+  { LockBox }
+  LbCipher,
+  LbClass,
+  LbRSA,
+  LbBigInt,
+  LbUtils,
+  LbRandom;
+  { LockBox }
+
+function CalculateUDK(const MDK: AnsiString; const PAN: AnsiString; const PANSeq: AnsiString; const ODD: Boolean) : AnsiString;
+function CalculateCommonSessionKey(const UDK: AnsiString; const ATC: AnsiString) : AnsiString;
+function CalculateARQC(const SessionKey: AnsiString; const RawData: AnsiString; const CryptoVersion: Byte) : AnsiString;
+
+implementation
+
+{*******************************************************}
+{                                                       }
+{                   Triple DES ECB Encode               }
+{                                                       }
+{     https://en.wikipedia.org/wiki/ISO/IEC_9797-1      }
+{                                                       }
+{*******************************************************}
+function TripleDesECBEncode(const Data: AnsiString; const Key: AnsiString) : AnsiString;
+var
+  I          : LongInt;
+  Indx       : LongInt;
+  Block      : TDESBlock;
+  Context    : TTripleDESContext;
+  DKey       : TKey128;
+  BlockCount : LongInt;
+  OddCount   : Byte;
+  Res        : AnsiString;
+begin
+  Result := '';
+
+  if Length(Key) <> SizeOf(DKey) then Exit;
+
+  Move(Key[1], DKey[0], SizeOf(DKey));
+  InitEncryptTripleDES(DKey, Context, True);
+
+  // Get the number of blocks in the file
+  BlockCount := (Length(Data) div SizeOf(Block));
+  OddCount := Length(Data) mod SizeOf(Block);
+
+  // Get number of bytes to pad at the end
+  if (OddCount > 0) then
+    Inc(BlockCount)
+  else
+    OddCount := 8;
+
+  // Process all except the last block
+  Indx := 1;
+  for I := 1 to BlockCount - 1 do
+  begin
+    Move(Data[Indx], Block[0], SizeOf(Block));
+    Indx := Indx + SizeOf(Block);
+
+    EncryptTripleDES(Context, Block);
+
+    SetLength(res, SizeOf(Block));
+    Move(Block[0], Res[1], SizeOf(Block));
+    Result := Result + Res;
+  end;
+
+  // Process the last block
+  FillChar(Block, SizeOf(Block), #0);
+  Move(data[indx], Block[0], OddCount);
+
+  // Encrypt and save full block
+  EncryptTripleDES(Context, Block);
+
+  SetLength(Res, SizeOf(Block));
+  Move(Block[0], Res[1], SizeOf(Block));
+  Result := Result + Res;
+end;
+
+{*******************************************************}
+{                Triple DES MAC Encode                  }
+{*******************************************************}
+function DesMACEmv(const Data: AnsiString; const Key: AnsiString) : AnsiString;
+var
+  I          : LongInt;
+  Indx       : LongInt;
+  Block      : TDESBlock;
+  PrevBlock  : TDESBlock;
+  Context    : TTripleDESContext;
+  DKey       : TKey128;
+  BlockCount : LongInt;
+  OddCount   : Byte;
+begin
+  Result := '';
+  if (Length(data) = 0) or (Length(Key) <> SizeOf(DKey)) then Exit;
+
+  Move(Key[1], DKey[0], SizeOf(DKey));
+  InitEncryptTripleDES(DKey, Context, True);
+
+  // Get the number of blocks in the file
+  BlockCount := (Length(Data) div SizeOf(Block));
+  OddCount := Length(Data) mod SizeOf(Block);
+
+  // Initialization vector
+  FillChar(PrevBlock, SizeOf(PrevBlock), #0);
+
+  // Get number of bytes to pad at the end
+  if (OddCount > 0) then
+    Inc(BlockCount)
+  else
+    OddCount := 8;
+
+  Indx := 1;
+  // Process all except the last block
+  for I := 1 to BlockCount - 1 do
+  begin
+    Move(Data[Indx], Block[0], SizeOf(Block));
+    Indx := Indx + SizeOf(Block);
+
+    EncryptDESCBC(Context[0], PrevBlock, Block);
+
+    PrevBlock := Block;
+  end;
+
+  // Process the last block
+  FillChar(Block, SizeOf(Block), #0);
+  Move(Data[Indx], Block[0], OddCount);
+
+  // Encrypt and save full block
+  EncryptTripleDESCBC(Context, PrevBlock, Block);
+
+  SetLength(Result, SizeOf(Block));
+  Move(Block[0], Result[1], SizeOf(Block));
+end;
+
+{*******************************************************}
+{                   Calculate UDK                       }
+{*******************************************************}
+function CalculateUDK(const MDK: AnsiString; const PAN: AnsiString; const PANSeq: AnsiString; const ODD: Boolean) : AnsiString;
+var
+  UDKA : AnsiString;
+  UDKB : AnsiString;
+  PSeq : AnsiString;
+  I    : Integer;
+begin
+  Result := '';
+
+  // Concatenate from left to right the decimal digits of the Application PAN with
+  // the PAN Sequence Number (if the PAN Sequence Number is not present,
+  // then it is replaced by a '00' byte)
+  if PANSeq = '' then
+    PSeq := #$00
+  else
+    PSeq := PANSeq;
+
+  // Set UDK Part A
+  UDKA := NormalizePAN(PAN) + PSeq;
+
+  // If the result X is less than 16 digits long,
+  // pad it to the left with hexadecimal zeros in order to obtain an 8-byte
+  // number Y in numeric format. If X is at least 16 digits long, then Y consists of
+  // the 16 rightmost digits of X in numeric format.
+  if Length(UDKA) > 8 then
+    UDKA := Copy(UDKA, 1 + (Length(UDKA) - 8), Length(UDKA));
+  if length(UDKA) < 8 then
+    UDKA := UDKA + AnsiString(StringOfChar(#0, 8 - length(UDKA)));
+
+  // Set UDK Part B
+  UDKB := UDKA;
+
+  for I := 1 to Length(UDKB) do
+    UDKB[I] := AnsiChar(Byte(UDKB[I]) xor $FF);
+
+  // Compute the two 8-byte numbers
+  if ODD then
+    Result := Bin2HexExt(DESSetOdd(TripleDesECBEncode(UDKA + UDKB, MDK)), False)
+  else
+    Result := Bin2HexExt(TripleDesECBEncode(UDKA + UDKB, MDK), False);
+end;
+
+{*******************************************************}
+{             Calculate Common Session Key              }
+{*******************************************************}
+function CalculateCommonSessionKey(const UDK: AnsiString; const ATC: AnsiString) : AnsiString;
+var
+  ATCblock : AnsiString;
+begin
+  ATCblock := ATC + AnsiString(StringOfChar(#$00, Length(UDK) div 2 - Length(ATC)));
+  ATCblock := ATCblock + ATCblock;
+  ATCblock[3]  := #$F0;
+  ATCblock[11] := #$0F;
+  Result := Bin2HexExt(DESSetOdd(TripleDesECBEncode(ATCblock, UDK)), False);
+end;
+
+{*******************************************************}
+{                   Calculate ARQC                      }
+{*******************************************************}
+function CalculateARQC(const SessionKey: AnsiString; const RawData: AnsiString; const CryptoVersion: Byte) : AnsiString;
+var
+  RWData : AnsiString;
+begin
+  Result := '';
+
+  // CVN 18
+  if CryptoVersion = 18 then
+    RWData := RawData + #$80
+
+  // CVN 10, CVN 17
+  else
+    RWData := RawData;
+
+  Result := Bin2HexExt(DesMACEmv(RWData, SessionKey), False);
+end;
+
+{$WARN IMPLICIT_STRING_CAST ON}
+{$WARN IMPLICIT_STRING_CAST_LOSS ON}
+
+end.

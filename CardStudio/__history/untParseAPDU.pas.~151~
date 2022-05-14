@@ -1,0 +1,233 @@
+unit untParseAPDU;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Imaging.pngimage,
+  Vcl.ExtCtrls;
+
+type
+  TfrmParseAPDU = class(TForm)
+    Panel1: TPanel;
+    Image1: TImage;
+    Label1: TLabel;
+    Label2: TLabel;
+    Panel2: TPanel;
+    btnHelp: TButton;
+    btnSave: TButton;
+    btnParse: TButton;
+    gbAPDU: TGroupBox;
+    memAPDU: TMemo;
+    gbDecodedData: TGroupBox;
+    memDecodedData: TMemo;
+    gbAPDUFormat: TGroupBox;
+    cbFormat: TComboBox;
+    SaveDialog: TSaveDialog;
+    procedure FormCreate(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure btnParseClick(Sender: TObject);
+    procedure btnSaveClick(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  frmParseAPDU: TfrmParseAPDU;
+
+implementation
+
+{$R *.dfm}
+
+uses untAPDUParser, untASNParser, untConst, untEMVTools, System.Math;
+
+{*******************************************************}
+{                  Form Create Event                    }
+{*******************************************************}
+procedure TfrmParseAPDU.FormCreate(Sender: TObject);
+begin
+  // Set width and height
+  Width  := 640;
+  Height := 480;
+  // Clear memo's
+  memAPDU.Clear;
+  memDecodedData.Clear;
+end;
+
+{*******************************************************}
+{                   Form Close Event                    }
+{*******************************************************}
+procedure TfrmParseAPDU.FormClose(Sender: TObject;
+  var Action: TCloseAction);
+begin
+  Action := caFree;
+  Release;
+end;
+
+{*******************************************************}
+{                     Parse APDU                        }
+{*******************************************************}
+procedure TfrmParseAPDU.btnParseClick(Sender: TObject);
+
+  function FormatData(const D: string) : string;
+  var
+    I, X : Integer;
+  begin
+    Result := '';
+    X := 1;
+    for I := 1 to Ceil(Length(D) / 2) do
+    begin
+      Result := Result + Copy(D, X, 2) + ' ';
+      Inc(X, 2);
+    end;
+    Result := Trim(Result);
+  end;
+
+  function GetAsText(const Value: AnsiString) : AnsiString;
+  var
+    I : Integer;
+    S : AnsiString;
+  begin
+    S := Hex2String(Value);
+    for I := 1 to Length(S) do
+    //Alphas, Digits and punctuation
+    if not (Byte(S[I]) in [$32..$23, $25..$2A, $2C..$3B, $3F..$5D, $5F..$7B, $7D, $A1, $AB, $AD, $B7, $BB, $BF..$C0]) then
+    begin
+      Result := Value;
+      Exit;
+    end;
+
+    Result := S;
+  end;
+
+  procedure LogASN(const ASN: TASNItem);
+  var
+    I : Integer;
+  begin
+    if ASN.Name <> '' then
+      memDecodedData.Lines.Add(Format(APDUDecRespASNT, [ASN.Name]))
+    else
+      memDecodedData.Lines.Add(Format(APDUDecRespASNT, [ASN.Tag]));
+    memDecodedData.Lines.Add(Format(APDUDecRespASNL, [ASN.Length]));
+    case ASN.ValueType of
+      vtString : memDecodedData.Lines.Add(Format(APDUDecRespASNV, [GetAsText(ASN.Value)]));
+      vtBool   : memDecodedData.Lines.Add(Format(APDUDecRespASNV, [ASN.Value]));
+      vtNumber : memDecodedData.Lines.Add(Format(APDUDecRespASNV, [ASN.Value]));
+      vtByte   : memDecodedData.Lines.Add(Format(APDUDecRespASNV, [ASN.Value]));
+      vtBytes  : memDecodedData.Lines.Add(Format(APDUDecRespASNV, [ASN.Value]));
+      vtBits   : memDecodedData.Lines.Add(Format(APDUDecRespASNV, [ASN.Value]));
+    end;
+    memDecodedData.Lines.Add('');
+    for I := 0 to ASN.Children.Count -1 do LogASN(ASN.Children[I]);
+  end;
+
+const
+  DataLen = 32;
+var
+  I : Integer;
+  L : Integer;
+  P : TAPDUParser;
+  A : TASNParser;
+  S : string;
+begin
+  // Clear memo
+  memDecodedData.Clear;
+  // Remove all spaces from APDU
+  S := StringReplace(memAPDU.Text, ' ', '', [rfReplaceAll]);
+  // Parse
+  case cbFormat.ItemIndex of
+
+    0: // Command
+    begin
+      P := TAPDUParser.Create(S, '');
+      try
+        with memDecodedData.Lines do
+        begin
+          BeginUpdate;
+          Add(APDUDecHeader);
+          Add(Format(APDUDecComCLA, [2, P.Command.CLA]));
+          Add(Format(APDUDecComINS, [2, P.Command.INS]));
+          Add(Format(APDUDecComP1,  [2, P.Command.P1]));
+          Add(Format(APDUDecComP2,  [2, P.Command.P2]));
+          Add(Format(APDUDecComLC,  [2, P.Command.LC]));
+          // Command description
+          Add(Format(APDUDecComInstruc, [P.CommandInstruction.Description, P.CommandInstruction.Standard]));
+          Add(Format(APDUDecComDataLen, [P.Command.LC]));
+          // Data
+          L := 1;
+          for I := 1 to Ceil(Length(P.Command.Data) / DataLen) do
+          begin
+            if I = 1 then
+            begin
+              Add(FormatData(Copy(P.Command.Data, L, DataLen)));
+              Inc(L, DataLen);
+            end else
+            begin
+              Add(FormatData(Copy(P.Command.Data, L, DataLen)));
+              Inc(L, DataLen);
+            end;
+          end;
+          EndUpdate;
+        end;
+      finally
+        P.Free;
+      end;
+    end;
+    
+    1: // Response
+    begin
+      P := TAPDUParser.Create('', S);
+      A := TASNParser.Create;
+      try
+        with memDecodedData.Lines do
+        begin
+          BeginUpdate;
+          Add(APDUDecHeader);
+          Add(Format(APDUDecRespSW1, [2, P.Response.SW1]));
+          Add(Format(APDUDecRespSW2, [2, P.Response.SW2]));
+          // Response description
+          Add(Format(APDUDecRespStatus, [P.ResponseStatus.Description]));
+          // Parse ASN
+          A.Parse(P.Response.Data);
+          for I := 0 to A.Items.Count -1 do
+          LogASN(A.Itemss[I]);
+
+          // Data
+          L := 1;
+          for I := 1 to Ceil(Length(P.Response.Data) / DataLen) do
+          begin
+            if I = 1 then
+            begin
+              Add(FormatData(Copy(P.Response.Data, L, DataLen)));
+              Inc(L, DataLen);
+            end else
+            begin
+              Add(FormatData(Copy(P.Response.Data, L, DataLen)));
+              Inc(L, DataLen);
+            end;
+          end;
+          EndUpdate;
+        end;
+      finally
+        P.Free;
+        A.Free;
+      end;
+    end;
+    
+  end;
+end;
+
+{*******************************************************}
+{                Save Decoded APDU Data                 }
+{*******************************************************}
+procedure TfrmParseAPDU.btnSaveClick(Sender: TObject);
+begin
+  if SaveDialog.Execute(Handle) and (SaveDialog.FileName <> '') then
+  begin
+    memDecodedData.Lines.SaveToFile(SaveDialog.FileName);
+  end;
+end;
+
+end.

@@ -1,0 +1,383 @@
+unit untGenerateCC;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Imaging.pngimage,
+  Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.Menus;
+
+type
+  TfrmGenerateCC = class(TForm)
+    Panel1: TPanel;
+    Image1: TImage;
+    Label1: TLabel;
+    Label2: TLabel;
+    Panel2: TPanel;
+    btnHelp: TButton;
+    btnGenerate: TButton;
+    Panel4: TPanel;
+    GroupBox1: TGroupBox;
+    cbCardScheme: TComboBox;
+    GroupBox2: TGroupBox;
+    cbBIN: TComboBox;
+    GroupBox3: TGroupBox;
+    cbAmount: TComboBox;
+    GroupBox4: TGroupBox;
+    PB: TProgressBar;
+    lvResults: TListView;
+    Panel3: TPanel;
+    lblProgress: TLabel;
+    PopupMenu: TPopupMenu;
+    SaveDialog: TSaveDialog;
+    CreateTrack1: TMenuItem;
+    N1: TMenuItem;
+    btnSave: TButton;
+    CopyPAN1: TMenuItem;
+    CopySelection1: TMenuItem;
+    N2: TMenuItem;
+    SaveSelection1: TMenuItem;
+    SaveResultsDialog: TSaveDialog;
+    procedure FormCreate(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure cbCardSchemeChange(Sender: TObject);
+    procedure btnGenerateClick(Sender: TObject);
+    procedure CreateTrack1Click(Sender: TObject);
+    procedure PopupMenuPopup(Sender: TObject);
+    procedure cbBINChange(Sender: TObject);
+    procedure CopyPAN1Click(Sender: TObject);
+    procedure CopySelection1Click(Sender: TObject);
+    procedure SaveSelection1Click(Sender: TObject);
+    procedure btnSaveClick(Sender: TObject);
+  private
+    { Private declarations }
+    CancelLoop  : Boolean;
+    ExpiryYears : TStringList;
+  public
+    { Public declarations }
+  end;
+
+var
+  frmGenerateCC: TfrmGenerateCC;
+
+implementation
+
+{$R *.dfm}
+
+uses untConst, untBIN, untBIN_AMEX, untBIN_DINERSCLUB, untBIN_DISCOVER,
+     untBIN_JCB, untBIN_MAESTRO, untBIN_MASTERCARD, untBIN_VISA,
+     System.Math, untEncodeTracks, Vcl.ClipBrd, JSON, DateUtils;
+
+{*******************************************************}
+{                  Form Create Event                    }
+{*******************************************************}
+procedure TfrmGenerateCC.FormCreate(Sender: TObject);
+var
+  I : Integer;
+begin
+  // Set width and height
+  Width  := 640;
+  Height := 450;
+  // Populate card schemes (AMEX/.../VISA)
+  for I := Low(CCGeneratorCardSchemes) to High(CCGeneratorCardSchemes) do
+  cbCardScheme.Items.Add(CCGeneratorCardSchemes[I]);
+  // Create stringlist with expiry years
+  ExpiryYears := TStringList.Create;
+  for I := 0 to 10 do ExpiryYears.Add(IntToStr(CurrentYear + I));
+end;
+
+{*******************************************************}
+{                   Form Close Event                    }
+{*******************************************************}
+procedure TfrmGenerateCC.FormClose(Sender: TObject;
+  var Action: TCloseAction);
+begin
+  // Cancel active generation loop
+  CancelLoop := True;
+  // Free Expiry Years list
+  ExpiryYears.Free;
+  // Free Form
+  Action := caFree;
+  Release;
+end;
+
+{*******************************************************}
+{                      Load BINS                        }
+{*******************************************************}
+procedure TfrmGenerateCC.cbCardSchemeChange(Sender: TObject);
+
+  procedure LoadBINS(const BINS: array of TBINRec);
+  var
+    I : Integer;
+  begin
+    // Set progress
+    PB.Max := High(BINS);
+    // Set progress label
+    lblProgress.Caption := 'Loading Bins..';
+    //
+    Application.ProcessMessages;
+    // Load BINS
+    for I := Low(BINS) to High(BINS) do
+    with cbBin.Items do
+    begin
+      // If cancel loop - break the loop
+      if CancelLoop then Break;
+      // Add BIN
+      Add(Format('%.*d (%s)', [6, BINS[I].iin_start, CCGeneratorCardType[BINS[I].iin_type]]));
+      PB.Position := I;
+    end;
+    // Set progress
+    PB.Position := 0;
+    // Set progress label
+    lblProgress.Caption := 'Ready';
+  end;
+
+begin
+  // Clear Results
+  lvResults.Clear;
+  // Clear BINS
+  cbBIN.Clear;
+  // Disable SAVE button
+  btnSave.Enabled := False;
+  // Load bins based on selected card type
+  case cbCardScheme.ItemIndex of
+    0 : LoadBINS(BINS_AMEX);
+    1 : LoadBINS(BINS_DINERSCLUB);
+    2 : LoadBINS(BINS_DISCOVER);
+    3 : LoadBINS(BINS_JCB);
+    4 : LoadBINS(BINS_MAESTRO);
+    5 : LoadBINS(BINS_MASTERCARD);
+    6 : LoadBINS(BINS_VISA);
+  end;
+end;
+
+{*******************************************************}
+{            Clear Results when BIN changed             }
+{*******************************************************}
+procedure TfrmGenerateCC.cbBINChange(Sender: TObject);
+begin
+  // Clear Results
+  lvResults.Clear;
+end;
+
+{*******************************************************}
+{                   Generate Cards                      }
+{*******************************************************}
+procedure TfrmGenerateCC.btnGenerateClick(Sender: TObject);
+var
+  BIN : string;
+  LST : TStringList;
+
+  function RandomPAN(const PANLength: Integer) : string;
+  var
+    S : string;
+  begin
+    S := BIN;
+    Randomize;
+    repeat
+      S := S + IntToStr(RandomRange(0, 9));
+    until (Length(S) = (PANLength -1)) or CancelLoop;
+    Result := S + IntToStr(LuhnAlgorithmCheckDigit(S));
+  end;
+
+  procedure AddCardNumber(const PAN: string);
+  begin
+    if (LST.IndexOf(PAN) < 0) then
+    begin
+      // Add to LST for lookup
+      LST.Add(PAN);
+      // Add to results
+      with lvResults.Items.Add do
+      begin
+        Caption := PAN;
+        SubItems.Add(ExpiryYears[RandomRange(0, 10)]);
+        SubItems.Add(Format('%.*d', [2, RandomRange(1, 12)]));
+        SubItems.Add(Format('%.*d', [3, RandomRange(1, 999)]));
+      end;
+    end;
+  end;
+
+  procedure EnableControls(const B: Boolean);
+  begin
+    cbCardScheme.Enabled := B; 
+    cbBIN.Enabled        := B;
+    cbAmount.Enabled     := B;
+    btnSave.Enabled      := B;
+    btnGenerate.Enabled  := B;
+  end;
+
+var
+  M, X, I : Integer;
+begin
+  EnableControls(False);
+  // Create TEMP list with PAN's for lookup to prevent doubles (How high are the odds?)
+  LST := TStringList.Create;
+  try
+    // Set cancelloop to false
+    CancelLoop := False;
+    // Set BIN to variable
+    BIN := Copy(cbBIN.Text, 1, Pos(' ', cbBIN.Text) -1);
+    // Set progress
+    M := StrToInt(cbAmount.Text);
+    PB.Max := M;
+    //
+    Application.ProcessMessages;
+    // Begin Update
+    lvResults.Items.BeginUpdate;
+    // Counter for Processmessages
+    I := 0;
+    // Create Card Numbers
+    repeat
+      // Set amount generated to variable
+      X := lvResults.Items.Count;
+      //
+      case cbCardScheme.ItemIndex of
+        0 : AddCardNumber(RandomPAN(15));   // AMEX
+        1 : AddCardNumber(RandomPAN(14));   // DINERS CLUB INT
+
+        else  AddCardNumber(RandomPAN(16)); // DISCOVER/MAESTRO/MASTERCARD/VISA
+      end;
+      // Update progress
+      PB.Position := X;
+      // Set progress label
+      lblProgress.Caption := Format('%d of %d', [X, M]);
+      //
+      if (I mod 100) = 0 then Application.ProcessMessages;
+    until (X = M) or CancelLoop;
+    // End Update
+    lvResults.Items.EndUpdate;
+    // Done!
+    PB.Position := 0;
+    // Set progress label
+    lblProgress.Caption := 'Ready';
+    // Enable SAVE button
+    btnSave.Enabled := lvResults.Items.Count > 0;
+  finally
+    LST.Free;
+  end;
+  EnableControls(True);
+end;
+
+{*******************************************************}
+{              Create Track from Selected               }
+{*******************************************************}
+procedure TfrmGenerateCC.CreateTrack1Click(Sender: TObject);
+begin
+  with TfrmTracksEncode.Create(Application) do 
+  begin
+    // Set PAN
+    edtCardNumber.Text := lvResults.Selected.Caption;
+    // Set Year
+    cbExpirationYear.ItemIndex := cbExpirationYear.Items.IndexOf(lvResults.Selected.SubItems[0]);
+    // Set Month
+    cbExpirationMonth.ItemIndex := StrToInt(lvResults.Selected.SubItems[1]) -1;
+    // Set Service Code
+    edtServiceCode.Text := '101';
+    // Set PVKI
+    edtPVKI.Text := '0';
+    // Set PVV
+    edtPVV.Text := '0000';
+    // Set CVV
+    edtCVV.Text := lvResults.Selected.SubItems[2];
+    // Show
+    Show;
+  end;
+end;
+
+{*******************************************************}
+{                  Copy Selected PAN                    }
+{*******************************************************}
+procedure TfrmGenerateCC.CopyPAN1Click(Sender: TObject);
+begin
+  Clipboard.AsText := lvResults.Selected.Caption;
+end;
+
+{*******************************************************}
+{                  Copy Selected CC                     }
+{*******************************************************}
+procedure TfrmGenerateCC.CopySelection1Click(Sender: TObject);
+begin
+  Clipboard.AsText := Format('%s|%s|%s|%s', [
+    lvResults.Selected.Caption,
+    lvResults.Selected.SubItems[0],
+    lvResults.Selected.SubItems[1],
+    lvResults.Selected.SubItems[2]
+  ]);
+end;
+
+{*******************************************************}
+{             Save Selected CC as *.cscd                }
+{*******************************************************}
+procedure TfrmGenerateCC.SaveSelection1Click(Sender: TObject);
+var
+  TRFile : TJSONObject;
+  TSFile : TStringList;
+begin
+  TSFile := TStringList.Create;
+  try
+    TRFile := TJSONObject.Create();
+    try
+      TRFile.AddPair('PAN', lvResults.Selected.Caption);
+      TRFile.AddPair('FN', '');
+      TRFile.AddPair('LN', '');
+      TRFile.AddPair('EXY', lvResults.Selected.SubItems[0]);
+      TRFile.AddPair('EXM', lvResults.Selected.SubItems[1]);
+      TRFile.AddPair('SC', '101');
+      TRFile.AddPair('PVKI', '0');
+      TRFile.AddPair('PVV', '0000');
+      TRFile.AddPair('CVV', lvResults.Selected.SubItems[2]);
+      TSFile.Text := TRFile.ToJSON;
+      if SaveDialog.Execute(Handle) then
+      begin
+        TSFile.SaveToFile(SaveDialog.FileName);
+      end;
+    finally
+      TRFile.free;
+    end;
+  finally
+    TSFile.Free;
+  end;
+end;
+
+{*******************************************************}
+{                Save Generated CC's                    }
+{*******************************************************}
+procedure TfrmGenerateCC.btnSaveClick(Sender: TObject);
+var
+  S : TStringList;
+  I : Integer;
+begin
+  S := TStringList.Create;
+  try
+    if SaveResultsDialog.Execute(Handle) then
+    for I := 0 to lvResults.Items.Count -1 do
+    begin
+      S.Add(Format('%s|%s|%s|%s', [
+        lvResults.Items[I].Caption,
+        lvResults.Items[I].SubItems[0],
+        lvResults.Items[I].SubItems[1],
+        lvResults.Items[I].SubItems[2]
+      ]));
+    end;
+    S.SaveToFile(SaveResultsDialog.FileName);
+  finally
+    S.Free;
+  end;
+end;
+
+{*******************************************************}
+{              Enable/Disable Menuitems                 }
+{*******************************************************}
+procedure TfrmGenerateCC.PopupMenuPopup(Sender: TObject);
+var
+  B : Boolean;
+begin
+  B := (lvResults.Items.Count > 0) and Assigned(lvResults.Selected);
+  // Enable/Disable menuitems
+  CreateTrack1.Enabled := B;
+  CopyPan1.Enabled := B;
+  CopySelection1.Enabled := B;
+  SaveSelection1.Enabled := B;
+end;
+
+end.

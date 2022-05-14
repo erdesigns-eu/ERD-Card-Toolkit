@@ -1,0 +1,108 @@
+unit untCardStudioProject;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.StdCtrls;
+
+type
+  TfrmCardStudioProject = class(TForm)
+    Button1: TButton;
+    OpenDialog1: TOpenDialog;
+    Memo1: TMemo;
+    procedure Button1Click(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  frmCardStudioProject: TfrmCardStudioProject;
+
+implementation
+
+{$R *.dfm}
+
+uses untCardStudioFile, untASNParser, untConst, untEMVTools;
+
+procedure TfrmCardStudioProject.Button1Click(Sender: TObject);
+
+  function GetAsText(const Value: AnsiString) : AnsiString;
+  var
+    I : Integer;
+    S : AnsiString;
+  begin
+    S := Hex2String(Value);
+    for I := 1 to Length(S) do
+    //Alphas, Digits and punctuation
+    if not (Byte(S[I]) in [$32..$23, $25..$2A, $2C..$3B, $3F..$5D, $5F..$7B, $7D, $A1, $AB, $AD, $B7, $BB, $BF..$C0]) then
+    begin
+      Result := Value;
+      Exit;
+    end;
+
+    Result := S;
+  end;
+
+  procedure LogASN(const ASN: TASNItem);
+  var
+    I : Integer;
+  begin
+    if ASN.Name <> '' then
+      memo1.Lines.Add(Format(APDUDecRespASNT, [ASN.Name]))
+    else
+      memo1.Lines.Add(Format(APDUDecRespASNT, [ASN.Tag]));
+    memo1.Lines.Add(Format(APDUDecRespASNL, [ASN.Length]));
+    case ASN.ValueType of
+      vtString : memo1.Lines.Add(Format(APDUDecRespASNV, [GetAsText(ASN.Value)]));
+      vtBool   : memo1.Lines.Add(Format(APDUDecRespASNV, [ASN.Value]));
+      vtNumber : memo1.Lines.Add(Format(APDUDecRespASNV, [ASN.Value]));
+      vtByte   : memo1.Lines.Add(Format(APDUDecRespASNV, [ASN.Value]));
+      vtBytes  : memo1.Lines.Add(Format(APDUDecRespASNV, [ASN.Value]));
+      vtBits   : memo1.Lines.Add(Format(APDUDecRespASNV, [ASN.Value]));
+    end;
+    memo1.Lines.Add('');
+    for I := 0 to ASN.Children.Count -1 do LogASN(ASN.Children[I]);
+  end;
+
+var
+  F : TCardStudioFile;
+  I : Integer;
+begin
+  F := TCardStudioFile.Create;
+  try
+    if Opendialog1.Execute(Handle) then
+    begin
+      F.LoadFromFile(Opendialog1.FileName);
+      for I := 0 to F.EMV.Items.Count -1 do LogASN(F.EMV.Items[I]);
+    end;
+  finally
+    F.Free;
+  end;
+end;
+
+{*******************************************************}
+{                  Form Create Event                    }
+{*******************************************************}
+procedure TfrmCardStudioProject.FormCreate(Sender: TObject);
+begin
+  // Set width and height
+  Width  := 640;
+  Height := 480;
+end;
+
+{*******************************************************}
+{                   Form Close Event                    }
+{*******************************************************}
+procedure TfrmCardStudioProject.FormClose(Sender: TObject;
+  var Action: TCloseAction);
+begin
+  Action := caFree;
+  Release;
+end;
+
+end.

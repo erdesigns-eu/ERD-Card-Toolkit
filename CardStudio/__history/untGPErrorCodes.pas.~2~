@@ -1,0 +1,16 @@
+{*******************************************************}
+{                                                       }
+{             untGPErrorCodes (errorcodes.h)            }
+{                     Author: ERD                       }
+{                                                       }
+{       Global Platform errorcodes.h translation        }
+{                                                       }
+{*******************************************************}
+
+unit untGPErrorCodes;
+
+interface
+
+implementation
+
+end.

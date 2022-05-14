@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+  <Transactions>
+    <Transaction>2022/04/13 15:53:23.904,=C:\Users\Ernst Reidinga\Documents\Embarcadero\Studio\Projects\Unit7.pas</Transaction>
+    <Transaction>2022/04/13 15:53:41.281,=C:\Users\Ernst Reidinga\Desktop\CardStudio\CardStudio\untASN1Parser.pas</Transaction>
+    <Transaction>2022/04/13 15:53:57.065,=C:\Users\Ernst Reidinga\Desktop\CardStudio\CardStudio\MSXml2.pas</Transaction>
+    <Transaction>2022/04/13 15:56:13.516,C:\Users\Ernst Reidinga\Desktop\CardStudio\CardStudio\Unit7.pas=C:\Users\Ernst Reidinga\Documents\Embarcadero\Studio\Projects\Unit7.pas</Transaction>
+    <Transaction>2022/04/13 15:56:13.516,C:\Users\Ernst Reidinga\Desktop\CardStudio\CardStudio\Unit7.dfm=C:\Users\Ernst Reidinga\Documents\Embarcadero\Studio\Projects\Unit7.dfm</Transaction>
+    <Transaction>2022/04/13 15:56:15.537,C:\Users\Ernst Reidinga\Desktop\CardStudio\CardStudio\Project6.dproj=C:\Users\Ernst Reidinga\Documents\Embarcadero\Studio\Projects\Project6.dproj</Transaction>
+  </Transactions>
+</BorlandProject>

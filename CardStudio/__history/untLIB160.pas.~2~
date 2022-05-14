@@ -1,0 +1,90 @@
+﻿{*******************************************************}
+{                                                       }
+{                   160.h - lib160.dll                  }
+{                    Translator: ERD                    }
+{                                                       }
+{       lib160.dll is a library for communicating       }
+{       with YL160 Magstripe/RFID/SmartCard/RFID        }
+{       reader/writer and MSR MagStripe readers.        }
+{                                                       }
+{*******************************************************}
+
+unit untLIB160;
+
+interface
+
+uses
+  Winapi.Windows, System.SysUtils, System.Classes;
+
+const
+  LIB160 = 'lib160.dll';
+
+type
+  TADPU_SEND = record
+    Command : array [0..4] of Byte;
+    Lc      : Word;
+    DataIn  : array [0..512] of Byte;
+    Le      : Word;
+  end;
+  PADPU_SEND = ^TADPU_SEND;
+
+  TADPU_RESP = record
+    LenOut  : Word;
+    DataOut : array [0..512] of Byte;
+    SWA     : Byte;
+    SWB     : Byte;
+  end;
+  PADPU_RESP = ^TADPU_RESP;
+
+  TByteArray = array [0..255] of Byte;
+  PByteArray = ^TByteArray;
+
+// Connect
+function InitDev(ComPort: Byte; BaudRate: LongWord) : integer; stdcall; external LIB160;
+// Disconnect
+function DelDev : integer; stdcall; external LIB160;
+// Read Serial Number
+function ReadSN(Buffer: array of Byte) : integer; stdcall; external LIB160;
+
+{*******************************************************}
+{                   YL160 MagStripe                     }
+{*******************************************************}
+function MagOpen : integer; stdcall; external LIB160;
+function MagClose : integer; stdcall; external LIB160;
+function MagReset : integer; stdcall; external LIB160;
+function MagSwiped : integer; stdcall; external LIB160;
+function MagRead(TK1Dat: PChar; TK2Dat: PChar; TK3Dat: PChar) : integer; stdcall; external LIB160;
+function MagRead_DES(TK1Dat: PChar; TK2Dat: PChar; TK3Dat: PChar) : integer; stdcall; external LIB160;
+
+{*******************************************************}
+{                    MSR MagStripe                      }
+{*******************************************************}
+function MSR_Init : integer; stdcall; external LIB160;
+function MSR_Exit : integer; stdcall; external LIB160;
+function MSR_DoCancel : integer; stdcall; external LIB160;
+function MSR_Read : integer; stdcall; external LIB160;
+function MSR_Write(TK1Dat: PADPU_SEND; TK2Dat: PADPU_SEND; TK3Dat: PADPU_SEND) : integer; stdcall; external LIB160;
+function MSR_Read_ASCII : PAnsiChar; stdcall; external LIB160;
+function MSR_Write_ASCII(TK1Dat: PAnsiChar; TK2Dat: PAnsiChar; TK3Dat: PAnsiChar) : integer; stdcall; external LIB160;
+function MSR_Erase(Mode: Byte) : integer; stdcall; external LIB160;
+function MSR_GetTrackData(TK1Dat: PADPU_RESP; TK2Dat: PADPU_RESP; TK3Dat: PADPU_RESP) : integer; stdcall; external LIB160;
+function MSR_Set_HiCo : integer; stdcall; external LIB160;
+function MSR_Set_LoCo : integer; stdcall; external LIB160;
+function MSR_Get_CoStatus(Status: Byte) : integer; stdcall; external LIB160;
+function Msr_ChangeAscii(TK1Dat: PADPU_SEND; TK2Dat: PADPU_SEND; TK3Dat: PADPU_SEND) : integer; stdcall; external LIB160;
+function MSR_Write_status : integer; stdcall; external LIB160;
+function MSR_Fast_Init(Port: integer) : integer; stdcall; external LIB160;
+function MSR_Get_HwInfo(Info: PAnsiChar) : integer; stdcall; external LIB160;
+function MSR_BeepOff : integer; stdcall; external LIB160;
+function MSR_BeepOn : integer; stdcall; external LIB160;
+function MSR_Erase_status : integer; stdcall; external LIB160;
+function MSR_ASC_Read : integer; stdcall; external LIB160;
+function auto_init : integer; stdcall; external LIB160;
+function MSR_Write_SPEC(TK1Dat: PAnsiChar; TK2Dat: PAnsiChar; TK3Dat: PAnsiChar; Parity1: Integer; Parity2: Integer; Parity3: Integer; TK1Len: Integer; TK2KLen: Integer; TK3Len: Integer; SS1: Integer; ES1: Integer; SS2: Integer; ES2: Integer; SS3: Integer; ES3: Integer) : integer; stdcall; external LIB160;
+function MSR_SetBPI(Mode: Byte) : integer; stdcall; external LIB160;
+function User_To_ASC(TK1Dat: PAnsiChar; TK2Dat: PAnsiChar; TK3Dat: PAnsiChar; Parity1: Byte; Parity2: Byte; Parity3: Byte; TR1Bit: Byte; TR2Bit: Byte; TR3Bit: Byte; ES1: Byte; ES2: Byte; ES3: Byte) : integer; stdcall; external LIB160;
+function MSR_AUTH : integer; stdcall; external LIB160;
+
+implementation
+
+end.

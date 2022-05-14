@@ -1,0 +1,469 @@
+unit untConst;
+
+interface
+
+{*******************************************************}
+{                     Application                       }
+{*******************************************************}
+const
+  ApplicationTitle   = 'CardStudio';
+  ApplicationVersion = '1.0.0.0';
+  ApplicationBuild   = '2022';
+  ApplicationAuthor  = 'ERD';
+  ApplicationRegKey  = 'SOFTWARE\CardStudio\';
+  ApplicationTGLink  = 'https://t.me/cardstudio_official';
+
+  ApplicationExitConfirm   = 'Are you sure you want to exit CardStudio?';
+
+  LicenseKeyRegEx = '^[A-Z0-9]{6}\-[A-Z0-9]{6}\-[A-Z0-9]{6}-[A-Z0-9]{6}\-[A-Z0-9]{6}$';
+  LicenseKeyRegV  = 'License';
+  LicenseKeyError = 'Invalid License Key!'                         + #13#10 +
+                    'Please enter a valid CardStudio License Key.' + #13#10#13#10 +
+                    'If you don''t have a valid License Key,'      + #13#10 +
+                    'you can order one from official resellers.'   + #13#10#13#10 +
+                    'Or contact ERD on TG: cardstudio_official';
+
+  AboutHeader     = '*********************************************'  + #13#10 +
+                    '*                                           *'  + #13#10 +
+                    '*                CardStudio                 *'  + #13#10 +
+                    '*                                           *'  + #13#10 +
+                    '*********************************************'  + #13#10;
+
+  AboutAuthor     = 'Author.....: %s';
+  AboutCopyright  = 'Copyright..: %d-%d (c) %s' + #13#10;
+
+  AboutBINHeader  = '*********************************************'  + #13#10 +
+                    '*                                           *'  + #13#10 +
+                    '*                   BINS                    *'  + #13#10 +
+                    '*                                           *'  + #13#10 +
+                    '*********************************************'  + #13#10;
+
+  AboutBINSAmex   = 'American Expresss..: %.0n';
+  AboutBINSDCI    = 'Diners Club........: %.0n';
+  AboutBINDISC    = 'Discover...........: %.0n';
+  AboutBINJCB     = 'JCB................: %.0n';
+  AboutBINMAES    = 'MAESTRO............: %.0n';
+  AboutBINMAST    = 'MASTERCARD.........: %.0n';
+  AboutBINVISA    = 'VISA...............: %.0n' + #13#10;
+
+  AboutATRHeader  = '*********************************************'  + #13#10 +
+                    '*                                           *'  + #13#10 +
+                    '*                   ATRs                    *'  + #13#10 +
+                    '*                                           *'  + #13#10 +
+                    '*********************************************'  + #13#10;
+
+  AboutATRCount   = 'ATR Database.......: %.0n' + #13#10;
+
+  AboutDISCHeader = '*********************************************'  + #13#10 +
+                    '*                                           *'  + #13#10 +
+                    '*                DISCLAIMER                 *'  + #13#10 +
+                    '*                                           *'  + #13#10 +
+                    '*********************************************'  + #13#10;
+
+  AboutDisclaimer = 'The author (%s) is not liable for damage'       + #13#10 +
+                    'caused by or with the use of this application!' + #13#10 +
+                    'Copying or cloning CREDIT/DEBIT/BANK cards'     + #13#10 +
+                    'is a criminal offence!'                         + #13#10#13#10 +
+
+                    'If you bough this software from someone else'   + #13#10 +
+                    'than our official resellers, you will not'      + #13#10 +
+                    'get updates or support!'                        + #13#10#13#10 +
+
+                    'Reselling this software without our consent'    + #13#10 +
+                    'will result in a BAN and BLACK LIST!'           + #13#10#13#10 +
+
+                    'Support development by buying from our'         + #13#10 +
+                    'official resellers only.';
+
+{*******************************************************}
+{                   Magnetic Stripe                     }
+{*******************************************************}
+const
+  MSRClearSuccess   = 'Successfully erased card!';
+  MSRClearError     = 'Failed erasing card!';
+  MSRWriteSuccess   = 'Card has been written successfully!';
+  MSRWriteError     = 'Failed to write to card!';
+
+  MST1StartSentinel = '%';
+  MST2StartSentinel = ';';
+  MSTEndSentinel    = '?';
+
+  YL160Port         = 201;
+  YL160AutoConnect  = 'YL160AutoConnect';
+  YL160BaudRate     = 'YL160BaudRate';
+
+  MSRAutoConnect    = 'MSRAutoConnect';
+  MSRPort           = 'MSRPort';
+  MSRBaudRate       = 'MSRBaudRate';
+  MSRCardType       = 'MSRCardType';
+
+{*******************************************************}
+{                      SmartCard                        }
+{*******************************************************}
+const
+  PCSCDefault       = 'PCSCDefault';
+  PCSCTransportKey  = 'PCSCTK';
+  PCSCEncryptionKey = 'PCSCEK';
+  PCSCMACKey        = 'PCSCMK';
+  PCSCDataKey       = 'PCSCDK';
+  // Visa
+  PCSCVisaEK        = 'PCSCVisaEK';
+  PCSCVisaMK        = 'PCSCVisaMK';
+  PCSCVisaDK        = 'PCSCVisaDK';
+  // Mastercard
+  PCSCMasterCardEK  = 'PCSCMasterCardEK';
+  PCSCMasterCardMK  = 'PCSCMasterCardMK';
+  PCSCMasterCardDK  = 'PCSCMasterCardDK';
+  // Maestro
+  PCSCMaestroEK     = 'PCSCMaestroEK';
+  PCSCMaestroMK     = 'PCSCMaestroMK';
+  PCSCMaestroDK     = 'PCSCMaestroDK';
+
+{*******************************************************}
+{                    Track Decoder                      }
+{*******************************************************}
+const
+  TrackLogHeader  = '*********************************************'  + #13#10 +
+                    '*                                           *'  + #13#10 +
+                    '*              Track %d Data                 *' + #13#10 +
+                    '*                                           *'  + #13#10 +
+                    '*********************************************'  + #13#10;
+
+  TrackLogPAN     = 'PAN...........: %s'   + #13#10 +
+                    'Type..........: %s'   + #13#10 +
+                    'LUHN Check....: %s'   + #13#10;
+
+  TrackLogBIN     = 'Country.......: %s'   + #13#10 +
+                    'Currency......: %s'   + #13#10;
+                    // 'Issuer........: %s'   + #13#10 +
+                    // 'Issuer URL....: %s'   + #13#10 +
+                    // 'Category......: %s'   + #13#10;
+
+  TrackLogEXP     = 'Exp Year......: %d'   + #13#10 +
+                    'Exp Month.....: %s'   + #13#10;
+
+  TrackLogSC      = 'Service Code..: %.*d' + #13#10 +
+                    'SC D1.........: %s'   + #13#10 +
+                    'SC D2.........: %s'   + #13#10 +
+                    'SC D3.........: %s'   + #13#10;
+
+  TrackLogName    = 'First Name....: %s'   + #13#10 +
+                    'Last Name.....: %s'   + #13#10;
+
+  TrackLogPVKI    = 'PVKI..........: %d';
+  TrackLogPVV     = 'PVV...........: %.*d';
+  TrackLogCVV     = 'CVV...........: %.*d';
+
+  TrackLogCtyCode = 'Country Code..: %.*d %s';
+  TrackLogCurCode = 'Currency Code.: %.*d %s';
+  TrackLogCExp    = 'Currency Exp..: %.*d' + #13#10;
+
+  TrackLogAmntA   = 'Amount Auth...: %.*d';
+  TrackLogAmntR   = 'Amount Rem....: %.*d' + #13#10;
+
+  TrackLogCycleB  = 'Cycle Begin...: %.*d (%s) %.*d';
+  TrackLogCycleL  = 'Cycle Length..: %.*d' + #13#10;
+
+  TrackLogRetryC  = 'Retry Count...: %d'   + #13#10;
+
+  TrackLogPCP     = 'PCP...........: %.*d';
+  TrackLogIC      = 'IC............: %d';
+  TrackLogPSR     = 'PSR...........: %.*d';
+  TrackLogCSN     = 'CSN...........: %d'   + #13#10;
+
+  TrackLogSAN1    = 'SAN-1 SR......: %.*d';
+  TrackLogSAN2    = 'SAN-2 SR......: %.*d';
+
+  Track1RegEx          = '^%?B\d{0,19}\^[\w\s\/-]{2,26}\^\d{7}\w*\??$';
+  Track2RegEx          = '^;?\d{0,19}=\d{7}\w*\??$';
+  Track3RegEx          = '^;?\d{4,19}\=\d{10,40}\=\d{0,15}\=\d{0,15}\=\d{1,5}\=\d{1,6}\??$';
+
+  TrackInvalidData     = 'Invalid track format! Please check if you selected the right Track Type.';
+
+  Track1NameSeperator  = '/';
+  Track1FieldSeperator = '^';
+  Track2FieldSeperator = '=';
+
+  TrackLogLUHNValid    = 'VALID';
+  TrackLogLUHNInValid  = 'INVALID';
+
+{*******************************************************}
+{                    Track Encoder                      }
+{*******************************************************}
+const
+  TrackEmptyFieldPAN = 'Please enter a DEBIT/CREDIT card number (PAN)!';
+  TrackEmptyFieldFN  = 'Please enter a Card Holder first name!';
+  TrackEmptyFieldLN  = 'Please enter a Card Holder last name!';
+  TrackEmptyFieldPKI = 'Please enter a Service Code!';
+  TrackEmptyFieldSC  = 'Please enter a PIN Verifcation Key Indicator!';
+  TrackEmptyFieldPVV = 'Please enter a Pin Verification Value!';
+  TrackEmptyFieldCVV = 'Please enter a Card Verification Value!';
+
+  TrackEncodeTrack1  = 'B%s^%s/%s^%s%.*d%.*d%.*d%.*d0000%.*d000000';
+  TrackEncodeTrack2  = '%s=%s%.*d%.*d%.*d%.*d%.*d00000';
+
+{*******************************************************}
+{                Credit Card Generator                  }
+{*******************************************************}
+const
+  CCGeneratorCardSchemes : array [0..6] of string = (
+    'American Express',
+    'Diners Club',
+    'Discover',
+    'JCB',
+    'Maestro',
+    'Mastercard',
+    'Visa'
+  );
+
+  CCGeneratorCardType  : array [0..3] of string = (
+    'N/A',
+    'DEBIT',
+    'CREDIT',
+    'CHARGE'
+  );
+
+{*******************************************************}
+{                     BIN Checker                       }
+{*******************************************************}
+const
+  BINCheckBinCodesAPIKEY = 'BinCodes';
+  BINCheckAPILayerAPIKEY = 'APILayer';
+  BINCheckBinTableAPIKEY = 'BinTable';
+  BINCheckDefault        = 'DefaultBINCheck';
+
+const
+  BINCheckHeader   = '*********************************************'  + #13#10 +
+                     '*                                           *'  + #13#10 +
+                     '*                 BIN Check                 *'  + #13#10 +
+                     '*                                           *'  + #13#10 +
+                     '*********************************************'  + #13#10;
+
+  BINCheckPAN      = 'PAN...........: %s';
+  BINCheckScheme   = 'Scheme........: %s';
+  BINCheckType     = 'Type..........: %s';
+  BINCheckBrand    = 'Brand.........: %s';
+  BINCheckCategory = 'Category......: %s';
+  BINCheckIssuer   = 'Issuer........: %s';
+  BINCheckURL      = 'Issuer URL....: %s';
+  BINCheckCountry  = 'Country.......: %s';
+  BINCheckCurrency = 'Currency......: %s';
+
+{*******************************************************}
+{                       Database                        }
+{*******************************************************}
+const
+  DBCreateCCTable = 'CREATE TABLE ccs (' +
+                    'pan TEXT, scheme INTEGER, type INTEGER, category TEXT,'  +
+                    'issuer TEXT, url TEXT, country INTEGER, '                +
+                    'currency INTEGER, firstname TEXT, lastname TEXT,'        +
+                    'expyear INTEGER, expmonth INTEGER, track1 TEXT,'         +
+                    'track2 TEXT, track3 TEXT, cvv TEXT, pin TEXT, comment TEXT)';
+
+  DBFile          = 'Database';
+  DBAddCard       = 'INSERT INTO ccs (pan, scheme, type, category, issuer,' +
+                    'url, country, currency, firstname, lastname, expyear,'     +
+                    'expmonth, track1, track2, track3, cvv, pin, comment)'      +
+                    'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+
+  DBUpdateCard    = 'UPDATE ccs SET pan = ?, scheme = ?, type = ?, category = ?,'    +
+                    'issuer = ?, url = ?, country = ?, currency = ?, firstname = ?,' +
+                    'lastname = ?, expyear = ?, expmonth = ?, track1 = ?,'           +
+                    'track2 = ?, track3 = ?, cvv = ?, pin = ?, comment = ? WHERE '   +
+                    'rowid = %d';
+
+  DBSelectCards   = 'SELECT rowid, * FROM ccs';
+  DBSelectCard    = 'SELECT rowid, * FROM ccs WHERE rowid = %d';
+  DBDeleteCard    = 'DELETE FROM ccs WHERE rowid = %s';
+  DBSearch        = 'SELECT rowid, * FROM ccs WHERE %s %s ''%s''';
+  DBFilter        = 'SELECT rowid, * FROM ccs WHERE %s = ''%d''';
+
+{*******************************************************}
+{                      ATR Changer                      }
+{*******************************************************}
+const
+  ATRCheckHeader    = '*********************************************'  + #13#10 +
+                      '*                                           *'  + #13#10 +
+                      '*                 Check ATR                 *'  + #13#10 +
+                      '*                                           *'  + #13#10 +
+                      '*********************************************'  + #13#10;
+
+  ATRCheckATR       = 'ATR.................: %s';
+  ATRCheckHistBytes = 'Historical Bytes....: %s';
+  ATRCheckFused     = 'Fused...............: %s' + #13#10;
+
+  ATRCheckDefDataR  = 'Default Data Rate...: %d';
+  ATRCheckDefCLK    = 'Default Data Clock..: %d' + #13#10;
+
+  ATRCheckATRValid  = 'Valid ATR...........: %s';
+  ATRCheckTS        = 'TS..................: %s';
+  ATRCheckT0        = 'T0..................: 0x%s';
+  ATRCheckTPresent  = 'T Present...........: %s' + #13#10;
+
+  ATRCheckTA        = 'TA(%d) = 0x%s %s';
+  ATRCheckTB        = 'TB(%d) = 0x%s %s';
+  ATRCheckTC        = 'TC(%d) = 0x%s %s';
+  ATRCheckTD        = 'TD(%d) = 0x%s %s';
+
+  ATRCheckTLV       = 'Historical Bytes contains TLV data object' + #13#10;
+
+  ATRCheckCSTCK     = 'Checksum TCK........: %s';
+  ATRCkeckCSValid   = 'Checksum TCK Valid..: %s';
+
+  ATRSetHeader      = '*********************************************'  + #13#10 +
+                      '*                                           *'  + #13#10 +
+                      '*                Change ATR                 *'  + #13#10 +
+                      '*                                           *'  + #13#10 +
+                      '*********************************************'  + #13#10;
+
+  ATRSetOld         = 'Current ATR.........: %s';
+  ATRSetNew         = 'New ATR.............: %s' + #13#10;
+
+  ATRSetReset       = 'Reset card to factory defaults - THIS WILL WIPE OUT ALL APPLETS INSTALLED' + #13#10;
+
+  ATRSetCold        = 'Set COLD ATR';
+  ATRSetHot         = 'Set WARM ATR' + #13#10;
+
+  ATRSetTKKey       = '00A4040010C238E449F725B1510EAA699550CABA16';
+  ATRSetResetFact   = '00F00000';
+  ATRSet1           = 'C0D6029A02F807';
+  ATRSet2           = 'C0D601240108';
+  ATRSet3           = 'C0D601470108';
+  ATRSet4           = 'C0D601260403600000';
+  ATRSet5           = 'C0D601490403600000';
+  ATRSet6           = 'C0D6012201FE';
+  ATRSetATRCold     = 'C0D60136';
+  ATRSetATRHot      = 'C0D60159';
+  ATRSet7           = 'C0D603010101';
+  ATRSetAuthKey1    = 'C0D6030510404142434445464748494A4B4C4D4E4F';
+  ATRSet8           = 'C0D6031D0101';
+  ATRSetAuthKey2    = 'C0D6032110404142434445464748494A4B4C4D4E4F';
+  ATRSet9           = 'C0D603390101';
+  ATRSetAuthKey3    = 'C0D6033D10404142434445464748494A4B4C4D4E4F';
+  ATRSetLock        = '00100000';
+  ATRFuseCard       = '00000000';
+
+  ATRSetSuccess     = 'Successfully changed ATR!';
+  ATRSetFSuccess    = 'Successfully changed ATR, and Fused card!';
+  ATRSetError       = 'Failed to change the ATR! Please make sure the card is unfused!';
+
+{*******************************************************}
+{                     Card Formatter                    }
+{*******************************************************}
+const
+  FormatCardHeader  = '*********************************************'  + #13#10 +
+                      '*                                           *'  + #13#10 +
+                      '*                Format Card                *'  + #13#10 +
+                      '*                                           *'  + #13#10 +
+                      '*********************************************'  + #13#10;
+
+  FormatCardConnect = 'Connect to Reader....: %s';
+  FormatCardSelectA = 'Select Application...: %s (%s)';
+  FormatCardOpenSec = 'Open Secure Channel..: %s';
+  FormatCardDelete  = 'Delete Applet........: %s (%s)';
+  FormatCardInstall = 'Install Applet.......: %s';
+  FormatCardDisConn = 'Disconnect...........: %s' + #13#10;
+
+  FormatCardSuccess = 'Successfully formatted the Card!';
+  FormatCardError   = 'Failed to format the Card!';
+
+  FormatCardSelect  = 'A000000003000000';
+  FormatCard1PAY    = '315041592E5359532E4444463031';
+  FormatCard2Pay    = '315041592E5359532E4444463032';
+
+{*******************************************************}
+{                     APDU Decoder                      }
+{*******************************************************}
+const
+  APDUDecHeader     = '*********************************************'  + #13#10 +
+                      '*                                           *'  + #13#10 +
+                      '*                Decode APDU                *'  + #13#10 +
+                      '*                                           *'  + #13#10 +
+                      '*********************************************'  + #13#10;
+
+  APDUDecComCLA     = 'CLA.................: 0x%.*X';
+  APDUDecComINS     = 'INS.................: 0x%.*X';
+  APDUDecComP1      = 'P1..................: 0x%.*X';
+  APDUDecComP2      = 'P2..................: 0x%.*X';
+  APDUDecComLC      = 'LC..................: 0x%.*X' + #13#10;
+
+  APDUDecComInstruc = 'Instruction.........: %s (%s)';
+  APDUDecComDataLen = 'Data Length.........: %d Bytes' + #13#10;
+
+  APDUDecRespSW1    = 'SW1.................: 0x%.*X';
+  APDUDecRespSW2    = 'SW2.................: 0x%.*X';
+  APDUDecRespStatus = 'Status..............: %s' + #13#10;
+
+  APDUDecRespASNT   = 'Tag.................: %s';
+  APDUDecRespASNL   = 'Length..............: %d Bytes';
+  APDUDecRespASNV   = 'Value...............: %s';
+
+{*******************************************************}
+{                   Read Memory Card                    }
+{*******************************************************}
+const
+  MCDefault         = 'MCDefault';
+  MCSLE4442PIN      = 'MCSLE4442';
+  MCSLE4442Select   = 'MCSLE4442SelectCard';
+
+  MCReadHeader      = '*********************************************'  + #13#10 +
+                      '*                                           *'  + #13#10 +
+                      '*             Read Memory Card              *'  + #13#10 +
+                      '*                                           *'  + #13#10 +
+                      '*********************************************'  + #13#10;
+
+  MCReadRespSW1     = 'SW1.................: 0x%.*X';
+  MCReadRespSW2     = 'SW2.................: 0x%.*X';
+  MCReadRespStatus  = 'Status..............: %s' + #13#10;
+
+  MCWriteHeader     = '*********************************************'  + #13#10 +
+                      '*                                           *'  + #13#10 +
+                      '*             Write Memory Card             *'  + #13#10 +
+                      '*                                           *'  + #13#10 +
+                      '*********************************************'  + #13#10;
+
+  MCWriteRespSW1    = 'SW1.................: 0x%.*X';
+  MCWriteRespSW2    = 'SW2.................: 0x%.*X';
+  MCWriteRespStatus = 'Status..............: %s' + #13#10;
+
+  MCPINHeader       = '*********************************************'  + #13#10 +
+                      '*                                           *'  + #13#10 +
+                      '*        Change Memory Card PIN Code        *'  + #13#10 +
+                      '*                                           *'  + #13#10 +
+                      '*********************************************'  + #13#10;
+
+  MCPINRespSW1      = 'SW1.................: 0x%.*X';
+  MCPINRespSW2      = 'SW2.................: 0x%.*X';
+  MCPINRespStatus   = 'Status..............: %s';
+
+{*******************************************************}
+{                       Project                         }
+{*******************************************************}
+const
+  ProjectAuthor   = 'ProjectAuthor';
+  ProjectWebsite  = 'ProjectWebsite';
+  ProjectEmail    = 'ProjectEmail';
+  ProjectTelegram = 'ProjectTelegram';
+
+{*******************************************************}
+{                      Date Texts                       }
+{*******************************************************}
+const
+  LongMonthNames : array[1..12] of string = (
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December'
+  );
+
+implementation
+
+end.

@@ -1,0 +1,393 @@
+unit untDatabase;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ComCtrls, Vcl.StdCtrls,
+  Vcl.Imaging.pngimage, Vcl.ExtCtrls, Vcl.Menus, Winapi.CommCtrl;
+
+type
+  THitInfo = record
+    HitTests: THitTests;
+    HitItem: Integer;
+    HitColumn: Integer;
+  end;
+
+  TfrmDatabase = class(TForm)
+    PopupMenu: TPopupMenu;
+    lvDB: TListView;
+    Panel1: TPanel;
+    Image1: TImage;
+    Label1: TLabel;
+    Label2: TLabel;
+    Panel2: TPanel;
+    btnHelp: TButton;
+    btnSearch: TButton;
+    btnSettings: TButton;
+    btnAddCard: TButton;
+    N1: TMenuItem;
+    Edit1: TMenuItem;
+    Delete1: TMenuItem;
+    WritetoMagStripe1: TMenuItem;
+    N2: TMenuItem;
+    Copy1: TMenuItem;
+    N3: TMenuItem;
+    Refresh1: TMenuItem;
+    procedure FormCreate(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure btnSettingsClick(Sender: TObject);
+    procedure btnAddCardClick(Sender: TObject);
+    procedure Delete1Click(Sender: TObject);
+    procedure WritetoMagStripe1Click(Sender: TObject);
+    procedure PopupMenuPopup(Sender: TObject);
+    procedure lvDBMouseDown(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
+    procedure Copy1Click(Sender: TObject);
+    procedure lvDBColumnClick(Sender: TObject; Column: TListColumn);
+    procedure Refresh1Click(Sender: TObject);
+    procedure btnSearchClick(Sender: TObject);
+    procedure Edit1Click(Sender: TObject);
+  private
+    { Private declarations }
+    FDatabaseFile : string;
+    FSelectColumn : Integer;
+    FOrderBy      : string;
+    FOrderAsc     : Boolean;
+  public
+    { Public declarations }
+    property DatabaseFile: string read FDatabaseFile write FDatabaseFile;
+    property SelectColumn: Integer read FSelectColumn write FSelectColumn;
+
+    procedure ExecuteQuery(const Q: string);
+  end;
+
+var
+  frmDatabase: TfrmDatabase;
+
+const
+  AscDesc : array [Boolean] of string = ('ASC', 'DESC');
+
+implementation
+
+{$R *.dfm}
+
+uses untConst, untSettings, untBIN, SQLite3, SQLite3Wrap, Registry, untDatabaseAdd,
+  untMagStripeWrite, ClipBrd, untDatabaseSearch, untDatabaseEdit;
+
+function ListView_SubItemHitTest(hwndLV: HWND; var pinfo:
+  TLVHitTestInfo): Integer;
+begin
+  Result := SendMessage(hwndLV, LVM_SUBITEMHITTEST, 0, Longint(@pinfo));
+end;
+
+function GetSubItemHitTestInfoAt(Handle: THandle; X, Y: Integer):
+THitInfo;
+var
+  Info: TLVHitTestInfo;
+begin
+  Info.pt := Point(X, Y);
+  ListView_SubItemHitTest(Handle, Info);
+
+  Result.HitColumn := Info.iSubItem;
+  Result.HitItem := Info.iItem;
+  Result.HitTests := [];
+
+  if ((Info.flags and LVHT_ABOVE) <> 0) and (Y < 0) then
+    Include(Result.HitTests, htAbove);
+  if (Info.flags and LVHT_BELOW) <> 0 then
+    Include(Result.HitTests, htBelow);
+  if (Info.flags and LVHT_NOWHERE) <> 0 then
+    Include(Result.HitTests, htNowhere);
+  if (Info.flags and LVHT_ONITEM) = LVHT_ONITEM then
+    Include(Result.HitTests, htOnItem)
+  else
+  begin
+    if (Info.flags and LVHT_ONITEMICON) <> 0 then
+      Include(Result.HitTests, htOnIcon);
+    if (Info.flags and LVHT_ONITEMLABEL) <> 0 then
+      Include(Result.HitTests, htOnLabel);
+    if (Info.flags and LVHT_ONITEMSTATEICON) <> 0 then
+      Include(Result.HitTests, htOnStateIcon);
+  end;
+  if (Info.flags and LVHT_TOLEFT) <> 0 then
+    Include(Result.HitTests, htToLeft);
+  if (Info.flags and LVHT_TORIGHT) <> 0 then
+    Include(Result.HitTests, htToRight);
+end;
+
+{*******************************************************}
+{                     Execute Query                     }
+{*******************************************************}
+procedure TfrmDatabase.ExecuteQuery(const Q: string);
+var
+  DB : TSQLite3Database;
+  ST : TSQLite3Statement;
+begin
+  if FileExists(FDatabaseFile) then
+  begin
+    DB := TSQLite3Database.Create;
+    try
+      DB.Open(FDatabaseFile);
+      ST := DB.Prepare(Format('%s ORDER BY %s %s', [Q, FOrderBy, AscDesc[FOrderAsc]]));
+      try
+        lvDB.Clear;
+        while ST.Step = SQLITE_ROW do
+        begin
+          lvDB.Items.BeginUpdate;
+          with lvDB.Items.Add do
+          begin
+            Caption := ST.ColumnText(0);
+            SubItems.Add(FormatPAN(ST.ColumnText(1), ST.ColumnInt(2)));
+            SubItems.Add(CardSchemeToStr(ST.ColumnInt(2)));
+            SubItems.Add(CardTypeToStr(ST.ColumnInt(3)));
+            SubItems.Add(ST.ColumnText(4));
+            SubItems.Add(ST.ColumnText(5));
+            SubItems.Add(ST.ColumnText(6));
+            SubItems.Add(CountryCodeToStr(ST.ColumnInt(7)));
+            SubItems.Add(CurrencyCodeToStr(ST.ColumnInt(8)));
+            SubItems.Add(ST.ColumnText(9));
+            SubItems.Add(ST.ColumnText(10));
+            SubItems.Add(ST.ColumnText(11));
+            SubItems.Add(LongMonthNames[ST.ColumnInt(12)]);
+            SubItems.Add(ST.ColumnText(13));
+            SubItems.Add(ST.ColumnText(14));
+            SubItems.Add(ST.ColumnText(15));
+            SubItems.Add(ST.ColumnText(16));
+            SubItems.Add(ST.ColumnText(17));
+            SubItems.Add(ST.ColumnText(18));
+          end;
+          lvDB.Items.EndUpdate;
+        end;
+      finally
+        ST.Free;
+      end;
+    finally
+      DB.Free;
+    end;
+  end;
+end;
+
+{*******************************************************}
+{                  Form Create Event                    }
+{*******************************************************}
+procedure TfrmDatabase.FormCreate(Sender: TObject);
+var
+  R : TRegistry;
+begin
+  R := TRegistry.Create;
+  try
+    R.RootKey := HKEY_CURRENT_USER;
+    if R.OpenKey(ApplicationRegKey, True) then
+    begin
+      // Database File
+      if R.ValueExists(DBFile) then DatabaseFile := R.ReadString(DBFile)
+    end;
+  finally
+    R.Free;
+  end;
+  // Set width and height
+  Width  := 640;
+  Height := 450;
+  // Enable/Disable controls
+  btnAddCard.Enabled := FileExists(DatabaseFile);
+  // Order by rowid (default)
+  FOrderBy := 'rowid';
+  // Show all cards
+  ExecuteQuery(DBSelectCards);
+end;
+
+{*******************************************************}
+{                   Form Close Event                    }
+{*******************************************************}
+procedure TfrmDatabase.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  Action := caFree;
+  Release;
+  frmDatabase := nil;
+end;
+
+{*******************************************************}
+{                Show Settings Dialog                   }
+{*******************************************************}
+procedure TfrmDatabase.btnSettingsClick(Sender: TObject);
+begin
+  with TfrmSettings.Create(Application) do
+  if Execute(9) = MROK then SaveSettings;
+end;
+
+{*******************************************************}
+{                      Add Card                         }
+{*******************************************************}
+procedure TfrmDatabase.btnAddCardClick(Sender: TObject);
+begin
+  with TfrmDatabaseAdd.Create(Application) do Show;
+end;
+
+{*******************************************************}
+{                 Edit selected Card                    }
+{*******************************************************}
+procedure TfrmDatabase.Edit1Click(Sender: TObject);
+begin
+  if Assigned(lvDB.Selected) then
+  with TfrmDatabaseEdit.Create(Application) do
+  begin
+    LoadCard(StrToInt(lvDB.Selected.Caption));
+    Show;
+  end;
+end;
+
+{*******************************************************}
+{                     Delete Card                       }
+{*******************************************************}
+procedure TfrmDatabase.Delete1Click(Sender: TObject);
+var
+  DB : TSQLite3Database;
+begin
+  if FileExists(FDatabaseFile) then
+  begin
+    DB := TSQLite3Database.Create;
+    try
+      DB.Open(FDatabaseFile);
+      // Delete selected
+      DB.Execute(Format(DBDeleteCard, [lvDB.Selected.Caption]));
+      // Show all cards
+      ExecuteQuery(DBSelectCards);
+    finally
+      DB.Free;
+    end;
+  end;
+end;
+
+{*******************************************************}
+{              Write Tracks to MagStripe                }
+{*******************************************************}
+procedure TfrmDatabase.WritetoMagStripe1Click(Sender: TObject);
+begin
+  if not Assigned(frmMagStripeWrite) then
+  begin
+    frmMagStripeWrite := TfrmMagStripeWrite.Create(Application);
+    frmMagStripeWrite.memTrack1.Text := lvDB.Selected.SubItems[12];
+    frmMagStripeWrite.memTrack2.Text := lvDB.Selected.SubItems[13];
+    frmMagStripeWrite.memTrack3.Text := lvDB.Selected.SubItems[14];
+    frmMagStripeWrite.Show;
+  end else
+  begin
+    if frmMagStripeWrite.WindowState = wsMinimized then frmMagStripeWrite.WindowState := wsNormal;
+    frmMagStripeWrite.memTrack1.Text := lvDB.Selected.SubItems[12];
+    frmMagStripeWrite.memTrack2.Text := lvDB.Selected.SubItems[13];
+    frmMagStripeWrite.memTrack3.Text := lvDB.Selected.SubItems[14];
+    frmMagStripeWrite.BringToFront;
+  end;
+end;
+
+{*******************************************************}
+{        Enable/Disable items based on selection        }
+{*******************************************************}
+procedure TfrmDatabase.PopupMenuPopup(Sender: TObject);
+begin
+  Edit1.Enabled             := Assigned(lvDB.Selected);
+  Delete1.Enabled           := Assigned(lvDB.Selected);
+  Copy1.Enabled             := Assigned(lvDB.Selected);
+  WritetoMagStripe1.Enabled := Assigned(lvDB.Selected);
+end;
+
+{*******************************************************}
+{          Capture the column of selected item          }
+{*******************************************************}
+procedure TfrmDatabase.lvDBMouseDown(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+var
+  HitInfo : THitInfo;
+  LV      : TListView;
+begin
+  if Button = mbRight then
+  begin
+    LV := (Sender as TListView);
+    HitInfo := GetSubItemHitTestInfoAt(LV.Handle, X, Y);
+    SelectColumn := HitInfo.HitColumn;
+  end;
+end;
+
+{*******************************************************}
+{             Copy text in selected column              }
+{*******************************************************}
+procedure TfrmDatabase.Copy1Click(Sender: TObject);
+begin
+  if (SelectColumn > -1) and Assigned(lvDB.Selected) then
+  begin
+    if SelectColumn = 0 then
+      ClipBoard.AsText := lvDB.Selected.Caption
+    else if SelectColumn = 1 then
+      ClipBoard.AsText := StringReplace(lvDB.Selected.SubItems[0], ' ', '', [rfReplaceAll])
+    else
+      ClipBoard.AsText := lvDB.Selected.SubItems[SelectColumn -1];
+  end;
+end;
+
+{*******************************************************}
+{                   Sort by column                      }
+{*******************************************************}
+procedure TfrmDatabase.lvDBColumnClick(Sender: TObject; Column: TListColumn);
+const 
+  Columns : array [0..17] of string = (
+    'pan', 
+    'scheme', 
+    'type', 
+    'category', 
+    'issuer', 
+    'url', 
+    'country', 
+    'currency', 
+    'firstname', 
+    'lastname', 
+    'expyear', 
+    'expmonth', 
+    'track1', 
+    'track2', 
+    'track3', 
+    'cvv', 
+    'pin', 
+    'comment'
+  );
+var
+  C : string;
+begin
+  C := Columns[Column.Index];
+  if FOrderBy = C then
+  begin
+    FOrderAsc := not FOrderAsc;
+  end else
+  begin
+    FOrderBy  := C;
+    FOrderAsc := False;
+  end;
+  ExecuteQuery(DBSelectCards);
+end;
+
+{*******************************************************}
+{                    Refresh List                       }
+{*******************************************************}
+procedure TfrmDatabase.Refresh1Click(Sender: TObject);
+begin
+  ExecuteQuery(DBSelectCards);
+end;
+
+{*******************************************************}
+{                   Search / Filter                     }
+{*******************************************************}
+procedure TfrmDatabase.btnSearchClick(Sender: TObject);
+begin
+  if not Assigned(frmDatabaseSearch) then
+  begin
+    frmDatabaseSearch := TfrmDatabaseSearch.Create(Application);
+    frmDatabaseSearch.Show;
+  end else
+  begin
+    if frmDatabaseSearch.WindowState = wsMinimized then frmDatabaseSearch.WindowState := wsNormal;
+    frmDatabaseSearch.BringToFront;
+  end;
+end;
+
+
+end.

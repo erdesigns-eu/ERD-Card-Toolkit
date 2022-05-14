@@ -1,0 +1,244 @@
+unit untDatabaseSearch;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Imaging.pngimage,
+  Vcl.ExtCtrls, Vcl.ComCtrls;
+
+type
+  TfrmDatabaseSearch = class(TForm)
+    Panel1: TPanel;
+    Image1: TImage;
+    Label1: TLabel;
+    Label2: TLabel;
+    Panel2: TPanel;
+    btnHelp: TButton;
+    btnReset: TButton;
+    btnSearch: TButton;
+    PC: TPageControl;
+    TabSheet1: TTabSheet;
+    TabSheet2: TTabSheet;
+    pnlSearch: TPanel;
+    gbSearch: TGroupBox;
+    edtSearch: TEdit;
+    gbSearchField: TGroupBox;
+    cbSearchField: TComboBox;
+    gbSearchMode: TGroupBox;
+    cbSearchMode: TComboBox;
+    Panel3: TPanel;
+    gbFilterField: TGroupBox;
+    cbFilterField: TComboBox;
+    gbFilterValue: TGroupBox;
+    cbFilterValue: TComboBox;
+    procedure PCChange(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure FormCreate(Sender: TObject);
+    procedure cbFilterFieldChange(Sender: TObject);
+    procedure btnResetClick(Sender: TObject);
+    procedure btnSearchClick(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  frmDatabaseSearch: TfrmDatabaseSearch;
+
+implementation
+
+{$R *.dfm}
+
+uses untConst, untBIN, untDatabase;
+
+{*******************************************************}
+{                  Form Create Event                    }
+{*******************************************************}
+procedure TfrmDatabaseSearch.FormCreate(Sender: TObject);
+var
+  I : Integer;
+begin
+  // Set width and height
+  Width  := 500;
+  Height := 270;
+  // Default search view
+  PC.ActivePageIndex := 0;
+end;
+
+{*******************************************************}
+{                   Form Close Event                    }
+{*******************************************************}
+procedure TfrmDatabaseSearch.FormClose(Sender: TObject;
+  var Action: TCloseAction);
+begin
+  Action := caFree;
+  Release;
+  frmDatabaseSearch := nil;
+end;
+
+{*******************************************************}
+{          Change button caption based on view          }
+{*******************************************************}
+procedure TfrmDatabaseSearch.PCChange(Sender: TObject);
+begin
+  if PC.ActivePageIndex = 0 then
+    btnSearch.Caption := 'Search'
+  else
+    btnSearch.Caption := 'Filter';
+end;
+
+{*******************************************************}
+{                Populate Filter Values                 }
+{*******************************************************}
+procedure TfrmDatabaseSearch.cbFilterFieldChange(Sender: TObject);
+
+  procedure PopulateSchemes;
+  var
+    I : Integer;
+  begin
+    for I := Low(CardSchemes) to High(CardSchemes) do
+    cbFilterValue.Items.AddObject(CardSchemeToStr(CardSchemes[I]), TObject(CardSchemes[I]));
+    cbFilterValue.ItemIndex := 0;
+  end;
+
+  procedure PopulateTypes;
+  var
+    I : Integer;
+  begin
+    for I := Low(CardTypes) to High(CardTypes) do
+    cbFilterValue.Items.AddObject(CardTypeToStr(CardTypes[I]), TObject(CardTypes[I]));
+    cbFilterValue.ItemIndex := 0;
+  end;
+
+  procedure PopulateCountries;
+  var
+    I : Integer;
+  begin
+    for I := Low(CountryCodes) to High(CountryCodes) do
+    cbFilterValue.Items.AddObject(CountryCodeToStr(CountryCodes[I]), TObject(CountryCodes[I]));
+    cbFilterValue.ItemIndex := 0;
+  end;
+
+  procedure PopulateCurrencies;
+  var
+    I : Integer;
+  begin
+    for I := Low(CurrencyCodes) to High(CurrencyCodes) do
+    cbFilterValue.Items.AddObject(CurrencyCodeToStr(CurrencyCodes[I]), TObject(CurrencyCodes[I]));
+    cbFilterValue.ItemIndex := 0;
+  end;
+
+  procedure PopulateExpYears;
+  var
+    I : Integer;
+  begin
+    for I := 0 to 10 do
+    cbFilterValue.Items.AddObject(Format('%.*d', [4, CurrentYear + I]), TObject(CurrentYear + I));
+    cbFilterValue.ItemIndex := 0;
+  end;
+
+  procedure PopulateExpMonths;
+  var
+    I : Integer;
+  begin
+    for I := Low(LongMonthNames) to High(LongMonthNames) do
+    cbFilterValue.Items.AddObject(LongMonthNames[I], TObject(I));
+    cbFilterValue.ItemIndex := 0;
+  end;
+
+begin
+  // Clear
+  cbFilterValue.Clear;
+  // Populate
+  case cbFilterField.ItemIndex of
+    0 : PopulateSchemes;    // Scheme
+    1 : PopulateTypes;      // Type
+    2 : PopulateCountries;  // Country
+    3 : PopulateCurrencies; // Currency
+    4 : PopulateExpYears;   // Exp Year
+    5 : PopulateExpMonths;  // Exp Month
+  end;
+end;
+
+{*******************************************************}
+{             Reset Database Search/Filter              }
+{*******************************************************}
+procedure TfrmDatabaseSearch.btnResetClick(Sender: TObject);
+begin
+  if Assigned(frmDatabase) then
+  frmDatabase.ExecuteQuery(DBSelectCards);
+end;
+
+{*******************************************************}
+{                    Search/Filter                      }
+{*******************************************************}
+procedure TfrmDatabaseSearch.btnSearchClick(Sender: TObject);
+
+  procedure ShowDatabase(const Query: string);
+  begin
+    if not Assigned(frmDatabase) then
+    begin
+      frmDatabase := TfrmDatabase.Create(Application);
+      frmDatabase.Show;
+      frmDatabase.ExecuteQuery(Query);
+    end else
+    begin
+      if frmDatabase.WindowState = wsMinimized then frmDatabase.WindowState := wsNormal;
+      frmDatabase.BringToFront;
+      frmDatabase.ExecuteQuery(Query);
+    end;
+  end;
+
+  procedure SearchCards;
+  const
+    Fields : array [0..17] of string = (
+      'pan',
+      'scheme',
+      'type',
+      'category',
+      'issuer',
+      'url',
+      'country',
+      'currency',
+      'firstname',
+      'lastname',
+      'expyear',
+      'expmonth',
+      'track1',
+      'track2',
+      'track3',
+      'cvv',
+      'pin',
+      'comment'
+    );
+  begin
+    case cbSearchMode.ItemIndex of
+      0: ShowDatabase(Format(DBSearch, [Fields[cbSearchField.ItemIndex], '=', edtSearch.Text]));
+      1: ShowDatabase(Format(DBSearch, [Fields[cbSearchField.ItemIndex], 'LIKE', '%' + StringReplace(edtSearch.Text, ' ', '%', [rfReplaceAll]) + '%']));
+    end;
+  end;
+
+  procedure FilterCards;
+  const
+    Fields : array [0..5] of string = (
+      'scheme',
+      'type',
+      'country',
+      'currency',
+      'expyear',
+      'expmonth'
+    );
+  begin
+    ShowDatabase(Format(DBFilter, [Fields[cbFilterField.ItemIndex], Integer(cbFilterValue.Items.Objects[cbFilterValue.ItemIndex])]));
+  end;
+
+begin
+  case PC.ActivePageIndex of
+    0 : SearchCards;
+    1 : FilterCards;
+  end;
+end;
+
+end.

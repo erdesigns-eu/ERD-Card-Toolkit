@@ -1,0 +1,79 @@
+unit untUDKCalculator;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Imaging.pngimage,
+  Vcl.ExtCtrls;
+
+type
+  TfrmUDKCalculator = class(TForm)
+    Panel1: TPanel;
+    Image1: TImage;
+    Label1: TLabel;
+    Label2: TLabel;
+    Panel2: TPanel;
+    btnHelp: TButton;
+    btnCalculate: TButton;
+    gbMDK: TGroupBox;
+    edtMDK: TEdit;
+    gbPAN: TGroupBox;
+    edtPAN: TEdit;
+    GroupBox1: TGroupBox;
+    edtPSEQ: TEdit;
+    gbOutput: TGroupBox;
+    memOutput: TMemo;
+    gbKeyParity: TGroupBox;
+    cbKeyParity: TComboBox;
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure FormCreate(Sender: TObject);
+    procedure btnCalculateClick(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  frmUDKCalculator: TfrmUDKCalculator;
+
+implementation
+
+{$R *.dfm}
+
+uses untCipher, untEMVTools;
+
+{*******************************************************}
+{                  Form Create Event                    }
+{*******************************************************}
+procedure TfrmUDKCalculator.FormCreate(Sender: TObject);
+var
+  I : Integer;
+begin
+  // Set width and height
+  Width  := 550;
+  Height := 460;
+  // Clear memo's
+  memOutput.Clear;
+end;
+
+{*******************************************************}
+{                   Form Close Event                    }
+{*******************************************************}
+procedure TfrmUDKCalculator.FormClose(Sender: TObject;
+  var Action: TCloseAction);
+begin
+  Action := caFree;
+  Release;
+end;
+
+{*******************************************************}
+{                    Calculate UDK                      }
+{*******************************************************}
+procedure TfrmUDKCalculator.btnCalculateClick(Sender: TObject);
+begin
+  memOutput.Text := CalculateUDK(Hex2Bin(edtMDK.Text), Hex2Bin(edtPAN.Text), Hex2Bin(edtPSEQ.Text), cbKeyParity.ItemIndex = 1);
+end;
+
+end.

@@ -1,0 +1,93 @@
+{*******************************************************}
+{                                                       }
+{            untGPConnection (connection.h)             }
+{                     Author: ERD                       }
+{                                                       }
+{       Global Platform connection.h translation        }
+{                                                       }
+{*******************************************************}
+
+unit untGPConnection;
+
+interface
+
+uses
+  WinApi.Windows,
+  untGPSecurity,
+  untPCSC;
+
+const
+  GlobalPlatform = 'globalplatform.dll';
+
+const
+  OPGP_ERROR_STATUS_SUCCESS = 0; //!< No error occured.
+  OPGP_ERROR_STATUS_FAILURE = 1; //!< An error occurred.
+
+const
+  ERROR_MESSAGE_LENGTH      = 256; //!< Maximum size of an error message.
+  MAX_ATR_SIZE              = 33;  //!< Maximum ATR size.
+
+const
+  OPGP_CARD_PROTOCOL_T0 = SCARD_PROTOCOL_T0; //!< Transport protocol T=0
+  OPGP_CARD_PROTOCOL_T1 = SCARD_PROTOCOL_T1; //!< Transport protocol T=1
+
+const
+  OPGP_TRACE_MODE_ENABLE  = 1;
+  OPGP_TRACE_MODE_DISABLE = 0;
+
+type
+  OPGP_ERROR_STATUS = record
+    errorStatus  : LONG; //!< Identifies, if an error occurred. If no error occurred #OPGP_ERROR_STATUS_SUCCESS must be set. The following fields can be ignored in this case.
+    errorCode    : LONG; //!< The error code.
+    errorMessage : array [0..ERROR_MESSAGE_LENGTH -1] of WideChar;
+  end;
+
+  OPGP_CONNECTION_FUNCTIONS = record
+    establishContext : Pointer; //!< Transport protocol T=1
+    releaseContext   : Pointer; //!< Function to release the context.
+    cardConnect      : Pointer; //!< Function to connect to the card.
+    cardDisconnect   : Pointer; //!< Function to disconnect from the card.
+    listReaders      : Pointer; //!< Function to list the readers.
+    sendAPDU         : Pointer; //!< Function to send an APDU.
+  end;
+
+  OPGP_CARD_CONTEXT = record
+    librarySpecific     : Pointer;                   //!< Library specific data.
+    libraryName         : array [0..63] of WideChar; //!< The name of the connection library to use.
+    libraryVersion      : array [0..31] of WideChar; //!< The version of the connection library to use.
+    libraryHandle       : Pointer;                   //!< The handle to the library.
+    connectionFunctions : OPGP_CONNECTION_FUNCTIONS; //!< Connection functions of the connection library. Is automatically filled in if the connection library can be loaded correctly.
+  end;
+
+  OPGP_CARD_INFO = record
+    ATR             : array [1..MAX_ATR_SIZE] of Byte; //!< The Answer To Reset from the card.
+    ATRLength       : DWORD;                           //!< The length of the ATR buffer.
+    logicalChannel  : Byte;                            //!< The current logical channel.
+    specVersion     : Byte;                            //!< The specification version, see #OP_201 or #GP_211.
+    librarySpecific : Pointer;                         //!< Specific data for the library.
+  end;
+
+// Enable Trace Mode - OUT -> Pointer to file where the log will be written.
+procedure OPGP_enable_trace_mode(enable: DWORD; &out: Pointer); cdecl; external GlobalPlatform;
+
+// Establish context
+function OPGP_establish_context(var cardContext: OPGP_CARD_CONTEXT): OPGP_ERROR_STATUS; cdecl; external GlobalPlatform;
+
+// Release context
+function OPGP_release_context(var cardContext: OPGP_CARD_CONTEXT): OPGP_ERROR_STATUS; cdecl; external GlobalPlatform;
+
+// List smartcard readers
+function OPGP_list_readers(cardContext: OPGP_CARD_CONTEXT; readerNames: PWideChar; var readerNamesLength: DWORD): OPGP_ERROR_STATUS; cdecl; external GlobalPlatform;
+
+// Connect to cardreader
+function OPGP_card_connect(cardContext: OPGP_CARD_CONTEXT; readerName: PWideChar; var cardInfo: OPGP_CARD_INFO; protocol: DWORD): OPGP_ERROR_STATUS; cdecl; external GlobalPlatform;
+
+// Disconnect from cardreader
+function OPGP_card_disconnect(cardContext: OPGP_CARD_CONTEXT; var cardInfo: OPGP_CARD_INFO): OPGP_ERROR_STATUS; cdecl; external GlobalPlatform;
+
+// Send ADPU to cardreader
+function OPGP_send_APDU(cardContext: OPGP_CARD_CONTEXT; cardInfo: OPGP_CARD_INFO; var secInfo: GP211_SECURITY_INFO; capdu: PByte; capduLength: DWORD; rapdu: PByte; var rapduLength: DWORD): OPGP_ERROR_STATUS; cdecl; external GlobalPlatform;
+
+implementation
+
+end.
