@@ -2,7 +2,10 @@
 
 UID programming is a dedicated operation in `TContactlessCardReader`. The shipped
 implementation targets explicitly identified **reprogrammable Classic Gen2/CUID**
-cards with a four-byte or seven-byte manufacturer-block layout. It is independently
+cards with a four-byte or seven-byte manufacturer-block layout. A separate
+`TRawUidProgrammer` now adds four-byte Gen1a/unsealed UFUID and seven-byte Type 2
+DirectWrite, with a concrete ACR122U/PN532 raw-RF adapter; see [RAW_UID.md](RAW_UID.md).
+The code is independently
 written and exercised with synthetic readers; actual chip/reader compatibility has
 not been established. A successful PC/SC UID read does not identify this capability.
 
@@ -18,10 +21,11 @@ general-purpose writable user memory.
 | --- | --- |
 | Reprogrammable Classic Gen2/CUID, four-byte UID | Explicit layout, sector-zero authentication, standard direct manufacturer-block write and verification implemented |
 | Reprogrammable Classic Gen2/CUID, seven-byte UID | Explicit seven-byte layout and verification implemented; no four-byte BCC inserted into metadata |
-| Gen1a/Gen1b and UFUID variants | Pending exact card/reader profiles for raw RF unlock/activation; no unlock or fuse command is sent by this release |
+| Gen1a and unsealed UFUID with Gen1a wakeup, four-byte UID | Implemented raw seven-bit unlock, metadata-preserving block write, full read-back and fresh RF UID verification; ACR122U/PN532 adapter provided |
+| Gen1b, sealed UFUID and alternate USCUID/GDM modes | Further explicit card/unlock profiles; no seal/unfuse/configuration command implemented |
 | FUID/OTP or other write-once/fusing variants | Pending separate one-time programming semantics and verified vendor protocol; not covered by the reprogrammable Gen2 API |
 | Gen3/APDU, Gen4/USCUID/GDM/UMC variants | Pending proprietary protocol/reader adapters; commands cannot be inferred from a marketing generation alone |
-| Programmable Ultralight/NTAG-style seven-byte UID | Pending manufacturer-page protocol and multi-page recovery; ordinary Type 2 writers reject pages 0..3 |
+| Reprogrammable Type 2 DirectWrite seven-byte UID | Implemented three consecutive manufacturer-page writes, both BCCs, internal/lock/OTP/CC preservation, read-back and fresh selection; interrupted writes explicitly uncertain |
 | Ten-byte UID variants | Pending concrete supported chip layout/command profile; rejected by the current Gen2 API before I/O |
 | LF 125 kHz and UHF RFID identifiers | Pending suitable hardware, family codecs and device adapters; not accessible through this NFC storage profile |
 
@@ -29,7 +33,7 @@ The aim is broad coverage through explicit profiles, with a matrix of tested chi
 reader, firmware, driver and operation. Do not infer capability from a UID length,
 ATR, UID contents or the terms "magic", "CUID" or "unfused" alone. This release does
 not promise every product sold under those names or automatic card identification.
-No physical UID write, card fuse or access-controller operation was executed during
+Physical UID write, card fuse and access-controller operations were not executed during
 development or validation.
 
 ## API and exact behavior
@@ -137,4 +141,5 @@ Protocol facts were checked on 2026-10-07 against:
   framing, linked with hashes in [the contactless guide](CONTACTLESS.md).
 
 The implementation is independently written from protocol/layout facts. No Proxmark3
-implementation, RF unlock sequence or third-party binary is copied into the library.
+implementation or third-party binary is copied into the library. Independent Gen1a
+RF unlock and Type 2 DirectWrite sequences are documented in [RAW_UID.md](RAW_UID.md).

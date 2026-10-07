@@ -48,12 +48,13 @@ def main():
                     'tests/eid/Icao.Tests.dpr',
                     'tests/emv/Emv.Tests.dpr',
                     'tests/contactless/Contactless.Tests.dpr',
+                    'tests/contactless/RawUid.Tests.dpr',
                     'examples/core/InspectApdu.dpr', 'examples/pcsc/InspectReader.dpr',
                     'examples/eid/ReadBelgianEid.dpr', 'examples/emv/InspectEmv.dpr',
                     'examples/contactless/InspectContactless.dpr'):
         subprocess.run(command + [project], cwd=REPO, check=True)
     suffix = '.exe' if os.name == 'nt' else ''
-    for project in ('CardCore.Tests', 'ProtocolCore.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests'):
+    for project in ('CardCore.Tests', 'ProtocolCore.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests'):
         result = subprocess.run([str(build / (project + suffix))], cwd=REPO,
                                 capture_output=True, text=True)
         print(result.stdout, end='', flush=True)

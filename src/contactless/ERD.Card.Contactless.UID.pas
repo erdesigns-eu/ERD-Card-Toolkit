@@ -23,9 +23,9 @@ type
     /// <summary>Seven UID bytes and metadata at bytes seven through fifteen; no stored BCC byte.</summary>
     cgum7Byte
   );
-  /// <summary>Result after successful Gen2/CUID manufacturer-block read-back and transaction release.</summary>
+  /// <summary>Result after successful Classic manufacturer-block verification and transaction release.</summary>
   /// <remarks>Ordinary record assignment shares arrays. The active RF UID may remain old until
-  /// reactivation; use ActiveUidVerified to distinguish that condition from verified activation.</remarks>
+  /// reactivation with Gen2/CUID; raw-RF programming additionally requires fresh activation before returning.</remarks>
   TProgrammableUidResult = record
     /// <summary>Caller-selected manufacturer-block layout.</summary>
     Model: TClassicGen2UidModel;
