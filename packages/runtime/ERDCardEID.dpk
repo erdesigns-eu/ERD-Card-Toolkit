@@ -8,6 +8,8 @@ requires
   ERDCardCore;
 
 contains
+  ERD.Card.EID.MRZ in '..\..\src\eid\ERD.Card.EID.MRZ.pas',
+  ERD.Card.EID.ICAO in '..\..\src\eid\ERD.Card.EID.ICAO.pas',
   ERD.Card.EID.Data in '..\..\src\eid\ERD.Card.EID.Data.pas',
   ERD.Card.EID.Reader in '..\..\src\eid\ERD.Card.EID.Reader.pas';
 

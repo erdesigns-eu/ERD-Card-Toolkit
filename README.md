@@ -40,6 +40,11 @@ read sequences are tested; real-card validation and authenticity verification re
 pending. The other components are planned. See [the component plan](docs/COMPONENT_PLAN.md),
 [the PC/SC guide](docs/PCSC_TRANSPORT.md) and [the Belgian eID guide](docs/BELGIAN_EID.md).
 
+The eID package also provides shared ICAO TD1/TD2/TD3 MRZ and DG1/DG2 decoders,
+including encoded face images. Direct access to Dutch, Luxembourg and German
+documents still requires a separate BAC/PACE secure-messaging provider. See
+[the European eID support boundary](docs/EUROPEAN_EID.md).
+
 ## Using the core
 
 Add `src/core` to the Delphi unit search path. Source-based use does not require

@@ -8,12 +8,13 @@ Validated in the Linux cloud environment on 2026-10-07 after the legacy cleanup.
 | Actual Pascal ATR/TLV tests | 1826 assertions in seven groups passed |
 | Injected PC/SC transport tests | 86 assertions in seven groups passed, including real thread execution and transport transaction capability |
 | Belgian eID decoders and reader | 1821 assertions in seven groups passed using synthetic exact APDU transcripts |
+| ICAO MRZ and DG1/DG2 data codecs | 297 assertions passed: published MRZ examples, synthetic FAC/CBEFF records and malformed inputs |
 | Native Windows adapter branches | 38 assertions passed against an isolated Linux C ABI shim |
 | Console examples | APDU valid/invalid cases passed; PC/SC and eID help work without hardware |
 | FPC range/overflow/heap checks | Passed; no unfreed allocations in passing test programs |
 | Python checker regression tests | All 15 passed |
-| Pascalcheck core profile | All 21 readers passed on eighteen explicitly selected source files |
-| XML documentation | 357 visible API declarations inspected; zero findings |
+| Pascalcheck core profile | All 21 readers passed on twenty-one explicitly selected source files |
+| XML documentation | 404 visible API declarations inspected; zero findings |
 | Reference integrity | All 26 retained files match the original Git bytes and manifest hashes |
 | Patch whitespace | `git diff --check` passed |
 
@@ -45,7 +46,9 @@ lengths/padding, exact AID/MF/DF/EF selection, grouped reads, optional certifica
 states, bounded 61xx/6Cxx handling, EOF probes, 15-bit offsets, partial failures,
 no transport replay and transaction-release exception precedence. Its JPEG and
 certificate payloads are synthetic protocol fixtures, not decoded image or X.509
-validation tests. A total of 4292 Pascal assertions passed across the suites.
+validation tests. A total of 4589 Pascal assertions passed across the suites.
+The ICAO additions decode acquired files only; BAC/PACE, secure messaging and
+direct access to Dutch/Luxembourg/German documents are still pending.
 
 Pending: Delphi dcc32/dcc64 builds, runtime package builds, generated XML/Help
 Insight inspection in RAD Studio, and real Belpic 1.7/1.8 contact-card checks for

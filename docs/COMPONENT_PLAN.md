@@ -27,6 +27,9 @@ are not compatibility requirements.
    availability is explicit. Runtime package, console/photo example and exact APDU
    tests supplied. Cryptographic authenticity, contactless PACE and real-card profile
    certification remain separate work. See [the eID guide](BELGIAN_EID.md).
+   Shared ICAO MRZ/DG1/DG2 data codecs are available for the European expansion.
+   BAC/PACE, secure messaging and physical Dutch/Luxembourg/German card support
+   are separate pending access-layer work; see [the support matrix](EUROPEAN_EID.md).
 5. **TEMVCardReader.** Available applications, card information and supported records
    through the common transport. Fields are optional; do not promise an IBAN on every
    card. Keep UI, automatic protocol recovery and storage separate.

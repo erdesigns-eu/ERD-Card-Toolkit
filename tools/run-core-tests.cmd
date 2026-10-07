@@ -30,6 +30,10 @@ if errorlevel 1 exit /b %errorlevel%
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\BelgianEid.Tests.exe"
 if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\eid" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\eid\Icao.Tests.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\Icao.Tests.exe"
+if errorlevel 1 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\pcsc;src\eid" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" examples\eid\ReadBelgianEid.dpr
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\ReadBelgianEid.exe" --help

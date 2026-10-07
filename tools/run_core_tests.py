@@ -43,11 +43,12 @@ def main():
                 command.append('-Fl' + str(crt_path.parent))
     for project in ('tests/core/CardCore.Tests.dpr', 'tests/core/ProtocolCore.Tests.dpr',
                     'tests/transport/CardTransport.Tests.dpr', 'tests/eid/BelgianEid.Tests.dpr',
+                    'tests/eid/Icao.Tests.dpr',
                     'examples/core/InspectApdu.dpr', 'examples/pcsc/InspectReader.dpr',
                     'examples/eid/ReadBelgianEid.dpr'):
         subprocess.run(command + [project], cwd=REPO, check=True)
     suffix = '.exe' if os.name == 'nt' else ''
-    for project in ('CardCore.Tests', 'ProtocolCore.Tests', 'CardTransport.Tests', 'BelgianEid.Tests'):
+    for project in ('CardCore.Tests', 'ProtocolCore.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests'):
         result = subprocess.run([str(build / (project + suffix))], cwd=REPO,
                                 capture_output=True, text=True)
         print(result.stdout, end='', flush=True)
