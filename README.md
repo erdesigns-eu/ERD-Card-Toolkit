@@ -51,6 +51,10 @@ whether the active UID also changed. Ordinary data writers reject manufacturer,
 trailer and lock/configuration regions. Uncertain write completion has its own
 exception and commands are never replayed. The PC/SC storage profile has synthetic
 tests; real-card/reader validation remains pending.
+`TRawUidProgrammer` adds four-byte Gen1a/unsealed UFUID and seven-byte Type 2
+DirectWrite UID programming, with an opt-in ACR122U/PN532 raw-RF adapter. It preserves
+manufacturer metadata, verifies fresh RF selection and treats interrupted writes as
+uncertain. See [the raw-RF guide](docs/RAW_UID.md).
 See [the contactless guide](docs/CONTACTLESS.md). Terminal/provider payments and direct
 NFC-kernel payments have a [documented integration design](docs/PAYMENTS.md);
 payment backends, other MIFARE/UID-programming families and generic NDEF access are

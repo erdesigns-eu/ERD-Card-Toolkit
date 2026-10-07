@@ -48,6 +48,10 @@ are not compatibility requirements.
    layouts, guarded user-page writes and complete user-memory snapshots. Dedicated
    Gen2/CUID four/seven-byte UID programming preserves manufacturer metadata and
    distinguishes EEPROM read-back from active RF verification.
+   `TRawUidProgrammer` additionally implements four-byte Gen1a/unsealed UFUID and
+   seven-byte Type 2 DirectWrite UID programming. `TAcr122RawReader` supplies the
+   ACR122U/PN532 seven-bit raw-RF adapter, explicit CRC, exclusive lifecycle and
+   fresh UID selection. See [the raw UID guide](RAW_UID.md).
    Runtime package, UID/Type 2 example and synthetic transcripts supplied.
    Further UID generations, Type 2 authentication, DESFire/secure messaging, Plus,
    NDEF and broader reader backends
