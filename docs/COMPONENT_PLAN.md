@@ -48,7 +48,7 @@ are not compatibility requirements.
    layouts, guarded user-page writes and complete user-memory snapshots. Dedicated
    Gen2/CUID four/seven-byte UID programming preserves manufacturer metadata and
    distinguishes EEPROM read-back from active RF verification.
-   `TRawUidProgrammer` additionally implements four-byte Gen1a/unsealed UFUID and
+   `TRawUidProgrammer` additionally implements four-byte Gen1a/Gen1b/unsealed UFUID and
    seven-byte Type 2 DirectWrite UID programming. `TAcr122RawReader` supplies the
    ACR122U/PN532 seven-bit raw-RF adapter, explicit CRC, exclusive lifecycle and
    fresh UID selection. Gen3 adds independent four/seven-byte UID-register programming;
@@ -57,7 +57,9 @@ are not compatibility requirements.
    guide](RAW_UID.md) and [Gen3/Gen4 guide](GEN3_GEN4_UID.md). USCUID/GDM adds
    public/hidden four/seven-byte sources with both wakeup styles and unchanged
    configuration. Factory FUID has a separate authenticated one-time write API;
-   see [USCUID/FUID](USCUID_FUID.md).
+   see [USCUID/FUID](USCUID_FUID.md). Configuration-verified partial UFUID/ZUID/PFUID
+   profiles use distinct read opcodes and persistent verification; see
+   [Gen1b/partial profiles](GEN1B_PARTIAL_UID.md).
    Runtime package, UID/Type 2 example and synthetic transcripts supplied.
    Further UID generations, Type 2 authentication, DESFire/secure messaging, Plus,
    NDEF and broader reader backends

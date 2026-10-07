@@ -8,7 +8,9 @@ DirectWrite, with a concrete ACR122U/PN532 raw-RF adapter; see [RAW_UID.md](RAW_
 Gen3 four/seven-byte UID-register and Gen4 UMC four/seven/ten-byte programming
 are also implemented; see [GEN3_GEN4_UID.md](GEN3_GEN4_UID.md). USCUID/GDM public/hidden
 four/seven-byte sources and a separate authenticated factory FUID one-time write
-are implemented in [USCUID_FUID.md](USCUID_FUID.md). The code is independently
+are implemented in [USCUID_FUID.md](USCUID_FUID.md). Gen1b and configuration-verified
+partial UFUID/ZUID/PFUID programming are implemented in
+[GEN1B_PARTIAL_UID.md](GEN1B_PARTIAL_UID.md). The code is independently
 written and exercised with synthetic readers; actual chip/reader compatibility has
 not been established. A successful PC/SC UID read does not identify this capability.
 
@@ -25,7 +27,9 @@ general-purpose writable user memory.
 | Reprogrammable Classic Gen2/CUID, four-byte UID | Explicit layout, sector-zero authentication, standard direct manufacturer-block write and verification implemented |
 | Reprogrammable Classic Gen2/CUID, seven-byte UID | Explicit seven-byte layout and verification implemented; no four-byte BCC inserted into metadata |
 | Gen1a and unsealed UFUID with Gen1a wakeup, four-byte UID | Implemented raw seven-bit unlock, metadata-preserving block write, full read-back and fresh RF UID verification; ACR122U/PN532 adapter provided |
-| Gen1b, sealed UFUID and partial UFUID/ZUID/PFUID configurations | Further explicit profiles; no seal/unfuse/configuration command implemented |
+| Gen1b, four-byte UID | Explicit seven-bit40-only wakeup, full block read-back before/after fresh selection and metadata preservation implemented |
+| Partial unsealed UFUID/ZUID/PFUID configurations, four-byte UID | Separate documented configuration shapes and E0/E1 read dialects implemented; full configuration/block persistence verification without hidden probes or configuration writes |
+| Sealed UFUID or unknown partial marker revisions | Separate concrete profiles required; no seal/unfuse or guessed configuration command implemented |
 | Four-byte factory FUID, UID AA55C396 | Separate authenticated single-write API, factory/source checks, preserved metadata and explicit cached UID state; no claim that every backdoor is fused |
 | Other OTP/OTP2.0 or write-once/fusing variants | Further distinct protocols and one-time semantics; not inferred from factory FUID |
 | Gen3/APDU, four/seven-byte UID | Implemented raw UID-register command, unchanged block-zero verification and fresh RF selection; no freeze command |
