@@ -35,7 +35,9 @@ There is no SCardControl/escape fallback, automatic device probing, or claim tha
 every ACR-branded reader uses this dialect. An incompatible reader fails explicitly.
 
 `BeginSession` acquires the transaction and configures PN532 RF timing to 102.4 ms
-for ATR response and 409.6 ms for non-DEP response. Communication retries are zero;
+for ATR response and, by default, 409.6 ms for non-DEP response. Optional constructor
+arguments select another finite PN532 timeout and suppression of automatic RATS;
+see [GEN3_GEN4_UID.md](GEN3_GEN4_UID.md) for the extended adapter lifecycle. Communication retries are zero;
 passive activation uses one attempt. These reader settings remain until hardware
 reset or deliberate reconfiguration: dedicate the reader to this adapter while it
 is in use. They bound reader RF operations, not an arbitrary blocked USB/driver call.
@@ -170,7 +172,8 @@ Protocol facts checked on 2026-10-07:
 - NXP Ultralight/EV1/NTAG datasheet manufacturer-page layouts and AN10927 cascade
   rules, linked in [CONTACTLESS.md](CONTACTLESS.md) and [PROGRAMMABLE_UID.md](PROGRAMMABLE_UID.md).
 
-Gen3/APDU, Gen4 UMC ten-byte layouts, other USCUID unlock/configuration modes,
+[Gen3/Gen4 UID profiles](GEN3_GEN4_UID.md) now add Gen3 four/seven-byte UID-register
+and Gen4 UMC Classic/Type 2 four/seven/ten-byte programming. Other USCUID unlock/configuration modes,
 write-once FUID, LF and UHF remain further concrete profiles. The shared raw-RF
 foundation now supplies the bit framing, exclusive lifecycle and fresh selection
 needed to add their independent protocols.

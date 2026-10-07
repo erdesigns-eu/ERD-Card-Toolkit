@@ -26,17 +26,25 @@ type
     FTransport: ICardTransport;
     FTransaction: ICardTransaction;
     FActive, FHasRegisters: Boolean;
+    FResponseTimeoutCode: Byte;
+    FSkipAutomaticRats, FParametersChanged: Boolean;
     FTxMode, FRxMode, FBitFraming: Byte;
     function Send(const APayload: TBytes; const AResponseCode: Byte): TBytes;
     procedure RequireActive;
     procedure RestoreRegisters;
     procedure StopRf;
+    procedure RestoreParameters;
+    procedure ReleaseHardware;
     procedure SetRawFraming(const ALastBits: Byte);
   public
     /// <summary>Retains a connected injectable transport; does not open the hardware.</summary>
     /// <param name="ATransport">Non-nil transport supporting exclusive transactions.</param>
-    /// <exception cref="EContactlessError">Transport is nil or lacks transaction capability.</exception>
-    constructor Create(const ATransport: ICardTransport);
+    /// <param name="AResponseTimeoutCode">PN532 non-DEP timeout code 01..10 hex; default 0D is 409.6 ms, 10 is 3276.8 ms.</param>
+    /// <param name="ASkipAutomaticRats">Use PN532 initiator parameters 24 during sessions, then restore documented baseline 34 on release.</param>
+    /// <exception cref="EContactlessError">Transport is nil, lacks transactions, or timeout code is zero/out of range.</exception>
+    /// <remarks>For Gen3/Gen4 raw commands use code 10 and skip automatic RATS; no infinite timeout is accepted.</remarks>
+    constructor Create(const ATransport: ICardTransport; const AResponseTimeoutCode: Byte = $0D;
+      const ASkipAutomaticRats: Boolean = False);
     /// <summary>Attempts to release an abandoned active session without raising; explicit EndSession is required to observe failures.</summary>
     destructor Destroy; override;
     /// <summary>Acquires a transaction and sets bounded RF timing and zero PN532 retries.</summary>
@@ -59,6 +67,10 @@ type
     /// <exception cref="EContactlessError">Frame/session is invalid, PN532 status is not success/timeout, or response framing is malformed.</exception>
     /// <remarks>Does not retry, reset RF, insert CRC or translate four-bit acknowledgments into full bytes.</remarks>
     function Exchange(const AFrame: TBytes; const ABitCount: Integer): TRawRfResponse;
+    /// <summary>Configured bounded non-DEP response timeout code, immutable after construction.</summary>
+    property ResponseTimeoutCode: Byte read FResponseTimeoutCode;
+    /// <summary>Whether sessions disable automatic RATS and restore PN532 baseline parameters on release.</summary>
+    property SkipAutomaticRats: Boolean read FSkipAutomaticRats;
   end;
 
 implementation
@@ -70,13 +82,17 @@ begin
   raise EContactlessError.Create('ACR122 raw reader failed: ' + AReason + '.');
 end;
 
-constructor TAcr122RawReader.Create(const ATransport: ICardTransport);
+constructor TAcr122RawReader.Create(const ATransport: ICardTransport; const AResponseTimeoutCode: Byte;
+  const ASkipAutomaticRats: Boolean);
 var Transaction: ICardTransaction;
 begin
   inherited Create;
   if (ATransport = nil) or not Supports(ATransport, ICardTransaction, Transaction) then
     RawFailure('exclusive transport required');
+  if (AResponseTimeoutCode = 0) or (AResponseTimeoutCode > $10) then RawFailure('invalid bounded timeout');
   FTransport := ATransport;
+  FResponseTimeoutCode := AResponseTimeoutCode;
+  FSkipAutomaticRats := ASkipAutomaticRats;
 end;
 
 destructor TAcr122RawReader.Destroy;
@@ -90,7 +106,7 @@ begin
 end;
 
 function TAcr122RawReader.Send(const APayload: TBytes; const AResponseCode: Byte): TBytes;
-var Wire: TBytes; Response: TApduResponse;
+var Wire, RawResponse: TBytes; Response: TApduResponse;
 begin
   Result := nil;
   if (Length(APayload) < 2) or (Length(APayload) > 255) or (APayload[0] <> $D4) then
@@ -102,11 +118,19 @@ begin
   Wire[3] := 0;
   Wire[4] := Byte(Length(APayload));
   Move(APayload[0], Wire[5], Length(APayload));
-  Response := TApduCodec.DecodeResponse(FTransport.Exchange(Wire));
-  if Response.StatusWord <> $9000 then raise EContactlessStatusError.Create(Response.StatusWord);
-  if (Length(Response.Data) < 2) or (Response.Data[0] <> $D5) or
-    (Response.Data[1] <> AResponseCode) then RawFailure('unexpected PN532 response');
-  Result := Copy(Response.Data, 2, Length(Response.Data) - 2);
+  try
+    RawResponse := FTransport.Exchange(Wire);
+    Response := TApduCodec.DecodeResponse(RawResponse);
+  finally
+    FillChar(Wire[0], Length(Wire), 0);
+    if Length(RawResponse) > 0 then FillChar(RawResponse[0], Length(RawResponse), 0);
+  end;
+  try
+    if Response.StatusWord <> $9000 then raise EContactlessStatusError.Create(Response.StatusWord);
+    if (Length(Response.Data) < 2) or (Response.Data[0] <> $D5) or
+      (Response.Data[1] <> AResponseCode) then RawFailure('unexpected PN532 response');
+    Result := Copy(Response.Data, 2, Length(Response.Data) - 2);
+  finally if Length(Response.Data) > 0 then FillChar(Response.Data[0], Length(Response.Data), 0); end;
 end;
 
 procedure TAcr122RawReader.RequireActive;
@@ -115,7 +139,7 @@ begin
 end;
 
 procedure TAcr122RawReader.BeginSession;
-var Data: TBytes;
+var Data, Timing: TBytes;
 begin
   if FActive then RawFailure('session already active');
   if not Supports(FTransport, ICardTransaction, FTransaction) then RawFailure('transaction unavailable');
@@ -124,12 +148,20 @@ begin
   FActive := True;
   try
     // RFConfiguration: bounded ATR/non-DEP timing, no communication retry, one activation attempt.
-    Data := Send(HexToBytes('D43202000B0D'), $33);
+    Timing := HexToBytes('D43202000B00');
+    Timing[5] := FResponseTimeoutCode;
+    Data := Send(Timing, $33);
     if Length(Data) <> 0 then RawFailure('RF timing response contains data');
     Data := Send(HexToBytes('D4320400'), $33);
     if Length(Data) <> 0 then RawFailure('RF retry response contains data');
     Data := Send(HexToBytes('D43205000000'), $33);
     if Length(Data) <> 0 then RawFailure('activation retry response contains data');
+    if FSkipAutomaticRats then
+    begin
+      FParametersChanged := True; // Dispatch may change reader state even if the response is lost.
+      Data := Send(HexToBytes('D41224'), $13);
+      if Length(Data) <> 0 then RawFailure('parameter response contains data');
+    end;
   except
     try EndSession;
     except
@@ -153,29 +185,19 @@ begin
 end;
 
 procedure TAcr122RawReader.EndSession;
-var Succeeded, Restored: Boolean; Transaction: ICardTransaction;
+var Succeeded: Boolean; Transaction: ICardTransaction;
 begin
   RequireActive;
   Transaction := FTransaction;
   Succeeded := False;
-  Restored := False;
   try
     try
-      try
-        RestoreRegisters;
-        Restored := True;
-      finally
-        if Restored then StopRf
-        else
-          try StopRf;
-          except
-            // Still attempt to clear volatile card state; preserve restoration failure.
-          end;
-      end;
+      ReleaseHardware;
       Succeeded := True;
     finally
       FActive := False;
       FHasRegisters := False;
+      FParametersChanged := False;
       FTransaction := nil;
       if Succeeded then Transaction.EndTransaction
       else
@@ -185,6 +207,43 @@ begin
         end;
     end;
   finally Transaction := nil; end;
+end;
+
+procedure TAcr122RawReader.RestoreParameters;
+var Data: TBytes;
+begin
+  if not FParametersChanged then Exit;
+  Data := Send(HexToBytes('D41234'), $13);
+  if Length(Data) <> 0 then RawFailure('baseline parameter response contains data');
+  FParametersChanged := False;
+end;
+
+procedure TAcr122RawReader.ReleaseHardware;
+var Restored, Stopped: Boolean;
+begin
+  Restored := False;
+  Stopped := False;
+  try
+    try
+      RestoreRegisters;
+      Restored := True;
+    finally
+      if Restored then StopRf
+      else
+        try StopRf;
+        except
+          // Preserve restoration failure while attempting to clear volatile card state.
+        end;
+    end;
+    Stopped := True;
+  finally
+    if Stopped then RestoreParameters
+    else
+      try RestoreParameters;
+      except
+        // Still release exclusivity; preserve the primary framing/RF-off error.
+      end;
+  end;
 end;
 
 procedure TAcr122RawReader.StopRf;
@@ -222,7 +281,7 @@ begin
   if not (Size in [4, 7, 10]) then RawFailure('invalid selected UID length');
   AfterUid := 6 + Size;
   if Length(Data) < AfterUid then RawFailure('truncated selected UID');
-  if (Data[4] and $20) <> 0 then
+  if ((Data[4] and $20) <> 0) and not FSkipAutomaticRats then
   begin
     if Length(Data) <= AfterUid then RawFailure('missing ATS');
     AtsSize := Data[AfterUid];
@@ -254,22 +313,25 @@ begin
   Wire[0] := $D4;
   Wire[1] := $42;
   Move(AFrame[0], Wire[2], Length(AFrame));
-  Data := Send(Wire, $43);
-  if Length(Data) < 1 then RawFailure('missing RF status');
-  if Data[0] = $01 then
-  begin
-    if Length(Data) <> 1 then RawFailure('timeout contains data');
-    Result.TimedOut := True;
-    Exit;
-  end;
-  if Data[0] <> 0 then RawFailure('PN532 RF exchange status failure');
-  if (Length(Data) < 2) or (Length(Data) > 254) then RawFailure('invalid RF response size');
-  Control := Send(HexToBytes('D406633C'), $07);
-  if Length(Control) <> 1 then RawFailure('invalid received-bit status');
-  LastBits := Control[0] and $07;
-  Result.Data := Copy(Data, 1, Length(Data) - 1);
-  Result.BitCount := Length(Result.Data) * 8;
-  if LastBits <> 0 then Result.BitCount := Result.BitCount - 8 + LastBits;
+  try Data := Send(Wire, $43);
+  finally FillChar(Wire[0], Length(Wire), 0); end;
+  try
+    if Length(Data) < 1 then RawFailure('missing RF status');
+    if Data[0] = $01 then
+    begin
+      if Length(Data) <> 1 then RawFailure('timeout contains data');
+      Result.TimedOut := True;
+      Exit;
+    end;
+    if Data[0] <> 0 then RawFailure('PN532 RF exchange status failure');
+    if (Length(Data) < 2) or (Length(Data) > 254) then RawFailure('invalid RF response size');
+    Control := Send(HexToBytes('D406633C'), $07);
+    if Length(Control) <> 1 then RawFailure('invalid received-bit status');
+    LastBits := Control[0] and $07;
+    Result.Data := Copy(Data, 1, Length(Data) - 1);
+    Result.BitCount := Length(Result.Data) * 8;
+    if LastBits <> 0 then Result.BitCount := Result.BitCount - 8 + LastBits;
+  finally if Length(Data) > 0 then FillChar(Data[0], Length(Data), 0); end;
 end;
 
 end.

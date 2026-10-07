@@ -51,7 +51,10 @@ are not compatibility requirements.
    `TRawUidProgrammer` additionally implements four-byte Gen1a/unsealed UFUID and
    seven-byte Type 2 DirectWrite UID programming. `TAcr122RawReader` supplies the
    ACR122U/PN532 seven-bit raw-RF adapter, explicit CRC, exclusive lifecycle and
-   fresh UID selection. See [the raw UID guide](RAW_UID.md).
+   fresh UID selection. Gen3 adds independent four/seven-byte UID-register programming;
+   Gen4 UMC adds Classic/Type 2 four/seven/ten-byte manufacturer layouts, explicit
+   backdoor password, stable configuration and fresh verification. See [the raw UID
+   guide](RAW_UID.md) and [Gen3/Gen4 guide](GEN3_GEN4_UID.md).
    Runtime package, UID/Type 2 example and synthetic transcripts supplied.
    Further UID generations, Type 2 authentication, DESFire/secure messaging, Plus,
    NDEF and broader reader backends
