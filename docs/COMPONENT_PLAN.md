@@ -40,12 +40,17 @@ are not compatibility requirements.
    See [the EMV guide](EMV_READER.md).
 6. **TMagStripeReaderWriter.** Track codecs plus separate YL160/MSR adapters. Model
    device capabilities, errors, buffers and supported SDK/driver versions explicitly.
-7. **TContactlessCardReader — first profile implemented; Delphi/hardware validation pending.**
+7. **TContactlessCardReader — storage profiles implemented; Delphi/hardware validation pending.**
    Explicit injectable PC/SC storage command profile, UID retrieval and supplied-key
    Classic Mini/1K/4K layout/block operations. Authenticated data writes exclude
    manufacturer/trailer blocks; uncertain write completion is explicit and never replayed.
-   Runtime package, UID example and synthetic transcripts supplied.
-   Ultralight/NTAG, DESFire/secure messaging, Plus, NDEF and broader reader backends
+   Original Ultralight, both EV1 memory sizes and NTAG213/215/216 have explicit page
+   layouts, guarded user-page writes and complete user-memory snapshots. Dedicated
+   Gen2/CUID four/seven-byte UID programming preserves manufacturer metadata and
+   distinguishes EEPROM read-back from active RF verification.
+   Runtime package, UID/Type 2 example and synthetic transcripts supplied.
+   Further UID generations, Type 2 authentication, DESFire/secure messaging, Plus,
+   NDEF and broader reader backends
    remain separate profiles; see [the contactless guide](CONTACTLESS.md).
    **TMemoryCardReaderWriter** remains planned for contact memory-card families and
    matching readers. Non-Java chips do not share one universal protocol.

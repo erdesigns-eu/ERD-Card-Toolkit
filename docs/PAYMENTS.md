@@ -108,13 +108,16 @@ Do not ship a simulated adapter as if it processed real payments.
 ## Next implementation order
 
 1. Current release: optional EMV GET DATA/log inspection and an explicit PC/SC
-   contactless storage profile for UID/Classic data blocks.
+   contactless storage profile for UID/Classic data blocks, Ultralight/NTAG pages
+   and explicit Gen2/CUID UID programming. These storage operations are separate
+   from payment processing.
 2. Payment request/outcome contract and the first selected provider's sandbox adapter.
 3. Provider-specific terminal integration, disconnect/cancellation/reconciliation
    checks, then actual deployment validation with the provider.
 4. A selected contactless kernel integration with its supported NFC reader profiles
    and acquirer test environment; add scheme configurations as validated capabilities.
-5. In parallel, separate Ultralight/NTAG, DESFire/secure messaging, NDEF and further
+5. In parallel, Type 2 authentication, further UID profiles, DESFire/secure messaging,
+   NDEF and further
    RFID/vendor reader backends. Their storage authentication is separate from payment
    authorization. Existing magstripe and European eID access milestones remain planned.
 

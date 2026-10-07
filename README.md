@@ -44,12 +44,17 @@ It is a data reader; GPO can change card state, and payment-kernel or scheme
 certification is not provided. See [the EMV guide](docs/EMV_READER.md).
 `TContactlessCardReader` in `src/contactless` adds explicit injectable reader profiles,
 UID retrieval and authenticated MIFARE Classic block reads/data writes with supplied
-keys. Manufacturer/trailer writes are rejected; uncertain write completion has its
-own exception and commands are never replayed. Its first PC/SC storage profile has
-synthetic tests; real-card/reader validation remains pending.
+keys. Original Ultralight, EV1-48/128 and NTAG213/215/216 add page reads, guarded user
+writes and complete memory snapshots. A dedicated Gen2/CUID four/seven-byte UID
+programming method preserves manufacturer metadata, verifies the block and reports
+whether the active UID also changed. Ordinary data writers reject manufacturer,
+trailer and lock/configuration regions. Uncertain write completion has its own
+exception and commands are never replayed. The PC/SC storage profile has synthetic
+tests; real-card/reader validation remains pending.
 See [the contactless guide](docs/CONTACTLESS.md). Terminal/provider payments and direct
 NFC-kernel payments have a [documented integration design](docs/PAYMENTS.md);
-payment backends, other MIFARE families and generic NDEF access are still pending.
+payment backends, other MIFARE/UID-programming families and generic NDEF access are
+still pending. See [the programmable UID support matrix](docs/PROGRAMMABLE_UID.md).
 The remaining components are planned. See [the component plan](docs/COMPONENT_PLAN.md),
 [the PC/SC guide](docs/PCSC_TRANSPORT.md) and [the Belgian eID guide](docs/BELGIAN_EID.md).
 
