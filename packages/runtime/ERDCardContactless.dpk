@@ -12,6 +12,7 @@ contains
   ERD.Card.Contactless.Type2 in '..\..\src\contactless\ERD.Card.Contactless.Type2.pas',
   ERD.Card.Contactless.UID in '..\..\src\contactless\ERD.Card.Contactless.UID.pas',
   ERD.Card.Contactless.UID.Profiles in '..\..\src\contactless\ERD.Card.Contactless.UID.Profiles.pas',
+  ERD.Card.Contactless.UID.USCUID in '..\..\src\contactless\ERD.Card.Contactless.UID.USCUID.pas',
   ERD.Card.Contactless.Raw in '..\..\src\contactless\ERD.Card.Contactless.Raw.pas',
   ERD.Card.Contactless.ACR122 in '..\..\src\contactless\ERD.Card.Contactless.ACR122.pas';
 

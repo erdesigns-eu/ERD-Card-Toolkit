@@ -109,12 +109,21 @@ type
     /// <returns>Independent complete command; successful response contains only status bytes.</returns>
     function WriteGen2ManufacturerCommand(const ABlock: TBytes): TBytes;
   end;
+  /// <summary>Optional authenticated direct-write capability for caller-identified factory FUID cards.</summary>
+  /// <remarks>Separate from reprogrammable Gen2 capability; factory UID alone does not identify this variant.</remarks>
+  IFuidUidReaderProfile = interface
+    ['{77BC05EB-650A-418A-9D4F-B7D91F93664E}']
+    /// <summary>Builds the single factory-FUID manufacturer-block write after sector-zero authentication.</summary>
+    /// <param name="ABlock">Exactly sixteen prepared bytes preserving manufacturer metadata.</param>
+    /// <returns>Independent complete command; successful response contains only status bytes.</returns>
+    function WriteFuidManufacturerCommand(const ABlock: TBytes): TBytes;
+  end;
   /// <summary>Opt-in PC/SC storage pseudo-APDU profile: FF CA/82/86/B0/D6.</summary>
   /// <remarks>Targets the documented ACR122U-compatible storage command dialect. Other readers
   /// may implement it, require another profile, or lack Classic hardware support entirely.
   /// Slot zero is the portable starting point; accepted slot numbers are reader dependent.</remarks>
   TPcscStorageProfile = class(TInterfacedObject, IContactlessReaderProfile,
-    IType2ReaderProfile, IGen2UidReaderProfile)
+    IType2ReaderProfile, IGen2UidReaderProfile, IFuidUidReaderProfile)
   public
     /// <summary>Builds FF CA 00 00 00 to retrieve the reader-reported UID.</summary>
     /// <returns>Independent command bytes.</returns>
@@ -159,6 +168,12 @@ type
     /// <exception cref="EContactlessError">Block size is invalid.</exception>
     /// <remarks>No unlock/fuse commands or automatic programmable-card detection.</remarks>
     function WriteGen2ManufacturerCommand(const ABlock: TBytes): TBytes;
+    /// <summary>Builds FF D6 for the single authenticated factory-FUID manufacturer-block write.</summary>
+    /// <param name="ABlock">Exactly sixteen prepared manufacturer bytes; never modified.</param>
+    /// <returns>Independent complete command.</returns>
+    /// <exception cref="EContactlessError">Block size is invalid.</exception>
+    /// <remarks>Does not configure, fuse or lock the card; variant selection and factory checks belong to the caller/API.</remarks>
+    function WriteFuidManufacturerCommand(const ABlock: TBytes): TBytes;
   end;
   /// <summary>Stateless MIFARE Classic layout checks.</summary>
   TMifareClassicLayout = class
@@ -193,6 +208,7 @@ type
       const AKeyType: TMifareClassicKeyType; const AKey: TBytes);
     function RequireType2Profile: IType2ReaderProfile;
     function RequireGen2Profile: IGen2UidReaderProfile;
+    function RequireFuidProfile: IFuidUidReaderProfile;
   public
     /// <summary>Creates an inactive component with no selected reader profile.</summary>
     /// <param name="AOwner">Optional owner; nil requires caller Free.</param>
@@ -280,6 +296,23 @@ type
     /// No reset/reconnect or write replay. Ordinary data writers still reject manufacturer blocks.</remarks>
     function ProgramClassicGen2Uid(const AModel: TClassicGen2UidModel; const ANewUid: TBytes; const AKeyType: TMifareClassicKeyType;
       const AKey: TBytes; const ASlot: Byte = 0): TProgrammableUidResult;
+    /// <summary>Performs one authenticated UID write on an explicitly identified four-byte factory FUID card.</summary>
+    /// <param name="ANewUid">Exactly four target bytes, different from factory UID AA55C396; never modified.</param>
+    /// <param name="AKeyType">Supplied sector-zero key A or B.</param>
+    /// <param name="AKey">Exactly six caller-owned sector-zero key bytes; never guessed or retained.</param>
+    /// <param name="ASlot">Volatile reader key slot, default zero.</param>
+    /// <returns>Independent block/UID snapshot and explicit cached-versus-active UID state after successful release.</returns>
+    /// <exception cref="EProgrammableUidError">Target UID, original manufacturer layout or BCC is invalid.</exception>
+    /// <exception cref="EContactlessError">Reader capability, supplied parameters or factory UID/block precondition fails.</exception>
+    /// <exception cref="EContactlessStatusError">Reading, key loading or authentication is denied before write dispatch.</exception>
+    /// <exception cref="EContactlessWriteUncertain">Any failure after the sole write was dispatched, including denied status or release.</exception>
+    /// <remarks>Requires fresh unprogrammed variant with factory UID AA55C396. Changing UID consumes its standard
+    /// direct-write condition; this API does not prove all backdoors are fused or disabled. Preserves bytes five through
+    /// fifteen, recomputes BCC and verifies all sixteen bytes. False ActiveUidVerified requires caller-controlled RF
+    /// reactivation and ReadUid verification; never repeat this method after an uncertain result. No automatic replay,
+    /// fuse commands or reconnect. Local key-command overwriting and reader key-slot lifetime match ReadClassicBlock.</remarks>
+    function ProgramFuidUidOnce(const ANewUid: TBytes; const AKeyType: TMifareClassicKeyType;
+      const AKey: TBytes; const ASlot: Byte = 0): TFuidUidResult;
     /// <summary>Connected byte transport retained by the component; its owner may disconnect it.</summary>
     property Transport: ICardTransport read FTransport write FTransport;
     /// <summary>Explicit matching reader command profile; nil disables all hardware operations.</summary>
@@ -370,6 +403,12 @@ begin
 end;
 
 function TPcscStorageProfile.WriteGen2ManufacturerCommand(const ABlock: TBytes): TBytes;
+begin
+  if Length(ABlock) <> 16 then Fail('manufacturer block size');
+  Result := Command($D6, 0, ABlock, 0);
+end;
+
+function TPcscStorageProfile.WriteFuidManufacturerCommand(const ABlock: TBytes): TBytes;
 begin
   if Length(ABlock) <> 16 then Fail('manufacturer block size');
   Result := Command($D6, 0, ABlock, 0);
@@ -481,6 +520,12 @@ function TContactlessCardReader.RequireGen2Profile: IGen2UidReaderProfile;
 begin
   Result := nil;
   if not Supports(FProfile, IGen2UidReaderProfile, Result) then Fail('Gen2 UID reader capability missing');
+end;
+
+function TContactlessCardReader.RequireFuidProfile: IFuidUidReaderProfile;
+begin
+  Result := nil;
+  if not Supports(FProfile, IFuidUidReaderProfile, Result) then Fail('FUID reader capability missing');
 end;
 
 function TContactlessCardReader.ReadType2Page(const AModel: TType2TagModel;
@@ -620,6 +665,52 @@ begin
     begin
       if Dispatched and (WriteAccepted or not (E is EContactlessStatusError)) then
         raise EContactlessWriteUncertain.Create(E.ClassName);
+      raise;
+    end;
+  end;
+  Result := Data;
+end;
+
+function TContactlessCardReader.ProgramFuidUidOnce(const ANewUid: TBytes;
+  const AKeyType: TMifareClassicKeyType; const AKey: TBytes; const ASlot: Byte): TFuidUidResult;
+var Profile: IFuidUidReaderProfile; Transaction: ICardTransaction; Data: TFuidUidResult;
+  FactoryUid, OldBlock, BlockUid, Verified, ActiveUid, Wire: TBytes;
+  Succeeded, Dispatched: Boolean;
+begin
+  Result := Default(TFuidUidResult);
+  TProgrammableUidCodec.ValidateUid(cgum4Byte, ANewUid);
+  FactoryUid := HexToBytes('AA55C396');
+  if BytesEqual(ANewUid, FactoryUid) then Fail('target must differ from factory UID');
+  ValidateBlock(mcm1K, 0, AKeyType, AKey);
+  Profile := RequireFuidProfile;
+  Data := Default(TFuidUidResult);
+  Data.RequestedUid := CopyBytes(ANewUid);
+  Succeeded := False;
+  Dispatched := False;
+  Transaction := BeginOperation;
+  try
+    try
+      Data.PreviousUid := Send(FProfile.UidCommand, -1);
+      if not BytesEqual(Data.PreviousUid, FactoryUid) then Fail('FUID factory UID precondition failed');
+      Authenticate(0, AKeyType, AKey, ASlot);
+      OldBlock := Send(FProfile.ReadBlockCommand(0), 16);
+      BlockUid := TProgrammableUidCodec.DecodeGen2Uid(cgum4Byte, OldBlock);
+      if not BytesEqual(BlockUid, FactoryUid) then Fail('FUID factory UID/block mismatch');
+      Data.ManufacturerBlock := TProgrammableUidCodec.PrepareGen2Block(cgum4Byte, OldBlock, Data.RequestedUid);
+      Wire := Profile.WriteFuidManufacturerCommand(Data.ManufacturerBlock);
+      Dispatched := True;
+      Send(Wire, 0);
+      Verified := Send(FProfile.ReadBlockCommand(0), 16);
+      if not BytesEqual(Verified, Data.ManufacturerBlock) then Fail('FUID manufacturer read-back mismatch');
+      ActiveUid := Send(FProfile.UidCommand, -1);
+      Data.ActiveUidVerified := BytesEqual(ActiveUid, Data.RequestedUid);
+      if not Data.ActiveUidVerified and not BytesEqual(ActiveUid, FactoryUid) then Fail('FUID active UID mismatch');
+      Succeeded := True;
+    finally EndOperation(Transaction, Succeeded); end;
+  except
+    on E: Exception do
+    begin
+      if Dispatched then raise EContactlessWriteUncertain.Create(E.ClassName);
       raise;
     end;
   end;

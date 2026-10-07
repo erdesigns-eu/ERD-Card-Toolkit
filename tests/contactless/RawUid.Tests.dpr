@@ -16,7 +16,7 @@ uses
   System.SysUtils,
 {$ENDIF}
   ERD.Card.Bytes, ERD.Card.Transport, ERD.Card.Contactless,
-  ERD.Card.Contactless.UID, ERD.Card.Contactless.UID.Profiles,
+  ERD.Card.Contactless.UID, ERD.Card.Contactless.UID.Profiles, ERD.Card.Contactless.UID.USCUID,
   ERD.Card.Contactless.Raw, ERD.Card.Contactless.ACR122;
 
 type
@@ -1018,6 +1018,315 @@ begin
   Writeln('PASS: concrete ten-byte Gen4 adapter chain, bounded timeout, RATS suppression and baseline cleanup.');
 end;
 
+function UscuidConfig(const AStyle: TUscuidWakeupStyle; const ALayout: TUscuidUidLayout): TBytes;
+begin
+  Result := HexToBytes('7AFF00000000000000FF000000000008');
+  if AStyle = uwsGdm then Result[2] := $85;
+  case ALayout of
+    uulHiddenF3_4: Result[9] := $69;
+    uulHiddenF0F1_7: Result[9] := $C3;
+  end;
+end;
+
+procedure UscuidFixture(const ALayout: TUscuidUidLayout; out AOldUid, ANewUid,
+  AOldPublic, ANewPublic, AOldHidden, ANewHidden: string);
+begin
+  AOldUid := '11223344';
+  ANewUid := 'A1B2C3D4';
+  AOldPublic := OldBlock;
+  ANewPublic := NewBlock;
+  AOldHidden := '';
+  ANewHidden := '';
+  if ALayout = uulHiddenF3_4 then
+  begin
+    AOldPublic := '01020304040804006263646566676869';
+    ANewPublic := AOldPublic;
+    AOldHidden := OldBlock;
+    ANewHidden := NewBlock;
+  end;
+  if ALayout = uulHiddenF0F1_7 then
+  begin
+    AOldUid := '04112233445566';
+    ANewUid := '04AABBCCDDEEFF';
+    AOldPublic := 'DEADBEEF010203884400C82000000000';
+    ANewPublic := '04AABBCCDDEEFF884400C82000000000';
+    AOldHidden := '88041122BF043344556644084400AABB';
+    ANewHidden := '8804AABB9D04CCDDEEFF00084400AABB';
+  end;
+end;
+
+procedure AddUscuidUnlock(Script: TRawScript; const AStyle: TUscuidWakeupStyle);
+begin
+  if AStyle = uwsGen1a then AddUnlock(Script)
+  else
+  begin
+    Script.Add('500057CD', '', 32, 0, True);
+    Script.Add('20', '0A', 7, 4);
+    Script.Add('23', '0A', 8, 4);
+  end;
+end;
+
+procedure AddUscuidRead(Script: TRawScript; const ACommand, AData: string);
+begin Script.Add(WithCrc(ACommand), WithCrc(AData), 32, 144); end;
+
+procedure AddUscuidWrite(Script: TRawScript; const ACommand, AData: string);
+begin
+  Script.Add(WithCrc(ACommand), '0A', 32, 4);
+  Script.Add(WithCrc(AData), '0A', 144, 4);
+end;
+
+procedure AddUscuidTranscript(Script: TRawScript; const AStyle: TUscuidWakeupStyle;
+  const ALayout: TUscuidUidLayout; const ANoOp: Boolean = False);
+var OldUid, NewUid, OldPublic, NewPublic, OldHidden, NewHidden: string; HiddenIndex: Integer;
+begin
+  UscuidFixture(ALayout, OldUid, NewUid, OldPublic, NewPublic, OldHidden, NewHidden);
+  HiddenIndex := TUscuidUidCodec.HiddenBlockIndex(ALayout);
+  Script.SelectUid(OldUid);
+  AddUscuidUnlock(Script, AStyle);
+  AddUscuidRead(Script, 'E000', BytesToHex(UscuidConfig(AStyle, ALayout)));
+  AddRead(Script, OldPublic);
+  if HiddenIndex >= 0 then AddUscuidRead(Script, '38' + IntToHex(HiddenIndex, 2), OldHidden);
+  if ANoOp then Exit;
+  if HiddenIndex < 0 then AddUscuidWrite(Script, 'A000', NewPublic)
+  else
+  begin
+    AddUscuidWrite(Script, 'A8' + IntToHex(HiddenIndex, 2), NewHidden);
+    if ALayout = uulHiddenF0F1_7 then AddUscuidWrite(Script, 'A000', NewPublic);
+  end;
+  Script.SelectUid(NewUid);
+  AddUscuidUnlock(Script, AStyle);
+  AddUscuidRead(Script, 'E000', BytesToHex(UscuidConfig(AStyle, ALayout)));
+  AddRead(Script, NewPublic);
+  if HiddenIndex >= 0 then AddUscuidRead(Script, '38' + IntToHex(HiddenIndex, 2), NewHidden);
+end;
+
+procedure TestUscuidCodecs;
+var Style: TUscuidWakeupStyle; Layout: TUscuidUidLayout; Config, Source, Prepared, Uid: TBytes;
+  OldUid, NewUid, OldPublic, NewPublic, OldHidden, NewHidden: string; I, J: Integer; Raised, Valid: Boolean;
+begin
+  for Style := Low(TUscuidWakeupStyle) to High(TUscuidWakeupStyle) do
+    for Layout := Low(TUscuidUidLayout) to High(TUscuidUidLayout) do
+    begin
+      UscuidFixture(Layout, OldUid, NewUid, OldPublic, NewPublic, OldHidden, NewHidden);
+      if Layout = uulPublic4 then Source := HexToBytes(OldPublic) else Source := HexToBytes(OldHidden);
+      Uid := HexToBytes(NewUid);
+      Prepared := TUscuidUidCodec.PrepareSourceBlock(Layout, Source, Uid);
+      if Layout = uulPublic4 then Check(BytesToHex(Prepared) = NewPublic, 'Public UID/BCC golden vector')
+      else Check(BytesToHex(Prepared) = NewHidden, 'Hidden UID/cascade/BCC golden vector');
+      Check(BytesToHex(TUscuidUidCodec.DecodeUid(Layout, Prepared)) = NewUid, 'Hidden/public UID extraction');
+      Prepared[15] := Prepared[15] xor 1;
+      Check((BytesToHex(Source) = OldPublic) or (BytesToHex(Source) = OldHidden), 'Source is independent');
+      Check(BytesToHex(Uid) = NewUid, 'Requested UID is unchanged');
+      for I := 0 to 255 do
+      begin
+        Config := UscuidConfig(Style, Layout);
+        Config[9] := Byte(I);
+        case Layout of
+          uulPublic4: Valid := I in [0, $FF];
+          uulHiddenF3_4: Valid := I = $69;
+          uulHiddenF0F1_7: Valid := I in [$5A, $C3, $A5];
+        else Valid := False; end;
+        Raised := False;
+        try TUscuidUidCodec.ValidateConfiguration(Style, Layout, Config);
+        except on E: EProgrammableUidError do Raised := True; end;
+        Check(Raised <> Valid, 'Only explicitly supported existing personalization sources');
+      end;
+      for J := 0 to 5 do
+      begin
+        Config := UscuidConfig(Style, Layout);
+        case J of
+          0: SetLength(Config, 15);
+          1: SetLength(Config, 17);
+          2: Config[0] := $85;
+          3: Config[1] := 0;
+          4: Config[2] := Config[2] xor $85;
+          5: Config[10] := $5A;
+        end;
+        Raised := False;
+        try TUscuidUidCodec.ValidateConfiguration(Style, Layout, Config);
+        except on E: EProgrammableUidError do Raised := True; end;
+        Check(Raised, 'Partial configuration, disabled/wrong wakeup and shadow are rejected');
+      end;
+    end;
+  for I := 0 to 4 do
+  begin
+    Source := HexToBytes('88041122BF043344556644084400AABB');
+    case I of
+      0: Source[0] := 0;
+      1: Source[4] := Source[4] xor 1;
+      2: Source[10] := Source[10] xor 1;
+      3: Source[5] := 0;
+      4: Source[11] := $04;
+    end;
+    Raised := False;
+    try Prepared := TUscuidUidCodec.DecodeUid(uulHiddenF0F1_7, Source);
+    except on E: EProgrammableUidError do Raised := True; end;
+    Check(Raised, 'Both BCCs, cascade tag and first/final cascade SAK are validated');
+  end;
+  Source := HexToBytes(OldBlock);
+  Source[5] := $04;
+  Raised := False;
+  try Prepared := TUscuidUidCodec.DecodeUid(uulHiddenF3_4, Source);
+  except on E: EProgrammableUidError do Raised := True; end;
+  Check(Raised, 'F3 final SAK must not claim another cascade');
+  Writeln('PASS: USCUID configured source modes, wakeup/shadow, hidden cascade checks and independent codecs.');
+end;
+
+procedure TestUscuidProgramming;
+var Programmer: TRawUidProgrammer; Script: TRawScript; Style: TUscuidWakeupStyle;
+  Layout: TUscuidUidLayout; Data: TUscuidUidResult; Uid: TBytes;
+  OldUid, NewUid, OldPublic, NewPublic, OldHidden, NewHidden: string;
+begin
+  Programmer := TRawUidProgrammer.Create(nil);
+  try
+    for Style := Low(TUscuidWakeupStyle) to High(TUscuidWakeupStyle) do
+      for Layout := Low(TUscuidUidLayout) to High(TUscuidUidLayout) do
+      begin
+        UscuidFixture(Layout, OldUid, NewUid, OldPublic, NewPublic, OldHidden, NewHidden);
+        Script := TRawScript.Create;
+        Programmer.Reader := Script;
+        AddUscuidTranscript(Script, Style, Layout);
+        Uid := HexToBytes(NewUid);
+        Data := Programmer.ProgramUscuidUid(Style, Layout, Uid);
+        Check(Data.ActiveUidVerified and (Data.Layout = Layout) and (Data.WakeupStyle = Style), 'Six explicit USCUID routes');
+        Check(BytesToHex(Data.PreviousUid) = OldUid, 'UID is verified against active source, independent of public mirror');
+        Check(BytesToHex(Data.PublicManufacturerBlock) = NewPublic, 'All public metadata preserved; F3 public block unchanged');
+        Check(BytesToHex(Data.HiddenManufacturerBlock) = NewHidden, 'All hidden metadata preserved');
+        Check(BytesEqual(Data.Configuration, UscuidConfig(Style, Layout)), 'Full configuration unchanged');
+        Check((Script.Position = Length(Script.Steps)) and (Script.Selections = 2) and (Script.Ends = 1), 'Exact commands once, persistent verification after fresh RF activation');
+        Data.RequestedUid[0] := Data.RequestedUid[0] xor 1;
+        Check(BytesToHex(Uid) = NewUid, 'Returned requested UID independently owned');
+        Script := TRawScript.Create;
+        Programmer.Reader := Script;
+        AddUscuidTranscript(Script, Style, Layout, True);
+        Data := Programmer.ProgramUscuidUid(Style, Layout, HexToBytes(OldUid));
+        Check(Data.ActiveUidVerified and (BytesToHex(Data.PublicManufacturerBlock) = OldPublic) and
+          (BytesToHex(Data.HiddenManufacturerBlock) = OldHidden), 'No-op returns original snapshots including unmirrored public bytes');
+        Check((Script.Position = Length(Script.Steps)) and (Script.Selections = 1), 'No-op performs no writes or configuration changes');
+      end;
+  finally Programmer.Free; end;
+  Writeln('PASS: six USCUID/GDM routes, metadata, persistent verification and unchanged no-op snapshots.');
+end;
+
+procedure TestUscuidFailures;
+var Programmer: TRawUidProgrammer; Script: TRawScript; Data: TUscuidUidResult;
+  Config, Payload: TBytes; I, Last: Integer; Raised: Boolean;
+begin
+  Programmer := TRawUidProgrammer.Create(nil);
+  try
+    for I := 0 to 17 do
+    begin
+      Script := TRawScript.Create;
+      Programmer.Reader := Script;
+      AddUscuidTranscript(Script, uwsGdm, uulHiddenF0F1_7);
+      Last := 15;
+      case I of
+        0, 1: begin
+          Config := UscuidConfig(uwsGdm, uulHiddenF0F1_7);
+          if I = 0 then Config[10] := $5A else Config[9] := $87;
+          Script.Steps[3].Response := TRawUidCodec.AppendCrcA(Config);
+          Last := 3;
+        end;
+        2: begin Script.Uids[0] := HexToBytes('04112233445567'); Last := 5; end;
+        3: begin Script.Steps[5].Response[4] := Script.Steps[5].Response[4] xor 1; Last := 5; end;
+        4: begin Script.Steps[6].Fails := True; Last := 6; end;
+        5: begin Script.Steps[6].Timeout := True; Script.Steps[6].Response := nil; Script.Steps[6].ReceivedBits := 0; Last := 6; end;
+        6: begin Script.Steps[6].Response := HexToBytes('00'); Last := 6; end;
+        7: begin Script.Steps[7].Fails := True; Last := 7; end;
+        8: begin Script.Steps[8].Fails := True; Last := 8; end;
+        9: begin Script.Steps[9].Response := HexToBytes('00'); Last := 9; end;
+        10: begin Script.Uids[1] := CopyBytes(Script.Uids[0]); Last := 9; end;
+        11: begin Script.Steps[11].Response := HexToBytes('00'); Last := 11; end;
+        12: begin
+          Config := UscuidConfig(uwsGdm, uulHiddenF0F1_7); Config[15] := Config[15] xor 1;
+          Script.Steps[13].Response := TRawUidCodec.AppendCrcA(Config); Last := 13;
+        end;
+        13: begin
+          Payload := HexToBytes('04AABBCCDDEEFF884400C82000000001');
+          Script.Steps[14].Response := TRawUidCodec.AppendCrcA(Payload); Last := 14;
+        end;
+        14: begin
+          Payload := HexToBytes('8804AABB9D04CCDDEEFF00084400AABC');
+          Script.Steps[15].Response := TRawUidCodec.AppendCrcA(Payload);
+        end;
+        15: Script.Steps[15].Response[17] := Script.Steps[15].Response[17] xor 1;
+        16: begin Script.Steps[6].ReceivedBits := 8; Last := 6; end;
+        17: Script.EndFails := True;
+      end;
+      SetLength(Script.Steps, Last + 1);
+      if I = 14 then Script.EndFails := True;
+      Raised := False;
+      try Data := Programmer.ProgramUscuidUid(uwsGdm, uulHiddenF0F1_7, HexToBytes('04AABBCCDDEEFF'));
+      except
+        on E: EContactlessWriteUncertain do
+        begin
+          Check(I >= 4, 'Only dispatched write is uncertain');
+          if I = 14 then Check(E.OriginalErrorClass = 'EContactlessError', 'Read-back error wins over release failure');
+          Raised := True;
+        end;
+        on E: EProgrammableUidError do begin Check(I <= 3, 'Invalid configuration/source before write'); Raised := True; end;
+        on E: EContactlessError do begin Check(I <= 3, 'Initial RF/source failure before write'); Raised := True; end;
+      end;
+      Check(Raised and (Script.Ends = 1) and (Script.Position = Length(Script.Steps)), 'Stop at failing stage, no retry, rollback or configuration write');
+    end;
+    Script := TRawScript.Create;
+    Programmer.Reader := Script;
+    Raised := False;
+    try Data := Programmer.ProgramUscuidUid(uwsGdm, uulHiddenF0F1_7, HexToBytes('04112288445566'));
+    except on E: EProgrammableUidError do Raised := True; end;
+    Check(Raised and (Script.Begins = 0), 'Invalid target rejected before acquisition');
+  finally Programmer.Free; end;
+  Writeln('PASS: USCUID preparation, write handshake/data, partial two-block writes, fresh selection, configuration and release failures.');
+end;
+
+procedure TestUscuidAdapter;
+var Script: TPcscScript; Programmer: TRawUidProgrammer; Reader: IRawContactlessReader;
+  Data: TUscuidUidResult; OldUid, NewUid, OldPublic, NewPublic, OldHidden, NewHidden: string;
+  Pass: Integer;
+begin
+  UscuidFixture(uulHiddenF0F1_7, OldUid, NewUid, OldPublic, NewPublic, OldHidden, NewHidden);
+  Script := TPcscScript.Create;
+  Reader := TAcr122RawReader.Create(Script, $10, True);
+  Programmer := TRawUidProgrammer.Create(nil);
+  try
+    Programmer.Reader := Reader;
+    AddExtendedConfiguration(Script);
+    for Pass := 0 to 1 do
+    begin
+      if Pass = 0 then AddExtendedActivation(Script, OldUid)
+      else
+      begin
+        Script.Add('D408630280630380633D00', 'D5099000');
+        AddExtendedActivation(Script, NewUid);
+      end;
+      AddAcrExchange(Script, '500057CD', '', 0, 0, True);
+      AddAcrExchange(Script, '20', '0A', 7, 4);
+      AddAcrExchange(Script, '23', '0A', 0, 4);
+      AddAcrExchange(Script, WithCrc('E000'), WithCrc(BytesToHex(UscuidConfig(uwsGdm, uulHiddenF0F1_7))), 0, 0);
+      if Pass = 0 then
+      begin
+        AddAcrExchange(Script, WithCrc('3000'), WithCrc(OldPublic), 0, 0);
+        AddAcrExchange(Script, WithCrc('3800'), WithCrc(OldHidden), 0, 0);
+        AddAcrExchange(Script, WithCrc('A800'), '0A', 0, 4);
+        AddAcrExchange(Script, WithCrc(NewHidden), '0A', 0, 4);
+        AddAcrExchange(Script, WithCrc('A000'), '0A', 0, 4);
+        AddAcrExchange(Script, WithCrc(NewPublic), '0A', 0, 4);
+      end
+      else
+      begin
+        AddAcrExchange(Script, WithCrc('3000'), WithCrc(NewPublic), 0, 0);
+        AddAcrExchange(Script, WithCrc('3800'), WithCrc(NewHidden), 0, 0);
+      end;
+    end;
+    AddRelease(Script);
+    Script.Add('D41234', 'D5139000');
+    Data := Programmer.ProgramUscuidUid(uwsGdm, uulHiddenF0F1_7, HexToBytes(NewUid));
+    Check(Data.ActiveUidVerified and (Script.Position = Length(Script.Steps)), 'Complete USCUID GDM hidden-seven adapter chain');
+    Check((Script.Begins = 1) and (Script.Ends = 1), 'One exclusive adapter transaction, baseline/RF restoration');
+  finally Programmer.Free; Reader := nil; end;
+  Writeln('PASS: concrete USCUID/GDM ACR122U/PN532 hidden/public writes, fresh selection and cleanup.');
+end;
+
 begin
   try
     TestCodecs;
@@ -1034,7 +1343,11 @@ begin
     TestGen4PreparationFailures;
     TestGen4WriteFailures;
     TestExtendedAdapter;
-    Writeln('PASS: ', Checks, ' assertions across fourteen raw UID test groups.');
+    TestUscuidCodecs;
+    TestUscuidProgramming;
+    TestUscuidFailures;
+    TestUscuidAdapter;
+    Writeln('PASS: ', Checks, ' assertions across eighteen raw UID test groups.');
   except
     on E: Exception do begin Writeln('FAIL: ', E.ClassName, ': ', E.Message); Halt(1); end;
   end;

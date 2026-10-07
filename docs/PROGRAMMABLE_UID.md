@@ -6,7 +6,9 @@ cards with a four-byte or seven-byte manufacturer-block layout. A separate
 `TRawUidProgrammer` now adds four-byte Gen1a/unsealed UFUID and seven-byte Type 2
 DirectWrite, with a concrete ACR122U/PN532 raw-RF adapter; see [RAW_UID.md](RAW_UID.md).
 Gen3 four/seven-byte UID-register and Gen4 UMC four/seven/ten-byte programming
-are also implemented; see [GEN3_GEN4_UID.md](GEN3_GEN4_UID.md). The code is independently
+are also implemented; see [GEN3_GEN4_UID.md](GEN3_GEN4_UID.md). USCUID/GDM public/hidden
+four/seven-byte sources and a separate authenticated factory FUID one-time write
+are implemented in [USCUID_FUID.md](USCUID_FUID.md). The code is independently
 written and exercised with synthetic readers; actual chip/reader compatibility has
 not been established. A successful PC/SC UID read does not identify this capability.
 
@@ -23,11 +25,13 @@ general-purpose writable user memory.
 | Reprogrammable Classic Gen2/CUID, four-byte UID | Explicit layout, sector-zero authentication, standard direct manufacturer-block write and verification implemented |
 | Reprogrammable Classic Gen2/CUID, seven-byte UID | Explicit seven-byte layout and verification implemented; no four-byte BCC inserted into metadata |
 | Gen1a and unsealed UFUID with Gen1a wakeup, four-byte UID | Implemented raw seven-bit unlock, metadata-preserving block write, full read-back and fresh RF UID verification; ACR122U/PN532 adapter provided |
-| Gen1b, sealed UFUID and alternate USCUID/GDM modes | Further explicit card/unlock profiles; no seal/unfuse/configuration command implemented |
-| FUID/OTP or other write-once/fusing variants | Pending separate one-time programming semantics and verified vendor protocol; not covered by the reprogrammable Gen2 API |
+| Gen1b, sealed UFUID and partial UFUID/ZUID/PFUID configurations | Further explicit profiles; no seal/unfuse/configuration command implemented |
+| Four-byte factory FUID, UID AA55C396 | Separate authenticated single-write API, factory/source checks, preserved metadata and explicit cached UID state; no claim that every backdoor is fused |
+| Other OTP/OTP2.0 or write-once/fusing variants | Further distinct protocols and one-time semantics; not inferred from factory FUID |
 | Gen3/APDU, four/seven-byte UID | Implemented raw UID-register command, unchanged block-zero verification and fresh RF selection; no freeze command |
 | Gen4 UMC/GTU, Classic/Type 2 four/seven/ten-byte layouts | Implemented explicit password-bearing CF dialect, matching stable configuration, full manufacturer-block verification and fresh selection; no configuration/fuse changes |
-| Other Gen4 USCUID/GDM modes | Further concrete unlock/configuration profiles; not inferred from the UMC marketing generation |
+| USCUID/GDM with enabled Gen1a or GDM wakeup | Public four-byte, hidden F3 four-byte and hidden F0/F1 seven-byte sources implemented; stable full configuration, preserved metadata and persistent fresh-selection verification |
+| USCUID Magic Auth and other configuration variants | Further Crypto1/authentication and configuration profiles; no automatic conversion to a supported mode |
 | Reprogrammable Type 2 DirectWrite seven-byte UID | Implemented three consecutive manufacturer-page writes, both BCCs, internal/lock/OTP/CC preservation, read-back and fresh selection; interrupted writes explicitly uncertain |
 | Ten-byte UID | Gen4 UMC Classic/Type 2 existing layouts implemented; Gen2/Gen3 APIs retain their own smaller supported lengths |
 | LF 125 kHz and UHF RFID identifiers | Pending suitable hardware, family codecs and device adapters; not accessible through this NFC storage profile |

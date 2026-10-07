@@ -10,7 +10,9 @@ These are independently implemented protocol paths with synthetic transcript
 validation. Physical chip/reader/firmware/driver validation and Delphi/RAD Studio
 checks remain pending. Gen4 **UMC/GTU** here means the password-bearing `CF` command
 dialect. It is separate from USCUID/GDM configuration or alternate seven-bit unlock
-modes, despite products sometimes sharing a marketing generation number.
+modes, despite products sometimes sharing a marketing generation number. The
+separate implemented USCUID/GDM profiles are described in
+[USCUID_FUID.md](USCUID_FUID.md).
 
 ## Reader setup
 

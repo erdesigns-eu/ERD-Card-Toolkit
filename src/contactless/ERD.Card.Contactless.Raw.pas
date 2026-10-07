@@ -12,7 +12,7 @@ uses
 {$ELSE}
   System.SysUtils, System.Classes,
 {$ENDIF}
-  ERD.Card.Contactless, ERD.Card.Contactless.UID, ERD.Card.Contactless.UID.Profiles;
+  ERD.Card.Contactless, ERD.Card.Contactless.UID, ERD.Card.Contactless.UID.Profiles, ERD.Card.Contactless.UID.USCUID;
 
 type
   /// <summary>One raw ISO 14443-A RF response; bytes include any card-supplied CRC.</summary>
@@ -100,6 +100,10 @@ type
     procedure ReleaseSession(const ASucceeded: Boolean);
     procedure RequireAck(const AResponse: TRawRfResponse);
     procedure UnlockClassic;
+    procedure UnlockUscuid(const AStyle: TUscuidWakeupStyle);
+    function ReadUscuidBlock(const ACommand, ABlock: Byte): TBytes;
+    procedure WriteUscuidBlock(const ACommand, ABlock: Byte; const AData: TBytes;
+      var ADispatched: Boolean);
     function ReadManufacturer: TBytes;
     procedure CheckActivation(const ARequestedUid: TBytes);
     procedure RequireStatus9000(const AResponse: TRawRfResponse);
@@ -149,6 +153,20 @@ type
     /// Preserves configuration, metadata, internal/lock bytes and hidden block tails. Split Type 2 writes are not atomic.
     /// Local password-bearing commands/configuration are overwritten on all exits; backend/transport copies are outside that guarantee.</remarks>
     function ProgramGen4Uid(const ALayout: TGen4UidLayout; const ANewUid, APassword: TBytes): TGen4UidResult;
+    /// <summary>Programs an already configured USCUID/GDM public or hidden UID source.</summary>
+    /// <param name="AWakeupStyle">Explicit enabled Gen1a 40/43 or GDM 20/23 wakeup; never probed.</param>
+    /// <param name="ALayout">Existing public four-byte, hidden F3 four-byte or hidden F0/F1 seven-byte source.</param>
+    /// <param name="ANewUid">Requested four/seven-byte UID, copied without modification.</param>
+    /// <returns>Independent full configuration and manufacturer blocks after fresh selection and successful release.</returns>
+    /// <exception cref="EProgrammableUidError">UID, configuration, BCC or hidden cascade layout is unsupported.</exception>
+    /// <exception cref="EContactlessError">Reader, unlock or original source/selection consistency is invalid.</exception>
+    /// <exception cref="EContactlessWriteUncertain">A write handshake was dispatched and completion could not be verified.</exception>
+    /// <remarks>Requires the full sixteen-byte E0 configuration with enabled selected wakeup and shadow mode off.
+    /// Preserves configuration and metadata; hidden F3 leaves public block zero unchanged. Seven-byte programming
+    /// writes hidden block zero and mirrors the first seven public bytes; these two writes are not atomic.
+    /// A matching UID is a verified no-op. No configuration, wipe, fuse, key discovery, rollback or replay commands.</remarks>
+    function ProgramUscuidUid(const AWakeupStyle: TUscuidWakeupStyle; const ALayout: TUscuidUidLayout;
+      const ANewUid: TBytes): TUscuidUidResult;
     /// <summary>Retained raw-reader interface; caller configures an adapter matching the hardware before any operation.</summary>
     property Reader: IRawContactlessReader read FReader write FReader;
   end;
@@ -413,14 +431,128 @@ begin
 end;
 
 procedure TRawUidProgrammer.UnlockClassic;
+begin
+  UnlockUscuid(uwsGen1a);
+end;
+
+procedure TRawUidProgrammer.UnlockUscuid(const AStyle: TUscuidWakeupStyle);
 var Wire: TBytes; Response: TRawRfResponse;
 begin
+  if not (AStyle in [uwsGen1a, uwsGdm]) then Fail('invalid wakeup style');
   Wire := TRawUidCodec.AppendCrcA(HexToBytes('5000'));
   Response := FReader.Exchange(Wire, Length(Wire) * 8);
   if not Response.TimedOut or (Length(Response.Data) <> 0) or (Response.BitCount <> 0) then
     Fail('HALT did not report expected RF timeout');
-  RequireAck(FReader.Exchange(HexToBytes('40'), 7));
-  RequireAck(FReader.Exchange(HexToBytes('43'), 8));
+  if AStyle = uwsGen1a then
+  begin
+    RequireAck(FReader.Exchange(HexToBytes('40'), 7));
+    RequireAck(FReader.Exchange(HexToBytes('43'), 8));
+  end
+  else
+  begin
+    RequireAck(FReader.Exchange(HexToBytes('20'), 7));
+    RequireAck(FReader.Exchange(HexToBytes('23'), 8));
+  end;
+end;
+
+function TRawUidProgrammer.ReadUscuidBlock(const ACommand, ABlock: Byte): TBytes;
+var Wire: TBytes;
+begin
+  SetLength(Wire, 2);
+  Wire[0] := ACommand;
+  Wire[1] := ABlock;
+  Wire := TRawUidCodec.AppendCrcA(Wire);
+  Result := TRawUidCodec.DecodeCrcA(FReader.Exchange(Wire, Length(Wire) * 8), 16);
+end;
+
+procedure TRawUidProgrammer.WriteUscuidBlock(const ACommand, ABlock: Byte;
+  const AData: TBytes; var ADispatched: Boolean);
+var Wire: TBytes;
+begin
+  SetLength(Wire, 2);
+  Wire[0] := ACommand;
+  Wire[1] := ABlock;
+  Wire := TRawUidCodec.AppendCrcA(Wire);
+  ADispatched := True;
+  RequireAck(FReader.Exchange(Wire, Length(Wire) * 8));
+  Wire := TRawUidCodec.AppendCrcA(AData);
+  RequireAck(FReader.Exchange(Wire, Length(Wire) * 8));
+end;
+
+function TRawUidProgrammer.ProgramUscuidUid(const AWakeupStyle: TUscuidWakeupStyle;
+  const ALayout: TUscuidUidLayout; const ANewUid: TBytes): TUscuidUidResult;
+var Data: TUscuidUidResult; Source, SourceUid, Verified: TBytes;
+  HiddenIndex: Integer; Succeeded, Dispatched: Boolean;
+begin
+  Result := Default(TUscuidUidResult);
+  if not (AWakeupStyle in [uwsGen1a, uwsGdm]) then Fail('invalid wakeup style');
+  TUscuidUidCodec.ValidateUid(ALayout, ANewUid);
+  HiddenIndex := TUscuidUidCodec.HiddenBlockIndex(ALayout);
+  RequireReader;
+  Data := Default(TUscuidUidResult);
+  Data.WakeupStyle := AWakeupStyle;
+  Data.Layout := ALayout;
+  Data.RequestedUid := CopyBytes(ANewUid);
+  Succeeded := False;
+  Dispatched := False;
+  FReader.BeginSession;
+  try
+    try
+      Data.PreviousUid := FReader.Activate;
+      if Length(Data.PreviousUid) <> TUscuidUidCodec.UidLength(ALayout) then Fail('current USCUID length mismatch');
+      UnlockUscuid(AWakeupStyle);
+      Data.Configuration := ReadUscuidBlock($E0, 0);
+      TUscuidUidCodec.ValidateConfiguration(AWakeupStyle, ALayout, Data.Configuration);
+      Data.PublicManufacturerBlock := ReadManufacturer;
+      if HiddenIndex < 0 then Source := Data.PublicManufacturerBlock
+      else
+      begin
+        Data.HiddenManufacturerBlock := ReadUscuidBlock($38, Byte(HiddenIndex));
+        Source := Data.HiddenManufacturerBlock;
+      end;
+      SourceUid := TUscuidUidCodec.DecodeUid(ALayout, Source);
+      if not BytesEqual(SourceUid, Data.PreviousUid) then Fail('USCUID source/selection mismatch');
+      if not BytesEqual(Data.PreviousUid, Data.RequestedUid) then
+      begin
+        Source := TUscuidUidCodec.PrepareSourceBlock(ALayout, Source, Data.RequestedUid);
+        if HiddenIndex < 0 then
+        begin
+          Data.PublicManufacturerBlock := Source;
+          WriteUscuidBlock($A0, 0, Source, Dispatched);
+        end
+        else
+        begin
+          Data.HiddenManufacturerBlock := Source;
+          WriteUscuidBlock($A8, Byte(HiddenIndex), Source, Dispatched);
+          if ALayout = uulHiddenF0F1_7 then
+          begin
+            Move(Data.RequestedUid[0], Data.PublicManufacturerBlock[0], 7);
+            WriteUscuidBlock($A0, 0, Data.PublicManufacturerBlock, Dispatched);
+          end;
+        end;
+        CheckActivation(Data.RequestedUid);
+        UnlockUscuid(AWakeupStyle);
+        Verified := ReadUscuidBlock($E0, 0);
+        if not BytesEqual(Verified, Data.Configuration) then Fail('USCUID configuration changed');
+        Verified := ReadManufacturer;
+        if not BytesEqual(Verified, Data.PublicManufacturerBlock) then Fail('USCUID public read-back mismatch');
+        if HiddenIndex >= 0 then
+        begin
+          Verified := ReadUscuidBlock($38, Byte(HiddenIndex));
+          if not BytesEqual(Verified, Data.HiddenManufacturerBlock) then Fail('USCUID hidden read-back mismatch');
+        end;
+      end;
+      Data.ActiveUidVerified := True;
+      Succeeded := True;
+    finally ReleaseSession(Succeeded); end;
+  except
+    on E: Exception do
+    begin
+      if Dispatched then raise EContactlessWriteUncertain.Create(E.ClassName);
+      raise;
+    end;
+  end;
+  Result := Data;
 end;
 
 function TRawUidProgrammer.ReadManufacturer: TBytes;

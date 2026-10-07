@@ -54,7 +54,10 @@ are not compatibility requirements.
    fresh UID selection. Gen3 adds independent four/seven-byte UID-register programming;
    Gen4 UMC adds Classic/Type 2 four/seven/ten-byte manufacturer layouts, explicit
    backdoor password, stable configuration and fresh verification. See [the raw UID
-   guide](RAW_UID.md) and [Gen3/Gen4 guide](GEN3_GEN4_UID.md).
+   guide](RAW_UID.md) and [Gen3/Gen4 guide](GEN3_GEN4_UID.md). USCUID/GDM adds
+   public/hidden four/seven-byte sources with both wakeup styles and unchanged
+   configuration. Factory FUID has a separate authenticated one-time write API;
+   see [USCUID/FUID](USCUID_FUID.md).
    Runtime package, UID/Type 2 example and synthetic transcripts supplied.
    Further UID generations, Type 2 authentication, DESFire/secure messaging, Plus,
    NDEF and broader reader backends
