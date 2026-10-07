@@ -30,6 +30,7 @@ def main():
     command = [compiler, '-B', '-Mdelphi', '-Cr', '-Co', '-gl', '-gh', '-vewn',
                '-Fu' + str(REPO / 'src/core'), '-Fu' + str(REPO / 'src/pcsc'),
                '-Fu' + str(REPO / 'src/eid'),
+               '-Fu' + str(REPO / 'src/emv'),
                '-FU' + str(build), '-FE' + str(build)]
     if args.rtl_dir is not None:
         command.extend(['-n', '-Fu' + str(args.rtl_dir.resolve())])
@@ -44,11 +45,12 @@ def main():
     for project in ('tests/core/CardCore.Tests.dpr', 'tests/core/ProtocolCore.Tests.dpr',
                     'tests/transport/CardTransport.Tests.dpr', 'tests/eid/BelgianEid.Tests.dpr',
                     'tests/eid/Icao.Tests.dpr',
+                    'tests/emv/Emv.Tests.dpr',
                     'examples/core/InspectApdu.dpr', 'examples/pcsc/InspectReader.dpr',
-                    'examples/eid/ReadBelgianEid.dpr'):
+                    'examples/eid/ReadBelgianEid.dpr', 'examples/emv/InspectEmv.dpr'):
         subprocess.run(command + [project], cwd=REPO, check=True)
     suffix = '.exe' if os.name == 'nt' else ''
-    for project in ('CardCore.Tests', 'ProtocolCore.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests'):
+    for project in ('CardCore.Tests', 'ProtocolCore.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests'):
         result = subprocess.run([str(build / (project + suffix))], cwd=REPO,
                                 capture_output=True, text=True)
         print(result.stdout, end='', flush=True)
@@ -99,6 +101,10 @@ def main():
                              capture_output=True, text=True, check=True)
     if 'Usage: ReadBelgianEid' not in eid_help.stdout:
         raise RuntimeError('eID example did not show its hardware-free help')
+    emv_help = subprocess.run([str(build / ('InspectEmv' + suffix)), '--help'],
+                             capture_output=True, text=True, check=True)
+    if 'Usage: InspectEmv' not in emv_help.stdout:
+        raise RuntimeError('EMV example did not show its hardware-free help')
     subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests/tools', '-v'],
                    cwd=REPO, check=True)
     subprocess.run([sys.executable, 'tools/pascalcheck/run.py', '--profile', 'core',

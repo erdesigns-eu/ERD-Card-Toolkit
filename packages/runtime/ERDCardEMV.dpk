@@ -1,0 +1,14 @@
+package ERDCardEMV;
+
+{$DESCRIPTION 'ERD Card EMV: application discovery, data codecs and non-visual reader'}
+{$RUNONLY}
+
+requires
+  rtl,
+  ERDCardCore;
+
+contains
+  ERD.Card.EMV.Data in '..\..\src\emv\ERD.Card.EMV.Data.pas',
+  ERD.Card.EMV.Reader in '..\..\src\emv\ERD.Card.EMV.Reader.pas';
+
+end.

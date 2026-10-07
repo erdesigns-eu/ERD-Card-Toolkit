@@ -30,9 +30,12 @@ are not compatibility requirements.
    Shared ICAO MRZ/DG1/DG2 data codecs are available for the European expansion.
    BAC/PACE, secure messaging and physical Dutch/Luxembourg/German card support
    are separate pending access-layer work; see [the support matrix](EUROPEAN_EID.md).
-5. **TEMVCardReader.** Available applications, card information and supported records
-   through the common transport. Fields are optional; do not promise an IBAN on every
-   card. Keep UI, automatic protocol recovery and storage separate.
+5. **TEMVCardReader — implementation available; Delphi/hardware validation pending.**
+   PSE/PPSE discovery, explicit AID/PDOL selection, GPO formats 80/77 and bounded AFL
+   record reads. Optional PAN/expiry/name/IBAN and packed Track 2 data, with explicit
+   terminal inputs and no GPO replay. Runtime package, console example and synthetic
+   APDU tests supplied. No payment kernel, cryptogram generation, scheme certification,
+   nested DDF discovery or transaction-log reader is claimed. See [the EMV guide](EMV_READER.md).
 6. **TMagStripeReaderWriter.** Track codecs plus separate YL160/MSR adapters. Model
    device capabilities, errors, buffers and supported SDK/driver versions explicitly.
 7. **TMemoryCardReaderWriter and TContactlessCardReader.** Implement one tested card
