@@ -37,7 +37,11 @@ validation remains pending. `TBelgianEIDReader` in `src/eid` reads identity, add
 JPEG photographs, raw signatures and five available public certificate files using
 the documented Belpic 1.7/1.8 contact protocol. Its standalone decoders and injected
 read sequences are tested; real-card validation and authenticity verification remain
-pending. The other components are planned. See [the component plan](docs/COMPONENT_PLAN.md),
+pending. `TEMVCardReader` in `src/emv` provides PSE/PPSE discovery, explicit AID/PDOL
+selection, GPO and bounded AFL record reads with optional PAN, expiry, name, IBAN
+and Track 2 data. It is a data reader; GPO can change card state, and payment-kernel
+or scheme certification is not provided. See [the EMV guide](docs/EMV_READER.md).
+The remaining components are planned. See [the component plan](docs/COMPONENT_PLAN.md),
 [the PC/SC guide](docs/PCSC_TRANSPORT.md) and [the Belgian eID guide](docs/BELGIAN_EID.md).
 
 The eID package also provides shared ICAO TD1/TD2/TD3 MRZ and DG1/DG2 decoders,
@@ -112,7 +116,7 @@ tools\run-core-tests.cmd dcc32
 tools\run-core-tests.cmd dcc64
 ```
 
-The Windows script builds the Pascal tests, console examples and all three runtime
+The Windows script builds the Pascal tests, console examples and all four runtime
 packages with XML documentation, range checks and overflow checks.
 It has not been executed in the Linux development environment. Verify the generated
 XML documentation and Help Insight in the target IDE as described in
