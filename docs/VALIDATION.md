@@ -12,12 +12,13 @@ Validated in the Linux cloud environment on 2026-10-07 after the legacy cleanup.
 | EMV data codecs, application reader and diagnostics | 1605 assertions in nine groups passed, including exact PSE/PPSE/GPO/AFL/GET DATA/log transcripts and resource limits |
 | Contactless Classic/Type 2 storage and programmable UID | 6365 assertions in twelve groups passed, including protected pages, complete snapshots, four/seven-byte Gen2 programming, separate factory FUID one-time writes and uncertain outcomes |
 | Raw RF UID programming and ACR122U adapter | 8179 assertions in twenty-three groups passed, including Gen1a/Gen1b/unsealed UFUID, partial UFUID/ZUID/PFUID, Type 2 DirectWrite, Gen3, all six Gen4 layouts, partial writes, USCUID/GDM hidden/public sources, password-command wiping, bit framing and complete adapter-chain transcripts |
+| Password-authenticated Type 2 user memory | 2062 assertions in seven groups passed for both EV1 sizes and NTAG213/215/216, including retained-session PWD_AUTH/PACK, bounded snapshots, verified writes and concrete adapter integration |
 | Native Windows adapter branches | 38 assertions passed against an isolated Linux C ABI shim |
 | Console examples | APDU valid/invalid cases passed; PC/SC, eID, EMV and contactless help work without hardware |
 | FPC range/overflow/heap checks | Passed; no unfreed allocations in passing test programs |
 | Python checker regression tests | All 15 passed |
-| Pascalcheck core profile | All 21 readers passed on thirty-six explicitly selected source files |
-| XML documentation | 705 visible API declarations inspected; zero findings |
+| Pascalcheck core profile | All 21 readers passed on thirty-eight explicitly selected source files |
+| XML documentation | 718 visible API declarations inspected; zero findings |
 | Reference integrity | All 26 retained files match the original Git bytes and manifest hashes |
 | Patch whitespace | `git diff --check` passed |
 
@@ -49,7 +50,7 @@ lengths/padding, exact AID/MF/DF/EF selection, grouped reads, optional certifica
 states, bounded 61xx/6Cxx handling, EOF probes, 15-bit offsets, partial failures,
 no transport replay and transaction-release exception precedence. Its JPEG and
 certificate payloads are synthetic protocol fixtures, not decoded image or X.509
-validation tests. A total of 20738 Pascal assertions passed across the suites.
+validation tests. A total of 22800 Pascal assertions passed across the suites.
 The ICAO additions decode acquired files only; BAC/PACE, secure messaging and
 direct access to Dutch/Luxembourg/German documents are still pending.
 EMV tests exercise supplied PDOL values, GPO 80/77, optional fields, Track 2 fallback,
@@ -93,6 +94,13 @@ PFUID tests validate documented shapes, flag/SAK preservation, sixteen-byte
 configuration responses, variant markers, reversed E1 PFUID reads, initial
 UID/BCC checks, interrupted writes and persistent block/configuration comparisons.
 Complete Gen1b and PFUID chains also pass through the concrete ACR122U/PN532 adapter.
+Password-access tests cover five PWD_AUTH models, all excluded pages, mandatory
+credential sizes, exact single-page FAST_READ and complete bounded snapshots.
+Authentication NAK/timeout/transport/framing/CRC/PACK failures never replay or send
+memory commands. Local credential copies are wiped and caller arrays remain
+unchanged; same-session writes verify all four page bytes and report every
+post-dispatch failure as uncertain. A complete ACR122U/PN532 write/read-back
+transcript verifies retained authentication and cleanup.
 Real payment-card behavior, contact/contactless schemes and Delphi package/IDE
 integration remain pending; no payment kernel or scheme certification is claimed.
 
@@ -106,7 +114,8 @@ Implemented Gen3 and Gen4 UMC four/seven/ten-byte profiles are described in
 [GEN3_GEN4_UID.md](GEN3_GEN4_UID.md). Implemented USCUID/GDM and factory FUID
 profiles are described in [USCUID_FUID.md](USCUID_FUID.md). Gen1b and documented
 partial UFUID/ZUID/PFUID profiles are described in [GEN1B_PARTIAL_UID.md](GEN1B_PARTIAL_UID.md).
-Remaining UID families and one-time fuses need
+Password-authenticated EV1/NTAG user-memory access is described in
+[TYPE2_PASSWORD.md](TYPE2_PASSWORD.md). Remaining UID families and one-time fuses need
 further concrete protocols and hardware validation;
 see [the programmable UID matrix](PROGRAMMABLE_UID.md). No broad reader certification
 or payment-processing support is claimed.
