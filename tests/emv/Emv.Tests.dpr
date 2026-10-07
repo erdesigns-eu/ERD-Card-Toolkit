@@ -526,6 +526,251 @@ begin
   Writeln('PASS: response/field limits, selected AID and record-number boundaries.');
 end;
 
+function LogFci(const AEntry: string): string;
+begin
+  Result := Tlv('6F', '8407' + AidHex + Tlv('A5', Tlv('BF0C', AEntry)));
+end;
+
+procedure TestLogCodec;
+var
+  Fields: TEmvValues;
+  FormatBytes, RecordBytes: TBytes;
+  I, Size: Integer;
+  Raised: Boolean;
+begin
+  FormatBytes := HexToBytes('9A039F21035F2A029F02069F4E149F3602');
+  RecordBytes := HexToBytes('2610071234560978000000001234' + StringOfChar('4', 40) + '002A');
+  Check(TEmvCodec.LogRecordSize(FormatBytes) = 36, 'Annex D example log format size');
+  Fields := TEmvCodec.DecodeLogRecord(FormatBytes, RecordBytes);
+  Check((Length(Fields) = 6) and (BytesToHex(Fields[5].Value) = '002A'), 'Concatenated values split by DOL');
+  FormatBytes[0] := 0;
+  RecordBytes[0] := 0;
+  Check((BytesToHex(Fields[0].Tag) = '9A') and (BytesToHex(Fields[0].Value) = '261007'), 'Log result owns buffers');
+  Fields := TEmvCodec.DecodeLogRecord(HexToBytes('9F36019F36019F1700'), HexToBytes('0102'));
+  Check((Length(Fields) = 3) and (Length(Fields[2].Value) = 0), 'Repeated/zero-sized log fields retained');
+  SetLength(RecordBytes, 256);
+  Fields := TEmvCodec.DecodeLogRecord(HexToBytes('9F02FF9F3601'), RecordBytes);
+  Check(Length(Fields[0].Value) = 255, 'Maximum 256-byte log record supported');
+  for I := 0 to 7 do
+  begin
+    Raised := False;
+    try
+      case I of
+        0: Size := TEmvCodec.LogRecordSize(nil);
+        1: Size := TEmvCodec.LogRecordSize(HexToBytes('9F0200'));
+        2: Size := TEmvCodec.LogRecordSize(HexToBytes('9F02FF9F3602'));
+        3: Size := TEmvCodec.LogRecordSize(HexToBytes('9F02'));
+        4: Size := TEmvCodec.LogRecordSize(HexToBytes('A501'));
+        5: Fields := TEmvCodec.DecodeLogRecord(HexToBytes('9F3602'), HexToBytes('01'));
+        6: Fields := TEmvCodec.DecodeLogRecord(HexToBytes('9F3602'), HexToBytes('010203'));
+        7: Fields := TEmvCodec.DecodeLogRecord(HexToBytes('9F3602'), HexToBytes('70020102'));
+      end;
+    except on E: EEmvDataError do Raised := True; end;
+    Check(Raised, 'Invalid log format/record rejected');
+  end;
+  Writeln('PASS: log DOL decoding, ownership, unknown/repeated tags and bounds.');
+end;
+
+procedure TestDataObjects;
+const
+  Tags: array[0..3] of string = ('9F36', '9F13', '9F17', '9F4F');
+  Bodies: array[0..3] of string = ('FFFF', '0100', '03', '9F3602');
+  Missing: array[0..2] of string = ('6A88', '6A81', '6D00');
+var
+  Reader: TEMVCardReader;
+  Script: TScript;
+  Data: TEmvDataObjectResult;
+  I: Integer;
+  Raised: Boolean;
+begin
+  Reader := TEMVCardReader.Create(nil);
+  try
+    for I := 0 to 3 do
+    begin
+      Script := TScript.Create;
+      Reader.Transport := Script;
+      Script.Add(SelectHex, Fci + '9000');
+      Script.Add('80CA' + Tags[I] + '00', Tlv(Tags[I], Bodies[I]) + '9000');
+      Data := Reader.ReadDataObject(HexToBytes(AidHex), TEmvDataObject(I));
+      Check(Data.Present and (Data.StatusWord = $9000), 'GET DATA present');
+      Check(BytesToHex(Data.Value) = Bodies[I], 'Exact GET DATA value');
+      Check(Data.HasNumericValue = (I <> 3), 'Numeric interpretation only for counters');
+      if I = 0 then Check(Data.NumericValue = 65535, 'Unsigned two-byte ATC');
+      if I = 1 then Check(Data.NumericValue = 256, 'Big-endian last online ATC');
+      if I = 2 then Check(Data.NumericValue = 3, 'Remaining PIN attempts without VERIFY');
+      Check((Script.Position = 2) and (Script.Begins = 1) and (Script.Ends = 1), 'No GPO, one transaction');
+    end;
+    for I := 0 to 2 do
+    begin
+      Script := TScript.Create;
+      Reader.Transport := Script;
+      Script.Add(SelectHex, Fci + '9000');
+      Script.Add('80CA9F3600', Missing[I]);
+      Data := Reader.ReadDataObject(HexToBytes(AidHex), edoAtc);
+      Check(not Data.Present and not Data.HasNumericValue and (Length(Data.Value) = 0), 'Explicit optional absence');
+      Check(IntToHex(Data.StatusWord, 4) = Missing[I], 'Absence status retained');
+    end;
+    for I := 0 to 9 do
+    begin
+      Script := TScript.Create;
+      Reader.Transport := Script;
+      Script.Add(SelectHex, Fci + '9000');
+      case I of
+        0: Script.Add('80CA9F3600', '9F130200019000');
+        1: Script.Add('80CA9F3600', '9F3601019000');
+        2: Script.Add('80CA9F3600', '9F36030000019000');
+        3: Script.Add('80CA9F3600', '9F360200019F360200019000');
+        4: Script.Add('80CA9F3600', '9F360200019F9000');
+        5: Script.Add('80CA9F3600', 'AA6A88');
+        6: Script.Add('80CA9F3600', '6982');
+        7: Script.Add('80CA9F3600', '', True);
+        8: Script.Add('80CA9F3600', '9F360200019000');
+        9: Script.Add('80CA9F3600', '6985');
+      end;
+      Script.EndFails := I >= 8;
+      Raised := False;
+      try Data := Reader.ReadDataObject(HexToBytes(AidHex), edoAtc);
+      except
+        on E: EEmvDataError do
+        begin
+          if I in [6, 9] then Check(E is EEmvStatusError, 'Status error retained');
+          if I = 9 then Check(EEmvStatusError(E).StatusWord = $6985, 'Primary status beats release error');
+          Raised := I in [0, 1, 2, 3, 4, 5, 6, 9];
+        end;
+        on E: ECardTransportError do Raised := I in [7, 8];
+        on E: ETlvFormatError do Raised := I = 4;
+      end;
+      Check(Raised and (Script.Ends = 1), 'Malformed/failed GET DATA aborts transaction');
+      Check(Script.Position = 2, 'Failed GET DATA never replayed');
+    end;
+    Script := TScript.Create;
+    Reader.Transport := Script;
+    Script.Add(SelectHex, Fci + '9000');
+    Script.Add('80CA9F3600', '6C05');
+    Script.Add('80CA9F3605', '9F36026102');
+    Script.Add('00C0000002', '002A9000');
+    Data := Reader.ReadDataObject(HexToBytes(AidHex), edoAtc);
+    Check(Data.NumericValue = 42, 'GET DATA bounded correction and response chaining');
+    Script := TScript.Create;
+    Reader.Transport := Script;
+    Raised := False;
+    try Data := Reader.ReadDataObject(nil, edoAtc);
+    except on E: EEmvDataError do Raised := True; end;
+    Check(Raised and (Script.Begins = 0), 'Invalid AID rejected before transaction');
+    Script.BeginFails := True;
+    Raised := False;
+    try Data := Reader.ReadDataObject(HexToBytes(AidHex), edoAtc);
+    except on E: ECardTransportError do Raised := True; end;
+    Check(Raised and (Script.Ends = 0) and (Script.Position = 0), 'Failed acquisition has no cleanup/APDU');
+  finally Reader.Free; end;
+  Writeln('PASS: optional counters, exact tags, transaction failures and no GPO/replay.');
+end;
+
+procedure TestTransactionLogs;
+var
+  Reader: TEMVCardReader;
+  Script: TScript;
+  Data: TEmvTransactionLogData;
+  I, N: Integer;
+  Raised: Boolean;
+  Entry, FormatBody: string;
+begin
+  Reader := TEMVCardReader.Create(nil);
+  try
+    Check(Reader.MaxLogRecords = 32, 'Default log capacity bound');
+    Script := TScript.Create;
+    Reader.Transport := Script;
+    Script.Add(SelectHex, LogFci('9F4D020F03') + '9000');
+    Script.Add('80CA9F4F00', Tlv('9F4F', '9A039F02069F3602') + '9000');
+    Script.Add('00B2017C00', '261007000000001234002A9000');
+    Script.Add('00B2027C00', '26100600000000010000299000');
+    Script.Add('00B2037C00', '6A83');
+    Data := Reader.ReadTransactionLog(HexToBytes(AidHex));
+    Check(Data.Supported and (Data.Sfi = 15) and (Data.MaximumRecords = 3), 'Log Entry interpreted directly, no SFI shift');
+    Check((Length(Data.Records) = 2) and (Data.Records[0].Number = 1), 'Newest-first partly filled cyclic log');
+    Check(BytesToHex(Data.Records[0].Fields[2].Value) = '002A', 'Raw log decoded, no BER template required');
+    Check((Script.Begins = 1) and (Script.Ends = 1), 'Whole log in one transaction');
+    for I := 0 to 2 do
+    begin
+      Script := TScript.Create;
+      Reader.Transport := Script;
+      if I = 0 then Script.Add(SelectHex, Fci + '9000')
+      else if I = 1 then Script.Add(SelectHex, LogFci('') + '9000')
+      else Script.Add(SelectHex, LogFci('9F4D020F02') + '9000');
+      if I = 2 then
+      begin
+        Script.Add('80CA9F4F00', '9F4F039F36029000');
+        Script.Add('00B2017C00', '6A83');
+      end;
+      Data := Reader.ReadTransactionLog(HexToBytes(AidHex));
+      Check(Data.Supported = (I = 2), 'Missing log differs from advertised empty log');
+      Check(Length(Data.Records) = 0, 'Empty/absent log has no records');
+      if I <> 2 then Check(Script.Position = 1, 'No GET DATA when no advertised log');
+    end;
+    for I := 0 to 12 do
+    begin
+      Script := TScript.Create;
+      Reader.Transport := Script;
+      Entry := '9F4D020F02';
+      case I of
+        0: Entry := '9F4D010F';
+        1: Entry := '9F4D020A02';
+        2: Entry := '9F4D021F02';
+        3: Entry := '9F4D020F00';
+        4: Entry := '9F4D020F21';
+        5: Entry := Entry + Entry;
+      end;
+      Script.Add(SelectHex, LogFci(Entry) + '9000');
+      if I > 5 then
+      begin
+        FormatBody := '9F3602';
+        if I = 7 then FormatBody := '9F3600';
+        if I = 8 then FormatBody := '9F36';
+        if I = 6 then Script.Add('80CA9F4F00', '6A88')
+        else Script.Add('80CA9F4F00', Tlv('9F4F', FormatBody) + '9000');
+        if I > 8 then
+        begin
+          if I = 9 then Script.Add('00B2017C00', '700200019000')
+          else if I = 10 then Script.Add('00B2017C00', '002A9000')
+          else if I = 11 then Script.Add('00B2017C00', '', True)
+          else Script.Add('00B2017C00', '6982');
+          if I = 10 then Script.Add('00B2027C00', '6985');
+        end;
+      end;
+      Script.EndFails := I = 12;
+      Raised := False;
+      try Data := Reader.ReadTransactionLog(HexToBytes(AidHex));
+      except
+        on E: EEmvDataError do
+        begin
+          Raised := I <> 11;
+          if I = 12 then Check((E is EEmvStatusError) and (EEmvStatusError(E).StatusWord = $6982), 'Log primary error retained');
+        end;
+        on E: ECardTransportError do Raised := I = 11;
+      end;
+      Check(Raised and (Script.Ends = 1), 'Invalid/incomplete log rejected atomically');
+      if I <= 5 then Check(Script.Position = 1, 'Bad entry bound checked before GET DATA');
+    end;
+    Reader.MaxLogRecords := 255;
+    Script := TScript.Create;
+    Reader.Transport := Script;
+    Script.Add(SelectHex, LogFci('9F4D021EFF') + '9000');
+    Script.Add('80CA9F4F00', '9F4F039F36029000');
+    for N := 1 to 255 do Script.Add('00B2' + IntToHex(N, 2) + 'F400', IntToHex(N, 4) + '9000');
+    Data := Reader.ReadTransactionLog(HexToBytes(AidHex));
+    Check((Length(Data.Records) = 255) and (Data.Records[254].Number = 255), 'Maximum log capacity with SFI 30 and record 255');
+    Check(Script.Position = 257, 'No extra probe beyond advertised log capacity');
+    for I := 0 to 1 do
+    begin
+      Raised := False;
+      try if I = 0 then Reader.MaxLogRecords := 0 else Reader.MaxLogRecords := 256;
+      except on E: EEmvDataError do Raised := True; end;
+      Check(Raised, 'Invalid log limit assignment rejected');
+    end;
+  finally Reader.Free; end;
+  Writeln('PASS: cyclic logs, absent/empty distinction, capacity and primary-error preservation.');
+end;
+
 begin
   try
     TestDol;
@@ -534,7 +779,10 @@ begin
     TestDirectories;
     TestFailuresAndStatusHandling;
     TestResourceAndRecordBoundaries;
-    Writeln('PASS: ', Checks, ' assertions across six EMV test groups.');
+    TestLogCodec;
+    TestDataObjects;
+    TestTransactionLogs;
+    Writeln('PASS: ', Checks, ' assertions across nine EMV test groups.');
   except
     on E: Exception do begin Writeln('FAIL: ', E.ClassName, ': ', E.Message); Halt(1); end;
   end;

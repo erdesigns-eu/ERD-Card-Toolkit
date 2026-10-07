@@ -42,12 +42,17 @@ type
     FUseTransactions: Boolean;
     FMaxRecords: Integer;
     FMaxDirectoryRecords: Integer;
+    FMaxLogRecords: Integer;
     procedure SetMaxRecords(const AValue: Integer);
     procedure SetMaxDirectoryRecords(const AValue: Integer);
+    procedure SetMaxLogRecords(const AValue: Integer);
     function BeginRead: ICardTransaction;
     procedure EndRead(const ATransaction: ICardTransaction; const ASucceeded: Boolean);
     function Exchange(const ACommand: TApduCommand; const AAllowCorrection: Boolean): TApduResponse;
     function Select(const AName: TBytes): TApduResponse;
+    function SelectApplicationFci(const AAid: TBytes; out AFci: TBytes): TTlvDocument;
+    function GetData(const AObject: TEmvDataObject): TEmvDataObjectResult;
+    function ReadLogInternal(const AAid: TBytes): TEmvTransactionLogData;
     function ReadRecord(const ASfi, ANumber: Byte): TApduResponse;
     function DecodeTemplate(const ABytes: TBytes; const ATag: string): TTlvDocument;
     function Child(const AParent: TTlvNode; const ATag: string; const ARequired: Boolean): TTlvNode;
@@ -78,6 +83,24 @@ type
     /// may collect its output. SELECT/READ RECORD allow one bounded Le correction per APDU.
     /// No partial snapshot is returned; release failures preserve a primary read error.</remarks>
     function ReadApplication(const AAid: TBytes; const ATerminalValues: TEmvValues): TEmvApplicationData;
+    /// <summary>Selects an exact AID and retrieves an optional counter or log format without GPO.</summary>
+    /// <param name="AAid">Exact application identifier, 5..16 bytes.</param>
+    /// <param name="AObject">Explicit supported GET DATA object.</param>
+    /// <returns>Validated independent value; Present is false only for 6A88, 6A81 or 6D00.</returns>
+    /// <exception cref="EEmvDataError">Selection, returned tag/size, enum or a resource bound is invalid.</exception>
+    /// <exception cref="EEmvStatusError">SELECT fails or GET DATA returns another failure status.</exception>
+    /// <remarks>One exclusive operation. Transport exceptions are never replayed. SELECT and GET DATA
+    /// allow bounded response chaining and Le correction; no PIN command or payment cryptogram is sent.</remarks>
+    function ReadDataObject(const AAid: TBytes; const AObject: TEmvDataObject): TEmvDataObjectResult;
+    /// <summary>Selects an exact AID and reads its optional cyclic transaction log without GPO.</summary>
+    /// <param name="AAid">Exact application identifier, 5..16 bytes.</param>
+    /// <returns>Complete snapshot; Supported is false only when FCI A5/BF0C has no Log Entry 9F4D.</returns>
+    /// <exception cref="EEmvDataError">FCI, log entry, format, record or configured bound is invalid.</exception>
+    /// <exception cref="EEmvStatusError">A required command fails; only 6A83 ends an incompletely filled log.</exception>
+    /// <remarks>Advertised capacity above MaxLogRecords is rejected before log reads. Records are
+    /// newest-first raw concatenations decoded by 9F4F, not BER templates. An advertised log requires
+    /// a readable valid format. No partial snapshot is returned; release failure preserves a primary error.</remarks>
+    function ReadTransactionLog(const AAid: TBytes): TEmvTransactionLogData;
     /// <summary>Connected byte transport retained by the component; its owner may still disconnect it.</summary>
     property Transport: ICardTransport read FTransport write FTransport;
   published
@@ -90,6 +113,8 @@ type
     /// <summary>Maximum contact-directory record probes, 1..255; defaults to 32.</summary>
     /// <remarks>Reaching the bound without a 6A83 end marker raises EEmvDataError.</remarks>
     property MaxDirectoryRecords: Integer read FMaxDirectoryRecords write SetMaxDirectoryRecords default 32;
+    /// <summary>Maximum advertised log capacity, 1..255; defaults to 32. Invalid assignments raise EEmvDataError.</summary>
+    property MaxLogRecords: Integer read FMaxLogRecords write SetMaxLogRecords default 32;
   end;
 
 implementation
@@ -123,6 +148,13 @@ begin
   FUseTransactions := True;
   FMaxRecords := 256;
   FMaxDirectoryRecords := 32;
+  FMaxLogRecords := 32;
+end;
+
+procedure TEMVCardReader.SetMaxLogRecords(const AValue: Integer);
+begin
+  if (AValue < 1) or (AValue > 255) then Fail('log record limit');
+  FMaxLogRecords := AValue;
 end;
 
 procedure TEMVCardReader.SetMaxRecords(const AValue: Integer);
@@ -233,6 +265,80 @@ begin
   Command.HasLe := True;
   Command.Le := 256;
   Result := Exchange(Command, True);
+end;
+
+function TEMVCardReader.SelectApplicationFci(const AAid: TBytes; out AFci: TBytes): TTlvDocument;
+var Response: TApduResponse;
+begin
+  Result := nil;
+  Response := Select(AAid);
+  RequireSuccess(Response);
+  AFci := Response.Data;
+  Result := DecodeTemplate(AFci, '6F');
+  try
+    if not BytesEqual(Child(Result.Roots[0], '84', True).Value, AAid) then Fail('selected AID mismatch');
+    Child(Result.Roots[0], 'A5', True);
+  except
+    Result.Free;
+    raise;
+  end;
+end;
+
+function TEMVCardReader.GetData(const AObject: TEmvDataObject): TEmvDataObjectResult;
+var
+  Command: TApduCommand;
+  Response: TApduResponse;
+  Tag: string;
+  TagBytes: TBytes;
+  Document: TTlvDocument;
+  Size: Integer;
+begin
+  Result := Default(TEmvDataObjectResult);
+  Result.DataObject := AObject;
+  case AObject of
+    edoAtc: Tag := '9F36';
+    edoLastOnlineAtc: Tag := '9F13';
+    edoPinTryCounter: Tag := '9F17';
+    edoLogFormat: Tag := '9F4F';
+  else Fail('GET DATA object'); end;
+  Command := Default(TApduCommand);
+  Command.CLA := $80;
+  Command.INS := $CA;
+  Command.P1 := $9F;
+  TagBytes := HexToBytes(Tag);
+  Command.P2 := TagBytes[1];
+  Command.HasLe := True;
+  Command.Le := 256;
+  Response := Exchange(Command, True);
+  Result.StatusWord := Response.StatusWord;
+  if (Response.StatusWord = $6A88) or (Response.StatusWord = $6A81) or
+    (Response.StatusWord = $6D00) then Exit;
+  RequireSuccess(Response);
+  Document := DecodeTemplate(Response.Data, Tag);
+  try Result.Value := Document.Roots[0].Value;
+  finally Document.Free; end;
+  Size := Length(Result.Value);
+  if AObject = edoLogFormat then
+  begin
+    // Validate the DOL and its total record length before accepting even an empty log.
+    Size := TEmvCodec.LogRecordSize(Result.Value);
+  end
+  else
+  begin
+    if AObject = edoPinTryCounter then
+    begin
+      if Size <> 1 then Fail('PIN counter size');
+      Result.NumericValue := Result.Value[0];
+    end
+    else
+    begin
+      if Size <> 2 then Fail('ATC size');
+      Result.NumericValue := (Word(Result.Value[0]) shl 8) or Result.Value[1];
+    end;
+    Result.HasNumericValue := True;
+  end;
+  Result.RawData := Response.Data;
+  Result.Present := True;
 end;
 
 function TEMVCardReader.ReadRecord(const ASfi, ANumber: Byte): TApduResponse;
@@ -395,12 +501,8 @@ var
   I, N, Index: Integer;
 begin
   Result := Default(TEmvApplicationData);
-  Response := Select(AAid);
-  RequireSuccess(Response);
-  Result.Fci := Response.Data;
-  Document := DecodeTemplate(Result.Fci, '6F');
+  Document := SelectApplicationFci(AAid, Result.Fci);
   try
-    if not BytesEqual(Child(Document.Roots[0], '84', True).Value, AAid) then Fail('selected AID mismatch');
     A5 := Child(Document.Roots[0], 'A5', True);
     Result.ApplicationInfo := Info(A5, AAid);
     Dol := nil;
@@ -461,6 +563,87 @@ begin
       end;
     end;
   TEmvCodec.DecodeCardFields(Result);
+end;
+
+function TEMVCardReader.ReadLogInternal(const AAid: TBytes): TEmvTransactionLogData;
+var
+  Document: TTlvDocument;
+  Node: TTlvNode;
+  Entry: TBytes;
+  FormatData: TEmvDataObjectResult;
+  Response: TApduResponse;
+  N, Index: Integer;
+begin
+  Result := Default(TEmvTransactionLogData);
+  Document := SelectApplicationFci(AAid, Result.Fci);
+  try
+    Node := Child(Child(Document.Roots[0], 'A5', True), 'BF0C', False);
+    if Node = nil then Exit;
+    Node := Child(Node, '9F4D', False);
+    if Node = nil then Exit;
+    Entry := Node.Value;
+    if (Length(Entry) <> 2) or (Entry[0] < 11) or (Entry[0] > 30) or
+      (Entry[1] = 0) then Fail('log entry');
+    if Entry[1] > FMaxLogRecords then Fail('advertised log exceeds limit');
+    Result.Supported := True;
+    Result.Sfi := Entry[0];
+    Result.MaximumRecords := Entry[1];
+  finally Document.Free; end;
+  FormatData := GetData(edoLogFormat);
+  if not FormatData.Present then raise EEmvStatusError.Create(FormatData.StatusWord);
+  Result.LogFormat := FormatData.Value;
+  for N := 1 to Result.MaximumRecords do
+  begin
+    Response := ReadRecord(Result.Sfi, Byte(N));
+    if Response.StatusWord = $6A83 then Exit;
+    RequireSuccess(Response);
+    Index := Length(Result.Records);
+    SetLength(Result.Records, Index + 1);
+    Result.Records[Index].Number := Byte(N);
+    Result.Records[Index].RawData := Response.Data;
+    Result.Records[Index].Fields := TEmvCodec.DecodeLogRecord(Result.LogFormat, Response.Data);
+  end;
+end;
+
+function TEMVCardReader.ReadDataObject(const AAid: TBytes;
+  const AObject: TEmvDataObject): TEmvDataObjectResult;
+var
+  Transaction: ICardTransaction;
+  Data: TEmvDataObjectResult;
+  Document: TTlvDocument;
+  Fci: TBytes;
+  Succeeded: Boolean;
+begin
+  Result := Default(TEmvDataObjectResult);
+  if (Length(AAid) < 5) or (Length(AAid) > 16) then Fail('AID size');
+  if (Ord(AObject) < Ord(Low(TEmvDataObject))) or
+    (Ord(AObject) > Ord(High(TEmvDataObject))) then Fail('GET DATA object');
+  Transaction := BeginRead;
+  Succeeded := False;
+  try
+    Document := SelectApplicationFci(AAid, Fci);
+    Document.Free;
+    Data := GetData(AObject);
+    Succeeded := True;
+  finally EndRead(Transaction, Succeeded); end;
+  Result := Data;
+end;
+
+function TEMVCardReader.ReadTransactionLog(const AAid: TBytes): TEmvTransactionLogData;
+var
+  Transaction: ICardTransaction;
+  Data: TEmvTransactionLogData;
+  Succeeded: Boolean;
+begin
+  Result := Default(TEmvTransactionLogData);
+  if (Length(AAid) < 5) or (Length(AAid) > 16) then Fail('AID size');
+  Transaction := BeginRead;
+  Succeeded := False;
+  try
+    Data := ReadLogInternal(AAid);
+    Succeeded := True;
+  finally EndRead(Transaction, Succeeded); end;
+  Result := Data;
 end;
 
 function TEMVCardReader.DiscoverApplications(const ADirectory: TEmvDirectory): TEmvDirectoryData;

@@ -1,0 +1,13 @@
+package ERDCardContactless;
+
+{$DESCRIPTION 'ERD Card Contactless: explicit reader profiles and MIFARE Classic storage'}
+{$RUNONLY}
+
+requires
+  rtl,
+  ERDCardCore;
+
+contains
+  ERD.Card.Contactless in '..\..\src\contactless\ERD.Card.Contactless.pas';
+
+end.

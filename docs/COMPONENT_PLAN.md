@@ -33,18 +33,32 @@ are not compatibility requirements.
 5. **TEMVCardReader — implementation available; Delphi/hardware validation pending.**
    PSE/PPSE discovery, explicit AID/PDOL selection, GPO formats 80/77 and bounded AFL
    record reads. Optional PAN/expiry/name/IBAN and packed Track 2 data, with explicit
-   terminal inputs and no GPO replay. Runtime package, console example and synthetic
-   APDU tests supplied. No payment kernel, cryptogram generation, scheme certification,
-   nested DDF discovery or transaction-log reader is claimed. See [the EMV guide](EMV_READER.md).
+   terminal inputs and no GPO replay. Optional GET DATA counters/log format and cyclic
+   transaction-log snapshots are implemented without GPO. Runtime package, console
+   example and synthetic APDU tests supplied. Payment kernels, cryptogram generation,
+   scheme certification and nested DDF discovery remain separate work.
+   See [the EMV guide](EMV_READER.md).
 6. **TMagStripeReaderWriter.** Track codecs plus separate YL160/MSR adapters. Model
    device capabilities, errors, buffers and supported SDK/driver versions explicitly.
-7. **TMemoryCardReaderWriter and TContactlessCardReader.** Implement one tested card
-   family/reader profile at a time. Non-Java chips do not share one universal protocol:
-   memory cards, Classic, Ultralight and DESFire need distinct support and access models.
+7. **TContactlessCardReader — first profile implemented; Delphi/hardware validation pending.**
+   Explicit injectable PC/SC storage command profile, UID retrieval and supplied-key
+   Classic Mini/1K/4K layout/block operations. Authenticated data writes exclude
+   manufacturer/trailer blocks; uncertain write completion is explicit and never replayed.
+   Runtime package, UID example and synthetic transcripts supplied.
+   Ultralight/NTAG, DESFire/secure messaging, Plus, NDEF and broader reader backends
+   remain separate profiles; see [the contactless guide](CONTACTLESS.md).
+   **TMemoryCardReaderWriter** remains planned for contact memory-card families and
+   matching readers. Non-Java chips do not share one universal protocol.
 8. **Distribution.** Runtime/design-time packages, Delphi/Windows validation matrix,
    console and VCL examples, public API docs and dependency/data license inventory.
 
 Magstripe work can progress independently once the byte/codec foundation is established.
+
+Payment support will have terminal/provider and direct NFC-kernel adapters behind a
+shared payment request/outcome contract. No payment adapter/kernel is implemented yet.
+User-requested broad reader coverage and both payment routes guide subsequent work;
+see [the concrete payment architecture and order](PAYMENTS.md). Adding a reader backend
+does not automatically add all card protocols; maintain an operation-specific hardware matrix.
 
 The obsolete application has been removed. Selected original protocol code is
 retained in `reference/legacy` for implementation research, outside runtime packages

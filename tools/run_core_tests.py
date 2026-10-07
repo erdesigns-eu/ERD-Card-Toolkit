@@ -31,6 +31,7 @@ def main():
                '-Fu' + str(REPO / 'src/core'), '-Fu' + str(REPO / 'src/pcsc'),
                '-Fu' + str(REPO / 'src/eid'),
                '-Fu' + str(REPO / 'src/emv'),
+               '-Fu' + str(REPO / 'src/contactless'),
                '-FU' + str(build), '-FE' + str(build)]
     if args.rtl_dir is not None:
         command.extend(['-n', '-Fu' + str(args.rtl_dir.resolve())])
@@ -46,11 +47,13 @@ def main():
                     'tests/transport/CardTransport.Tests.dpr', 'tests/eid/BelgianEid.Tests.dpr',
                     'tests/eid/Icao.Tests.dpr',
                     'tests/emv/Emv.Tests.dpr',
+                    'tests/contactless/Contactless.Tests.dpr',
                     'examples/core/InspectApdu.dpr', 'examples/pcsc/InspectReader.dpr',
-                    'examples/eid/ReadBelgianEid.dpr', 'examples/emv/InspectEmv.dpr'):
+                    'examples/eid/ReadBelgianEid.dpr', 'examples/emv/InspectEmv.dpr',
+                    'examples/contactless/InspectContactless.dpr'):
         subprocess.run(command + [project], cwd=REPO, check=True)
     suffix = '.exe' if os.name == 'nt' else ''
-    for project in ('CardCore.Tests', 'ProtocolCore.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests'):
+    for project in ('CardCore.Tests', 'ProtocolCore.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests'):
         result = subprocess.run([str(build / (project + suffix))], cwd=REPO,
                                 capture_output=True, text=True)
         print(result.stdout, end='', flush=True)
@@ -105,6 +108,10 @@ def main():
                              capture_output=True, text=True, check=True)
     if 'Usage: InspectEmv' not in emv_help.stdout:
         raise RuntimeError('EMV example did not show its hardware-free help')
+    contactless_help = subprocess.run([str(build / ('InspectContactless' + suffix)), '--help'],
+                                     capture_output=True, text=True, check=True)
+    if 'Usage: InspectContactless' not in contactless_help.stdout:
+        raise RuntimeError('Contactless example did not show its hardware-free help')
     subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests/tools', '-v'],
                    cwd=REPO, check=True)
     subprocess.run([sys.executable, 'tools/pascalcheck/run.py', '--profile', 'core',

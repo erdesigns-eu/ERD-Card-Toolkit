@@ -38,6 +38,14 @@ if errorlevel 1 exit /b %errorlevel%
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\Emv.Tests.exe"
 if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\contactless" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\contactless\Contactless.Tests.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\Contactless.Tests.exe"
+if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\pcsc;src\contactless" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" examples\contactless\InspectContactless.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\InspectContactless.exe" --help
+if errorlevel 1 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\pcsc;src\emv" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" examples\emv\InspectEmv.dpr
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\InspectEmv.exe" --help
@@ -61,4 +69,6 @@ if errorlevel 1 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\eid;%CARD_BUILD%" -N0"%CARD_BUILD%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" packages\runtime\ERDCardEID.dpk
 if errorlevel 1 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\emv;%CARD_BUILD%" -N0"%CARD_BUILD%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" packages\runtime\ERDCardEMV.dpk
+if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\contactless;%CARD_BUILD%" -N0"%CARD_BUILD%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" packages\runtime\ERDCardContactless.dpk
 exit /b %errorlevel%
