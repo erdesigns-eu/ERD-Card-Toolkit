@@ -38,8 +38,14 @@ are not compatibility requirements.
    example and synthetic APDU tests supplied. Payment kernels, cryptogram generation,
    scheme certification and nested DDF discovery remain separate work.
    See [the EMV guide](EMV_READER.md).
-6. **TMagStripeReaderWriter.** Track codecs plus separate YL160/MSR adapters. Model
-   device capabilities, errors, buffers and supported SDK/driver versions explicitly.
+6. **TMagStripeReaderWriter — codecs/component/input adapters implemented; hardware validation pending.**
+   Strict Track 1/2/3 framing and forward bit codecs, odd parity/data-column LRC,
+   financial Track 1 format B/Track 2 fields and exclusive capability-checked
+   reader/writer sessions. MagTek unencrypted ISO fixed HID/default keyboard read
+   adapters use bounded host sources. Runtime package, console example and injected
+   tests supplied. Native host capture, physical writer backends and verified YL160/MSR
+   SDK/ABI bindings remain pending; no physical writer is claimed.
+   See [the magstripe guide](MAGSTRIPE.md).
 7. **TContactlessCardReader — storage profiles implemented; Delphi/hardware validation pending.**
    Explicit injectable PC/SC storage command profile, UID retrieval and supplied-key
    Classic Mini/1K/4K layout/block operations. Authenticated data writes exclude
@@ -76,7 +82,7 @@ are not compatibility requirements.
 8. **Distribution.** Runtime/design-time packages, Delphi/Windows validation matrix,
    console and VCL examples, public API docs and dependency/data license inventory.
 
-Magstripe work can progress independently once the byte/codec foundation is established.
+Magstripe codecs and input adapters now provide a base for concrete native reader/writer integrations.
 
 Payment support will have terminal/provider and direct NFC-kernel adapters behind a
 shared payment request/outcome contract. No payment adapter/kernel is implemented yet.
@@ -94,8 +100,9 @@ The Type 2 and Type 4 NDEF increments combine pure codecs, record/descriptor
 handling, verified card components, examples, protocol failure tests and API
 documentation. Use the same complete scope for upcoming batches:
 
-1. **Magstripe:** strict Track 1/2/3 character/bit codecs, parity/LRC and typed fields,
-   then YL160/MSR reader-writer adapters with explicit supported SDK/driver versions.
+1. **Native magstripe integrations:** host HID/keyboard sources and concrete
+   writer backends, then YL160/MSR bindings with verified SDK headers, buffer lengths,
+   status semantics, bitness and calling conventions. Physical coverage stays explicit.
 2. **Additional chip families:** DESFire through a maintained authenticated crypto
    provider, ISO 15693/Type 5 through capable reader backends, then contact memory chips.
 3. **European eID access:** BAC/PACE and secure-messaging integration for the existing
@@ -110,7 +117,8 @@ read/write claim from the transport.
 ## Architecture
 
 - Core codecs depend only on the RTL and return typed data.
-- Reader adapters implement a common byte transport; parsers do not open hardware.
+- APDU reader adapters implement the shared byte transport; magstripe adapters
+  implement the separate device/session contract. Parsers do not open hardware.
 - Non-visual component wrappers expose configuration, lifecycle and events.
 - VCL presenters turn results into UI; the data model does not hold controls.
 - Vendor DLLs, data catalogs and optional providers stay out of the base runtime package.

@@ -1,0 +1,14 @@
+package ERDCardMagStripe;
+
+{$DESCRIPTION 'ERD Card MagStripe: track codecs, reader/writer component and MagTek input adapters'}
+{$RUNONLY}
+
+requires
+  rtl;
+
+contains
+  ERD.Card.MagStripe.Tracks in '..\..\src\magstripe\ERD.Card.MagStripe.Tracks.pas',
+  ERD.Card.MagStripe in '..\..\src\magstripe\ERD.Card.MagStripe.pas',
+  ERD.Card.MagStripe.MagTek in '..\..\src\magstripe\ERD.Card.MagStripe.MagTek.pas';
+
+end.

@@ -15,12 +15,13 @@ Validated in the Linux cloud environment on 2026-10-07 after the legacy cleanup.
 | Password-authenticated Type 2 user memory | 2062 assertions in seven groups passed for both EV1 sizes and NTAG213/215/216, including retained-session PWD_AUTH/PACK, bounded snapshots, verified writes and concrete adapter integration |
 | NDEF codecs, RTDs and public Type 2 access | 36962 assertions in five groups passed: bounded framing/chunks, strict Unicode, factory CC/TLV mapping and guarded write failures |
 | Public Type 4 NDEF files | 48480 assertions in four groups passed: mapping 1.0/2.0 CC/APDU transcripts, whole-file bounds, explicit file selection, MLe/MLc segmentation and every partial/later-command failure |
+| Magstripe codecs, component and MagTek input adapters | 57325 assertions in four groups passed: published parity/LRC vectors, all track lengths and single-bit errors, financial fields, synthetic HID/keyboard frames and verified-write failure contracts |
 | Native Windows adapter branches | 38 assertions passed against an isolated Linux C ABI shim |
-| Console examples | APDU valid/invalid cases passed; PC/SC, eID, EMV, contactless, NDEF and Type 4 help work without hardware; NDEF message and Type 4 CC valid/truncated cases passed |
+| Console examples | APDU valid/invalid cases passed; PC/SC, eID, EMV, contactless, NDEF and Type 4 help work without hardware; NDEF message and Type 4 CC valid/truncated cases passed; magstripe text/bit vectors and corrupt parity passed |
 | FPC range/overflow/heap checks | Passed; no unfreed allocations in passing test programs |
 | Python checker regression tests | All 15 passed |
-| Pascalcheck core profile | All 21 readers passed on forty-six explicitly selected source files |
-| XML documentation | 823 visible API declarations inspected; zero findings |
+| Pascalcheck core profile | All 21 readers passed on fifty-one explicitly selected source files |
+| XML documentation | 891 visible API declarations inspected; zero findings |
 | Reference integrity | All 26 retained files match the original Git bytes and manifest hashes |
 | Patch whitespace | `git diff --check` passed |
 
@@ -52,7 +53,7 @@ lengths/padding, exact AID/MF/DF/EF selection, grouped reads, optional certifica
 states, bounded 61xx/6Cxx handling, EOF probes, 15-bit offsets, partial failures,
 no transport replay and transaction-release exception precedence. Its JPEG and
 certificate payloads are synthetic protocol fixtures, not decoded image or X.509
-validation tests. A total of 108242 Pascal assertions passed across the suites.
+validation tests. A total of 165567 Pascal assertions passed across the suites.
 NDEF tests exercise complete MB/ME/chunk framing, independent Text/URI vectors,
 message/record/physical-chunk bounds, Unicode errors, all URI prefixes, Smart Poster
 semantics and deep buffer ownership. Its PC/SC memory backend checks all six Type 2
@@ -70,6 +71,16 @@ Every partial update and every later command failure stops without replay; chang
 CC, malformed responses, denied statuses, protected access and release precedence
 are tested through injected transports. The new console example inspects CC fixtures
 without hardware; neither the tests nor smoke checks access a physical card.
+Magstripe tests check published MagTek bit vectors, complete character ranges,
+all supported payload sizes and every single-bit error at every size, including SS,
+ES and LRC parity. Typed financial fields retain opaque issuer suffixes. Synthetic
+fixed HID/default keyboard input covers independent offsets, explicit report IDs,
+undefined padding, selected decoder errors, all HID truncations and unsupported
+encodings. Complete injected source/adapter/component chains verify bounded deadlines,
+exclusive lifecycle, preflight, unselected-track preservation, same-card write-result
+comparison, partial-write uncertainty, no retries and primary/release precedence.
+No physical stripe was read or written; host capture and concrete hardware writer
+backends remain pending. See [magstripe support and boundaries](MAGSTRIPE.md).
 The ICAO additions decode acquired files only; BAC/PACE, secure messaging and
 direct access to Dutch/Luxembourg/German documents are still pending.
 EMV tests exercise supplied PDOL values, GPO 80/77, optional fields, Track 2 fallback,
