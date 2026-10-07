@@ -121,7 +121,10 @@ MemoryReader.WriteUserPage(
 `ReplacementPage: TBytes` contains exactly four bytes. This explicitly changes that
 page when executed; no command-line examples or tests access physical cards.
 A page write can alter an existing NDEF message; there is no automatic formatting
-or NDEF transaction. This API only changes ordinary user memory.
+or NDEF transaction. This API only changes ordinary user memory. Bounded NDEF
+codecs and public PC/SC Type 2 NDEF transactions are now available separately in
+[NDEF.md](NDEF.md); they do not inject page commands into a password-authenticated
+raw session.
 
 After the sole verified authentication, send one `A2 page data4 + CRC-A`, require
 an exact four-bit ACK nibbleA, then FAST_READ that same page and compare all four

@@ -8,6 +8,9 @@ requires
   ERDCardCore;
 
 contains
+  ERD.Card.Ndef in '..\..\src\contactless\ERD.Card.Ndef.pas',
+  ERD.Card.Ndef.Records in '..\..\src\contactless\ERD.Card.Ndef.Records.pas',
+  ERD.Card.Contactless.Type2.Ndef in '..\..\src\contactless\ERD.Card.Contactless.Type2.Ndef.pas',
   ERD.Card.Contactless in '..\..\src\contactless\ERD.Card.Contactless.pas',
   ERD.Card.Contactless.Type2 in '..\..\src\contactless\ERD.Card.Contactless.Type2.pas',
   ERD.Card.Contactless.UID in '..\..\src\contactless\ERD.Card.Contactless.UID.pas',

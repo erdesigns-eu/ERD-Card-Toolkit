@@ -50,6 +50,19 @@ if errorlevel 1 exit /b %errorlevel%
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\Type2Password.Tests.exe"
 if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\contactless" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\contactless\Ndef.Tests.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\Ndef.Tests.exe"
+if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\contactless" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" examples\contactless\InspectNdef.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\InspectNdef.exe" --help
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\InspectNdef.exe" D101055402656E4869
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\InspectNdef.exe" D101055402656E48
+if not errorlevel 1 exit /b 1
+if errorlevel 2 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\pcsc;src\contactless" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" examples\contactless\InspectContactless.dpr
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\InspectContactless.exe" --help
