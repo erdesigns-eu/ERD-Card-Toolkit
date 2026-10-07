@@ -71,10 +71,66 @@ type
     function Write(const ATracks: TMagStripeTrackSet; const AData: TMagStripeTracks;
       const ACoercivity: TMagStripeCoercivity; const ATimeoutMs: Cardinal): TMagStripeTracks;
   end;
+  /// <summary>Explicit nonempty physical track combinations accepted by a status-only writer.</summary>
+  TMagStripeWriteSelection = (
+    /// <summary>Track 1 only.</summary>
+    mswsTrack1,
+    /// <summary>Track 2 only.</summary>
+    mswsTrack2,
+    /// <summary>Tracks 1 and 2.</summary>
+    mswsTracks12,
+    /// <summary>Track 3 only.</summary>
+    mswsTrack3,
+    /// <summary>Tracks 1 and 3.</summary>
+    mswsTracks13,
+    /// <summary>Tracks 2 and 3.</summary>
+    mswsTracks23,
+    /// <summary>All three physical tracks.</summary>
+    mswsAllTracks
+  );
+  /// <summary>Supported complete write selections, rather than inferring every subset is safe.</summary>
+  TMagStripeWriteSelections = set of TMagStripeWriteSelection;
+  /// <summary>Device-status programming guarantees, queried without I/O.</summary>
+  TMagStripeStatusWriteCapabilities = record
+    /// <summary>Exact permitted selections; backend must preserve physically present unselected tracks.</summary>
+    Selections: TMagStripeWriteSelections;
+    /// <summary>Supported explicit programming coercivity modes.</summary>
+    Coercivities: TMagStripeCoercivitySet;
+  end;
+  /// <summary>Receipt based on device-reported programming status, without host read-back evidence.</summary>
+  TMagStripeProgrammingReceipt = record
+    /// <summary>Requested physical tracks; this is request metadata, not measured stripe contents.</summary>
+    RequestedTracks: TMagStripeTrackSet;
+    /// <summary>Requested mode, including current-setting choice; not a measurement of card coercivity.</summary>
+    RequestedCoercivity: TMagStripeCoercivity;
+    /// <summary>Raw vendor success status returned by the backend.</summary>
+    DeviceStatus: Byte;
+    /// <summary>Always false for ProgramTracks; no independent track read-back was provided.</summary>
+    HostReadBackVerified: Boolean;
+  end;
+  /// <summary>Optional device-status programming contract, distinct from verified read-back writing.</summary>
+  /// <remarks>Implement alongside IMagStripeDevice. A successful status must never be represented
+  /// by echoing requested data as if it were acquired read-back. No automatic second-card swipe.</remarks>
+  IMagStripeStatusWriter = interface
+    ['{E086F36A-BF8E-4143-94A1-6164D97EB3C8}']
+    /// <summary>Returns exact permitted programming combinations without I/O.</summary>
+    /// <returns>Capabilities that remain stable during an acquired IMagStripeDevice session.</returns>
+    function GetStatusWriteCapabilities: TMagStripeStatusWriteCapabilities;
+    /// <summary>Programs one explicitly supported selection and awaits a device-reported success.</summary>
+    /// <param name="ATracks">Exact supported nonempty selection; preserve unselected physical tracks.</param>
+    /// <param name="AData">Nonempty unframed selected payloads; unselected entries are empty.</param>
+    /// <param name="ACoercivity">Explicit supported mode.</param>
+    /// <param name="ATimeoutMs">Total operation deadline including preparation and swipe wait.</param>
+    /// <returns>Raw vendor success status only after completion; errors/cancellation must raise.</returns>
+    /// <remarks>Requires an acquired IMagStripeDevice session. Do not replay any programming request.</remarks>
+    function ProgramStatus(const ATracks: TMagStripeTrackSet; const AData: TMagStripeTracks;
+      const ACoercivity: TMagStripeCoercivity; const ATimeoutMs: Cardinal): Byte;
+  end;
   /// <summary>Non-visual reader/writer component with validation and mandatory exclusive sessions.</summary>
   /// <remarks>No I/O in constructor. Use one caller thread without concurrent or reentrant calls.
-  /// Writes require selected-track preservation and same-card verification from the backend.
-  /// All errors after dispatch, including release failure, are uncertain; no replay or rollback.</remarks>
+  /// WriteTracks requires selected-track preservation and same-card verification from the backend.
+  /// ProgramTracks instead returns explicit device-status evidence without host read-back.
+  /// Errors after invocation/dispatch, including release failure, are uncertain; no replay or rollback.</remarks>
   TMagStripeReaderWriter = class(TComponent)
   private
     FDevice: IMagStripeDevice;
@@ -107,6 +163,18 @@ type
     /// <exception cref="EMagStripeWriteUncertain">Dispatch, verification or release failed; media may have changed.</exception>
     function WriteTracks(const ATracks: TMagStripeTrackSet; const AData: TMagStripeTracks;
       const ACoercivity: TMagStripeCoercivity = mscCurrent): TMagStripeTracks;
+    /// <summary>Programs once using an explicit device-status backend, without claiming host read-back.</summary>
+    /// <param name="ATracks">Exact supported physical combination; not every subset is necessarily writable.</param>
+    /// <param name="AData">Nonempty selected payloads; unselected entries must be empty.</param>
+    /// <param name="ACoercivity">Explicit supported mode, defaulting to current device setting.</param>
+    /// <returns>Request metadata and raw vendor success status after release; HostReadBackVerified=false.</returns>
+    /// <exception cref="EMagStripeError">Preflight, unsupported selection or acquisition fails.</exception>
+    /// <exception cref="EMagStripeFormatError">Input is invalid before I/O.</exception>
+    /// <exception cref="EMagStripeWriteUncertain">Programming invocation or release fails; never automatically retry.</exception>
+    /// <remarks>Requires IMagStripeStatusWriter in addition to IMagStripeDevice. Does not call Read
+    /// or weaken WriteTracks verification. Programming invocation is the conservative uncertainty boundary.</remarks>
+    function ProgramTracks(const ATracks: TMagStripeTrackSet; const AData: TMagStripeTracks;
+      const ACoercivity: TMagStripeCoercivity = mscCurrent): TMagStripeProgrammingReceipt;
     /// <summary>Retained backend interface; assigning never opens a connection and is refused while busy.</summary>
     property Device: IMagStripeDevice read FDevice write SetDevice;
     /// <summary>Read-only same-thread operation flag, not a cross-thread synchronization primitive.</summary>
@@ -243,6 +311,59 @@ begin
     end;
   finally
     Session := nil;
+  end;
+end;
+
+function TMagStripeReaderWriter.ProgramTracks(const ATracks: TMagStripeTrackSet;
+  const AData: TMagStripeTracks; const ACoercivity: TMagStripeCoercivity): TMagStripeProgrammingReceipt;
+var
+  Session: IMagStripeDevice;
+  Writer: IMagStripeStatusWriter;
+  Caps: TMagStripeStatusWriteCapabilities;
+  Selection: TMagStripeWriteSelection;
+  Mask: Integer;
+  T: TMagStripeTrack;
+  Succeeded: Boolean;
+begin
+  if FBusy then raise EMagStripeError.Create('Magstripe component is busy.');
+  ValidateData(ATracks, AData, True);
+  if (FDevice = nil) or (ATracks = []) or (FTimeoutMs < 1) or (FTimeoutMs > 600000) then
+    raise EMagStripeError.Create('Magstripe device, tracks and timeout must be configured.');
+  if (Ord(ACoercivity) < Ord(Low(TMagStripeCoercivity))) or
+    (Ord(ACoercivity) > Ord(High(TMagStripeCoercivity))) then
+    raise EMagStripeError.Create('Invalid magstripe coercivity.');
+  Mask := 0;
+  for T := Low(TMagStripeTrack) to High(TMagStripeTrack) do
+    if T in ATracks then Mask := Mask or (1 shl Ord(T));
+  Selection := TMagStripeWriteSelection(Mask - 1);
+  Session := FDevice;
+  FBusy := True;
+  try
+    if not Supports(Session, IMagStripeStatusWriter, Writer) then
+      raise EMagStripeError.Create('Device-status programming is not supported.');
+    Caps := Writer.GetStatusWriteCapabilities;
+    if not (Selection in Caps.Selections) or not (ACoercivity in Caps.Coercivities) then
+      raise EMagStripeError.Create('Selected programming combination or coercivity is not supported.');
+    Session.Acquire;
+  except
+    FBusy := False;
+    raise;
+  end;
+  Succeeded := False;
+  try
+    try
+      Result.RequestedTracks := ATracks;
+      Result.RequestedCoercivity := ACoercivity;
+      Result.HostReadBackVerified := False;
+      Result.DeviceStatus := Writer.ProgramStatus(ATracks, AData, ACoercivity, FTimeoutMs);
+      Succeeded := True;
+    finally
+      EndOperation(Session, Succeeded);
+    end;
+  except
+    on E: EMagStripeWriteUncertain do raise;
+    on E: Exception do
+      raise EMagStripeWriteUncertain.Create('Magstripe programming completion is uncertain (' + E.ClassName + ').');
   end;
 end;
 

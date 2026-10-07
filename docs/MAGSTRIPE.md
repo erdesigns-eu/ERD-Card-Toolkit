@@ -1,6 +1,6 @@
 # Magstripe codecs, component and input adapters
 
-`src/magstripe` supplies three RTL-only units and the optional
+`src/magstripe` supplies five RTL-only units and the optional
 `packages/runtime/ERDCardMagStripe.dpk` runtime package. Add `src/magstripe` to the
 unit search path for source-based use; the package requires only `rtl`. No VCL,
 PC/SC, third-party DLL, USB library or design-time activation is needed.
@@ -11,13 +11,16 @@ PC/SC, third-party DLL, USB library or design-time activation is needed.
 | --- | --- | --- |
 | Track 1 six-bit and Track 2/3 four-bit codecs | Character framing, forward bit encoding/decoding, odd parity, data-column LRC, strict capacity | F2F waveform decoding, clocking-bit removal and capture-direction normalization |
 | Financial Track 1 format B / Track 2 | Typed PAN, name, expiry, service code and opaque discretionary suffix | Issuer semantics, authentication and payment authorization |
-| `TMagStripeReaderWriter` | Exclusive read sessions; selected-track write preflight and same-card verified result checking | Concrete physical writer backend; no hardware write is claimed here |
+| `TMagStripeReaderWriter` | Exclusive read sessions; verified-result `WriteTracks`; separate status-only `ProgramTracks` with exact permitted combinations | Real reader/writer validation and additional backends |
+| MSR206/MSR605 three-track ISO serial profiles | Windows COM reader and all-three nonempty status-only programmer with explicit high/low coercivity | Delphi/Windows/firmware and physical swipe/write checks; see [MSR206](MSR206.md) |
 | MagTek D99875191 Rev 20 unencrypted HID ISO/ABA | Fixed 337-byte report parser and read adapter; explicit optional OS zero report-ID byte | Host HID opening, descriptor/identity checks, physical reader/firmware validation |
 | MagTek D99875206 Rev 20 default keyboard ISO/ABA | Ordered complete CR-terminated frame parser and read adapter | Isolated host keyboard capture, key mapping and physical reader validation |
 | YL160 `lib160.dll` / MSR605X `MSR_API.dll` | Legacy research retained; new common device contract available | Verified SDK headers, buffer capacities, return codes, bitness/calling convention and native bindings |
 | Other/encrypted MagTek, AAMVA, CADL, JIS, seven-bit tracks 2/3 | Not implemented | Distinct descriptors, framing, keys and concrete device profiles |
 
-MagTek adapters are read-only. Neither parser opens a physical reader. Supply an
+MagTek adapters are read-only. Neither parser opens a physical reader.
+MSR206/MSR605 have a separate native serial adapter, described in
+[the serial guide](MSR206.md). Supply an
 `IMagStripeFrameSource` that acquires one exclusive session and delivers exactly
 one complete swipe within the supplied deadline and allocation limit. For HID,
 validate the actual device/descriptor and use the documented unencrypted input
@@ -146,7 +149,7 @@ undefined field padding, honors length bytes and distinguishes selected decoder
 errors from absent data. Unsupported encoding/status/shape is refused. An error
 on an unrequested HID track does not block otherwise valid requested data.
 
-A future physical writer implements `IMagStripeDevice`, advertising only tracks
+A backend providing acquired verified write data implements `IMagStripeDevice`, advertising only tracks
 it can preserve independently and supported explicit coercivity modes. It must
 provide **same-programmed-card verified read-back** within its write operation.
 A later arbitrary swipe is not verification. The component:
@@ -165,6 +168,15 @@ class but not the underlying message or card data. A preflight/acquisition failu
 remains an ordinary error. Cleanup cannot replace a primary failure. There is no
 automatic retry, rollback, erase, track mirroring, coercivity guess or writer
 fallback. This API contract does not establish physical writer compatibility.
+
+`ProgramTracks` is a separate explicit method for `IMagStripeStatusWriter` backends
+that supply device status rather than acquired read-back. It preflights exact
+combinations/coercivity before acquisition and returns a receipt with
+`HostReadBackVerified=false`. Programming invocation and cleanup errors are
+conservatively uncertain. It does not weaken `WriteTracks`, echo inputs as measured
+data or consume a later swipe as verification. The concrete MSR206/MSR605 serial
+profiles implement all-three programming with explicit high/low modes;
+see [their protocol and native transport boundaries](MSR206.md).
 
 The MagTek adapter performs best-effort source release if destroyed while acquired.
 Use explicit release to observe cleanup errors; destruction suppresses them.
@@ -205,7 +217,9 @@ XML comments for Help Insight; the Windows runner supplies `--doc`.
 
 The Free Pascal range/overflow/heap checks and all source validation readers
 supplement Delphi. Pending: dcc32/dcc64, the runtime package, generated XML and
-real IDE Help Insight, native host sources, reader/firmware matrix and real
-swipe/write/verification/cancellation behavior. The legacy DLL declarations do not
+real IDE Help Insight, native MagTek host sources, reader/firmware matrix and real
+swipe/write/verification/cancellation behavior. The MSR206/MSR605 serial backend
+and Windows COM transport have injected/native-shim evidence; physical checks
+remain pending. The legacy DLL declarations do not
 specify safe output capacities and are not treated as a validated SDK binding.
 See [validation](VALIDATION.md) and [the implementation plan](COMPONENT_PLAN.md).

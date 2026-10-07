@@ -37,8 +37,11 @@ capability-checked selected-track writes with same-card verification and explici
 uncertain completion. Pure Track 1/2/3 text/bit codecs implement odd parity/LRC;
 optional financial codecs preserve issuer-defined discretionary data. Concrete
 MagTek fixed HID and default ISO keyboard parsers/read adapters accept host-supplied
-bounded frames. Native HID/keyboard capture, physical writers and verified YL160/MSR
-SDK bindings remain pending; see [the magstripe guide](docs/MAGSTRIPE.md).
+bounded frames. MSR206/MSR605 ISO profiles add native Windows COM reading and
+explicit all-three-track programming through `ProgramTracks`, returning device
+status without claiming host read-back. See [the serial guide](docs/MSR206.md).
+Native MagTek capture, additional writers, verified YL160/MSR DLL bindings and
+physical validation remain pending; see [the magstripe guide](docs/MAGSTRIPE.md).
 
 `TSmartCardReader` is implemented as a non-visual component in `src/pcsc`, with
 reader discovery, T=0/T=1 connections, transactions, raw ATR reads and optional

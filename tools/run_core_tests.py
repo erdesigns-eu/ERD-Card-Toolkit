@@ -54,15 +54,17 @@ def main():
                     'tests/contactless/Ndef.Tests.dpr',
                     'tests/contactless/Type4Ndef.Tests.dpr',
                     'tests/magstripe/MagStripe.Tests.dpr',
+                    'tests/magstripe/Msr206.Tests.dpr',
                     'examples/core/InspectApdu.dpr', 'examples/pcsc/InspectReader.dpr',
                     'examples/eid/ReadBelgianEid.dpr', 'examples/emv/InspectEmv.dpr',
                     'examples/contactless/InspectContactless.dpr',
                     'examples/contactless/InspectNdef.dpr',
                     'examples/contactless/InspectType4Ndef.dpr',
-                    'examples/magstripe/InspectMagStripe.dpr'):
+                    'examples/magstripe/InspectMagStripe.dpr',
+                    'examples/magstripe/InspectMsr206.dpr'):
         subprocess.run(command + [project], cwd=REPO, check=True)
     suffix = '.exe' if os.name == 'nt' else ''
-    for project in ('CardCore.Tests', 'ProtocolCore.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'MagStripe.Tests'):
+    for project in ('CardCore.Tests', 'ProtocolCore.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'MagStripe.Tests', 'Msr206.Tests'):
         result = subprocess.run([str(build / (project + suffix))], cwd=REPO,
                                 capture_output=True, text=True)
         print(result.stdout, end='', flush=True)
@@ -95,8 +97,28 @@ def main():
         native.check_returncode()
         if re.search(r'\b[1-9][0-9]* unfreed memory blocks', native.stderr):
             raise RuntimeError('Native PC/SC shim test leaked memory')
+        serial_build = REPO / 'dist/core/serial-native'
+        serial_build.mkdir(parents=True, exist_ok=True)
+        subprocess.run([gcc, '-std=c11', '-Wall', '-Wextra', '-Werror', '-shared', '-fPIC',
+                        'tests/magstripe/native/kernel32_serial_stub.c', '-o',
+                        str(serial_build / 'libkernel32.dll.so')], cwd=REPO, check=True)
+        serial_command = [arg for arg in command if not arg.startswith(('-FU', '-FE'))]
+        serial_command.extend(['-dMSWINDOWS', '-Fl' + str(serial_build),
+                               '-FU' + str(serial_build), '-FE' + str(serial_build),
+                               'tests/magstripe/NativeSerial.Tests.dpr'])
+        subprocess.run(serial_command, cwd=REPO, check=True)
+        serial_env = os.environ.copy()
+        serial_env['LD_LIBRARY_PATH'] = str(serial_build) + os.pathsep + serial_env.get('LD_LIBRARY_PATH', '')
+        serial_result = subprocess.run([str(serial_build / 'NativeSerial.Tests')], cwd=REPO,
+                                       env=serial_env, capture_output=True, text=True)
+        print(serial_result.stdout, end='', flush=True)
+        if serial_result.stderr:
+            print(serial_result.stderr, file=sys.stderr, end='')
+        serial_result.check_returncode()
+        if re.search(r'\b[1-9][0-9]* unfreed memory blocks', serial_result.stderr):
+            raise RuntimeError('Native serial shim test leaked memory')
     else:
-        print('SKIP: native PC/SC ABI shim requires Linux and GCC.', flush=True)
+        print('SKIP: native PC/SC and serial ABI shims requires Linux and GCC.', flush=True)
     example = str(build / ('InspectApdu' + suffix))
     valid = subprocess.run([example, '0000000002AABB00'], capture_output=True, text=True, check=True)
     if 'Data bytes: 2' not in valid.stdout or 'Le: 256' not in valid.stdout:
@@ -165,6 +187,20 @@ def main():
     if mag_bad.returncode != 1 or 'EMagStripeFormatError' not in mag_bad.stdout:
         raise RuntimeError('Magstripe example did not reject corrupted parity')
     print('PASS: magstripe console help, text/bit vectors and corrupt parity.', flush=True)
+    msr_example = str(build / ('InspectMsr206' + suffix))
+    msr_help = subprocess.run([msr_example, '--help'], capture_output=True, text=True, check=True)
+    if 'Usage: InspectMsr206' not in msr_help.stdout:
+        raise RuntimeError('MSR206 example did not show hardware-free help')
+    msr_fixture = '1B731B012530313F1B023B32333F1B033B34353F3F1C1B30'
+    msr_valid = subprocess.run([msr_example, '--frame-hex', msr_fixture],
+                               capture_output=True, text=True, check=True)
+    if any('Track ' + str(track) + ' payload characters: 2' not in msr_valid.stdout for track in (1, 2, 3)):
+        raise RuntimeError('MSR206 example did not decode the published frame')
+    msr_bad = subprocess.run([msr_example, '--frame-hex', msr_fixture[:-2] + '31'],
+                             capture_output=True, text=True)
+    if msr_bad.returncode != 1 or 'EMagStripeError' not in msr_bad.stdout:
+        raise RuntimeError('MSR206 example did not reject device-reported failure')
+    print('PASS: MSR206 console help, published frame and failed status.', flush=True)
     subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests/tools', '-v'],
                    cwd=REPO, check=True)
     subprocess.run([sys.executable, 'tools/pascalcheck/run.py', '--profile', 'core',
