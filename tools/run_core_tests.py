@@ -31,6 +31,7 @@ def main():
                '-Fu' + str(REPO / 'src/core'), '-Fu' + str(REPO / 'src/pcsc'),
                '-Fu' + str(REPO / 'src/eid'),
                '-Fu' + str(REPO / 'src/emv'),
+               '-Fu' + str(REPO / 'src/magstripe'),
                '-Fu' + str(REPO / 'src/contactless'),
                '-FU' + str(build), '-FE' + str(build)]
     if args.rtl_dir is not None:
@@ -52,14 +53,16 @@ def main():
                     'tests/contactless/Type2Password.Tests.dpr',
                     'tests/contactless/Ndef.Tests.dpr',
                     'tests/contactless/Type4Ndef.Tests.dpr',
+                    'tests/magstripe/MagStripe.Tests.dpr',
                     'examples/core/InspectApdu.dpr', 'examples/pcsc/InspectReader.dpr',
                     'examples/eid/ReadBelgianEid.dpr', 'examples/emv/InspectEmv.dpr',
                     'examples/contactless/InspectContactless.dpr',
                     'examples/contactless/InspectNdef.dpr',
-                    'examples/contactless/InspectType4Ndef.dpr'):
+                    'examples/contactless/InspectType4Ndef.dpr',
+                    'examples/magstripe/InspectMagStripe.dpr'):
         subprocess.run(command + [project], cwd=REPO, check=True)
     suffix = '.exe' if os.name == 'nt' else ''
-    for project in ('CardCore.Tests', 'ProtocolCore.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests', 'Type4Ndef.Tests'):
+    for project in ('CardCore.Tests', 'ProtocolCore.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'MagStripe.Tests'):
         result = subprocess.run([str(build / (project + suffix))], cwd=REPO,
                                 capture_output=True, text=True)
         print(result.stdout, end='', flush=True)
@@ -144,6 +147,24 @@ def main():
     if type4_invalid.returncode != 1 or 'EType4NdefError' not in type4_invalid.stdout:
         raise RuntimeError('Type 4 example did not reject truncated CC')
     print('PASS: Type 4 console example help and valid/invalid CC cases.', flush=True)
+    magstripe = str(build / ('InspectMagStripe' + suffix))
+    mag_help = subprocess.run([magstripe, '--help'], capture_output=True, text=True, check=True)
+    if 'Usage: InspectMagStripe' not in mag_help.stdout:
+        raise RuntimeError('Magstripe example did not show hardware-free help')
+    mag_frame = subprocess.run([magstripe, '--track', '1', '--frame', '%AT3?'],
+                               capture_output=True, text=True, check=True)
+    if 'Frame bits: 42 LRC symbol: 1C' not in mag_frame.stdout or 'AT3' in mag_frame.stdout:
+        raise RuntimeError('Magstripe example did not summarize the published Track 1 vector')
+    mag_bits = subprocess.run([magstripe, '--track', '2', '--bits',
+                              '110101000001000110011111100100'],
+                              capture_output=True, text=True, check=True)
+    if 'Input parity and LRC: verified' not in mag_bits.stdout or 'Frame bits: 30 LRC symbol: 04' not in mag_bits.stdout:
+        raise RuntimeError('Magstripe example did not validate the published numeric vector')
+    mag_bad = subprocess.run([magstripe, '--track', '2', '--bits',
+                             '010101000001000110011111100100'], capture_output=True, text=True)
+    if mag_bad.returncode != 1 or 'EMagStripeFormatError' not in mag_bad.stdout:
+        raise RuntimeError('Magstripe example did not reject corrupted parity')
+    print('PASS: magstripe console help, text/bit vectors and corrupt parity.', flush=True)
     subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests/tools', '-v'],
                    cwd=REPO, check=True)
     subprocess.run([sys.executable, 'tools/pascalcheck/run.py', '--profile', 'core',

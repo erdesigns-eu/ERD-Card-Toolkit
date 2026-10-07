@@ -32,6 +32,14 @@ outside the library. See [the cleanup record](docs/LEGACY_CLEANUP.md).
 | `TType2NdefCardReader` | Public Ultralight/NTAG NDEF access with guarded multi-page updates |
 | `TType4NdefCardReader` | Public ISO 7816 NDEF files with bounded CC/MLe/MLc and verified NLEN updates |
 
+`TMagStripeReaderWriter` in `src/magstripe` provides exclusive read sessions and
+capability-checked selected-track writes with same-card verification and explicit
+uncertain completion. Pure Track 1/2/3 text/bit codecs implement odd parity/LRC;
+optional financial codecs preserve issuer-defined discretionary data. Concrete
+MagTek fixed HID and default ISO keyboard parsers/read adapters accept host-supplied
+bounded frames. Native HID/keyboard capture, physical writers and verified YL160/MSR
+SDK bindings remain pending; see [the magstripe guide](docs/MAGSTRIPE.md).
+
 `TSmartCardReader` is implemented as a non-visual component in `src/pcsc`, with
 reader discovery, T=0/T=1 connections, transactions, raw ATR reads and optional
 monitoring. Its lifecycle is tested with an injected API; Windows/Delphi/hardware
@@ -160,7 +168,7 @@ tools\run-core-tests.cmd dcc32
 tools\run-core-tests.cmd dcc64
 ```
 
-The Windows script builds the Pascal tests, console examples and all five runtime
+The Windows script builds the Pascal tests, console examples and all six runtime
 packages with XML documentation, range checks and overflow checks.
 It has not been executed in the Linux development environment. Verify the generated
 XML documentation and Help Insight in the target IDE as described in

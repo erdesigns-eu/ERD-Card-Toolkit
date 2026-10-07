@@ -96,6 +96,23 @@ if errorlevel 1 exit /b %errorlevel%
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\InspectApdu.exe" 0000000002AABB00
 if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\magstripe" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\magstripe\MagStripe.Tests.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\MagStripe.Tests.exe"
+if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -Usrc\magstripe -N0"%CARD_BUILD%" -E"%CARD_BUILD%" examples\magstripe\InspectMagStripe.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\InspectMagStripe.exe" --help
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\InspectMagStripe.exe" --track 1 --frame "%%AT3?"
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\InspectMagStripe.exe" --track 2 --bits 110101000001000110011111100100
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\InspectMagStripe.exe" --track 2 --bits 010101000001000110011111100100
+if not errorlevel 1 exit /b 1
+if errorlevel 2 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -Usrc\magstripe -N0"%CARD_BUILD%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" packages\runtime\ERDCardMagStripe.dpk
+if errorlevel 1 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -Usrc\core -N0"%CARD_BUILD%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" packages\runtime\ERDCardCore.dpk
 if errorlevel 1 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\pcsc;%CARD_BUILD%" -N0"%CARD_BUILD%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" packages\runtime\ERDCardPCSC.dpk
