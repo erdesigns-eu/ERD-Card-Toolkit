@@ -151,7 +151,7 @@ type
     procedure Enter;
     procedure Leave;
   end;
-  TPcscSession = class(TInterfacedObject, ICardTransport)
+  TPcscSession = class(TInterfacedObject, ICardTransport, ICardTransaction)
   private
     FApi: IPcscApi;
     FLock: TInternalLock;
@@ -173,7 +173,8 @@ type
       const AProtocols: Cardinal; const ACapacity: Integer);
     procedure Close(const ADisposition: TPcscDisposition; const AReportErrors: Boolean);
     procedure BeginTransaction;
-    procedure EndTransaction(const ADisposition: TPcscDisposition);
+    procedure EndTransaction; overload;
+    procedure EndTransaction(const ADisposition: TPcscDisposition); overload;
     function ReadAtr: TBytes;
     function Exchange(const ACommand: TBytes): TBytes;
     function Connected: Boolean;
@@ -379,6 +380,11 @@ begin
   finally
     FLock.Leave;
   end;
+end;
+
+procedure TPcscSession.EndTransaction;
+begin
+  EndTransaction(pcdLeave);
 end;
 
 procedure TPcscSession.EndTransaction(const ADisposition: TPcscDisposition);

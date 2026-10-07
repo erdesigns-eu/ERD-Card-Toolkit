@@ -20,10 +20,13 @@ are not compatibility requirements.
    tests without hardware; a Linux C shim exercises native adapter arguments/layouts.
    Runtime packages and an inspection example are supplied. Design-time registration
    and real Delphi/Windows/card checks remain pending.
-4. **TBelgianEIDReader.** Belgian eID support based on authoritative file/protocol
-   definitions: identity, address, photo bytes and available certificates. Explicitly
-   identify supported card generations. Reading signed files and verifying their
-   authenticity are separate API capabilities and must be documented accordingly.
+4. **TBelgianEIDReader — implementation available; Delphi/hardware validation pending.**
+   Independent additive-TLV/UTF-8 decoders and a transaction-scoped public-file reader
+   targeting the documented Belpic 1.7/1.8 contact interfaces. Identity, address,
+   JPEG bytes, raw signatures and five public certificate roles; optional certificate
+   availability is explicit. Runtime package, console/photo example and exact APDU
+   tests supplied. Cryptographic authenticity, contactless PACE and real-card profile
+   certification remain separate work. See [the eID guide](BELGIAN_EID.md).
 5. **TEMVCardReader.** Available applications, card information and supported records
    through the common transport. Fields are optional; do not promise an IBAN on every
    card. Keep UI, automatic protocol recovery and storage separate.

@@ -1,0 +1,14 @@
+package ERDCardEID;
+
+{$DESCRIPTION 'ERD Card Belgian eID: public contact-card files and non-visual reader'}
+{$RUNONLY}
+
+requires
+  rtl,
+  ERDCardCore;
+
+contains
+  ERD.Card.EID.Data in '..\..\src\eid\ERD.Card.EID.Data.pas',
+  ERD.Card.EID.Reader in '..\..\src\eid\ERD.Card.EID.Reader.pas';
+
+end.

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compile and exercise the portable core and injected transport, then validate sources.
+"""Compile and exercise card protocols and injected transport, then validate sources.
 
 Free Pascal provides additional execution evidence. A separate Delphi build
 and Help Insight inspection are still required for a supported Delphi release.
@@ -29,6 +29,7 @@ def main():
     build.mkdir(parents=True, exist_ok=True)
     command = [compiler, '-B', '-Mdelphi', '-Cr', '-Co', '-gl', '-gh', '-vewn',
                '-Fu' + str(REPO / 'src/core'), '-Fu' + str(REPO / 'src/pcsc'),
+               '-Fu' + str(REPO / 'src/eid'),
                '-FU' + str(build), '-FE' + str(build)]
     if args.rtl_dir is not None:
         command.extend(['-n', '-Fu' + str(args.rtl_dir.resolve())])
@@ -41,11 +42,12 @@ def main():
             if crt_path.is_file():
                 command.append('-Fl' + str(crt_path.parent))
     for project in ('tests/core/CardCore.Tests.dpr', 'tests/core/ProtocolCore.Tests.dpr',
-                    'tests/transport/CardTransport.Tests.dpr',
-                    'examples/core/InspectApdu.dpr', 'examples/pcsc/InspectReader.dpr'):
+                    'tests/transport/CardTransport.Tests.dpr', 'tests/eid/BelgianEid.Tests.dpr',
+                    'examples/core/InspectApdu.dpr', 'examples/pcsc/InspectReader.dpr',
+                    'examples/eid/ReadBelgianEid.dpr'):
         subprocess.run(command + [project], cwd=REPO, check=True)
     suffix = '.exe' if os.name == 'nt' else ''
-    for project in ('CardCore.Tests', 'ProtocolCore.Tests', 'CardTransport.Tests'):
+    for project in ('CardCore.Tests', 'ProtocolCore.Tests', 'CardTransport.Tests', 'BelgianEid.Tests'):
         result = subprocess.run([str(build / (project + suffix))], cwd=REPO,
                                 capture_output=True, text=True)
         print(result.stdout, end='', flush=True)
@@ -92,6 +94,10 @@ def main():
                                  capture_output=True, text=True, check=True)
     if 'Usage: InspectReader' not in reader_help.stdout:
         raise RuntimeError('Reader example did not show its hardware-free help')
+    eid_help = subprocess.run([str(build / ('ReadBelgianEid' + suffix)), '--help'],
+                             capture_output=True, text=True, check=True)
+    if 'Usage: ReadBelgianEid' not in eid_help.stdout:
+        raise RuntimeError('eID example did not show its hardware-free help')
     subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests/tools', '-v'],
                    cwd=REPO, check=True)
     subprocess.run([sys.executable, 'tools/pascalcheck/run.py', '--profile', 'core',

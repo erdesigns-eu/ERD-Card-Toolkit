@@ -597,6 +597,7 @@ var
   First: TExchangeThread;
   Second: TExchangeThread;
   Raised: Boolean;
+  Transaction: ICardTransaction;
 begin
   Fake := TFakeApi.Create;
   Api := Fake;
@@ -604,7 +605,8 @@ begin
   try
     Reader.ReaderName := 'Reader A';
     Reader.Connect;
-    Reader.BeginTransaction;
+    Check(Supports(Reader.Transport, ICardTransaction, Transaction), 'Transport exposes transaction capability');
+    Transaction.BeginTransaction;
     Check(Fake.BeginCount = 1, 'Native begin transaction');
     Raised := False;
     try Reader.BeginTransaction; except on E: ECardTransportError do Raised := True; end;
@@ -617,7 +619,7 @@ begin
     finally
       First.Free;
     end;
-    Reader.EndTransaction(pcdLeave);
+    Transaction.EndTransaction;
     Check((Fake.EndCount = 1) and Reader.Connected, 'End leaves connection open');
     Raised := False;
     try Reader.EndTransaction; except on E: ECardTransportError do Raised := True; end;

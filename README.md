@@ -12,7 +12,7 @@ The implemented foundation is a standalone RTL core:
   bytes, advertised protocols and mandatory TCK validation.
 - `ERD.Card.TLV`: bounded definite-length ISO 7816 BER-TLV decoding, EMV encoded
   tags, immutable owned trees, deep cloning and canonical encoding.
-- `ERD.Card.Transport`: the shared `ICardTransport` byte-exchange contract.
+- `ERD.Card.Transport`: shared `ICardTransport` and optional `ICardTransaction` contracts.
 
 The core has no VCL, reader, vendor-DLL or external package dependency. It does
 not send commands to a card. The obsolete application and its supporting assets
@@ -33,8 +33,12 @@ outside the library. See [the cleanup record](docs/LEGACY_CLEANUP.md).
 `TSmartCardReader` is implemented as a non-visual component in `src/pcsc`, with
 reader discovery, T=0/T=1 connections, transactions, raw ATR reads and optional
 monitoring. Its lifecycle is tested with an injected API; Windows/Delphi/hardware
-validation remains pending. The other components are planned. See
-[the component plan](docs/COMPONENT_PLAN.md) and [the PC/SC guide](docs/PCSC_TRANSPORT.md).
+validation remains pending. `TBelgianEIDReader` in `src/eid` reads identity, address,
+JPEG photographs, raw signatures and five available public certificate files using
+the documented Belpic 1.7/1.8 contact protocol. Its standalone decoders and injected
+read sequences are tested; real-card validation and authenticity verification remain
+pending. The other components are planned. See [the component plan](docs/COMPONENT_PLAN.md),
+[the PC/SC guide](docs/PCSC_TRANSPORT.md) and [the Belgian eID guide](docs/BELGIAN_EID.md).
 
 ## Using the core
 
@@ -84,7 +88,9 @@ The tests exercise the actual Pascal units with range and overflow checks, all
 command cases, length boundaries, invalid inputs, independent buffers and responses,
 ATR checksums, TLV normalization, tree ownership and resource limits. Transport
 tests exercise transaction ownership, independent instances, serialized commands,
-failure cleanup and monitor cancellation/join. Linux with GCC also runs an isolated
+failure cleanup and monitor cancellation/join. eID tests cover exact APDUs, UTF-8,
+additive TLV, DER framing, certificate availability, bounded status handling and
+transaction cleanup. Linux with GCC also runs an isolated
 C ABI shim against the actual Windows adapter branches. This validates buffers,
 Unicode and record layouts, not Windows calling conventions or real drivers. FPC heap
 tracing also checks the Pascal test executables for leaked allocations.
@@ -101,7 +107,7 @@ tools\run-core-tests.cmd dcc32
 tools\run-core-tests.cmd dcc64
 ```
 
-The Windows script builds the Pascal tests, console examples and both runtime
+The Windows script builds the Pascal tests, console examples and all three runtime
 packages with XML documentation, range checks and overflow checks.
 It has not been executed in the Linux development environment. Verify the generated
 XML documentation and Help Insight in the target IDE as described in
