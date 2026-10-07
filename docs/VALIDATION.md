@@ -13,12 +13,13 @@ Validated in the Linux cloud environment on 2026-10-07 after the legacy cleanup.
 | Contactless Classic/Type 2 storage and programmable UID | 6365 assertions in twelve groups passed, including protected pages, complete snapshots, four/seven-byte Gen2 programming, separate factory FUID one-time writes and uncertain outcomes |
 | Raw RF UID programming and ACR122U adapter | 8179 assertions in twenty-three groups passed, including Gen1a/Gen1b/unsealed UFUID, partial UFUID/ZUID/PFUID, Type 2 DirectWrite, Gen3, all six Gen4 layouts, partial writes, USCUID/GDM hidden/public sources, password-command wiping, bit framing and complete adapter-chain transcripts |
 | Password-authenticated Type 2 user memory | 2062 assertions in seven groups passed for both EV1 sizes and NTAG213/215/216, including retained-session PWD_AUTH/PACK, bounded snapshots, verified writes and concrete adapter integration |
+| NDEF codecs, RTDs and public Type 2 access | 36962 assertions in five groups passed: bounded framing/chunks, strict Unicode, factory CC/TLV mapping and guarded write failures |
 | Native Windows adapter branches | 38 assertions passed against an isolated Linux C ABI shim |
-| Console examples | APDU valid/invalid cases passed; PC/SC, eID, EMV and contactless help work without hardware |
+| Console examples | APDU valid/invalid cases passed; PC/SC, eID, EMV, contactless and NDEF help work without hardware; NDEF valid/truncated message cases passed |
 | FPC range/overflow/heap checks | Passed; no unfreed allocations in passing test programs |
 | Python checker regression tests | All 15 passed |
-| Pascalcheck core profile | All 21 readers passed on thirty-eight explicitly selected source files |
-| XML documentation | 718 visible API declarations inspected; zero findings |
+| Pascalcheck core profile | All 21 readers passed on forty-three explicitly selected source files |
+| XML documentation | 781 visible API declarations inspected; zero findings |
 | Reference integrity | All 26 retained files match the original Git bytes and manifest hashes |
 | Patch whitespace | `git diff --check` passed |
 
@@ -50,7 +51,16 @@ lengths/padding, exact AID/MF/DF/EF selection, grouped reads, optional certifica
 states, bounded 61xx/6Cxx handling, EOF probes, 15-bit offsets, partial failures,
 no transport replay and transaction-release exception precedence. Its JPEG and
 certificate payloads are synthetic protocol fixtures, not decoded image or X.509
-validation tests. A total of 22800 Pascal assertions passed across the suites.
+validation tests. A total of 59762 Pascal assertions passed across the suites.
+NDEF tests exercise complete MB/ME/chunk framing, independent Text/URI vectors,
+message/record/physical-chunk bounds, Unicode errors, all URI prefixes, Smart Poster
+semantics and deep buffer ownership. Its PC/SC memory backend checks all six Type 2
+layouts, factory NTAG213 control TLVs, advertised/physical capacity differences,
+short/extended header transitions, unchanged out-of-capacity bytes, lock/AUTH0/mirror
+preflight, every partial write, page/full-memory verification, changed CC and release
+precedence. All writes use synthetic memory; there is no physical tag write.
+The hardware-free NDEF example accepts a complete Text RTD vector and rejects
+truncated data. Delphi compilation, IDE Help Insight and hardware checks remain pending.
 The ICAO additions decode acquired files only; BAC/PACE, secure messaging and
 direct access to Dutch/Luxembourg/German documents are still pending.
 EMV tests exercise supplied PDOL values, GPO 80/77, optional fields, Track 2 fallback,

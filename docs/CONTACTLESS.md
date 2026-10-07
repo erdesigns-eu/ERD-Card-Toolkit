@@ -21,7 +21,8 @@ hardware. Assign both a connected `ICardTransport` and an explicitly matching
 | Raw RF UID programming | Separate `TRawUidProgrammer`: Gen1a/Gen1b/unsealed UFUID, Type 2 DirectWrite, Gen3, Gen4 UMC, USCUID/GDM public/hidden and partial UFUID/ZUID/PFUID sources; ACR122U/PN532 adapter, explicit bit framing and fresh selection |
 | PC/SC storage profile | FF CA/82/86/B0/D6 dialect checked against PC/SC Part 3 and ACS ACR122U API 2.04 |
 | NFC-EMV | Separate `TEMVCardReader` PPSE/AID/GPO/AFL path through ISO 7816 APDUs |
-| DESFire, Plus, ISO 15693, NDEF, other programmable UID families | Separate family/access implementations still pending |
+| NDEF codecs and public Type 2 storage | `TNdefCodec`/`TNdefRecords`, CC/TLV mapping and `TType2NdefCardReader`; bounded framing, strict RTDs, lock/access preflight and verified length-last updates |
+| DESFire, Plus, ISO 15693, other NDEF tag types, other programmable UID families | Separate family/access implementations still pending |
 
 The Mini model supplies the original memory layout, not a tested Mini/reader
 compatibility claim. This release has synthetic command tests and no physical reader
@@ -157,8 +158,10 @@ details. The component rejects a driver returning sixteen bytes for a four-byte 
 The PC/SC storage path reads/writes publicly accessible user memory. Supplied-password
 PWD_AUTH/PACK verification and protected user-memory operations are implemented
 separately in [TYPE2_PASSWORD.md](TYPE2_PASSWORD.md), using retained raw-RF state.
-Ultralight C/EV2/AES, NTAG I2C/sector selection, secure messaging, NDEF and lock
-interpretation remain separate profiles. Enabled mirror
+Public contiguous Type 2 NDEF mapping and conservative whole-model lock checks are
+implemented in the separate [NDEF component](NDEF.md). Ultralight C/EV2/AES, NTAG
+I2C/sector selection, secure messaging and granular lock/configuration changes remain
+separate profiles. Enabled mirror
 features can affect reader-visible data; a snapshot is not a claim of raw backing EEPROM.
 
 Declare `Memory: TType2UserMemory` and add `ERD.Card.Contactless.Type2` to uses:
@@ -170,8 +173,9 @@ Contactless.WriteType2UserPage(ttmNtag213, 4, ApplicationPageBytes);
 ```
 
 `ApplicationPageBytes` is a caller-supplied `TBytes` containing exactly four bytes;
-writing a page can alter an existing NDEF message. There is no automatic message
-formatting, read-back, rollback or multi-page write operation.
+writing a page can alter an existing NDEF message. This low-level page API performs
+no automatic message formatting, read-back, rollback or multi-page update. Use
+`TType2NdefCardReader` for the guarded NDEF update protocol; see [NDEF.md](NDEF.md).
 
 ## Programmable UID
 
@@ -196,8 +200,9 @@ security profiles. None is a substitute for a payment kernel. NDEF is a data for
 on top of a specific NFC tag type and access layer. LF 125 kHz and UHF RFID require
 suitable hardware/backends and are not implicitly supported by an NFC PC/SC reader.
 
-The next family implementations are NDEF and other Type 2 authentication variants, further programmable
-UID card/reader profiles and DESFire with a maintained crypto/secure-messaging provider.
+The next family implementations include Type 4 NDEF access, other Type 2
+authentication variants, further programmable UID card/reader profiles and DESFire
+with a maintained crypto/secure-messaging provider.
 Additional profiles are planned, not advertised
 as already readable/writable. Maintain a tested matrix of reader/firmware/driver/card
 variant and operation, including card removal and write verification.

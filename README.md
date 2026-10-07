@@ -29,6 +29,7 @@ outside the library. See [the cleanup record](docs/LEGACY_CLEANUP.md).
 | `TEMVCardReader` | Available payment applications, card data and records |
 | `TMemoryCardReaderWriter` | Supported memory-card families through appropriate reader adapters |
 | `TContactlessCardReader` | Supported contactless families through distinct card profiles |
+| `TType2NdefCardReader` | Public Ultralight/NTAG NDEF access with guarded multi-page updates |
 
 `TSmartCardReader` is implemented as a non-visual component in `src/pcsc`, with
 reader discovery, T=0/T=1 connections, transactions, raw ATR reads and optional
@@ -55,6 +56,10 @@ tests; real-card/reader validation remains pending.
 user-page reads, complete memory snapshots and verified single-page writes. Each
 operation validates PACK and retains authentication within one raw-RF session;
 see [the Type 2 password guide](docs/TYPE2_PASSWORD.md).
+`TNdefCodec` and `TNdefRecords` provide bounded NDEF framing/chunk reassembly,
+strict Unicode Text/URI, MIME/external records and Smart Posters. `TType2NdefCardReader`
+adds CC/TLV-aware public Ultralight/NTAG NDEF reads and verified length-last updates,
+with lock, protection, mirror and capacity preflight; see [the NDEF guide](docs/NDEF.md).
 `TRawUidProgrammer` adds four-byte Gen1a/Gen1b/unsealed UFUID and seven-byte Type 2
 DirectWrite UID programming, with an opt-in ACR122U/PN532 raw-RF adapter. It preserves
 manufacturer metadata, verifies fresh RF selection and treats interrupted writes as
@@ -68,8 +73,8 @@ uncertain-result and cached-UID handling. See [the raw-RF guide](docs/RAW_UID.md
 [Gen3/Gen4 guide](docs/GEN3_GEN4_UID.md) and [USCUID/FUID guide](docs/USCUID_FUID.md).
 See [the contactless guide](docs/CONTACTLESS.md). Terminal/provider payments and direct
 NFC-kernel payments have a [documented integration design](docs/PAYMENTS.md);
-payment backends, other MIFARE/UID-programming families and generic NDEF access are
-still pending. See [the programmable UID support matrix](docs/PROGRAMMABLE_UID.md).
+payment backends, other MIFARE/UID-programming families and additional NDEF tag-type
+access layers are still pending. See [the programmable UID support matrix](docs/PROGRAMMABLE_UID.md).
 The remaining components are planned. See [the component plan](docs/COMPONENT_PLAN.md),
 [the PC/SC guide](docs/PCSC_TRANSPORT.md) and [the Belgian eID guide](docs/BELGIAN_EID.md).
 
@@ -122,6 +127,9 @@ python3 tools/run_core_tests.py
 
 An extracted compiler can be supplied with `--fpc /path/to/ppcx64` and
 `--rtl-dir /path/to/units/x86_64-linux/rtl`. Outputs stay in ignored `dist/core/fpc`.
+The NDEF example `InspectNdef <message-hex>` works without hardware and prints only
+record structure/lengths. Tests cover framing/chunk bounds, Unicode and guarded
+Type 2 writes with injected failures; see [the NDEF guide](docs/NDEF.md).
 The tests exercise the actual Pascal units with range and overflow checks, all
 command cases, length boundaries, invalid inputs, independent buffers and responses,
 ATR checksums, TLV normalization, tree ownership and resource limits. Transport

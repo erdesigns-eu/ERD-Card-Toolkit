@@ -50,12 +50,14 @@ def main():
                     'tests/contactless/Contactless.Tests.dpr',
                     'tests/contactless/RawUid.Tests.dpr',
                     'tests/contactless/Type2Password.Tests.dpr',
+                    'tests/contactless/Ndef.Tests.dpr',
                     'examples/core/InspectApdu.dpr', 'examples/pcsc/InspectReader.dpr',
                     'examples/eid/ReadBelgianEid.dpr', 'examples/emv/InspectEmv.dpr',
-                    'examples/contactless/InspectContactless.dpr'):
+                    'examples/contactless/InspectContactless.dpr',
+                    'examples/contactless/InspectNdef.dpr'):
         subprocess.run(command + [project], cwd=REPO, check=True)
     suffix = '.exe' if os.name == 'nt' else ''
-    for project in ('CardCore.Tests', 'ProtocolCore.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests'):
+    for project in ('CardCore.Tests', 'ProtocolCore.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests'):
         result = subprocess.run([str(build / (project + suffix))], cwd=REPO,
                                 capture_output=True, text=True)
         print(result.stdout, end='', flush=True)
@@ -114,6 +116,18 @@ def main():
                                      capture_output=True, text=True, check=True)
     if 'Usage: InspectContactless' not in contactless_help.stdout:
         raise RuntimeError('Contactless example did not show its hardware-free help')
+    ndef_example = str(build / ('InspectNdef' + suffix))
+    ndef_help = subprocess.run([ndef_example, '--help'], capture_output=True, text=True, check=True)
+    if 'Usage: InspectNdef' not in ndef_help.stdout:
+        raise RuntimeError('NDEF example did not show its hardware-free help')
+    ndef_valid = subprocess.run([ndef_example, 'D101055402656E4869'],
+                                capture_output=True, text=True, check=True)
+    if 'Records: 1' not in ndef_valid.stdout or 'TNF=1 TypeBytes=1 IdBytes=0 PayloadBytes=5' not in ndef_valid.stdout:
+        raise RuntimeError('NDEF example did not decode the independent Text RTD vector')
+    ndef_invalid = subprocess.run([ndef_example, 'D101055402656E48'], capture_output=True, text=True)
+    if ndef_invalid.returncode != 1 or 'ENdefError' not in ndef_invalid.stdout:
+        raise RuntimeError('NDEF example did not reject truncated payload')
+    print('PASS: NDEF console example help and valid/invalid message cases.', flush=True)
     subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests/tools', '-v'],
                    cwd=REPO, check=True)
     subprocess.run([sys.executable, 'tools/pascalcheck/run.py', '--profile', 'core',
