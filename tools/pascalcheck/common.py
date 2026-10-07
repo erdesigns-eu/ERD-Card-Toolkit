@@ -1,4 +1,4 @@
-import os, re, sys
+import json, os, re, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from paslex import strip_code, tokens, linemap, lineof
 
@@ -31,10 +31,44 @@ def find_root(start=None):
 ROOT = find_root()
 SKIP = ('Virtual-TreeView-master', '__history', 'Win32', '/typescript/')
 
+def source_roots():
+    """Explicit inputs supplied by run.py, or None for the legacy discovery."""
+    value = os.environ.get('PASCALCHECK_SOURCE_ROOTS')
+    if value is None:
+        return None
+    paths = json.loads(value)
+    if not isinstance(paths, list) or not paths or not all(isinstance(p, str) for p in paths):
+        raise ValueError('PASCALCHECK_SOURCE_ROOTS must be a nonempty JSON array of paths')
+    resolved = [os.path.abspath(os.path.join(ROOT, p)) for p in paths]
+    for path in resolved:
+        if not os.path.exists(path):
+            raise ValueError('source root does not exist: ' + path)
+    return resolved
+
+def selected_files(extensions):
+    """Walk explicitly selected paths once, excluding generated/history files."""
+    seen = set()
+    for base in source_roots() or []:
+        if os.path.isfile(base):
+            candidates = [base]
+        else:
+            candidates = []
+            for dp, dn, fn in os.walk(base):
+                dn[:] = sorted(d for d in dn if d not in ('__history', '__pycache__', 'Win32', 'Win64', '.git', 'dist'))
+                candidates.extend(os.path.join(dp, f) for f in sorted(fn))
+        for path in candidates:
+            identity = os.path.realpath(path)
+            if path.lower().endswith(extensions) and identity not in seen:
+                seen.add(identity)
+                yield path
+
 def pas_files(include_components=True):
+    if source_roots() is not None:
+        yield from selected_files(('.pas', '.dpr'))
+        return
     seen = set()
     bases = ['units', 'forms', 'cli', 'tools', 'build', 'shell-extension',
-             'workbench', 'tests']
+             'workbench', 'tests', 'src', 'examples']
     if include_components: bases.append('components')
     for base in bases:
         d = os.path.join(ROOT, base)
@@ -60,6 +94,9 @@ def dfm_files(bases=DFM_BASES):
     forms and a handful of frames that nothing here had ever read. Naming
     them once means a new folder is added once.
     """
+    if source_roots() is not None:
+        yield from selected_files(('.dfm',))
+        return
     seen = set()
     for base in bases:
         d = os.path.join(ROOT, base)
@@ -76,6 +113,7 @@ def dfm_files(bases=DFM_BASES):
                         yield p
 
 def load(path):
-    src = open(path, encoding='utf-8', errors='replace').read()
+    with open(path, encoding='utf-8', errors='replace') as source:
+        src = source.read()
     clean, directives = strip_code(src)
     return src, clean, directives, linemap(src), list(tokens(clean))

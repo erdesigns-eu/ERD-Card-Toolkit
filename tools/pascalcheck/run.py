@@ -7,11 +7,20 @@
 
 Exits non-zero when anything was found, so it can stand in a build step.
 """
-import argparse, os, re, subprocess, sys
+import argparse, json, os, re, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from common import ROOT
+from common import ROOT, pas_files
+
+# These readers use common.pas_files() and apply to standalone RTL units.
+# UI/catalog/project-layout readers remain available through the default suite.
+CORE_CHECKERS = {
+    'arraylow', 'assigned', 'blocks', 'bracecomment', 'capture', 'caselabel',
+    'declorder', 'dup', 'fieldorder', 'forvar', 'iface', 'impl', 'jsoncast',
+    'loopcapture', 'loopvar', 'nestedcapture', 'reservedname', 'sections',
+    'varargtype', 'varparam', 'xmldoc',
+}
 # A checker prints a heading, its findings, then a total. These are the shapes
 # that total comes in.
 TOTAL = re.compile(r'^\s*(?:total(?: distinct)?|mismatches):\s*(\d+)\s*$', re.M)
@@ -35,11 +44,31 @@ def main():
                     help='only run checkers whose name contains this')
     ap.add_argument('-v', '--verbose', action='store_true',
                     help='print the findings, not just the counts')
+    ap.add_argument('--profile', choices=('all', 'core'), default='core',
+                    help='core (default) runs source-aware readers; all includes legacy layout readers')
+    ap.add_argument('--source-root', action='append', default=[], metavar='PATH',
+                    help='file or directory to check; repeat for multiple inputs')
     args = ap.parse_args()
+
+    if args.source_root and args.profile != 'core':
+        ap.error('explicit source roots require --profile core; other readers may use fixed paths')
+    if args.source_root:
+        os.environ['PASCALCHECK_SOURCE_ROOTS'] = json.dumps(args.source_root)
+    try:
+        inputs = sorted(pas_files())
+    except (ValueError, OSError) as error:
+        ap.error(str(error))
+    if not inputs:
+        print('ERROR: no Pascal source files selected')
+        return 2
+    print('Selected %d Pascal source file(s):' % len(inputs))
+    for path in inputs:
+        print('  ' + os.path.relpath(path, ROOT))
 
     names = sorted(f for f in os.listdir(HERE)
                    if f.startswith('check_') and f.endswith('.py')
-                   and args.pattern in f)
+                   and args.pattern in f
+                   and (args.profile != 'core' or f[6:-3] in CORE_CHECKERS))
     if not names:
         print('no checker matches %r' % args.pattern)
         return 2
@@ -51,7 +80,8 @@ def main():
                            capture_output=True, text=True, cwd=ROOT)
         out = (r.stdout or '') + (r.stderr or '')
         label = name[len('check_'):-len('.py')]
-        if r.returncode != 0:
+        if r.returncode != 0 or any(marker in out for marker in
+                                   ('PARSE FAIL', 'SYMFAIL', 'Traceback (most recent call last)')):
             print('%-18s ERROR' % label)
             print(out.rstrip())
             unclear.append(label)

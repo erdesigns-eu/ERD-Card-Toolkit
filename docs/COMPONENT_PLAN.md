@@ -1,0 +1,54 @@
+# Component implementation plan
+
+Build new implementations where the legacy architecture obstructs correctness.
+The original code supplies domain examples and catalogs; its bugs and API signatures
+are not compatibility requirements.
+
+## Milestones
+
+1. **Bytes and APDU — implemented.** Strict hex conversion and independent buffers;
+   command cases 1, 2S, 3S, 4S, 2E, 3E, 4E; response codecs; XML-documented API;
+   executable regression tests and source-aware static checks.
+2. **ATR and BER-TLV — implemented.** Bounded byte readers, TCK validation,
+   explicit limits, immutable TLV trees, deep cloning and canonical definite-length
+   encoding. EMV encoded tags are supported; this is not a general ASN.1 schema
+   validator. EMV tag descriptions and ATR-identification catalogs remain separate.
+3. **TSmartCardReader.** An instance-owned PC/SC transport with pointer-sized
+   handles, deterministic watcher cancellation/join, explicit event threads and
+   reader selection by identity. Test transports allow protocol tests without hardware.
+4. **TBelgianEIDReader.** Belgian eID support based on authoritative file/protocol
+   definitions: identity, address, photo bytes and available certificates. Explicitly
+   identify supported card generations. Reading signed files and verifying their
+   authenticity are separate API capabilities and must be documented accordingly.
+5. **TEMVCardReader.** Available applications, card information and supported records
+   through the common transport. Fields are optional; do not promise an IBAN on every
+   card. Keep UI, automatic protocol recovery and storage separate.
+6. **TMagStripeReaderWriter.** Track codecs plus separate YL160/MSR adapters. Model
+   device capabilities, errors, buffers and supported SDK/driver versions explicitly.
+7. **TMemoryCardReaderWriter and TContactlessCardReader.** Implement one tested card
+   family/reader profile at a time. Non-Java chips do not share one universal protocol:
+   memory cards, Classic, Ultralight and DESFire need distinct support and access models.
+8. **Distribution.** Runtime/design-time packages, Delphi/Windows validation matrix,
+   console and VCL examples, public API docs and dependency/data license inventory.
+
+Magstripe work can progress independently once the byte/codec foundation is established.
+
+The obsolete application has been removed. Selected original protocol code is
+retained in `reference/legacy` for implementation research, outside runtime packages
+and validation coverage. See [the cleanup record](LEGACY_CLEANUP.md).
+
+## Architecture
+
+- Core codecs depend only on the RTL and return typed data.
+- Reader adapters implement a common byte transport; parsers do not open hardware.
+- Non-visual component wrappers expose configuration, lifecycle and events.
+- VCL presenters turn results into UI; the data model does not hold controls.
+- Vendor DLLs, data catalogs and optional providers stay out of the base runtime package.
+- Do not activate readers in constructors or in the IDE designer.
+
+## Completion criteria
+
+Each milestone includes documented declarations, tests for successful and failing
+behavior, the existing Pascal readers on an explicit source selection, and a Delphi
+build for the supported targets. Hardware features require real adapter/card tests.
+Linux core tests and XML well-formedness do not substitute for Delphi or Help Insight.
