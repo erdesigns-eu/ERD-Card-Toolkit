@@ -16,7 +16,7 @@ hardware. Assign both a connected `ICardTransport` and an explicitly matching
 | Classic data-block writing | Six-byte supplied key and sixteen-byte payload; block zero and every sector trailer rejected before I/O |
 | Ultralight/NTAG pages | Explicit original Ultralight, EV1-48/128 and NTAG213/215/216 layouts; four-byte page reads/user writes and complete user-memory snapshots |
 | Programmable Classic UID | Explicit reprogrammable Gen2/CUID four/seven-byte layouts; dedicated manufacturer-block programming and verification |
-| Raw RF UID programming | Separate `TRawUidProgrammer`: Gen1a/unsealed UFUID and Type 2 DirectWrite; ACR122U/PN532 adapter, explicit bit framing and fresh selection |
+| Raw RF UID programming | Separate `TRawUidProgrammer`: Gen1a/unsealed UFUID, Type 2 DirectWrite, Gen3 and Gen4 UMC; ACR122U/PN532 adapter, explicit bit framing and fresh selection |
 | PC/SC storage profile | FF CA/82/86/B0/D6 dialect checked against PC/SC Part 3 and ACS ACR122U API 2.04 |
 | NFC-EMV | Separate `TEMVCardReader` PPSE/AID/GPO/AFL path through ISO 7816 APDUs |
 | DESFire, Plus, ISO 15693, NDEF, other programmable UID families | Separate family/access implementations still pending |

@@ -5,7 +5,8 @@ implementation targets explicitly identified **reprogrammable Classic Gen2/CUID*
 cards with a four-byte or seven-byte manufacturer-block layout. A separate
 `TRawUidProgrammer` now adds four-byte Gen1a/unsealed UFUID and seven-byte Type 2
 DirectWrite, with a concrete ACR122U/PN532 raw-RF adapter; see [RAW_UID.md](RAW_UID.md).
-The code is independently
+Gen3 four/seven-byte UID-register and Gen4 UMC four/seven/ten-byte programming
+are also implemented; see [GEN3_GEN4_UID.md](GEN3_GEN4_UID.md). The code is independently
 written and exercised with synthetic readers; actual chip/reader compatibility has
 not been established. A successful PC/SC UID read does not identify this capability.
 
@@ -24,9 +25,11 @@ general-purpose writable user memory.
 | Gen1a and unsealed UFUID with Gen1a wakeup, four-byte UID | Implemented raw seven-bit unlock, metadata-preserving block write, full read-back and fresh RF UID verification; ACR122U/PN532 adapter provided |
 | Gen1b, sealed UFUID and alternate USCUID/GDM modes | Further explicit card/unlock profiles; no seal/unfuse/configuration command implemented |
 | FUID/OTP or other write-once/fusing variants | Pending separate one-time programming semantics and verified vendor protocol; not covered by the reprogrammable Gen2 API |
-| Gen3/APDU, Gen4/USCUID/GDM/UMC variants | Pending proprietary protocol/reader adapters; commands cannot be inferred from a marketing generation alone |
+| Gen3/APDU, four/seven-byte UID | Implemented raw UID-register command, unchanged block-zero verification and fresh RF selection; no freeze command |
+| Gen4 UMC/GTU, Classic/Type 2 four/seven/ten-byte layouts | Implemented explicit password-bearing CF dialect, matching stable configuration, full manufacturer-block verification and fresh selection; no configuration/fuse changes |
+| Other Gen4 USCUID/GDM modes | Further concrete unlock/configuration profiles; not inferred from the UMC marketing generation |
 | Reprogrammable Type 2 DirectWrite seven-byte UID | Implemented three consecutive manufacturer-page writes, both BCCs, internal/lock/OTP/CC preservation, read-back and fresh selection; interrupted writes explicitly uncertain |
-| Ten-byte UID variants | Pending concrete supported chip layout/command profile; rejected by the current Gen2 API before I/O |
+| Ten-byte UID | Gen4 UMC Classic/Type 2 existing layouts implemented; Gen2/Gen3 APIs retain their own smaller supported lengths |
 | LF 125 kHz and UHF RFID identifiers | Pending suitable hardware, family codecs and device adapters; not accessible through this NFC storage profile |
 
 The aim is broad coverage through explicit profiles, with a matrix of tested chip,
