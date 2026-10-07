@@ -63,6 +63,19 @@ if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\InspectNdef.exe" D101055402656E48
 if not errorlevel 1 exit /b 1
 if errorlevel 2 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\contactless" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\contactless\Type4Ndef.Tests.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\Type4Ndef.Tests.exe"
+if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\pcsc;src\contactless" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" examples\contactless\InspectType4Ndef.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\InspectType4Ndef.exe" --help
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\InspectType4Ndef.exe" --cc-hex 000F20003A00340406E10401000000
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\InspectType4Ndef.exe" --cc-hex 000F20003A00340406E104010000
+if not errorlevel 1 exit /b 1
+if errorlevel 2 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\pcsc;src\contactless" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" examples\contactless\InspectContactless.dpr
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\InspectContactless.exe" --help

@@ -30,6 +30,7 @@ outside the library. See [the cleanup record](docs/LEGACY_CLEANUP.md).
 | `TMemoryCardReaderWriter` | Supported memory-card families through appropriate reader adapters |
 | `TContactlessCardReader` | Supported contactless families through distinct card profiles |
 | `TType2NdefCardReader` | Public Ultralight/NTAG NDEF access with guarded multi-page updates |
+| `TType4NdefCardReader` | Public ISO 7816 NDEF files with bounded CC/MLe/MLc and verified NLEN updates |
 
 `TSmartCardReader` is implemented as a non-visual component in `src/pcsc`, with
 reader discovery, T=0/T=1 connections, transactions, raw ATR reads and optional
@@ -60,6 +61,10 @@ see [the Type 2 password guide](docs/TYPE2_PASSWORD.md).
 strict Unicode Text/URI, MIME/external records and Smart Posters. `TType2NdefCardReader`
 adds CC/TLV-aware public Ultralight/NTAG NDEF reads and verified length-last updates,
 with lock, protection, mirror and capacity preflight; see [the NDEF guide](docs/NDEF.md).
+`TType4NdefCardReader` adds explicit mapping 1.0/2.0 application/file selection,
+complete Capability Containers, bounded public NDEF reads and verified NLEN-last
+updates through an ISO 7816 transport. Multiple files require an explicit identifier;
+see [the Type 4 guide](docs/TYPE4_NDEF.md).
 `TRawUidProgrammer` adds four-byte Gen1a/Gen1b/unsealed UFUID and seven-byte Type 2
 DirectWrite UID programming, with an opt-in ACR122U/PN532 raw-RF adapter. It preserves
 manufacturer metadata, verifies fresh RF selection and treats interrupted writes as
@@ -128,7 +133,9 @@ python3 tools/run_core_tests.py
 An extracted compiler can be supplied with `--fpc /path/to/ppcx64` and
 `--rtl-dir /path/to/units/x86_64-linux/rtl`. Outputs stay in ignored `dist/core/fpc`.
 The NDEF example `InspectNdef <message-hex>` works without hardware and prints only
-record structure/lengths. Tests cover framing/chunk bounds, Unicode and guarded
+record structure/lengths. `InspectType4Ndef --cc-hex <hex>` inspects a complete CC
+without hardware; its explicit reader mode reads public files. Tests cover Type 4
+CC/APDU bounds and updates as well as framing/chunk bounds, Unicode and guarded
 Type 2 writes with injected failures; see [the NDEF guide](docs/NDEF.md).
 The tests exercise the actual Pascal units with range and overflow checks, all
 command cases, length boundaries, invalid inputs, independent buffers and responses,

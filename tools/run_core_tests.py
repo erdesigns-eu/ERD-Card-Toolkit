@@ -51,13 +51,15 @@ def main():
                     'tests/contactless/RawUid.Tests.dpr',
                     'tests/contactless/Type2Password.Tests.dpr',
                     'tests/contactless/Ndef.Tests.dpr',
+                    'tests/contactless/Type4Ndef.Tests.dpr',
                     'examples/core/InspectApdu.dpr', 'examples/pcsc/InspectReader.dpr',
                     'examples/eid/ReadBelgianEid.dpr', 'examples/emv/InspectEmv.dpr',
                     'examples/contactless/InspectContactless.dpr',
-                    'examples/contactless/InspectNdef.dpr'):
+                    'examples/contactless/InspectNdef.dpr',
+                    'examples/contactless/InspectType4Ndef.dpr'):
         subprocess.run(command + [project], cwd=REPO, check=True)
     suffix = '.exe' if os.name == 'nt' else ''
-    for project in ('CardCore.Tests', 'ProtocolCore.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests'):
+    for project in ('CardCore.Tests', 'ProtocolCore.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests', 'Type4Ndef.Tests'):
         result = subprocess.run([str(build / (project + suffix))], cwd=REPO,
                                 capture_output=True, text=True)
         print(result.stdout, end='', flush=True)
@@ -128,6 +130,20 @@ def main():
     if ndef_invalid.returncode != 1 or 'ENdefError' not in ndef_invalid.stdout:
         raise RuntimeError('NDEF example did not reject truncated payload')
     print('PASS: NDEF console example help and valid/invalid message cases.', flush=True)
+    type4_example = str(build / ('InspectType4Ndef' + suffix))
+    type4_help = subprocess.run([type4_example, '--help'], capture_output=True, text=True, check=True)
+    if 'Usage: InspectType4Ndef' not in type4_help.stdout:
+        raise RuntimeError('Type 4 example did not show its hardware-free help')
+    type4_cc = '000F20003A00340406E10401000000'
+    type4_valid = subprocess.run([type4_example, '--cc-hex', type4_cc],
+                                 capture_output=True, text=True, check=True)
+    if 'MLe: 58 MLc: 52' not in type4_valid.stdout or 'NDEF files: 1' not in type4_valid.stdout:
+        raise RuntimeError('Type 4 example did not decode the independent CC fixture')
+    type4_invalid = subprocess.run([type4_example, '--cc-hex', type4_cc[:-2]],
+                                   capture_output=True, text=True)
+    if type4_invalid.returncode != 1 or 'EType4NdefError' not in type4_invalid.stdout:
+        raise RuntimeError('Type 4 example did not reject truncated CC')
+    print('PASS: Type 4 console example help and valid/invalid CC cases.', flush=True)
     subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests/tools', '-v'],
                    cwd=REPO, check=True)
     subprocess.run([sys.executable, 'tools/pascalcheck/run.py', '--profile', 'core',

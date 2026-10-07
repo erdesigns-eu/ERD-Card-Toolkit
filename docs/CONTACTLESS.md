@@ -22,7 +22,8 @@ hardware. Assign both a connected `ICardTransport` and an explicitly matching
 | PC/SC storage profile | FF CA/82/86/B0/D6 dialect checked against PC/SC Part 3 and ACS ACR122U API 2.04 |
 | NFC-EMV | Separate `TEMVCardReader` PPSE/AID/GPO/AFL path through ISO 7816 APDUs |
 | NDEF codecs and public Type 2 storage | `TNdefCodec`/`TNdefRecords`, CC/TLV mapping and `TType2NdefCardReader`; bounded framing, strict RTDs, lock/access preflight and verified length-last updates |
-| DESFire, Plus, ISO 15693, other NDEF tag types, other programmable UID families | Separate family/access implementations still pending |
+| Public Type 4 NDEF files | `TType4NdefCardReader`: explicit mapping 1.0/2.0 ISO 7816 applications, CC/file descriptors, MLe/MLc-bounded reads and verified NLEN-last updates |
+| Native DESFire, Plus, ISO 15693, Type 1/3/5 NDEF, other programmable UID families | Separate family/access implementations still pending |
 
 The Mini model supplies the original memory layout, not a tested Mini/reader
 compatibility claim. This release has synthetic command tests and no physical reader
@@ -200,9 +201,11 @@ security profiles. None is a substitute for a payment kernel. NDEF is a data for
 on top of a specific NFC tag type and access layer. LF 125 kHz and UHF RFID require
 suitable hardware/backends and are not implicitly supported by an NFC PC/SC reader.
 
-The next family implementations include Type 4 NDEF access, other Type 2
-authentication variants, further programmable UID card/reader profiles and DESFire
-with a maintained crypto/secure-messaging provider.
+Public Type 4 NDEF access is implemented separately in [TYPE4_NDEF.md](TYPE4_NDEF.md),
+including already formatted public DESFire NDEF files; this does not implement native
+DESFire authentication or management. Further families include other Type 2
+security variants, ISO 15693/Type 5, further programmable UID profiles and native
+DESFire with a maintained crypto/secure-messaging provider.
 Additional profiles are planned, not advertised
 as already readable/writable. Maintain a tested matrix of reader/firmware/driver/card
 variant and operation, including card removal and write verification.
