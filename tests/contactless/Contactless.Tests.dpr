@@ -698,6 +698,115 @@ begin
   Writeln('PASS: programming validation, denied writes, read-back mismatch and uncertain outcome without replay.');
 end;
 
+procedure AddFuidPreparation(Script: TScript);
+begin
+  Script.Add('FFCA000000', 'AA55C3969000');
+  AddAuthentication(Script, 0, mckA);
+  Script.Add('FFB0000010', 'AA55C396AA08040062636465666768699000');
+end;
+
+procedure TestFuidProgramming;
+var Reader: TContactlessCardReader; Script: TScript; Data: TFuidUidResult;
+  Capability: IFuidUidReaderProfile; Uid, Key: TBytes; I, J: Integer;
+begin
+  Reader := TContactlessCardReader.Create(nil);
+  try
+    Reader.Profile := TPcscStorageProfile.Create;
+    Check(Supports(Reader.Profile, IFuidUidReaderProfile, Capability), 'Dedicated FUID capability, independent of Gen2 interface');
+    Check(BytesToHex(Capability.WriteFuidManufacturerCommand(HexToBytes(NewManufacturerHex))) =
+      'FFD6000010' + NewManufacturerHex, 'FUID explicit authenticated write command golden vector');
+    for I := 0 to 1 do
+    begin
+      Script := TScript.Create;
+      Reader.Transport := Script;
+      AddFuidPreparation(Script);
+      Script.Add('FFD6000010' + NewManufacturerHex, '9000');
+      Script.Add('FFB0000010', NewManufacturerHex + '9000');
+      if I = 0 then Script.Add('FFCA000000', NewUidHex + '9000')
+      else Script.Add('FFCA000000', 'AA55C3969000');
+      Uid := HexToBytes(NewUidHex);
+      Key := HexToBytes(KeyHex);
+      Data := Reader.ProgramFuidUidOnce(Uid, mckA, Key);
+      Check((Data.ActiveUidVerified = (I = 0)) and (BytesToHex(Data.PreviousUid) = 'AA55C396'), 'Cached factory UID remains explicit, no RF reconnect');
+      Check((BytesToHex(Data.ManufacturerBlock) = NewManufacturerHex) and (Script.Position = 7), 'One write, full metadata/BCC read-back');
+      Check((Script.Begins = 1) and (Script.Ends = 1), 'One transaction per FUID provisioning');
+      Data.RequestedUid[0] := 0;
+      Check((BytesToHex(Uid) = NewUidHex) and (BytesToHex(Key) = KeyHex), 'Caller UID/key unchanged and independent result');
+      for J := 0 to Length(Script.KeyCommandAlias) - 1 do Check(Script.KeyCommandAlias[J] = 0, 'FUID local key command wiped');
+    end;
+  finally Reader.Free; end;
+  Writeln('PASS: dedicated FUID single-write capability, factory precondition, metadata and cached UID semantics.');
+end;
+
+procedure TestFuidFailures;
+var Reader: TContactlessCardReader; Script: TScript; Data: TFuidUidResult;
+  I, Last: Integer; Raised: Boolean;
+begin
+  Reader := TContactlessCardReader.Create(nil);
+  try
+    Reader.Profile := TPcscStorageProfile.Create;
+    for I := 0 to 11 do
+    begin
+      Script := TScript.Create;
+      Reader.Transport := Script;
+      AddFuidPreparation(Script);
+      Script.Add('FFD6000010' + NewManufacturerHex, '9000');
+      Script.Add('FFB0000010', NewManufacturerHex + '9000');
+      Script.Add('FFCA000000', NewUidHex + '9000');
+      Last := 6;
+      case I of
+        0: begin Script.Steps[0].Response := HexToBytes(NewUidHex + '9000'); Last := 0; end;
+        1: begin Script.Steps[3].Response := HexToBytes(OldManufacturerHex + '9000'); Last := 3; end;
+        2: begin Script.Steps[3].Response[4] := 0; Last := 3; end;
+        3: begin Script.Steps[4].Response := HexToBytes('6982'); Last := 4; end;
+        4: begin Script.Steps[4].Fails := True; Last := 4; end;
+        5: begin Script.Steps[4].Response := HexToBytes('90'); Last := 4; end;
+        6: begin Script.Steps[4].Response := HexToBytes('009000'); Last := 4; end;
+        7: begin Script.Steps[5].Response[15] := 0; Last := 5; end;
+        8: begin Script.Steps[6].Response := HexToBytes('010203049000'); end;
+        9: Script.EndFails := True;
+        10: begin Script.Steps[5].Response := HexToBytes('6982'); Last := 5; Script.EndFails := True; end;
+        11: begin Script.Steps[1].Response := HexToBytes('6982'); Last := 1; end;
+      end;
+      SetLength(Script.Steps, Last + 1);
+      Raised := False;
+      try Data := Reader.ProgramFuidUidOnce(HexToBytes(NewUidHex), mckA, HexToBytes(KeyHex));
+      except
+        on E: EContactlessWriteUncertain do
+        begin
+          Check(I in [3..10], 'All post-dispatch failures uncertain, including explicit denial');
+          if I = 10 then Check(E.OriginalErrorClass = 'EContactlessStatusError', 'Primary status wins over cleanup');
+          Raised := True;
+        end;
+        on E: EProgrammableUidError do begin Check(I = 2, 'Invalid BCC before write'); Raised := True; end;
+        on E: EContactlessStatusError do begin Check(I = 11, 'Authentication denied before write'); Raised := True; end;
+        on E: EContactlessError do begin Check(I in [0, 1], 'Non-factory/mismatched source before write'); Raised := True; end;
+      end;
+      Check(Raised and (Script.Ends = 1) and (Script.Position = Length(Script.Steps)), 'FUID failure stops at exact stage without replay or additional writes');
+    end;
+    Script := TScript.Create;
+    Reader.Transport := Script;
+    Raised := False;
+    try Data := Reader.ProgramFuidUidOnce(HexToBytes('AA55C396'), mckA, HexToBytes(KeyHex));
+    except on E: EContactlessError do Raised := True; end;
+    Check(Raised and (Script.Begins = 0), 'Unchanged factory target rejected before I/O');
+    Raised := False;
+    try Data := Reader.ProgramFuidUidOnce(HexToBytes('88112233'), mckA, HexToBytes(KeyHex));
+    except on E: EProgrammableUidError do Raised := True; end;
+    Check(Raised and (Script.Begins = 0), 'Invalid cascade before I/O');
+    Raised := False;
+    try Data := Reader.ProgramFuidUidOnce(HexToBytes(NewUidHex), mckA, HexToBytes('0102'));
+    except on E: EContactlessError do Raised := True; end;
+    Check(Raised and (Script.Begins = 0), 'Invalid key size before I/O');
+    Reader.Profile := TClassicOnlyProfile.Create;
+    Raised := False;
+    try Data := Reader.ProgramFuidUidOnce(HexToBytes(NewUidHex), mckA, HexToBytes(KeyHex));
+    except on E: EContactlessError do Raised := True; end;
+    Check(Raised and (Script.Begins = 0), 'Old profiles require explicit new FUID capability');
+  finally Reader.Free; end;
+  Writeln('PASS: factory/no-op/capability checks, single-write denial, transport, malformed response, read-back and release failures.');
+end;
+
 begin
   try
     TestLayout;
@@ -710,7 +819,9 @@ begin
     TestProgrammableUidCodec;
     TestGen2Programming;
     TestGen2Failures;
-    Writeln('PASS: ', Checks, ' assertions across ten contactless test groups.');
+    TestFuidProgramming;
+    TestFuidFailures;
+    Writeln('PASS: ', Checks, ' assertions across twelve contactless test groups.');
   except
     on E: Exception do begin Writeln('FAIL: ', E.ClassName, ': ', E.Message); Halt(1); end;
   end;

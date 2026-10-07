@@ -56,7 +56,10 @@ DirectWrite UID programming, with an opt-in ACR122U/PN532 raw-RF adapter. It pre
 manufacturer metadata, verifies fresh RF selection and treats interrupted writes as
 uncertain. Gen3 UID-register programming and Gen4 UMC Classic/Type 2 layouts add
 four/seven/ten-byte profiles with explicit passwords and preserved configuration.
-See [the raw-RF guide](docs/RAW_UID.md) and [Gen3/Gen4 guide](docs/GEN3_GEN4_UID.md).
+USCUID/GDM adds public/hidden four/seven-byte sources for both wakeup styles.
+A separate authenticated factory FUID method performs one UID write with explicit
+uncertain-result and cached-UID handling. See [the raw-RF guide](docs/RAW_UID.md),
+[Gen3/Gen4 guide](docs/GEN3_GEN4_UID.md) and [USCUID/FUID guide](docs/USCUID_FUID.md).
 See [the contactless guide](docs/CONTACTLESS.md). Terminal/provider payments and direct
 NFC-kernel payments have a [documented integration design](docs/PAYMENTS.md);
 payment backends, other MIFARE/UID-programming families and generic NDEF access are

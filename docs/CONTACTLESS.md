@@ -16,7 +16,8 @@ hardware. Assign both a connected `ICardTransport` and an explicitly matching
 | Classic data-block writing | Six-byte supplied key and sixteen-byte payload; block zero and every sector trailer rejected before I/O |
 | Ultralight/NTAG pages | Explicit original Ultralight, EV1-48/128 and NTAG213/215/216 layouts; four-byte page reads/user writes and complete user-memory snapshots |
 | Programmable Classic UID | Explicit reprogrammable Gen2/CUID four/seven-byte layouts; dedicated manufacturer-block programming and verification |
-| Raw RF UID programming | Separate `TRawUidProgrammer`: Gen1a/unsealed UFUID, Type 2 DirectWrite, Gen3 and Gen4 UMC; ACR122U/PN532 adapter, explicit bit framing and fresh selection |
+| Factory FUID UID programming | Separate authenticated four-byte single-write API; factory/source checks, full read-back and explicit active/cached UID state |
+| Raw RF UID programming | Separate `TRawUidProgrammer`: Gen1a/unsealed UFUID, Type 2 DirectWrite, Gen3, Gen4 UMC and USCUID/GDM public/hidden sources; ACR122U/PN532 adapter, explicit bit framing and fresh selection |
 | PC/SC storage profile | FF CA/82/86/B0/D6 dialect checked against PC/SC Part 3 and ACS ACR122U API 2.04 |
 | NFC-EMV | Separate `TEMVCardReader` PPSE/AID/GPO/AFL path through ISO 7816 APDUs |
 | DESFire, Plus, ISO 15693, NDEF, other programmable UID families | Separate family/access implementations still pending |
@@ -233,3 +234,9 @@ Protocol facts were reviewed on 2026-10-07 against:
 
 The implementation is independently written; no external implementation or standards
 PDF is bundled. See [the payment architecture](PAYMENTS.md) for both payment routes.
+
+Factory FUID programming uses a separate optional `IFuidUidReaderProfile` and
+`ProgramFuidUidOnce`, preserving existing Gen2/Classic profile contracts. USCUID/GDM
+uses the raw programmer with explicitly configured public/hidden sources and
+wakeup styles. See [USCUID_FUID.md](USCUID_FUID.md) for preconditions, one-time
+semantics, cached UID handling and persistent raw-RF verification.

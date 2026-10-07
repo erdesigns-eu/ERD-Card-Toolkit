@@ -173,7 +173,10 @@ Protocol facts checked on 2026-10-07:
   rules, linked in [CONTACTLESS.md](CONTACTLESS.md) and [PROGRAMMABLE_UID.md](PROGRAMMABLE_UID.md).
 
 [Gen3/Gen4 UID profiles](GEN3_GEN4_UID.md) now add Gen3 four/seven-byte UID-register
-and Gen4 UMC Classic/Type 2 four/seven/ten-byte programming. Other USCUID unlock/configuration modes,
-write-once FUID, LF and UHF remain further concrete profiles. The shared raw-RF
+and Gen4 UMC Classic/Type 2 four/seven/ten-byte programming.
+[USCUID_FUID.md](USCUID_FUID.md) adds public/hidden USCUID/GDM sources with both
+wakeup styles and a separate authenticated factory FUID one-time operation.
+Magic Auth, partial configuration variants, other OTP profiles, LF and UHF remain
+further concrete profiles. The shared raw-RF
 foundation now supplies the bit framing, exclusive lifecycle and fresh selection
 needed to add their independent protocols.

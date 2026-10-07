@@ -38,6 +38,19 @@ type
     /// <summary>True only if the reader also reports RequestedUid after the block write; false means it still reports PreviousUid.</summary>
     ActiveUidVerified: Boolean;
   end;
+  /// <summary>Verified manufacturer-block write on a caller-identified four-byte factory FUID variant.</summary>
+  /// <remarks>Independent buffers on return; ordinary record assignment shares arrays.
+  /// A false active-UID flag requires fresh caller-controlled RF activation before provisioning is complete.</remarks>
+  TFuidUidResult = record
+    /// <summary>Independent original factory UID AA55C396, verified against manufacturer block zero.</summary>
+    PreviousUid: TBytes;
+    /// <summary>Independent requested four-byte UID.</summary>
+    RequestedUid: TBytes;
+    /// <summary>Independent complete sixteen-byte manufacturer block verified after the single write.</summary>
+    ManufacturerBlock: TBytes;
+    /// <summary>True if reader reports RequestedUid; false if it still caches the factory UID.</summary>
+    ActiveUidVerified: Boolean;
+  end;
   /// <summary>Independent manufacturer-block preparation for explicitly identified four/seven-byte Classic Gen2/CUID cards.</summary>
   /// <remarks>Does not detect a programmable card or implement RF unlock, one-time fuses, ten-byte layouts or UID emulation.</remarks>
   TProgrammableUidCodec = class
