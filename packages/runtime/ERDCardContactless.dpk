@@ -1,6 +1,6 @@
 package ERDCardContactless;
 
-{$DESCRIPTION 'ERD Card Contactless: explicit reader profiles and MIFARE Classic storage'}
+{$DESCRIPTION 'ERD Card Contactless: reader profiles, Classic/Type 2 storage and programmable UID'}
 {$RUNONLY}
 
 requires
@@ -8,6 +8,8 @@ requires
   ERDCardCore;
 
 contains
-  ERD.Card.Contactless in '..\..\src\contactless\ERD.Card.Contactless.pas';
+  ERD.Card.Contactless in '..\..\src\contactless\ERD.Card.Contactless.pas',
+  ERD.Card.Contactless.Type2 in '..\..\src\contactless\ERD.Card.Contactless.Type2.pas',
+  ERD.Card.Contactless.UID in '..\..\src\contactless\ERD.Card.Contactless.UID.pas';
 
 end.

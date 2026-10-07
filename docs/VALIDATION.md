@@ -10,13 +10,13 @@ Validated in the Linux cloud environment on 2026-10-07 after the legacy cleanup.
 | Belgian eID decoders and reader | 1821 assertions in seven groups passed using synthetic exact APDU transcripts |
 | ICAO MRZ and DG1/DG2 data codecs | 297 assertions passed: published MRZ examples, synthetic FAC/CBEFF records and malformed inputs |
 | EMV data codecs, application reader and diagnostics | 1605 assertions in nine groups passed, including exact PSE/PPSE/GPO/AFL/GET DATA/log transcripts and resource limits |
-| Contactless profiles and Classic storage | 684 assertions in five groups passed, including protected writes, authenticated operations, key wiping and uncertain write completion |
+| Contactless Classic/Type 2 storage and programmable UID | 6134 assertions in ten groups passed, including protected pages, complete snapshots, four/seven-byte Gen2 programming and uncertain outcomes |
 | Native Windows adapter branches | 38 assertions passed against an isolated Linux C ABI shim |
 | Console examples | APDU valid/invalid cases passed; PC/SC, eID, EMV and contactless help work without hardware |
 | FPC range/overflow/heap checks | Passed; no unfreed allocations in passing test programs |
 | Python checker regression tests | All 15 passed |
-| Pascalcheck core profile | All 21 readers passed on twenty-eight explicitly selected source files |
-| XML documentation | 539 visible API declarations inspected; zero findings |
+| Pascalcheck core profile | All 21 readers passed on thirty explicitly selected source files |
+| XML documentation | 586 visible API declarations inspected; zero findings |
 | Reference integrity | All 26 retained files match the original Git bytes and manifest hashes |
 | Patch whitespace | `git diff --check` passed |
 
@@ -48,7 +48,7 @@ lengths/padding, exact AID/MF/DF/EF selection, grouped reads, optional certifica
 states, bounded 61xx/6Cxx handling, EOF probes, 15-bit offsets, partial failures,
 no transport replay and transaction-release exception precedence. Its JPEG and
 certificate payloads are synthetic protocol fixtures, not decoded image or X.509
-validation tests. A total of 6878 Pascal assertions passed across the suites.
+validation tests. A total of 12328 Pascal assertions passed across the suites.
 The ICAO additions decode acquired files only; BAC/PACE, secure messaging and
 direct access to Dutch/Luxembourg/German documents are still pending.
 EMV tests exercise supplied PDOL values, GPO 80/77, optional fields, Track 2 fallback,
@@ -61,6 +61,14 @@ storage commands, explicit profile selection, UID ownership, all Mini/1K/4K trai
 boundaries, supplied key A/B, slot one, local key-command overwriting, failed
 load/authentication, protected writes before I/O, no write replay and uncertain
 completion after transport/parse/release failures. All keys and card data are synthetic.
+Type 2 tests validate all six datasheet layouts and excluded pages, masked configuration
+reads, exact page APDUs, complete ascending-page snapshots, read failures and release
+failures. Gen2/CUID tests validate explicit four/seven-byte manufacturer layouts,
+cascade-marker constraints, BCC/metadata preservation, current UID/block consistency,
+dedicated one-attempt writes, complete read-back and active UID verification. Matching
+UIDs are no-op writes; a cached previous UID remains explicitly pending reactivation.
+Failures after accepted programming cannot return completed snapshots. Original
+Classic-only profiles still work and reject new optional capabilities before I/O.
 Real payment-card behavior, contact/contactless schemes and Delphi package/IDE
 integration remain pending; no payment kernel or scheme certification is claimed.
 
@@ -68,7 +76,10 @@ Pending: Delphi dcc32/dcc64 builds, runtime package builds, generated XML/Help
 Insight inspection in RAD Studio, and real Belpic 1.7/1.8 contact-card checks for
 T=0/T=1, padded files, photographs, issued/unissued certificates and card removal.
 Contactless reader/firmware/card compatibility and physical write/read-back tests
-remain pending; no broad reader certification or payment-processing support is claimed.
+remain pending, including fresh RF activation after UID programming. Other programmable
+UID families, one-time fuses and ten-byte layouts remain unsupported by this release;
+see [the programmable UID matrix](PROGRAMMABLE_UID.md). No broad reader certification
+or payment-processing support is claimed.
 The scripts detect selected common errors; they do not prove compiler or hardware
 compatibility. Refer to [the protocol guide](PROTOCOL_CORE.md),
 [the PC/SC guide](PCSC_TRANSPORT.md) and [the eID guide](BELGIAN_EID.md) for the API boundaries.
