@@ -97,8 +97,9 @@ start at physical byte 160, outside the 144-byte CC data area. Lock Control TLVs
 must point into the selected model's three dynamic lock bytes. Memory Control TLVs
 may describe an external range within physical memory. Internal reserved-memory
 holes are rejected explicitly; no contiguous interpretation silently skips their
-semantics. Other mapping versions, sector selection and Type 1/3/4/5 access layers
-are separate implementations.
+semantics. Other mapping versions, sector selection and Type 1/3/5 access layers
+remain separate implementations. Public ISO 7816 Type 4 mapping 1.0/2.0 access is
+now available in [TYPE4_NDEF.md](TYPE4_NDEF.md).
 
 `HasNdef` distinguishes absence from an empty TLV. Empty length returns no records
 and stops interpreting the tail, because it can denote an update in progress.

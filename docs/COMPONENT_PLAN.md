@@ -66,7 +66,9 @@ are not compatibility requirements.
    see [Type 2 password access](TYPE2_PASSWORD.md).
    Bounded NDEF framing/chunk reassembly, strict Text/URI/MIME/external/Smart Poster
    helpers and public contiguous Type 2 CC/TLV reads/verified length-last updates are
-   implemented; see [NDEF](NDEF.md). Additional NDEF tag-type access, further UID
+   implemented; see [NDEF](NDEF.md). Public Type 4 mapping 1.0/2.0 CC/file reads and
+   verified NLEN-last writes through ISO 7816 are also implemented; see
+   [Type 4 NDEF](TYPE4_NDEF.md). Additional NDEF tag-type access, further UID
    generations, other Type 2 authentication, DESFire/secure messaging, Plus and
    broader reader backends remain separate profiles; see [the contactless guide](CONTACTLESS.md).
    **TMemoryCardReaderWriter** remains planned for contact memory-card families and
@@ -88,19 +90,17 @@ and validation coverage. See [the cleanup record](LEGACY_CLEANUP.md).
 
 ## Next coherent batches
 
-The NDEF increment groups message framing, application RTDs and Type 2 access in
-one PR. Following increments should also combine their pure codecs, component,
-examples, protocol failure tests and documentation:
+The Type 2 and Type 4 NDEF increments combine pure codecs, record/descriptor
+handling, verified card components, examples, protocol failure tests and API
+documentation. Use the same complete scope for upcoming batches:
 
-1. **Type 4 NDEF:** ISO 7816 application/file selection, CC descriptors, bounded
-   READ/UPDATE BINARY with MLe/MLc/NLEN handling and verified length-last updates.
-2. **Magstripe:** strict Track 1/2/3 character/bit codecs, parity/LRC and typed fields,
+1. **Magstripe:** strict Track 1/2/3 character/bit codecs, parity/LRC and typed fields,
    then YL160/MSR reader-writer adapters with explicit supported SDK/driver versions.
-3. **Additional chip families:** DESFire through a maintained authenticated crypto
+2. **Additional chip families:** DESFire through a maintained authenticated crypto
    provider, ISO 15693/Type 5 through capable reader backends, then contact memory chips.
-4. **European eID access:** BAC/PACE and secure-messaging integration for the existing
+3. **European eID access:** BAC/PACE and secure-messaging integration for the existing
    MRZ/DG codecs, with concrete Netherlands/Luxembourg/Germany card profiles.
-5. **Payments:** a concrete terminal/provider integration, followed by a separately
+4. **Payments:** a concrete terminal/provider integration, followed by a separately
    integrated direct NFC kernel where supported; data-reading alone cannot authorize payment.
 
 Authentication, hardware coverage and successful operations remain explicit per
