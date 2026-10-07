@@ -22,7 +22,19 @@ if errorlevel 1 exit /b %errorlevel%
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\ProtocolCore.Tests.exe"
 if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\pcsc" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\transport\CardTransport.Tests.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\CardTransport.Tests.exe"
+if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\pcsc" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" examples\pcsc\InspectReader.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\InspectReader.exe" --help
+if errorlevel 1 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -Usrc\core -N0"%CARD_BUILD%" -E"%CARD_BUILD%" examples\core\InspectApdu.dpr
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\InspectApdu.exe" 0000000002AABB00
+if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -Usrc\core -N0"%CARD_BUILD%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" packages\runtime\ERDCardCore.dpk
+if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\pcsc;%CARD_BUILD%" -N0"%CARD_BUILD%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" packages\runtime\ERDCardPCSC.dpk
 exit /b %errorlevel%

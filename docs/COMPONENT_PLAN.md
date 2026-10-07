@@ -13,9 +13,13 @@ are not compatibility requirements.
    explicit limits, immutable TLV trees, deep cloning and canonical definite-length
    encoding. EMV encoded tags are supported; this is not a general ASN.1 schema
    validator. EMV tag descriptions and ATR-identification catalogs remain separate.
-3. **TSmartCardReader.** An instance-owned PC/SC transport with pointer-sized
-   handles, deterministic watcher cancellation/join, explicit event threads and
-   reader selection by identity. Test transports allow protocol tests without hardware.
+3. **TSmartCardReader — implementation available; Windows/hardware validation pending.**
+   Instance-owned PC/SC transport with pointer-sized handles, transaction thread
+   ownership, deterministic watcher cancellation/join, caller-thread event polling
+   and Unicode reader selection by identity. An injectable API supports lifecycle
+   tests without hardware; a Linux C shim exercises native adapter arguments/layouts.
+   Runtime packages and an inspection example are supplied. Design-time registration
+   and real Delphi/Windows/card checks remain pending.
 4. **TBelgianEIDReader.** Belgian eID support based on authoritative file/protocol
    definitions: identity, address, photo bytes and available certificates. Explicitly
    identify supported card generations. Reading signed files and verifying their

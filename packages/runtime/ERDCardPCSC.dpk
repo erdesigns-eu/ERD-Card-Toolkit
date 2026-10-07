@@ -1,0 +1,15 @@
+package ERDCardPCSC;
+
+{$DESCRIPTION 'ERD Card PC/SC: non-visual reader and Windows byte transport'}
+{$RUNONLY}
+
+requires
+  rtl,
+  ERDCardCore;
+
+contains
+  ERD.Card.PCSC.Api in '..\..\src\pcsc\ERD.Card.PCSC.Api.pas',
+  ERD.Card.PCSC.Windows in '..\..\src\pcsc\ERD.Card.PCSC.Windows.pas',
+  ERD.Card.PCSC.Reader in '..\..\src\pcsc\ERD.Card.PCSC.Reader.pas';
+
+end.

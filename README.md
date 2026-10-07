@@ -12,13 +12,14 @@ The implemented foundation is a standalone RTL core:
   bytes, advertised protocols and mandatory TCK validation.
 - `ERD.Card.TLV`: bounded definite-length ISO 7816 BER-TLV decoding, EMV encoded
   tags, immutable owned trees, deep cloning and canonical encoding.
+- `ERD.Card.Transport`: the shared `ICardTransport` byte-exchange contract.
 
 The core has no VCL, reader, vendor-DLL or external package dependency. It does
 not send commands to a card. The obsolete application and its supporting assets
 have been removed. Selected original protocol code remains in `reference/legacy`,
 outside the library. See [the cleanup record](docs/LEGACY_CLEANUP.md).
 
-## Planned components
+## Components
 
 | Component | Responsibility |
 | --- | --- |
@@ -29,7 +30,11 @@ outside the library. See [the cleanup record](docs/LEGACY_CLEANUP.md).
 | `TMemoryCardReaderWriter` | Supported memory-card families through appropriate reader adapters |
 | `TContactlessCardReader` | Supported contactless families through distinct card profiles |
 
-These components are planned, not implemented yet. See [the component plan](docs/COMPONENT_PLAN.md).
+`TSmartCardReader` is implemented as a non-visual component in `src/pcsc`, with
+reader discovery, T=0/T=1 connections, transactions, raw ATR reads and optional
+monitoring. Its lifecycle is tested with an injected API; Windows/Delphi/hardware
+validation remains pending. The other components are planned. See
+[the component plan](docs/COMPONENT_PLAN.md) and [the PC/SC guide](docs/PCSC_TRANSPORT.md).
 
 ## Using the core
 
@@ -63,7 +68,7 @@ free the document when finished and clone a borrowed node if it must outlive its
 Run the source-aware Pascal readers, including XML-documentation coverage:
 
 ```sh
-python3 tools/pascalcheck/run.py --profile core --source-root src/core --source-root tests/core --source-root examples/core -v
+python3 tools/pascalcheck/run.py --profile core --source-root src --source-root tests --source-root examples -v
 python3 -m unittest discover -s tests/tools -v
 ```
 
@@ -77,7 +82,11 @@ An extracted compiler can be supplied with `--fpc /path/to/ppcx64` and
 `--rtl-dir /path/to/units/x86_64-linux/rtl`. Outputs stay in ignored `dist/core/fpc`.
 The tests exercise the actual Pascal units with range and overflow checks, all
 command cases, length boundaries, invalid inputs, independent buffers and responses,
-ATR checksums, TLV normalization, tree ownership and resource limits. FPC heap
+ATR checksums, TLV normalization, tree ownership and resource limits. Transport
+tests exercise transaction ownership, independent instances, serialized commands,
+failure cleanup and monitor cancellation/join. Linux with GCC also runs an isolated
+C ABI shim against the actual Windows adapter branches. This validates buffers,
+Unicode and record layouts, not Windows calling conventions or real drivers. FPC heap
 tracing also checks the Pascal test executables for leaked allocations.
 Free Pascal execution is additional validation; it does not establish Delphi
 compiler, Windows package or IDE compatibility.
@@ -92,7 +101,8 @@ tools\run-core-tests.cmd dcc32
 tools\run-core-tests.cmd dcc64
 ```
 
-The Windows script builds with XML documentation, range checks and overflow checks.
+The Windows script builds the Pascal tests, console examples and both runtime
+packages with XML documentation, range checks and overflow checks.
 It has not been executed in the Linux development environment. Verify the generated
 XML documentation and Help Insight in the target IDE as described in
 [the documentation standard](docs/API_DOCUMENTATION.md).
