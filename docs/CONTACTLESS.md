@@ -15,6 +15,7 @@ hardware. Assign both a connected `ICardTransport` and an explicitly matching
 | Classic block reading | Supplied six-byte key A/B, volatile key-slot load, authentication and read in one transaction |
 | Classic data-block writing | Six-byte supplied key and sixteen-byte payload; block zero and every sector trailer rejected before I/O |
 | Ultralight/NTAG pages | Explicit original Ultralight, EV1-48/128 and NTAG213/215/216 layouts; four-byte page reads/user writes and complete user-memory snapshots |
+| Password-authenticated EV1/NTAG user memory | Separate `TType2PasswordCardReader`: one supplied-password/PACK check per raw session, bounded FAST_READ snapshots and verified user-page writes |
 | Programmable Classic UID | Explicit reprogrammable Gen2/CUID four/seven-byte layouts; dedicated manufacturer-block programming and verification |
 | Factory FUID UID programming | Separate authenticated four-byte single-write API; factory/source checks, full read-back and explicit active/cached UID state |
 | Raw RF UID programming | Separate `TRawUidProgrammer`: Gen1a/Gen1b/unsealed UFUID, Type 2 DirectWrite, Gen3, Gen4 UMC, USCUID/GDM public/hidden and partial UFUID/ZUID/PFUID sources; ACR122U/PN532 adapter, explicit bit framing and fresh selection |
@@ -153,9 +154,11 @@ into a native four-page RF READ and truncate the result; RF wraparound and passw
 boundary behavior depend on the reader/card. Physical tests must establish those
 details. The component rejects a driver returning sixteen bytes for a four-byte request.
 
-This release reads/writes publicly accessible user memory. PWD_AUTH, PACK validation,
-Ultralight C/EV2/AES variants, NTAG I2C/sector selection, secure messaging, NDEF message
-parsing/writing and lock interpretation are separate pending profiles. Enabled mirror
+The PC/SC storage path reads/writes publicly accessible user memory. Supplied-password
+PWD_AUTH/PACK verification and protected user-memory operations are implemented
+separately in [TYPE2_PASSWORD.md](TYPE2_PASSWORD.md), using retained raw-RF state.
+Ultralight C/EV2/AES, NTAG I2C/sector selection, secure messaging, NDEF and lock
+interpretation remain separate profiles. Enabled mirror
 features can affect reader-visible data; a snapshot is not a claim of raw backing EEPROM.
 
 Declare `Memory: TType2UserMemory` and add `ERD.Card.Contactless.Type2` to uses:
@@ -193,7 +196,7 @@ security profiles. None is a substitute for a payment kernel. NDEF is a data for
 on top of a specific NFC tag type and access layer. LF 125 kHz and UHF RFID require
 suitable hardware/backends and are not implicitly supported by an NFC PC/SC reader.
 
-The next family implementations are Type 2 authentication/NDEF, further programmable
+The next family implementations are NDEF and other Type 2 authentication variants, further programmable
 UID card/reader profiles and DESFire with a maintained crypto/secure-messaging provider.
 Additional profiles are planned, not advertised
 as already readable/writable. Maintain a tested matrix of reader/firmware/driver/card

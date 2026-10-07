@@ -61,7 +61,10 @@ are not compatibility requirements.
    profiles use distinct read opcodes and persistent verification; see
    [Gen1b/partial profiles](GEN1B_PARTIAL_UID.md).
    Runtime package, UID/Type 2 example and synthetic transcripts supplied.
-   Further UID generations, Type 2 authentication, DESFire/secure messaging, Plus,
+   `TType2PasswordCardReader` implements supplied-password EV1/NTAG user-memory
+   access, PACK verification and single-write read-back in a retained raw session;
+   see [Type 2 password access](TYPE2_PASSWORD.md).
+   Further UID generations, other Type 2 authentication, DESFire/secure messaging, Plus,
    NDEF and broader reader backends
    remain separate profiles; see [the contactless guide](CONTACTLESS.md).
    **TMemoryCardReaderWriter** remains planned for contact memory-card families and

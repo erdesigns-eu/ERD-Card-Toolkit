@@ -15,6 +15,7 @@ contains
   ERD.Card.Contactless.UID.USCUID in '..\..\src\contactless\ERD.Card.Contactless.UID.USCUID.pas',
   ERD.Card.Contactless.UID.Partial in '..\..\src\contactless\ERD.Card.Contactless.UID.Partial.pas',
   ERD.Card.Contactless.Raw in '..\..\src\contactless\ERD.Card.Contactless.Raw.pas',
+  ERD.Card.Contactless.Type2.Password in '..\..\src\contactless\ERD.Card.Contactless.Type2.Password.pas',
   ERD.Card.Contactless.ACR122 in '..\..\src\contactless\ERD.Card.Contactless.ACR122.pas';
 
 end.

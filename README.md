@@ -51,6 +51,10 @@ whether the active UID also changed. Ordinary data writers reject manufacturer,
 trailer and lock/configuration regions. Uncertain write completion has its own
 exception and commands are never replayed. The PC/SC storage profile has synthetic
 tests; real-card/reader validation remains pending.
+`TType2PasswordCardReader` adds supplied-password Ultralight EV1/NTAG213/215/216
+user-page reads, complete memory snapshots and verified single-page writes. Each
+operation validates PACK and retains authentication within one raw-RF session;
+see [the Type 2 password guide](docs/TYPE2_PASSWORD.md).
 `TRawUidProgrammer` adds four-byte Gen1a/Gen1b/unsealed UFUID and seven-byte Type 2
 DirectWrite UID programming, with an opt-in ACR122U/PN532 raw-RF adapter. It preserves
 manufacturer metadata, verifies fresh RF selection and treats interrupted writes as
