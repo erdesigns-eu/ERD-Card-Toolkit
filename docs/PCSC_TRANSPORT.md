@@ -57,6 +57,13 @@ limitations may be stricter and are reported as native errors. The native receiv
 buffer is allocated before sending; an insufficient-buffer failure never resends.
 Transmit or response-framing failure closes the ambiguous connection.
 
+The same transport also exposes optional `ICardTransaction` through `Supports`.
+Its parameterless BeginTransaction/EndTransaction map to the session's existing
+transaction operations with leave-card disposition. Protocol components can protect
+their whole SELECT/READ sequence without depending on the PC/SC unit. The eID reader
+uses this capability by default. Do not nest a component transaction inside an
+already active one; use explicit caller-managed serialization where appropriate.
+
 Exchanges are serialized within a session. BeginTransaction additionally acquires
 the PC/SC transaction lock against other native connections. Transactions cannot be
 nested and belong to the thread that began them; exchanges/end/normal close from

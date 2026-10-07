@@ -42,6 +42,22 @@ type
     function Exchange(const ACommand: TBytes): TBytes;
   end;
 
+  /// <summary>Optional exclusive transaction capability for a multi-command card operation.</summary>
+  /// <remarks>Query the transport with Supports. Transactions are non-nesting and owned by
+  /// the calling thread. Retain the interface until EndTransaction has completed.
+  /// Implementations must exclude other threads and other clients of the physical card.</remarks>
+  ICardTransaction = interface
+    ['{F2B6855C-4DC7-4FA7-BC38-45CDE11E0E0F}']
+    /// <summary>Acquires exclusive access to the connected card for this thread.</summary>
+    /// <exception cref="ECardTransportError">The connection or transaction state is invalid.</exception>
+    /// <remarks>May block behind another client; hardware failures may raise transport-specific exceptions.</remarks>
+    procedure BeginTransaction;
+    /// <summary>Releases this thread's transaction, leaving the card powered and unchanged.</summary>
+    /// <exception cref="ECardTransportError">No transaction belongs to the calling thread.</exception>
+    /// <remarks>Release failures may close the connection and raise a transport-specific exception.</remarks>
+    procedure EndTransaction;
+  end;
+
 implementation
 
 end.
