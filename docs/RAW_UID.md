@@ -1,7 +1,7 @@
 # Raw RF UID programming
 
 `TRawUidProgrammer` in `ERD.Card.Contactless.Raw` adds actual programming paths for
-caller-identified **four-byte Gen1a**, **unsealed four-byte UFUID using Gen1a wakeup**,
+caller-identified **four-byte Gen1a/Gen1b**, **unsealed four-byte UFUID using Gen1a wakeup**,
 and **reprogrammable seven-byte Ultralight/NTAG-style DirectWrite** cards. These
 protocols and the concrete ACR122U adapter are implemented and tested with synthetic
 transcripts. Physical card/reader/driver compatibility still needs validation.
@@ -95,14 +95,15 @@ and UID length alone cannot establish it.
 The examples perform explicit writes if executed. No CLI command containing real
 keys or identifier values, card fuse, or physical write was run during development.
 
-## Classic Gen1a and unsealed UFUID
+## Classic Gen1a, Gen1b and unsealed UFUID
 
 1. Validate the explicit profile and four-byte UID before acquiring a session.
 2. Freshly activate; require a four-byte UID.
 3. Send `50 00 + CRC-A` (HALT), requiring its expected RF timeout. A USB/PC/SC
    exception is not mistaken for that timeout.
 4. Send seven-bit `40`, then eight-bit `43`, requiring a four-bit ACK value A for
-   each. Do not send the `41` wipe command or USCUID configuration/fuse commands.
+   each. For explicit `crupGen1b`, send only seven-bit40; never43 or a fallback
+   probe. Do not send the `41` wipe command or configuration/fuse data.
 5. Read block zero using `30 00 + CRC-A`. Validate all eighteen received bytes,
    CRC-A and the four-byte layout's BCC; require its UID to match fresh selection.
 6. Prepare sixteen bytes, replacing UID0..3 and BCC4 while preserving bytes5..15.
@@ -110,7 +111,8 @@ keys or identifier values, card fuse, or physical write was run during developme
 7. Otherwise send `A0 00 + CRC-A`, require ACK, send sixteen prepared bytes plus
    CRC-A and require ACK. No sector key is guessed or searched.
 8. Read and compare all sixteen bytes, freshly reactivate and require the requested
-   RF UID. Return the result only after successful session release.
+   RF UID. Gen1b then repeats HALT/40 and compares the full block again after
+   reactivation. Return the result only after successful session release.
 
 `TProgrammableUidResult.ActiveUidVerified` is true on every returned raw result.
 An old UID after **fresh** selection is a verification failure, not the cached UID
@@ -150,7 +152,7 @@ The component never blindly retries.
 
 The test suite includes CRC-A golden vectors; both cascade checksums; protected
 metadata preservation; exact seven/eight-bit transmit and four-bit receive framing;
-Gen1a and unsealed-UFUID sequences; no-ops; failed unlocks, handshakes, data writes,
+Gen1a, Gen1b and unsealed-UFUID sequences; no-ops; failed unlocks, handshakes, data writes,
 each Type 2 page, read-back, activation and release; exact ACR122/PN532 commands and
 a complete programmer-through-adapter transcript. Real cards, Windows drivers,
 Delphi packages and Help Insight still require independent checks.
@@ -176,7 +178,9 @@ Protocol facts checked on 2026-10-07:
 and Gen4 UMC Classic/Type 2 four/seven/ten-byte programming.
 [USCUID_FUID.md](USCUID_FUID.md) adds public/hidden USCUID/GDM sources with both
 wakeup styles and a separate authenticated factory FUID one-time operation.
-Magic Auth, partial configuration variants, other OTP profiles, LF and UHF remain
+[GEN1B_PARTIAL_UID.md](GEN1B_PARTIAL_UID.md) adds Gen1b40-only wakeup and
+configuration-verified partial UFUID/ZUID/PFUID variants with reversed PFUID reads.
+Magic Auth, unknown partial markers, other OTP profiles, LF and UHF remain
 further concrete profiles. The shared raw-RF
 foundation now supplies the bit framing, exclusive lifecycle and fresh selection
 needed to add their independent protocols.

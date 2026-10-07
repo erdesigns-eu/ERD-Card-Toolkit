@@ -78,9 +78,10 @@ further programming. No replay, rollback, partial success result or configuratio
 write is attempted.
 
 The profile does not implement `E1` configuration writes, personalization changes,
-wipe/seal/unfuse commands, Magic Auth/Crypto1 wakeup, Gen1b, partial eight-byte
-UFUID/ZUID/PFUID configurations or their command variants. Those require distinct
-profiles. It does not change CUID/direct-write, shadow, nonce, signature or SAK
+wipe/seal/unfuse commands or Magic Auth/Crypto1 wakeup. Gen1b and partial-feature
+UFUID/ZUID/PFUID configurations use separate implemented profiles described in
+[GEN1B_PARTIAL_UID.md](GEN1B_PARTIAL_UID.md); unknown marker revisions remain
+separate future profiles. It does not change CUID/direct-write, shadow, nonce, signature or SAK
 configuration to make the card fit. UMC/GTU password-bearing `CF` commands remain
 [a separate implemented dialect](GEN3_GEN4_UID.md).
 

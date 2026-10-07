@@ -16,7 +16,7 @@ uses
   System.SysUtils,
 {$ENDIF}
   ERD.Card.Bytes, ERD.Card.Transport, ERD.Card.Contactless,
-  ERD.Card.Contactless.UID, ERD.Card.Contactless.UID.Profiles, ERD.Card.Contactless.UID.USCUID,
+  ERD.Card.Contactless.UID, ERD.Card.Contactless.UID.Profiles, ERD.Card.Contactless.UID.USCUID, ERD.Card.Contactless.UID.Partial,
   ERD.Card.Contactless.Raw, ERD.Card.Contactless.ACR122;
 
 type
@@ -175,6 +175,16 @@ begin
   Script.Add('43', '0A', 8, 4);
 end;
 
+procedure AddClassicUnlock(Script: TRawScript; const AProfile: TClassicRawUidProfile);
+begin
+  if AProfile = crupGen1b then
+  begin
+    Script.Add('500057CD', '', 32, 0, True);
+    Script.Add('40', '0A', 7, 4);
+  end
+  else AddUnlock(Script);
+end;
+
 procedure TestCodecs;
 var Data, Prepared, Uid: TBytes; Response: TRawRfResponse;
   I: Integer; Raised: Boolean;
@@ -228,7 +238,7 @@ end;
 
 procedure TestClassicProgramming;
 var Programmer: TRawUidProgrammer; Script: TRawScript; Data: TProgrammableUidResult;
-  Profile: TClassicRawUidProfile;
+  Profile: TClassicRawUidProfile; ExpectedFrames: Integer;
 begin
   Programmer := TRawUidProgrammer.Create(nil);
   try
@@ -238,14 +248,21 @@ begin
       Programmer.Reader := Script;
       Script.SelectUid('11223344');
       Script.SelectUid('A1B2C3D4');
-      AddUnlock(Script);
+      AddClassicUnlock(Script, Profile);
       AddRead(Script, OldBlock);
       Script.Add(WithCrc('A000'), '0A', 32, 4);
       Script.Add(WithCrc(NewBlock), '0A', 144, 4);
       AddRead(Script, NewBlock);
+      ExpectedFrames := 7;
+      if Profile = crupGen1b then
+      begin
+        AddClassicUnlock(Script, Profile);
+        AddRead(Script, NewBlock);
+        ExpectedFrames := 9;
+      end;
       Data := Programmer.ProgramClassicUid(Profile, HexToBytes('A1B2C3D4'));
       Check(Data.ActiveUidVerified and (BytesToHex(Data.ManufacturerBlock) = NewBlock), 'Full block and fresh UID verification');
-      Check((Script.Position = 7) and (Script.Selections = 2) and (Script.Begins = 1) and (Script.Ends = 1), 'One unlock/write operation and fresh RF check');
+      Check((Script.Position = ExpectedFrames) and (Script.Selections = 2) and (Script.Begins = 1) and (Script.Ends = 1), 'One unlock/write operation and fresh RF check');
       Check(BytesToHex(Data.PreviousUid) = '11223344', 'Original RF UID snapshot');
     end;
     Script := TRawScript.Create;
@@ -256,7 +273,7 @@ begin
     Data := Programmer.ProgramClassicUid(crupGen1a, HexToBytes('11223344'));
     Check(Data.ActiveUidVerified and (Script.Position = 4), 'Classic already matching no-op');
   finally Programmer.Free; end;
-  Writeln('PASS: Gen1a/unsealed UFUID exact seven-bit unlock, metadata, write and fresh RF UID.');
+  Writeln('PASS: Gen1a/unsealed UFUID and Gen1b exact seven-bit unlock, metadata, write and fresh RF UID.');
 end;
 
 procedure TestClassicFailures;
@@ -1327,6 +1344,346 @@ begin
   Writeln('PASS: concrete USCUID/GDM ACR122U/PN532 hidden/public writes, fresh selection and cleanup.');
 end;
 
+function PartialConfig(const AProfile: TPartialUscuidProfile): TBytes;
+begin
+  case AProfile of
+    pupUnsealedUfuid: Result := HexToBytes('7AFF000000000000BAFA000000000008');
+    pupZuid: Result := HexToBytes('7AFF0000000000000000000000000008');
+    pupPfuid: Result := HexToBytes('7AFF000000000000BAFA358500000008');
+  else Result := nil; end;
+end;
+
+procedure AddPartialTranscript(Script: TRawScript; const AProfile: TPartialUscuidProfile;
+  const ANoOp: Boolean = False; const AConfigHex: string = '');
+var Command, Config: string;
+begin
+  if AProfile = pupPfuid then Command := 'E100' else Command := 'E000';
+  if AConfigHex = '' then Config := BytesToHex(PartialConfig(AProfile)) else Config := AConfigHex;
+  Script.SelectUid('11223344');
+  AddUnlock(Script);
+  AddUscuidRead(Script, Command, Config);
+  AddRead(Script, OldBlock);
+  if ANoOp then Exit;
+  AddUscuidWrite(Script, 'A000', NewBlock);
+  Script.SelectUid('A1B2C3D4');
+  AddUnlock(Script);
+  AddUscuidRead(Script, Command, Config);
+  AddRead(Script, NewBlock);
+end;
+
+procedure AddGen1bTranscript(Script: TRawScript; const ANoOp: Boolean = False);
+begin
+  Script.SelectUid('11223344');
+  AddClassicUnlock(Script, crupGen1b);
+  AddRead(Script, OldBlock);
+  if ANoOp then Exit;
+  AddUscuidWrite(Script, 'A000', NewBlock);
+  AddRead(Script, NewBlock);
+  Script.SelectUid('A1B2C3D4');
+  AddClassicUnlock(Script, crupGen1b);
+  AddRead(Script, NewBlock);
+end;
+
+procedure TestPartialCodecs;
+var Profile, Other: TPartialUscuidProfile; Config: TBytes; I: Integer; Raised: Boolean;
+begin
+  Check((Ord(crupGen1a) = 0) and (Ord(crupUnsealedUfuid) = 1) and (Ord(crupGen1b) = 2), 'Existing Classic profile ordinals are retained');
+  Check(WithCrc('E000') = 'E00039F7', 'Pinned E0 configuration-read CRC vector');
+  Check(WithCrc('E100') = 'E100E1EE', 'Independent E1 reversed PFUID-read CRC vector');
+  for Profile := Low(TPartialUscuidProfile) to High(TPartialUscuidProfile) do
+  begin
+    if Profile = pupPfuid then Check(TPartialUscuidUidCodec.ConfigurationReadCommand(Profile) = $E1, 'Only explicit PFUID uses E1 read')
+    else Check(TPartialUscuidUidCodec.ConfigurationReadCommand(Profile) = $E0, 'UFUID/ZUID E0 read');
+    Config := PartialConfig(Profile);
+    TPartialUscuidUidCodec.ValidateConfiguration(Profile, Config);
+    Check(BytesEqual(Config, PartialConfig(Profile)), 'Configuration remains independent and unchanged');
+    for Other := Low(TPartialUscuidProfile) to High(TPartialUscuidProfile) do
+    begin
+      Raised := False;
+      try TPartialUscuidUidCodec.ValidateConfiguration(Other, Config);
+      except on E: EProgrammableUidError do Raised := True; end;
+      Check(Raised = (Other <> Profile), 'Opaque markers are variant-specific, not full-USCUID personalization');
+    end;
+    for I := 0 to 15 do
+    begin
+      Config := PartialConfig(Profile);
+      if I = 15 then Config[I] := Config[I] xor $04 else Config[I] := Config[I] xor 1;
+      Raised := False;
+      try TPartialUscuidUidCodec.ValidateConfiguration(Profile, Config);
+      except on E: EProgrammableUidError do Raised := True; end;
+      Check(Raised, 'Unknown header/marker/flag or nonfinal SAK is rejected');
+    end;
+    for I := 0 to 18 do
+    begin
+      Config := PartialConfig(Profile);
+      SetLength(Config, I);
+      Raised := False;
+      try TPartialUscuidUidCodec.ValidateConfiguration(Profile, Config);
+      except on E: EProgrammableUidError do Raised := True; end;
+      Check(Raised = (I <> 16), 'Exactly sixteen configuration bytes, despite partial feature implementation');
+    end;
+  end;
+  Writeln('PASS: Gen1b ordinal stability, PFUID reversed read and three explicit partial configuration shapes.');
+end;
+
+procedure TestPartialProgramming;
+var Programmer: TRawUidProgrammer; Script: TRawScript; Profile: TPartialUscuidProfile;
+  Data: TPartialUscuidUidResult; Config, Uid: TBytes; I: Integer;
+begin
+  Programmer := TRawUidProgrammer.Create(nil);
+  try
+    for Profile := Low(TPartialUscuidProfile) to High(TPartialUscuidProfile) do
+    begin
+      for I := 0 to 3 do
+      begin
+        Script := TRawScript.Create;
+        Programmer.Reader := Script;
+        Config := PartialConfig(Profile);
+        if (I and 1) <> 0 then Config[6] := $5A;
+        if (I and 2) <> 0 then Config[7] := $5A;
+        case I of
+          0: Config[15] := $08;
+          1: Config[15] := $18;
+          2: Config[15] := $20;
+          3: Config[15] := 0;
+        end;
+        AddPartialTranscript(Script, Profile, False, BytesToHex(Config));
+        Uid := HexToBytes('A1B2C3D4');
+        Data := Programmer.ProgramPartialUscuidUid(Profile, Uid);
+        Check(Data.ActiveUidVerified and (Data.Profile = Profile), 'All partial profiles and acknowledged flags');
+        Check((BytesToHex(Data.PreviousUid) = '11223344') and (BytesToHex(Data.ManufacturerBlock) = NewBlock), 'UID/BCC preparation preserves every metadata byte');
+        Check(BytesEqual(Data.Configuration, Config), 'Configuration is unchanged, including PFUID opaque 35/85 bytes and SAK');
+        Check((Script.Position = 12) and (Script.Selections = 2) and (Script.Begins = 1) and (Script.Ends = 1), 'One write, configuration/block verification after fresh activation');
+        Data.RequestedUid[0] := 0;
+        Data.Configuration[15] := $FF;
+        Check((BytesToHex(Uid) = 'A1B2C3D4') and (Config[15] <> $FF), 'Caller buffers and returned snapshots are independent');
+      end;
+      Script := TRawScript.Create;
+      Programmer.Reader := Script;
+      AddPartialTranscript(Script, Profile, True);
+      Data := Programmer.ProgramPartialUscuidUid(Profile, HexToBytes('11223344'));
+      Check(Data.ActiveUidVerified and (BytesToHex(Data.ManufacturerBlock) = OldBlock) and
+        BytesEqual(Data.Configuration, PartialConfig(Profile)), 'No-op returns actual original block and configuration');
+      Check((Script.Position = 5) and (Script.Selections = 1) and (Script.Ends = 1), 'No-op has no write, hidden probe or configuration change');
+    end;
+  finally Programmer.Free; end;
+  Writeln('PASS: UFUID/ZUID/PFUID metadata, flags, opaque configuration, persistent verification and no-ops.');
+end;
+
+procedure TestPartialFailures;
+var Programmer: TRawUidProgrammer; Script: TRawScript; Profile: TPartialUscuidProfile;
+  Data: TPartialUscuidUidResult; Payload: TBytes; I, Last: Integer; Raised, Uncertain: Boolean;
+begin
+  Programmer := TRawUidProgrammer.Create(nil);
+  try
+    for Profile := Low(TPartialUscuidProfile) to High(TPartialUscuidProfile) do
+      for I := 0 to 20 do
+      begin
+        Script := TRawScript.Create;
+        Programmer.Reader := Script;
+        AddPartialTranscript(Script, Profile);
+        Last := 11;
+        case I of
+          0: begin Script.Steps[0].Timeout := False; Last := 0; end;
+          1: begin Script.Steps[1].ReceivedBits := 8; Last := 1; end;
+          2: begin Script.Steps[2].Fails := True; Last := 2; end;
+          3: begin Script.Steps[3].Response := PartialConfig(Profile); Script.Steps[3].ReceivedBits := 128; Last := 3; end;
+          4, 5: begin
+            Payload := PartialConfig(Profile);
+            if I = 4 then begin Payload[0] := $85; Payload[1] := 0; end else Payload[8] := Payload[8] xor 1;
+            Script.Steps[3].Response := TRawUidCodec.AppendCrcA(Payload); Last := 3;
+          end;
+          6: begin
+            Payload := HexToBytes(OldBlock); Payload[4] := Payload[4] xor 1;
+            Script.Steps[4].Response := TRawUidCodec.AppendCrcA(Payload); Last := 4;
+          end;
+          7: begin Script.Uids[0] := HexToBytes('01020304'); Last := 4; end;
+          8: begin Script.Steps[5].Response := HexToBytes('00'); Last := 5; end;
+          9: begin Script.Steps[5].Fails := True; Last := 5; end;
+          10: begin Script.Steps[6].Response := HexToBytes('00'); Last := 6; end;
+          11: begin Script.Steps[6].Response := nil; Script.Steps[6].ReceivedBits := 0; Script.Steps[6].Timeout := True; Last := 6; end;
+          12: begin Script.Uids[1] := CopyBytes(Script.Uids[0]); Last := 6; end;
+          13: begin Script.Steps[9].Response := HexToBytes('00'); Last := 9; end;
+          14: begin
+            Payload := PartialConfig(Profile); Payload[15] := Payload[15] xor 1;
+            Script.Steps[10].Response := TRawUidCodec.AppendCrcA(Payload); Last := 10;
+          end;
+          15: begin
+            Payload := HexToBytes(NewBlock); Payload[15] := Payload[15] xor 1;
+            Script.Steps[11].Response := TRawUidCodec.AppendCrcA(Payload); Script.EndFails := True;
+          end;
+          16: Script.Steps[11].Response[17] := Script.Steps[11].Response[17] xor 1;
+          17: Script.EndFails := True;
+          18: begin Script.Steps[3].Response := HexToBytes('0A'); Script.Steps[3].ReceivedBits := 4; Last := 3; end;
+          19: begin Script.Steps[7].Timeout := False; Last := 7; end;
+          20: begin Script.Steps[10].Fails := True; Last := 10; end;
+        end;
+        SetLength(Script.Steps, Last + 1);
+        Raised := False;
+        Uncertain := False;
+        try Data := Programmer.ProgramPartialUscuidUid(Profile, HexToBytes('A1B2C3D4'));
+        except
+          on E: EContactlessWriteUncertain do
+          begin
+            Uncertain := True;
+            Raised := True;
+            if I = 15 then Check(E.OriginalErrorClass = 'EContactlessError', 'Persistent mismatch wins over release error');
+          end;
+          on E: EProgrammableUidError do Raised := True;
+          on E: EContactlessError do Raised := True;
+          on E: ECardTransportError do Raised := True;
+        end;
+        Check(Raised and (Uncertain = (I in [8..17, 19, 20])), 'Pre-dispatch failures retain type; every dispatched failure is uncertain');
+        Check((Script.Position = Length(Script.Steps)) and (Script.Ends = 1), 'Stop at exact failed stage; no fallback configuration command, retries or hidden probes');
+      end;
+    Script := TRawScript.Create;
+    Programmer.Reader := Script;
+    Raised := False;
+    try Data := Programmer.ProgramPartialUscuidUid(pupPfuid, HexToBytes('88112233'));
+    except on E: EProgrammableUidError do Raised := True; end;
+    Check(Raised and (Script.Begins = 0), 'Invalid four-byte cascade marker before acquisition');
+    Raised := False;
+    try Data := Programmer.ProgramPartialUscuidUid(pupPfuid, HexToBytes('04112233445566'));
+    except on E: EProgrammableUidError do Raised := True; end;
+    Check(Raised and (Script.Begins = 0), 'Partial profiles do not infer a seven-byte hidden layout');
+    Script := TRawScript.Create;
+    Programmer.Reader := Script;
+    Script.SelectUid('04112233445566');
+    Raised := False;
+    try Data := Programmer.ProgramPartialUscuidUid(pupUnsealedUfuid, HexToBytes('A1B2C3D4'));
+    except on E: EContactlessError do Raised := True; end;
+    Check(Raised and (Script.Position = 0) and (Script.Selections = 1) and (Script.Ends = 1), 'Wrong current UID size stops before any wakeup/configuration frame');
+    Script := TRawScript.Create;
+    Programmer.Reader := Script;
+    Script.BeginFails := True;
+    Raised := False;
+    try Data := Programmer.ProgramPartialUscuidUid(pupZuid, HexToBytes('A1B2C3D4'));
+    except on E: ECardTransportError do Raised := True; end;
+    Check(Raised and (Script.Begins = 1) and (Script.Ends = 0) and (Script.Position = 0), 'Failed acquisition is not an acquired session');
+  finally Programmer.Free; end;
+  Writeln('PASS: all three partial variants reject malformed/sealed/mismatched sources and report interrupted persistent verification.');
+end;
+
+procedure TestGen1bFailures;
+var Programmer: TRawUidProgrammer; Script: TRawScript; Data: TProgrammableUidResult;
+  Payload: TBytes; I, Last: Integer; Raised, Uncertain: Boolean;
+begin
+  Programmer := TRawUidProgrammer.Create(nil);
+  try
+    for I := 0 to 13 do
+    begin
+      Script := TRawScript.Create;
+      Programmer.Reader := Script;
+      AddGen1bTranscript(Script);
+      Last := 8;
+      case I of
+        0: begin Script.Steps[0].Timeout := False; Last := 0; end;
+        1: begin Script.Steps[1].ReceivedBits := 8; Last := 1; end;
+        2: begin Script.Uids[0] := HexToBytes('01020304'); Last := 2; end;
+        3: begin
+          Payload := HexToBytes(OldBlock); Payload[4] := Payload[4] xor 1;
+          Script.Steps[2].Response := TRawUidCodec.AppendCrcA(Payload); Last := 2;
+        end;
+        4: begin Script.Steps[3].Response := HexToBytes('00'); Last := 3; end;
+        5: begin Script.Steps[3].Fails := True; Last := 3; end;
+        6: begin Script.Steps[4].Response := HexToBytes('00'); Last := 4; end;
+        7: begin Script.Steps[4].Fails := True; Last := 4; end;
+        8: begin Script.Steps[5].Response := TRawUidCodec.AppendCrcA(HexToBytes(OldBlock)); Last := 5; end;
+        9: begin Script.Uids[1] := CopyBytes(Script.Uids[0]); Last := 5; end;
+        10: begin Script.Steps[7].Response := HexToBytes('00'); Last := 7; end;
+        11: begin
+          Payload := HexToBytes(NewBlock); Payload[15] := Payload[15] xor 1;
+          Script.Steps[8].Response := TRawUidCodec.AppendCrcA(Payload); Script.EndFails := True;
+        end;
+        12: Script.Steps[8].Response[17] := Script.Steps[8].Response[17] xor 1;
+        13: Script.EndFails := True;
+      end;
+      SetLength(Script.Steps, Last + 1);
+      Raised := False;
+      Uncertain := False;
+      try Data := Programmer.ProgramClassicUid(crupGen1b, HexToBytes('A1B2C3D4'));
+      except
+        on E: EContactlessWriteUncertain do
+        begin
+          Raised := True;
+          Uncertain := True;
+          if I = 11 then Check(E.OriginalErrorClass = 'EContactlessError', 'Persistent Gen1b block failure wins over release');
+        end;
+        on E: EContactlessError do Raised := True;
+        on E: EProgrammableUidError do Raised := True;
+      end;
+      Check(Raised and (Uncertain = (I >= 4)), 'Gen1b errors retain dispatch certainty');
+      Check((Script.Position = Length(Script.Steps)) and (Script.Ends = 1), 'Never sends 43, probes another wakeup or retries after failed Gen1b frame');
+    end;
+    Script := TRawScript.Create;
+    Programmer.Reader := Script;
+    AddGen1bTranscript(Script, True);
+    Data := Programmer.ProgramClassicUid(crupGen1b, HexToBytes('11223344'));
+    Check(Data.ActiveUidVerified and (BytesToHex(Data.ManufacturerBlock) = OldBlock) and
+      (Script.Position = 3) and (Script.Selections = 1), 'Gen1b verified no-op uses only HALT/40/read');
+    Script := TRawScript.Create;
+    Programmer.Reader := Script;
+    Raised := False;
+    try Data := Programmer.ProgramClassicUid(crupGen1b, HexToBytes('04112233445566'));
+    except on E: EProgrammableUidError do Raised := True; end;
+    Check(Raised and (Script.Begins = 0), 'Gen1b remains an explicit four-byte layout');
+  finally Programmer.Free; end;
+  Writeln('PASS: Gen1b 40-only no-op, write failures, before/after-activation read-back and cleanup precedence.');
+end;
+
+procedure TestNewProfileAdapters;
+var Script: TPcscScript; Programmer: TRawUidProgrammer; Reader: IRawContactlessReader;
+  ClassicData: TProgrammableUidResult; PartialData: TPartialUscuidUidResult; I, Pass: Integer;
+begin
+  Programmer := TRawUidProgrammer.Create(nil);
+  try
+    for I := 0 to 1 do
+    begin
+      Script := TPcscScript.Create;
+      Reader := TAcr122RawReader.Create(Script);
+      Programmer.Reader := Reader;
+      AddConfiguration(Script);
+      for Pass := 0 to 1 do
+      begin
+        if Pass = 0 then AddActivation(Script, '11223344')
+        else
+        begin
+          Script.Add('D408630280630380633D00', 'D5099000');
+          AddActivation(Script, 'A1B2C3D4');
+        end;
+        AddAcrExchange(Script, '500057CD', '', 0, 0, True);
+        AddAcrExchange(Script, '40', '0A', 7, 4);
+        if I = 1 then
+        begin
+          AddAcrExchange(Script, '43', '0A', 0, 4);
+          AddAcrExchange(Script, 'E100E1EE', WithCrc(BytesToHex(PartialConfig(pupPfuid))), 0, 0);
+        end;
+        if Pass = 0 then
+        begin
+          AddAcrExchange(Script, '300002A8', WithCrc(OldBlock), 0, 0);
+          AddAcrExchange(Script, WithCrc('A000'), '0A', 0, 4);
+          AddAcrExchange(Script, WithCrc(NewBlock), '0A', 0, 4);
+          if I = 0 then AddAcrExchange(Script, '300002A8', WithCrc(NewBlock), 0, 0);
+        end
+        else AddAcrExchange(Script, '300002A8', WithCrc(NewBlock), 0, 0);
+      end;
+      AddRelease(Script);
+      if I = 0 then
+      begin
+        ClassicData := Programmer.ProgramClassicUid(crupGen1b, HexToBytes('A1B2C3D4'));
+        Check(ClassicData.ActiveUidVerified, 'Complete Gen1b PN532 chain has no 43');
+      end
+      else
+      begin
+        PartialData := Programmer.ProgramPartialUscuidUid(pupPfuid, HexToBytes('A1B2C3D4'));
+        Check(PartialData.ActiveUidVerified, 'Complete PFUID PN532 chain reads E1, never E0 or hidden blocks');
+      end;
+      Check((Script.Position = Length(Script.Steps)) and (Script.Begins = 1) and (Script.Ends = 1), 'Complete exact adapter transcript, persistent reads and RF/register cleanup');
+    end;
+  finally Programmer.Free; Reader := nil; end;
+  Writeln('PASS: full concrete Gen1b and reversed-read PFUID ACR122U/PN532 integration chains.');
+end;
+
 begin
   try
     TestCodecs;
@@ -1347,7 +1704,12 @@ begin
     TestUscuidProgramming;
     TestUscuidFailures;
     TestUscuidAdapter;
-    Writeln('PASS: ', Checks, ' assertions across eighteen raw UID test groups.');
+    TestPartialCodecs;
+    TestPartialProgramming;
+    TestPartialFailures;
+    TestGen1bFailures;
+    TestNewProfileAdapters;
+    Writeln('PASS: ', Checks, ' assertions across twenty-three raw UID test groups.');
   except
     on E: Exception do begin Writeln('FAIL: ', E.ClassName, ': ', E.Message); Halt(1); end;
   end;

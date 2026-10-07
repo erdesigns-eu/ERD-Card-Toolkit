@@ -51,12 +51,14 @@ whether the active UID also changed. Ordinary data writers reject manufacturer,
 trailer and lock/configuration regions. Uncertain write completion has its own
 exception and commands are never replayed. The PC/SC storage profile has synthetic
 tests; real-card/reader validation remains pending.
-`TRawUidProgrammer` adds four-byte Gen1a/unsealed UFUID and seven-byte Type 2
+`TRawUidProgrammer` adds four-byte Gen1a/Gen1b/unsealed UFUID and seven-byte Type 2
 DirectWrite UID programming, with an opt-in ACR122U/PN532 raw-RF adapter. It preserves
 manufacturer metadata, verifies fresh RF selection and treats interrupted writes as
 uncertain. Gen3 UID-register programming and Gen4 UMC Classic/Type 2 layouts add
 four/seven/ten-byte profiles with explicit passwords and preserved configuration.
 USCUID/GDM adds public/hidden four/seven-byte sources for both wakeup styles.
+Separate UFUID/ZUID/PFUID profiles verify partial configurations and handle PFUID’s
+reversed read command; see [Gen1b/partial-profile guide](docs/GEN1B_PARTIAL_UID.md).
 A separate authenticated factory FUID method performs one UID write with explicit
 uncertain-result and cached-UID handling. See [the raw-RF guide](docs/RAW_UID.md),
 [Gen3/Gen4 guide](docs/GEN3_GEN4_UID.md) and [USCUID/FUID guide](docs/USCUID_FUID.md).
