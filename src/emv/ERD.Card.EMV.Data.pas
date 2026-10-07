@@ -58,6 +58,61 @@ type
   end;
   /// <summary>Tag/value entries; terminal inputs require unique tags, card fields may repeat.</summary>
   TEmvValues = array of TEmvValue;
+  /// <summary>Explicitly supported optional GET DATA objects; no PIN verification is performed.</summary>
+  TEmvDataObject = (
+    /// <summary>Application Transaction Counter, tag 9F36, two bytes.</summary>
+    edoAtc,
+    /// <summary>Last Online ATC Register, tag 9F13, two bytes.</summary>
+    edoLastOnlineAtc,
+    /// <summary>Remaining offline PIN attempts, tag 9F17, one byte.</summary>
+    edoPinTryCounter,
+    /// <summary>Transaction log data-object list, tag 9F4F.</summary>
+    edoLogFormat
+  );
+  /// <summary>Optional GET DATA result with an explicit absence/unsupported status.</summary>
+  TEmvDataObjectResult = record
+    /// <summary>Requested object.</summary>
+    DataObject: TEmvDataObject;
+    /// <summary>True only for a validated 9000 response.</summary>
+    Present: Boolean;
+    /// <summary>9000, or an accepted 6A88/6A81/6D00 absence/unsupported status.</summary>
+    StatusWord: Word;
+    /// <summary>Complete response object, including tag and length but without status bytes.</summary>
+    RawData: TBytes;
+    /// <summary>Independent object value, or empty when unavailable.</summary>
+    Value: TBytes;
+    /// <summary>True only for a present ATC, Last Online ATC or PIN counter.</summary>
+    HasNumericValue: Boolean;
+    /// <summary>Unsigned big-endian counter; meaningful only when HasNumericValue is true.</summary>
+    NumericValue: Word;
+  end;
+  /// <summary>One cyclic transaction-log record; values are not BER-TLV encoded.</summary>
+  TEmvLogRecord = record
+    /// <summary>Record number, starting at one for the most recent entry.</summary>
+    Number: Byte;
+    /// <summary>Independent concatenated value bytes without status words.</summary>
+    RawData: TBytes;
+    /// <summary>Decoded values in Log Format order, retaining repeated and unknown tags.</summary>
+    Fields: TEmvValues;
+  end;
+  /// <summary>Transaction-log records in newest-first order.</summary>
+  TEmvLogRecords = array of TEmvLogRecord;
+  /// <summary>Complete optional card transaction-log snapshot; not a payment authorization result.</summary>
+  /// <remarks>Ordinary record assignment shares arrays. Log availability and contents are issuer dependent.</remarks>
+  TEmvTransactionLogData = record
+    /// <summary>True when the selected FCI advertises Log Entry 9F4D.</summary>
+    Supported: Boolean;
+    /// <summary>Exact selected application FCI without status bytes.</summary>
+    Fci: TBytes;
+    /// <summary>Log file SFI, 11..30 when supported.</summary>
+    Sfi: Byte;
+    /// <summary>Advertised maximum record count, 1..255 when supported.</summary>
+    MaximumRecords: Byte;
+    /// <summary>Independent Log Format 9F4F value, empty when unsupported.</summary>
+    LogFormat: TBytes;
+    /// <summary>All existing records up to the advertised maximum; no partial snapshot on failure.</summary>
+    Records: TEmvLogRecords;
+  end;
   /// <summary>One data-object-list request, whose length is a single byte rather than BER length encoding.</summary>
   TEmvDolEntry = record
     /// <summary>Requested primitive terminal tag.</summary>
@@ -125,9 +180,21 @@ type
     /// <summary>Independent tag 57 Track 2 equivalent data, or empty; not a magstripe wire format.</summary>
     Track2Equivalent: TBytes;
   end;
-  /// <summary>Stateless DOL, AFL and optional card-field decoding with explicit bounds.</summary>
+  /// <summary>Stateless DOL, AFL, transaction-log and optional card-field decoding with explicit bounds.</summary>
   TEmvCodec = class
   public
+    /// <summary>Validates a transaction-log DOL and computes its concatenated record size.</summary>
+    /// <param name="AFormat">Log Format 9F4F value, at most 252 bytes.</param>
+    /// <returns>Required record length, 1..256 bytes.</returns>
+    /// <exception cref="EEmvDataError">The DOL is invalid or its total size is outside the supported bound.</exception>
+    class function LogRecordSize(const AFormat: TBytes): Integer; static;
+    /// <summary>Splits concatenated transaction-log values using a card-provided DOL.</summary>
+    /// <param name="AFormat">Log Format 9F4F value, at most 252 bytes; repeated tags are retained.</param>
+    /// <param name="ARecord">Exact concatenated values, 1..256 bytes; no outer 70 template.</param>
+    /// <returns>Independent tags and values in format order.</returns>
+    /// <exception cref="EEmvDataError">The format is invalid or empty, total length exceeds 256, or record size differs.</exception>
+    /// <remarks>No amount, date, currency or successful-payment interpretation is inferred.</remarks>
+    class function DecodeLogRecord(const AFormat, ARecord: TBytes): TEmvValues; static;
     /// <summary>Parses primitive EMV tags followed by one-byte requested sizes.</summary>
     /// <param name="ABytes">A PDOL value, at most 252 bytes; empty is allowed.</param>
     /// <returns>Independent requests in original order.</returns>
@@ -164,6 +231,40 @@ type
 implementation
 
 uses ERD.Card.Bytes;
+
+function LogSize(const AEntries: TEmvDolEntries): Integer;
+var I: Integer;
+begin
+  Result := 0;
+  for I := 0 to Length(AEntries) - 1 do Inc(Result, AEntries[I].Size);
+  if (Result < 1) or (Result > 256) then
+    raise EEmvDataError.Create('Invalid EMV log format size.');
+end;
+
+class function TEmvCodec.LogRecordSize(const AFormat: TBytes): Integer;
+begin
+  Result := LogSize(DecodeDol(AFormat));
+end;
+
+class function TEmvCodec.DecodeLogRecord(const AFormat, ARecord: TBytes): TEmvValues;
+var
+  Entries: TEmvDolEntries;
+  I, Size, Offset: Integer;
+begin
+  Result := nil;
+  Entries := DecodeDol(AFormat);
+  Size := LogSize(Entries);
+  if Length(ARecord) <> Size then
+    raise EEmvDataError.Create('Invalid EMV log record size.');
+  SetLength(Result, Length(Entries));
+  Offset := 0;
+  for I := 0 to Length(Entries) - 1 do
+  begin
+    Result[I].Tag := CopyBytes(Entries[I].Tag);
+    Result[I].Value := Copy(ARecord, Offset, Entries[I].Size);
+    Inc(Offset, Entries[I].Size);
+  end;
+end;
 
 procedure Fail(const AReason: string);
 begin

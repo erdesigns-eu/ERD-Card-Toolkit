@@ -39,8 +39,17 @@ the documented Belpic 1.7/1.8 contact protocol. Its standalone decoders and inje
 read sequences are tested; real-card validation and authenticity verification remain
 pending. `TEMVCardReader` in `src/emv` provides PSE/PPSE discovery, explicit AID/PDOL
 selection, GPO and bounded AFL record reads with optional PAN, expiry, name, IBAN
-and Track 2 data. It is a data reader; GPO can change card state, and payment-kernel
-or scheme certification is not provided. See [the EMV guide](docs/EMV_READER.md).
+and Track 2 data. Separate GET DATA counters and transaction logs work without GPO.
+It is a data reader; GPO can change card state, and payment-kernel or scheme
+certification is not provided. See [the EMV guide](docs/EMV_READER.md).
+`TContactlessCardReader` in `src/contactless` adds explicit injectable reader profiles,
+UID retrieval and authenticated MIFARE Classic block reads/data writes with supplied
+keys. Manufacturer/trailer writes are rejected; uncertain write completion has its
+own exception and commands are never replayed. Its first PC/SC storage profile has
+synthetic tests; real-card/reader validation remains pending.
+See [the contactless guide](docs/CONTACTLESS.md). Terminal/provider payments and direct
+NFC-kernel payments have a [documented integration design](docs/PAYMENTS.md);
+payment backends, other MIFARE families and generic NDEF access are still pending.
 The remaining components are planned. See [the component plan](docs/COMPONENT_PLAN.md),
 [the PC/SC guide](docs/PCSC_TRANSPORT.md) and [the Belgian eID guide](docs/BELGIAN_EID.md).
 
@@ -116,7 +125,7 @@ tools\run-core-tests.cmd dcc32
 tools\run-core-tests.cmd dcc64
 ```
 
-The Windows script builds the Pascal tests, console examples and all four runtime
+The Windows script builds the Pascal tests, console examples and all five runtime
 packages with XML documentation, range checks and overflow checks.
 It has not been executed in the Linux development environment. Verify the generated
 XML documentation and Help Insight in the target IDE as described in
