@@ -1,0 +1,11 @@
+# Keep Delphi/Windows working files in the format expected by RAD Studio.
+*.pas text eol=crlf whitespace=cr-at-eol
+*.dpr text eol=crlf whitespace=cr-at-eol
+*.dpk text eol=crlf whitespace=cr-at-eol
+*.cmd text eol=crlf whitespace=cr-at-eol
+*.py text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+
+# Original references must retain their exact bytes and provenance hashes.
+reference/legacy/** -text whitespace=cr-at-eol

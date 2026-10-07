@@ -6,7 +6,7 @@ runs anywhere — a machine without Delphi installed, a CI step, a container.
 It is not a compiler and does not pretend to be one. It is a set of small,
 single-purpose readers that each know one mistake well enough to find it in
 source the compiler has not seen yet: a field declared after a method, a
-translation catalog that has drifted, an anonymous method holding a `const`
+an anonymous method holding a `const`
 parameter it will outlive. Where a checker cannot tell — a class whose
 ancestors live in the VCL, a `with` block whose target it cannot resolve — it
 says nothing rather than guessing. A quiet run means nothing was found, not
@@ -14,9 +14,25 @@ that nothing is wrong.
 
 ## Running it
 
-    python tools/pascalcheck/run.py             # one line per checker
+The default profile checks the standalone CardStudio core. Select the actual source directories:
+
+    python tools/pascalcheck/run.py --profile core --source-root src/core --source-root tests/core --source-root examples/core -v
+
+The core profile runs readers that use the shared source selection, including
+`xmldoc` for visible Delphi API documentation. It prints the selected filenames
+and rejects empty or missing inputs. Repeat `--source-root` to add a file or
+directory. It cannot be combined with the default suite because several legacy
+readers assume fixed form/catalog directories. Those readers are retained for
+reuse and are not applicable to the current standalone library layout.
+XML documentation checks do not verify Help Insight rendering or compiler support.
+
+    python tools/pascalcheck/run.py             # default core profile
     python tools/pascalcheck/run.py -v          # and the findings themselves
-    python tools/pascalcheck/run.py i18n        # only checkers matching a name
+    python tools/pascalcheck/run.py xmldoc      # only documentation coverage
+
+`--profile all` explicitly enables the older layout-specific suite; many of its
+UI/installer/catalog readers require files that this component repository does
+not contain. It is not the validation command for the new code.
 
 `run.py` exits non-zero when anything is found, so it can stand in a build
 step. Individual checkers can also be run directly:

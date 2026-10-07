@@ -1,0 +1,15 @@
+package ERDCardCore;
+
+{$DESCRIPTION 'ERD Card core: bytes, APDU, ATR and BER-TLV codecs'}
+{$RUNONLY}
+
+requires
+  rtl;
+
+contains
+  ERD.Card.Bytes in '..\..\src\core\ERD.Card.Bytes.pas',
+  ERD.Card.APDU in '..\..\src\core\ERD.Card.APDU.pas',
+  ERD.Card.ATR in '..\..\src\core\ERD.Card.ATR.pas',
+  ERD.Card.TLV in '..\..\src\core\ERD.Card.TLV.pas';
+
+end.
