@@ -10,6 +10,7 @@ contains
   ERD.Card.Bytes in '..\..\src\core\ERD.Card.Bytes.pas',
   ERD.Card.APDU in '..\..\src\core\ERD.Card.APDU.pas',
   ERD.Card.ATR in '..\..\src\core\ERD.Card.ATR.pas',
-  ERD.Card.TLV in '..\..\src\core\ERD.Card.TLV.pas';
+  ERD.Card.TLV in '..\..\src\core\ERD.Card.TLV.pas',
+  ERD.Card.Transport in '..\..\src\core\ERD.Card.Transport.pas';
 
 end.

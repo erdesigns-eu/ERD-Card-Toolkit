@@ -16,7 +16,7 @@ that nothing is wrong.
 
 The default profile checks the standalone CardStudio core. Select the actual source directories:
 
-    python tools/pascalcheck/run.py --profile core --source-root src/core --source-root tests/core --source-root examples/core -v
+    python tools/pascalcheck/run.py --profile core --source-root src --source-root tests --source-root examples -v
 
 The core profile runs readers that use the shared source selection, including
 `xmldoc` for visible Delphi API documentation. It prints the selected filenames
