@@ -115,10 +115,9 @@ reversed read command; see [Gen1b/partial-profile guide](docs/GEN1B_PARTIAL_UID.
 A separate authenticated factory FUID method performs one UID write with explicit
 uncertain-result and cached-UID handling. See [the raw-RF guide](docs/RAW_UID.md),
 [Gen3/Gen4 guide](docs/GEN3_GEN4_UID.md) and [USCUID/FUID guide](docs/USCUID_FUID.md).
-See [the contactless guide](docs/CONTACTLESS.md). Terminal/provider payments and direct
-NFC-kernel payments have a [documented integration design](docs/PAYMENTS.md);
-payment backends, other MIFARE/UID-programming families and additional NDEF tag-type
-access layers are still pending. See [the programmable UID support matrix](docs/PROGRAMMABLE_UID.md).
+See [the contactless guide](docs/CONTACTLESS.md). [Payments are deferred](docs/PAYMENTS.md)
+until the card read/write components are stable. Other MIFARE/UID-programming families
+and additional NDEF tag-type access layers remain future work. See [the programmable UID support matrix](docs/PROGRAMMABLE_UID.md).
 The remaining components are planned. See [the component plan](docs/COMPONENT_PLAN.md),
 [the PC/SC guide](docs/PCSC_TRANSPORT.md) and [the Belgian eID guide](docs/BELGIAN_EID.md).
 
@@ -133,7 +132,10 @@ passive authentication, EAC and national services require further work. See
 
 Add `src/core` to the Delphi unit search path. Source-based use does not require
 installing a package. `packages/runtime/ERDCardCore.dpk` is an optional runtime
-package; there is no design-time dependency or registration package yet.
+package. The separate `ERDCardDesign` package registers thirteen inactive components
+on the palette; runtime packages retain no design-time dependency. See
+[installation and package builds](docs/INSTALLATION.md) and the two
+[VCL read/write demos](docs/VCL_DEMOS.md). Actual Delphi/IDE validation is pending.
 `ICardAesProvider`/AES-CMAC utilities are in Core. The optional separate
 `ERDCardCryptoWindows.dpk` provides the CNG backend from `src/crypto`, without
 adding an OS cryptographic-library import to the base core package.
@@ -220,7 +222,9 @@ tools\run-core-tests.cmd dcc64
 ```
 
 The Windows script builds the Pascal tests, console examples and all eight runtime
-packages with XML documentation, range checks and overflow checks. The new BAC/PACE
+packages with XML documentation, range checks and overflow checks. Build the
+optional palette with `tools\build-packages.cmd dcc32 design` (use the IDE architecture),
+and both VCL applications with `tools\build-vcl-demos.cmd dcc32` or `dcc64`. The new BAC/PACE
 tests require matching OpenSSL 3 `libcrypto-3.dll` available to their Windows
 executables; application code can instead supply an explicit native-library path.
 It has not been executed in the Linux development environment. Verify the generated

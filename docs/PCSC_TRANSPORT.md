@@ -2,8 +2,9 @@
 
 `TSmartCardReader` is a non-visual RTL component. Add both `src/core` and `src/pcsc`
 to a Delphi project's unit search path. Runtime packages are optional:
-`ERDCardPCSC.dpk` requires `ERDCardCore.dpk` and the RTL. There is no design-time
-registration package yet. Windows uses the operating system's `winscard.dll`;
+`ERDCardPCSC.dpk` requires `ERDCardCore.dpk` and the RTL. The optional
+`ERDCardDesign` package registers the inactive reader on the component palette; see
+[installation](INSTALLATION.md). Windows uses the operating system's `winscard.dll`;
 other platforms report `PcscUnsupportedFeature` for system API operations.
 
 ## Connection use

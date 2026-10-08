@@ -19,8 +19,8 @@ are not compatibility requirements.
    ownership, deterministic watcher cancellation/join, caller-thread event polling
    and Unicode reader selection by identity. An injectable API supports lifecycle
    tests without hardware; a Linux C shim exercises native adapter arguments/layouts.
-   Runtime packages and an inspection example are supplied. Design-time registration
-   and real Delphi/Windows/card checks remain pending.
+   Runtime packages, palette registration and inspection/VCL examples are supplied.
+   Real Delphi/Windows/card checks remain pending.
 4. **TBelgianEIDReader — implementation available; Delphi/hardware validation pending.**
    Independent additive-TLV/UTF-8 decoders and a transaction-scoped public-file reader
    targeting the documented Belpic 1.7/1.8 contact interfaces. Identity, address,
@@ -101,16 +101,20 @@ are not compatibility requirements.
    configuration, originality and physical validation remain pending.
    **TMemoryCardReaderWriter** remains planned for contact memory-card families and
    matching readers. Non-Java chips do not share one universal protocol.
-8. **Distribution.** Runtime/design-time packages, Delphi/Windows validation matrix,
-   console and VCL examples, public API docs and dependency/data license inventory.
+8. **Distribution — source/projects available; Delphi/IDE validation pending.**
+   Eight runtime packages, thirteen-component palette registration, isolated Win32/Win64
+   Debug/Release build projects, console examples and two worker-based VCL read/write
+   demos are supplied. See [installation](INSTALLATION.md), [demos](VCL_DEMOS.md) and
+   [validation](VALIDATION.md). Published scalar configuration is streamed; interface
+   dependencies are supplied at runtime. Actual package installation, designer/Help
+   Insight, Windows/DPI and hardware checks remain outstanding.
 
 Magstripe codecs and input adapters now provide a base for concrete native reader/writer integrations.
 
-Payment support will have terminal/provider and direct NFC-kernel adapters behind a
-shared payment request/outcome contract. No payment adapter/kernel is implemented yet.
-User-requested broad reader coverage and both payment routes guide subsequent work;
-see [the concrete payment architecture and order](PAYMENTS.md). Adding a reader backend
-does not automatically add all card protocols; maintain an operation-specific hardware matrix.
+Payments are deferred until the card read/write library has stabilized; see
+[PAYMENTS.md](PAYMENTS.md). Broad reader and card coverage remains the active goal.
+Adding a reader backend does not automatically add all card protocols: maintain an
+operation-specific hardware matrix.
 
 The obsolete application has been removed. Selected original protocol code is
 retained in `reference/legacy` for implementation research, outside runtime packages
@@ -118,30 +122,35 @@ and validation coverage. See [the cleanup record](LEGACY_CLEANUP.md).
 
 ## Next coherent batches
 
-Payments is the next user-requested batch after the combined AES administration/
-European ICAO access work. The remaining areas are:
+Packages and VCL read/write examples are now supplied. Stabilization and broader
+card coverage are the next priorities; payments are outside the active roadmap.
 
 The Type 2, Type 4 and Type 5 NDEF increments combine pure codecs, record/descriptor
 handling, verified card components, examples, protocol failure tests and API
 documentation. Use the same complete scope for upcoming batches:
 
-1. **Further magstripe profiles:** additional MSR206 physical model combinations
+1. **Delphi/Windows and hardware validation:** build both architectures, install the
+   palette in the matching IDE, verify DFM streaming, Help Insight and DPI, then
+   exercise the demo operations on known cards/readers, including write/read-back
+   and disconnect failures. Turn confirmed combinations into a coverage matrix.
+2. **Further magstripe profiles:** additional MSR206 physical model combinations
    and native MagTek capture,
    then YL160/MSR DLL bindings with verified SDK headers and buffer lengths.
    Physical/firmware coverage and status-versus-read-back evidence stay explicit.
-2. **DESFire expansion and additional chip families:** D40 and EV1 DES/2K3DES/3K3DES security,
+3. **DESFire expansion and additional chip families:** D40 and EV1 DES/2K3DES/3K3DES security,
    EV2 key sets, LRP, TMAC receipts and extended configuration/SDM/rights, followed by
    originality and physical card profiles. Owned ordinary transactions and basic create/delete
    management and verified AES key/policy/access administration are implemented. EV1/EV2 AES secure
    file access and EV2 NonFirst through maintained providers are implemented. Then Plus profiles,
    additional ISO 15693 authentication/reader backends,
    then contact memory chips. Public ISO 15693/Type 5 access is already implemented.
-3. **European eID:** BAC and PACE ECDH-GM/AES-128 secure access with complete
+4. **European eID:** BAC and PACE ECDH-GM/AES-128 secure access with complete
    DG1/DG2/COM/SOD reads are implemented. Next: passive/SOD verification, chip/EAC
    authentication, more PACE profiles and concrete Netherlands/Luxembourg/Germany
    hardware/national-service integration.
-4. **Payments:** a concrete terminal/provider integration, followed by a separately
-   integrated direct NFC kernel where supported; data-reading alone cannot authorize payment.
+5. **Additional read/write examples and protocols:** authenticated DESFire/eID demo
+   flows after validation, Classic/Type 5/password Type 2 profiles, and concrete
+   contact memory-card chips and reader protocols. No universal support is inferred.
 
 Authentication, hardware coverage and successful operations remain explicit per
 profile; each batch requires its own validation rather than inheriting a universal

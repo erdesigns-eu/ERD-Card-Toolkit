@@ -33,6 +33,8 @@ def main():
                '-Fu' + str(REPO / 'src/emv'),
                '-Fu' + str(REPO / 'src/magstripe'),
                '-Fu' + str(REPO / 'src/contactless'),
+               '-Fu' + str(REPO / 'src/design'),
+               '-Fu' + str(REPO / 'examples/vcl/shared'),
                '-FU' + str(build), '-FE' + str(build)]
     if args.rtl_dir is not None:
         command.extend(['-n', '-Fu' + str(args.rtl_dir.resolve())])
@@ -46,6 +48,7 @@ def main():
                 command.append('-Fl' + str(crt_path.parent))
     for project in ('tests/core/CardCore.Tests.dpr', 'tests/core/ProtocolCore.Tests.dpr',
                     'tests/core/CardCatalogs.Tests.dpr',
+                    'tests/demos/DemoJob.Tests.dpr',
                     'tests/crypto/EacCrypto.Tests.dpr', 'tests/eid/IcaoDocument.Tests.dpr',
                     'tests/contactless/DesfireManagement.Tests.dpr',
                     'tests/crypto/CardCrypto.Tests.dpr', 'tests/contactless/Desfire.Tests.dpr', 'tests/contactless/DesfireSession.Tests.dpr',
@@ -73,8 +76,11 @@ def main():
                     'examples/magstripe/InspectMagStripe.dpr',
                     'examples/magstripe/InspectMsr206.dpr'):
         subprocess.run(command + [project], cwd=REPO, check=True)
+    # FPC-only DesignIntf capture: never place this shim on a Delphi library path.
+    subprocess.run(command + ['-Fu' + str(REPO / 'tests/design'),
+                              'tests/design/Registration.Tests.dpr'], cwd=REPO, check=True)
     suffix = '.exe' if os.name == 'nt' else ''
-    for project in ('EacCrypto.Tests', 'IcaoDocument.Tests', 'DesfireManagement.Tests', 'CardCore.Tests', 'ProtocolCore.Tests', 'CardCatalogs.Tests', 'CardCrypto.Tests', 'Desfire.Tests', 'DesfireSession.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'Iso15693Type5.Tests', 'MagStripe.Tests', 'Msr206.Tests', 'Msr2067HL.Tests'):
+    for project in ('DemoJob.Tests', 'Registration.Tests', 'EacCrypto.Tests', 'IcaoDocument.Tests', 'DesfireManagement.Tests', 'CardCore.Tests', 'ProtocolCore.Tests', 'CardCatalogs.Tests', 'CardCrypto.Tests', 'Desfire.Tests', 'DesfireSession.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'Iso15693Type5.Tests', 'MagStripe.Tests', 'Msr206.Tests', 'Msr2067HL.Tests'):
         result = subprocess.run([str(build / (project + suffix))], cwd=REPO,
                                 capture_output=True, text=True)
         print(result.stdout, end='', flush=True)
@@ -300,6 +306,7 @@ def main():
         if checked.returncode != 1:
             raise RuntimeError(project + ' accepted unknown hardware arguments')
     print('PASS: AES administration and ICAO document offline help/plan/CardAccess modes.', flush=True)
+    subprocess.run([sys.executable, 'tools/check_distribution.py'], cwd=REPO, check=True)
     subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests/tools', '-v'],
                    cwd=REPO, check=True)
     subprocess.run([sys.executable, 'tools/pascalcheck/run.py', '--profile', 'core',
