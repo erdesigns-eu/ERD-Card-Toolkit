@@ -10,6 +10,8 @@ The implemented foundation is a standalone RTL core:
   explicit Le presence, error categories and byte offsets.
 - `ERD.Card.ATR`: direct/inverse logical ATR decoding, interface groups, historical
   bytes, advertised protocols and mandatory TCK validation.
+- `ERD.Card.ATR.Catalog`: immutable, source-attributed ATR hints with strict ATR
+  validation and all matching descriptions; no automatic card-profile selection.
 - `ERD.Card.TLV`: bounded definite-length ISO 7816 BER-TLV decoding, EMV encoded
   tags, immutable owned trees, deep cloning and canonical encoding.
 - `ERD.Card.Transport`: shared `ICardTransport` and optional `ICardTransaction` contracts.
@@ -31,6 +33,8 @@ outside the library. See [the cleanup record](docs/LEGACY_CLEANUP.md).
 | `TContactlessCardReader` | Supported contactless families through distinct card profiles |
 | `TType2NdefCardReader` | Public Ultralight/NTAG NDEF access with guarded multi-page updates |
 | `TType4NdefCardReader` | Public ISO 7816 NDEF files with bounded CC/MLe/MLc and verified NLEN updates |
+| `TIso15693CardReader` | Explicit addressed ISO 15693 system information and guarded block access |
+| `TType5NdefCardReader` | Initialized public Type 5 NDEF memory with CC/security preflight and verified length-last updates |
 
 `TMagStripeReaderWriter` in `src/magstripe` provides exclusive read sessions and
 capability-checked selected-track writes with same-card verification and explicit
@@ -58,6 +62,9 @@ selection, GPO and bounded AFL record reads with optional PAN, expiry, name, IBA
 and Track 2 data. Separate GET DATA counters and transaction logs work without GPO.
 It is a data reader; GPO can change card state, and payment-kernel or scheme
 certification is not provided. See [the EMV guide](docs/EMV_READER.md).
+`TEmvTagCatalog` adds 46 source-attributed tag descriptions for diagnostic tools.
+Together with the curated ATR catalog, it is documented in
+[the catalog guide](docs/CARD_CATALOGS.md); lookup hints do not establish card identity.
 `TContactlessCardReader` in `src/contactless` adds explicit injectable reader profiles,
 UID retrieval and authenticated MIFARE Classic block reads/data writes with supplied
 keys. Original Ultralight, EV1-48/128 and NTAG213/215/216 add page reads, guarded user
@@ -79,6 +86,12 @@ with lock, protection, mirror and capacity preflight; see [the NDEF guide](docs/
 complete Capability Containers, bounded public NDEF reads and verified NLEN-last
 updates through an ISO 7816 transport. Multiple files require an explicit identifier;
 see [the Type 4 guide](docs/TYPE4_NDEF.md).
+`TIso15693CardReader` and `TType5NdefCardReader` add bounded addressed block access
+and initialized public Type 5 NDEF reads/verified updates. An explicit
+`TAcr1552Iso15693Session` supplies the ACR1552U-M/ACM1552U-Y/Z FF FB dialect, with
+caller-selected 8/16-bit addressing and response framing. Reader firmware and
+physical-card compatibility still require validation; see
+[the ISO 15693/Type 5 guide](docs/ISO15693_TYPE5.md).
 `TRawUidProgrammer` adds four-byte Gen1a/Gen1b/unsealed UFUID and seven-byte Type 2
 DirectWrite UID programming, with an opt-in ACR122U/PN532 raw-RF adapter. It preserves
 manufacturer metadata, verifies fresh RF selection and treats interrupted writes as
@@ -151,6 +164,10 @@ record structure/lengths. `InspectType4Ndef --cc-hex <hex>` inspects a complete 
 without hardware; its explicit reader mode reads public files. Tests cover Type 4
 CC/APDU bounds and updates as well as framing/chunk bounds, Unicode and guarded
 Type 2 writes with injected failures; see [the NDEF guide](docs/NDEF.md).
+`InspectType5Ndef --cc-hex <hex>` inspects Type 5 containers without hardware;
+its explicit reader mode reads initialized public tags. `InspectCardTools`
+looks up ATR hints or EMV tag metadata. Tests cover ISO 15693 adapter chains,
+Type 5 updates, interrupted writes and both catalogs.
 The tests exercise the actual Pascal units with range and overflow checks, all
 command cases, length boundaries, invalid inputs, independent buffers and responses,
 ATR checksums, TLV normalization, tree ownership and resource limits. Transport

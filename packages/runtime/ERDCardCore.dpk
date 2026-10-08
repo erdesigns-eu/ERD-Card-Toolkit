@@ -7,6 +7,7 @@ requires
   rtl;
 
 contains
+  ERD.Card.ATR.Catalog in '..\..\src\core\ERD.Card.ATR.Catalog.pas',
   ERD.Card.Bytes in '..\..\src\core\ERD.Card.Bytes.pas',
   ERD.Card.APDU in '..\..\src\core\ERD.Card.APDU.pas',
   ERD.Card.ATR in '..\..\src\core\ERD.Card.ATR.pas',

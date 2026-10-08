@@ -6,6 +6,7 @@ Validated in the Linux cloud environment on 2026-10-08 after the legacy cleanup.
 | --- | --- |
 | Actual Pascal bytes/APDU tests | 521 assertions in seven groups passed |
 | Actual Pascal ATR/TLV tests | 1826 assertions in seven groups passed |
+| ATR hint and EMV tag catalogs | 65812 assertions in two groups passed: exact/masked overlaps, ambiguous models, every bad TCK, copied catalog buffers, invalid definitions and all two-byte tag identifiers |
 | Injected PC/SC transport tests | 86 assertions in seven groups passed, including real thread execution and transport transaction capability |
 | Belgian eID decoders and reader | 1821 assertions in seven groups passed using synthetic exact APDU transcripts |
 | ICAO MRZ and DG1/DG2 data codecs | 297 assertions passed: published MRZ examples, synthetic FAC/CBEFF records and malformed inputs |
@@ -15,16 +16,17 @@ Validated in the Linux cloud environment on 2026-10-08 after the legacy cleanup.
 | Password-authenticated Type 2 user memory | 2062 assertions in seven groups passed for both EV1 sizes and NTAG213/215/216, including retained-session PWD_AUTH/PACK, bounded snapshots, verified writes and concrete adapter integration |
 | NDEF codecs, RTDs and public Type 2 access | 36962 assertions in five groups passed: bounded framing/chunks, strict Unicode, factory CC/TLV mapping and guarded write failures |
 | Public Type 4 NDEF files | 48480 assertions in four groups passed: mapping 1.0/2.0 CC/APDU transcripts, whole-file bounds, explicit file selection, MLe/MLc segmentation and every partial/later-command failure |
+| ISO 15693 memory and public Type 5 NDEF | 280409 assertions in five groups passed: literal addressed commands, concrete ACS adapter chains, all block sizes, 65535-byte TLV maximum, cross-block length fields, protected/partial writes and session cleanup |
 | Magstripe codecs, component and MagTek input adapters | 57326 assertions in four groups passed: published parity/LRC vectors, all track lengths and single-bit errors, financial fields, synthetic HID/keyboard frames and verified-write failure contracts |
 | MSR206/MSR605 ISO serial profiles and generic status programming | 9052 assertions in six groups passed: published frames, all statuses/combinations, complete chains, every I/O failure and programming reply corruption, aggregate deadlines and poisoned-session cleanup |
 | MSR206-7HL USI1 and same-swipe verified writing | 28393 assertions in five groups passed: all seven combinations, literal BCC/commands, complete read/write chains, every I/O failure/response corruption, independent mismatches, streaming bounds and inter-character timing |
 | Native Windows serial branches | 48 assertions passed against a Linux C ABI shim, including complete 8N1 status programming and 7O1 acquired verified-writing component/adapter/COM transcripts |
 | Native Windows adapter branches | 38 assertions passed against an isolated Linux C ABI shim |
-| Console examples | APDU valid/invalid cases passed; PC/SC, eID, EMV, contactless, NDEF and Type 4 help work without hardware; NDEF message and Type 4 CC valid/truncated cases passed; magstripe text/bit vectors and corrupt parity passed; MSR206 published frame and failed-status cases passed |
+| Console examples | All eleven built; hardware-free help/inspection checks passed, including APDU/NDEF/Type 4/Type 5 valid/invalid cases, ATR known/unknown/bad-TCK and EMV known/private tags, magstripe parity and MSR206 frame/status cases |
 | FPC range/overflow/heap checks | Passed; no unfreed allocations in passing test programs |
 | Python checker regression tests | All 15 passed |
-| Pascalcheck core profile | All 21 readers passed on fifty-eight explicitly selected source files |
-| XML documentation | 955 visible API declarations inspected; zero findings |
+| Pascalcheck core profile | All 21 readers passed on sixty-six explicitly selected source files |
+| XML documentation | 1074 visible API declarations inspected; zero findings |
 | Reference integrity | All 26 retained files match the original Git bytes and manifest hashes |
 | Patch whitespace | `git diff --check` passed |
 
@@ -56,7 +58,8 @@ lengths/padding, exact AID/MF/DF/EF selection, grouped reads, optional certifica
 states, bounded 61xx/6Cxx handling, EOF probes, 15-bit offsets, partial failures,
 no transport replay and transaction-release exception precedence. Its JPEG and
 certificate payloads are synthetic protocol fixtures, not decoded image or X.509
-validation tests. A total of 174665 Pascal assertions passed across the suites.
+validation tests. A total of 549282 Pascal assertions passed across the suites,
+including both native ABI shims.
 NDEF tests exercise complete MB/ME/chunk framing, independent Text/URI vectors,
 message/record/physical-chunk bounds, Unicode errors, all URI prefixes, Smart Poster
 semantics and deep buffer ownership. Its PC/SC memory backend checks all six Type 2
@@ -74,6 +77,20 @@ Every partial update and every later command failure stops without replay; chang
 CC, malformed responses, denied statuses, protected access and release precedence
 are tested through injected transports. The new console example inspects CC fixtures
 without hardware; neither the tests nor smoke checks access a physical card.
+ISO 15693/Type 5 tests additionally exercise both explicit address and response
+conventions through the actual ACS FF-FB adapter, native error-code retention,
+poisoned-session behavior and release failures. Independent CC/system-information
+vectors cover geometry bounds, MLEN excluding CC and extended request placement.
+Memory tests cover all physical block sizes 1..32, partial-block tails, opaque prefix
+preservation, short/extended transitions, length fields spanning blocks, exact maximum
+TLV length, locked later blocks before any dispatch and every I/O/partial-write
+failure. Every staged block is checked independently and published length remains
+zero until the final update. All card memory and transports are synthetic.
+The catalog suite validates strict ATR/TCK before masked matching, shared/emulated
+model hints, all matches, construction ownership and bounded invalid definitions.
+It probes all 65536 two-byte tag identifiers and independently checks selected
+EMV representation/length facts. The console examples inspect only supplied bytes
+and metadata in smoke tests; no physical ISO 15693/NFC reader was accessed.
 Magstripe tests check published MagTek bit vectors, complete character ranges,
 all supported payload sizes and every single-bit error at every size, including SS,
 ES and LRC parity. Typed financial fields retain opaque issuer suffixes. Synthetic

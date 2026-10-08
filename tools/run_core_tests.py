@@ -45,6 +45,7 @@ def main():
             if crt_path.is_file():
                 command.append('-Fl' + str(crt_path.parent))
     for project in ('tests/core/CardCore.Tests.dpr', 'tests/core/ProtocolCore.Tests.dpr',
+                    'tests/core/CardCatalogs.Tests.dpr',
                     'tests/transport/CardTransport.Tests.dpr', 'tests/eid/BelgianEid.Tests.dpr',
                     'tests/eid/Icao.Tests.dpr',
                     'tests/emv/Emv.Tests.dpr',
@@ -53,6 +54,7 @@ def main():
                     'tests/contactless/Type2Password.Tests.dpr',
                     'tests/contactless/Ndef.Tests.dpr',
                     'tests/contactless/Type4Ndef.Tests.dpr',
+                    'tests/contactless/Iso15693Type5.Tests.dpr',
                     'tests/magstripe/MagStripe.Tests.dpr',
                     'tests/magstripe/Msr206.Tests.dpr',
                     'tests/magstripe/Msr2067HL.Tests.dpr',
@@ -61,11 +63,13 @@ def main():
                     'examples/contactless/InspectContactless.dpr',
                     'examples/contactless/InspectNdef.dpr',
                     'examples/contactless/InspectType4Ndef.dpr',
+                    'examples/contactless/InspectType5Ndef.dpr',
+                    'examples/core/InspectCardTools.dpr',
                     'examples/magstripe/InspectMagStripe.dpr',
                     'examples/magstripe/InspectMsr206.dpr'):
         subprocess.run(command + [project], cwd=REPO, check=True)
     suffix = '.exe' if os.name == 'nt' else ''
-    for project in ('CardCore.Tests', 'ProtocolCore.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'MagStripe.Tests', 'Msr206.Tests', 'Msr2067HL.Tests'):
+    for project in ('CardCore.Tests', 'ProtocolCore.Tests', 'CardCatalogs.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'Iso15693Type5.Tests', 'MagStripe.Tests', 'Msr206.Tests', 'Msr2067HL.Tests'):
         result = subprocess.run([str(build / (project + suffix))], cwd=REPO,
                                 capture_output=True, text=True)
         print(result.stdout, end='', flush=True)
@@ -202,6 +206,33 @@ def main():
     if msr_bad.returncode != 1 or 'EMagStripeError' not in msr_bad.stdout:
         raise RuntimeError('MSR206 example did not reject device-reported failure')
     print('PASS: MSR206 console help, published frame and failed status.', flush=True)
+    type5 = str(build / ('InspectType5Ndef' + suffix))
+    checked = subprocess.run([type5, '--help'], capture_output=True, text=True, check=True)
+    if 'Usage: InspectType5Ndef' not in checked.stdout:
+        raise RuntimeError('Type 5 example did not show hardware-free help')
+    cc_args = ['--cc-hex', 'E1403F00', '--blocks', '128', '--block-size', '4', '--address', '8']
+    checked = subprocess.run([type5] + cc_args, capture_output=True, text=True, check=True)
+    if 'CC bytes: 4 data-area bytes: 504' not in checked.stdout:
+        raise RuntimeError('Type 5 example did not decode AN4911 CC/geometry')
+    cc_args[1] = 'E1404000'
+    checked = subprocess.run([type5] + cc_args, capture_output=True, text=True)
+    if checked.returncode != 1 or 'EType5NdefError' not in checked.stdout:
+        raise RuntimeError('Type 5 example did not refuse over-capacity MLEN')
+    catalog = str(build / ('InspectCardTools' + suffix))
+    cases = [(['--help'], 'Usage: InspectCardTools'),
+             (['--atr', '3B8F8001804F0CA0000003060B00350000000056'], 'ATR hints: 2'),
+             (['--atr', '3B00'], 'ATR hints: 0'),
+             (['--tag', '9F26'], 'Application Cryptogram'),
+             (['--tag', 'DF0101'], 'Unknown tag')]
+    for arguments, expected in cases:
+        checked = subprocess.run([catalog] + arguments, capture_output=True, text=True, check=True)
+        if expected not in checked.stdout:
+            raise RuntimeError('Catalog example did not report expected diagnostic metadata')
+    checked = subprocess.run([catalog, '--atr', '3B8F8001804F0CA0000003060B00350000000057'],
+                             capture_output=True, text=True)
+    if checked.returncode != 1 or 'EAtrFormatError' not in checked.stdout:
+        raise RuntimeError('Catalog example accepted invalid ATR TCK')
+    print('PASS: Type 5 CC bounds and source-attributed ATR/EMV catalog console cases.', flush=True)
     subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests/tools', '-v'],
                    cwd=REPO, check=True)
     subprocess.run([sys.executable, 'tools/pascalcheck/run.py', '--profile', 'core',

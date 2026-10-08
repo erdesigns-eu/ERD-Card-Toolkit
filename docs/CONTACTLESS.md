@@ -23,7 +23,9 @@ hardware. Assign both a connected `ICardTransport` and an explicitly matching
 | NFC-EMV | Separate `TEMVCardReader` PPSE/AID/GPO/AFL path through ISO 7816 APDUs |
 | NDEF codecs and public Type 2 storage | `TNdefCodec`/`TNdefRecords`, CC/TLV mapping and `TType2NdefCardReader`; bounded framing, strict RTDs, lock/access preflight and verified length-last updates |
 | Public Type 4 NDEF files | `TType4NdefCardReader`: explicit mapping 1.0/2.0 ISO 7816 applications, CC/file descriptors, MLe/MLc-bounded reads and verified NLEN-last updates |
-| Native DESFire, Plus, ISO 15693, Type 1/3/5 NDEF, other programmable UID families | Separate family/access implementations still pending |
+| Addressed ISO 15693 memory | `TIso15693CardReader`, explicit 8/16-bit geometry, single-block security and guarded writes; ACR1552U-M/ACM1552U-Y/Z FF FB adapter |
+| Public Type 5 NDEF memory | `TType5NdefCardReader`: initialized E1/E2 CC/TLV mapping, lock preflight and verified length-last updates |
+| Native DESFire, Plus, Type 1/3 NDEF, other programmable UID families | Separate family/access implementations still pending |
 
 The Mini model supplies the original memory layout, not a tested Mini/reader
 compatibility claim. This release has synthetic command tests and no physical reader
@@ -37,6 +39,9 @@ currently targets Windows winscard and T=0/T=1; contactless storage readers comm
 expose these operations through a T=1 emulation. This is driver behavior, not a
 claim that every reader has native raw/RF support. The explicit ACR122U/PN532
 backend is documented in [the raw UID guide](RAW_UID.md).
+The separate ISO 15693 adapter requires the documented ACR1552U-M or ACM1552U-Y/Z
+firmware and explicit addressing/response choices; see
+[ISO 15693 and Type 5](ISO15693_TYPE5.md). It does not cover ACR1552U-A.
 
 `TPcscStorageProfile` is opt-in and uses the standard storage pseudo-APDUs described
 below. ACR122U API 2.04 is a concrete documented dialect reference, **not a hardware
@@ -204,8 +209,10 @@ suitable hardware/backends and are not implicitly supported by an NFC PC/SC read
 Public Type 4 NDEF access is implemented separately in [TYPE4_NDEF.md](TYPE4_NDEF.md),
 including already formatted public DESFire NDEF files; this does not implement native
 DESFire authentication or management. Further families include other Type 2
-security variants, ISO 15693/Type 5, further programmable UID profiles and native
+security variants, authenticated ISO 15693 access, further programmable UID profiles and native
 DESFire with a maintained crypto/secure-messaging provider.
+Public ISO 15693/Type 5 access is available through the separate components described
+in [ISO15693_TYPE5.md](ISO15693_TYPE5.md).
 Additional profiles are planned, not advertised
 as already readable/writable. Maintain a tested matrix of reader/firmware/driver/card
 variant and operation, including card removal and write verification.

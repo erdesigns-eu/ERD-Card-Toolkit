@@ -12,7 +12,8 @@ are not compatibility requirements.
 2. **ATR and BER-TLV — implemented.** Bounded byte readers, TCK validation,
    explicit limits, immutable TLV trees, deep cloning and canonical definite-length
    encoding. EMV encoded tags are supported; this is not a general ASN.1 schema
-   validator. EMV tag descriptions and ATR-identification catalogs remain separate.
+   validator. Separate immutable ATR-identification hints and 46 EMV tag descriptions
+   are implemented with source attribution; see [the catalog guide](CARD_CATALOGS.md).
 3. **TSmartCardReader — implementation available; Windows/hardware validation pending.**
    Instance-owned PC/SC transport with pointer-sized handles, transaction thread
    ownership, deterministic watcher cancellation/join, caller-thread event polling
@@ -78,7 +79,10 @@ are not compatibility requirements.
    helpers and public contiguous Type 2 CC/TLV reads/verified length-last updates are
    implemented; see [NDEF](NDEF.md). Public Type 4 mapping 1.0/2.0 CC/file reads and
    verified NLEN-last writes through ISO 7816 are also implemented; see
-   [Type 4 NDEF](TYPE4_NDEF.md). Additional NDEF tag-type access, further UID
+   [Type 4 NDEF](TYPE4_NDEF.md). Addressed ISO 15693 information/block access and
+   initialized public Type 5 NDEF reads/verified length-last updates are implemented
+   through an explicit ACR1552U-M/ACM1552U-Y/Z session adapter; see
+   [ISO 15693/Type 5](ISO15693_TYPE5.md). Additional NDEF tag-type access, further UID
    generations, other Type 2 authentication, DESFire/secure messaging, Plus and
    broader reader backends remain separate profiles; see [the contactless guide](CONTACTLESS.md).
    **TMemoryCardReaderWriter** remains planned for contact memory-card families and
@@ -100,7 +104,7 @@ and validation coverage. See [the cleanup record](LEGACY_CLEANUP.md).
 
 ## Next coherent batches
 
-The Type 2 and Type 4 NDEF increments combine pure codecs, record/descriptor
+The Type 2, Type 4 and Type 5 NDEF increments combine pure codecs, record/descriptor
 handling, verified card components, examples, protocol failure tests and API
 documentation. Use the same complete scope for upcoming batches:
 
@@ -109,7 +113,8 @@ documentation. Use the same complete scope for upcoming batches:
    then YL160/MSR DLL bindings with verified SDK headers and buffer lengths.
    Physical/firmware coverage and status-versus-read-back evidence stay explicit.
 2. **Additional chip families:** DESFire through a maintained authenticated crypto
-   provider, ISO 15693/Type 5 through capable reader backends, then contact memory chips.
+   provider, Plus profiles, additional ISO 15693 authentication/reader backends,
+   then contact memory chips. Public ISO 15693/Type 5 access is already implemented.
 3. **European eID access:** BAC/PACE and secure-messaging integration for the existing
    MRZ/DG codecs, with concrete Netherlands/Luxembourg/Germany card profiles.
 4. **Payments:** a concrete terminal/provider integration, followed by a separately
@@ -126,7 +131,9 @@ read/write claim from the transport.
   implement the separate device/session contract. Parsers do not open hardware.
 - Non-visual component wrappers expose configuration, lifecycle and events.
 - VCL presenters turn results into UI; the data model does not hold controls.
-- Vendor DLLs, data catalogs and optional providers stay out of the base runtime package.
+- Vendor DLLs, large external data catalogs and optional providers stay out of the
+  base runtime package. The small curated ATR hint catalog is an optional core unit;
+  EMV metadata stays in the EMV package.
 - Do not activate readers in constructors or in the IDE designer.
 
 ## Completion criteria
