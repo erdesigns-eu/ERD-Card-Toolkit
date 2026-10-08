@@ -128,6 +128,34 @@ if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\InspectMsr206.exe" --frame-hex 1B731B012530313F1B023B32333F1B033B34353F3F1C1B31
 if not errorlevel 1 exit /b 1
 if errorlevel 2 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\emv" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\core\CardCatalogs.Tests.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\CardCatalogs.Tests.exe"
+if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\contactless" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\contactless\Iso15693Type5.Tests.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\Iso15693Type5.Tests.exe"
+if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\emv" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" examples\core\InspectCardTools.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\InspectCardTools.exe" --help
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\InspectCardTools.exe" --atr 3B8F8001804F0CA0000003060B00350000000056
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\InspectCardTools.exe" --tag 9F26
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\InspectCardTools.exe" --atr 3B8F8001804F0CA0000003060B00350000000057
+if not errorlevel 1 exit /b 1
+if errorlevel 2 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\pcsc;src\contactless" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" examples\contactless\InspectType5Ndef.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\InspectType5Ndef.exe" --help
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\InspectType5Ndef.exe" --cc-hex E1403F00 --blocks 128 --block-size 4 --address 8
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\InspectType5Ndef.exe" --cc-hex E1404000 --blocks 128 --block-size 4 --address 8
+if not errorlevel 1 exit /b 1
+if errorlevel 2 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -Usrc\magstripe -N0"%CARD_BUILD%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" packages\runtime\ERDCardMagStripe.dpk
 if errorlevel 1 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -Usrc\core -N0"%CARD_BUILD%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" packages\runtime\ERDCardCore.dpk

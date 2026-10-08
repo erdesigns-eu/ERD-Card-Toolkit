@@ -26,7 +26,9 @@ protocol is advertised, `Protocols` contains implicit T=0.
 3B and 3F select direct/inverse convention. Supply logical bytes as returned by
 PC/SC; raw electrical bit inversion/reversal is outside this API. Historical bytes
 remain uninterpreted. ATR identification and card capability interpretation belong
-to separate profiles/catalog providers.
+to separate profiles/catalog providers. `ERD.Card.ATR.Catalog` supplies a small
+immutable, source-attributed hint catalog; it validates the complete ATR before
+matching and returns all applicable hints. See [the catalog guide](CARD_CATALOGS.md).
 
 `TryDecode` returns false with a cleared `TAtrInfo` and structured `TAtrError` on
 syntax failure. `Decode` raises `EAtrFormatError` containing the same details.

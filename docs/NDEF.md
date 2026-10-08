@@ -7,6 +7,11 @@ Three RTL-only units are included in `ERDCardContactless.dpk`:
 - `ERD.Card.Contactless.Type2.Ndef`: CC/TLV mapping, update planning and
   `TType2NdefCardReader`, a non-visual public-memory reader/writer.
 
+Other access layers use the same message codecs: [Type 4 NDEF](TYPE4_NDEF.md)
+provides public ISO 7816 files, and [ISO 15693/Type 5](ISO15693_TYPE5.md) provides
+initialized public E1/E2 CC/TLV memory with guarded length-last updates.
+Type 1 and Type 3 access layers remain pending.
+
 Add `src/core` and `src/contactless` to the Delphi search path. These units need
 no VCL, vendor DLL, network connection or design-time package. Only the card
 component performs I/O, through an explicitly supplied page profile and transport.

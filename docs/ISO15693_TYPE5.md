@@ -1,0 +1,186 @@
+# ISO 15693 memory and Type 5 NDEF
+
+`TIso15693CardReader` provides bounded system information, contiguous block reads
+and verified single-block data writes. `TType5NdefCardReader` provides public NDEF
+access on existing initialized NFC Forum Type 5 tags. Both retain an
+`IIso15693Session`; `TAcr1552Iso15693Session` supplies a concrete addressed ACS
+FF-FB pass-through backend over an existing connected PC/SC transport.
+
+Source use needs `src/core` and `src/contactless`. The optional existing
+`ERDCardContactless` runtime package requires `rtl` and `ERDCardCore`; no additional
+crypto, vendor DLL or USB dependency is introduced. Constructors open no hardware.
+All visible APIs have Delphi `///` XML documentation.
+
+## Implemented profile and evidence
+
+| Layer | Implemented operations | Separate validation/boundary |
+| --- | --- | --- |
+| Pure ISO 15693 codec | Canonical/wire UID conversion, ordinary/extended system information, addressed read/write/security command builders, explicit response normalization | Optional commands and memory/protection semantics depend on the card |
+| ACS pass-through | FF-CA-80 activation data; addressed FF-FB 2B/3B, 20/30, 21/31, 2C/3C in one PC/SC transaction | ACR1552U-M firmware 1.03.00+, ACM1552U-Y/Z 2.03.00+, real firmware/driver framing and card tests |
+| Raw memory component | Information, selected block ranges and unlocked verified single-block writes | Blocks zero/one reserved by the wrapper; no generic write authorization or automatic card detection |
+| Type 5 component | Mapping 1.0 E1/E2 four/eight-byte CC, existing public contiguous NDEF TLV, read/replace/clear, verified no-op | No formatting, authentication, permanent locks or manufacturer/configuration updates |
+
+The ACS manual lists those firmware requirements for ISO 15693 pass-through. It
+does not list the ACR1552U-A in that section; support for the -A is **not inherited**.
+The implementation does not query or certify firmware, and a PC/SC reader name or
+ATR hint does not prove the profile. Select the actual supported reader deliberately.
+Other readers need a concrete `IIso15693Session` implementation.
+
+Ordinary mode uses one-byte block addresses and requires memory information from
+`2B`. Extended mode uses `3B` with parameter request `14` **before the addressed UID**,
+requires the returned two-byte memory-address indication, and uses extended block
+commands. There is no fallback after an unsupported optional command. Geometry is
+one through 32 bytes per block, at most 65536 blocks, additionally bounded to
+262144 total physical bytes. The Type 5 CC address indication must agree with the
+explicit session mode; CC capacity cannot exceed acquired physical memory.
+
+The UID returned by the library is eight bytes in canonical MSB-first order,
+beginning with `E0`. ISO transmission order is reversed. ACS `FF CA 80 00 00`
+returns DSFID plus UID in transmission order; addressed system information must
+report the same UID, and DSFID must agree when present. UID bytes are copied,
+not authenticated. UID writing is not an ordinary ISO 15693 storage operation.
+
+### Explicit response convention
+
+Choose `irfNativeFlags` when APDU data contains native response flags followed by
+payload, excluding RF CRC. Native success requires flags zero; an exact native
+error response raises `EIso15693StatusError` with its raw `ErrorCode`. RFU flags,
+malformed errors and unexpected lengths fail.
+
+Choose `irfPayloadOnly` only when the actual reader/firmware strips native response
+flags and reports native failures through APDU SW1/SW2. The ACS reference describes
+FF-FB data/status but does not fully specify flag forwarding for each firmware.
+**Verify this convention on the actual device**; the adapter never guesses or
+tries both formats. Both explicit conventions have injected complete-chain tests,
+not a claim that both occur on every ACS firmware.
+
+Reader firmware supplies RF framing/CRC and timing. Write-single-block commands
+use high-data-rate/addressed flags `22`, with the option flag clear. Cards needing
+option/EOF handshakes, custom authentication or manufacturer-specific protection
+require a separate profile. No inventory flood, select/quiet, reset, retry,
+retransmission, lock, password, AFI, DSFID or UID-programming command is sent.
+
+## Example
+
+```pascal
+uses ERD.Card.PCSC.Reader, ERD.Card.Contactless.ISO15693,
+  ERD.Card.Contactless.Type5.Ndef, ERD.Card.Ndef.Records;
+
+var
+  Card: TSmartCardReader;
+  Ndef: TType5NdefCardReader;
+  Snapshot: TType5NdefSnapshot;
+begin
+  Card := TSmartCardReader.Create(nil);
+  try
+    Card.ReaderName := 'Exact compatible reader name';
+    Card.Connect;
+    Ndef := TType5NdefCardReader.Create(nil);
+    try
+      // Explicit mode/convention verified for this card and firmware.
+      Ndef.Session := TAcr1552Iso15693Session.Create(
+        Card.Transport, iam8Bit, irfNativeFlags);
+      Snapshot := Ndef.ReadMessage;
+      // Snapshot contains acquired UID/geometry, CC, NDEF bytes and logical records.
+      // WriteMessage and ClearMessage are explicit separate operations.
+    finally
+      Ndef.Free;
+    end;
+    Card.Disconnect;
+  finally
+    Card.Free;
+  end;
+end;
+```
+
+`TIso15693CardReader.Session` accepts the same backend for `ReadInformation`,
+`ReadBlocks(First, Count)` or `WriteBlock(Index, Data)`. Raw wrapper writes require
+index at least two, exact acquired block size, zero standard security status and
+independent read-back. A matching block is a verified no-op. Raw writes are not
+NDEF edits and can invalidate application data; use the structured Type 5 component
+for NDEF updates. Direct backend use leaves protection/preflight/uncertain-write
+handling to the caller; the component wrappers provide these contracts.
+
+The supplied console is read-only and omits UID/payload contents:
+
+```text
+InspectType5Ndef --help
+InspectType5Ndef --cc-hex E1403F00 --blocks 128 --block-size 4 --address 8
+InspectType5Ndef --cc-hex E2400001000003FF --blocks 2048 --block-size 4 --address 16
+InspectType5Ndef --reader "Exact compatible reader name" --address 8 --response native
+```
+
+The CC examples are the NFC Forum-compatible ST AN4911 examples. Offline geometry
+is explicit input; it is not measured from a card.
+
+## Type 5 mapping and update sequence
+
+CC magic is E1/E2, mapping version exactly 1.0. Byte two selects a four-byte CC when
+nonzero, otherwise an eight-byte CC with reserved bytes four/five zero and big-endian
+MLEN in bytes six/seven. **MLEN describes the following data area in units of eight
+bytes, excluding the CC.** Legacy Android full-memory MLEN variants are not guessed.
+Reserved feature bits and proprietary/read-only access are explicit; proprietary
+read/write descriptors can be decoded but public access methods refuse them.
+
+This profile permits NULL/proprietary TLVs before one canonical short/extended NDEF
+TLV, followed immediately by a terminator. It refuses lock/memory-control TLVs,
+unsupported sparse mappings, noncanonical extended lengths, missing NDEF,
+multiple-message layouts and malformed nonempty NDEF. Short length covers 0..254;
+extended length covers 255..65535. Formatting an uninitialized tag is separate work.
+
+Every operation retains one exclusive session. Reads validate CC/geometry, acquire
+all physical blocks covering the mapped area, decode the message and recheck CC/TLV
+header coherence. This does not establish cryptographic authenticity or prevent an
+external interface from changing same-length contents. ST25DV has a separate I2C
+interface, so application-level coordination still matters. Single-block reads avoid
+crossing manufacturer area boundaries in multi-block commands.
+
+An update:
+
+1. Acquires the old initialized message, checks public access/capacity and constructs
+   complete block images preserving CC, opaque prefix and partial-block tails.
+2. Checks standard security status for **every affected block before the first write**.
+   An unsupported security command or locked later block prevents all modification.
+3. Sets the first NDEF length byte to zero and verifies the complete modified block.
+4. Stages the new header/payload/terminator with that first length byte still zero;
+   every changed full block is independently read back before continuing.
+5. Publishes one first-length byte last: the short length, or `FF` after the two extended
+   length bytes have already been staged. This supports length fields spanning blocks.
+6. Acquires and verifies CC, complete message and the complete expected block image
+   before releasing and returning success.
+
+Clear publishes `03 00 FE`, retaining unused former payload bytes after the new
+terminator; it is not a secure erase. Matching acquired contents are a verified
+no-op. Full-block read-modify-write can physically rewrite a block shared with CC
+bytes, while preserving those bytes; a locked shared block is refused. There are
+no CC edits, protection changes, rollback or automatic retries. Multi-block updates
+are not atomic and interrupted staging may leave an empty or incomplete mapping.
+
+After a backend write invocation, failed sending/status/read-back/final comparison
+or release raises `EContactlessWriteUncertain`. Error text retains the original
+exception class, not card data. Preflight/acquisition errors remain ordinary.
+The ACS backend poisons a failed acquired session until release, clears ownership
+even on release failure and preserves acquisition errors over cleanup failures.
+No APDU is replayed after a timeout, unsupported status or response failure.
+
+## Sources and validation
+
+Independently implemented protocol facts, not redistributed PDFs or external code:
+
+- [ACS ACR1552U Series Reference Manual 1.09](https://www.acs.com.hk/download-manual/13473/REF-ACR1552U-Series-1.09.pdf),
+  sections 5.3.3.1, 5.3.4.2 and 5.3.8. SHA-256
+  `ab9dc769d8a856913350cc4195b5823587267466f5415e9ddf763356c3f88a6a`.
+- [ST AN4911 Rev 5](https://www.st.com/resource/en/application_note/an4911-ndef-management-with-st25dvi2c-series-and-st25tv-series-stmicroelectronics.pdf),
+  Type 5 CC/access/MLEN and examples. SHA-256
+  `33dd528b1bd52882d5edec4761a55bba591ccb80166b8f168b8d5e59a05b696c`.
+- [ST25DV04K/16K/64K DS10925 Rev 11](https://www.st.com/resource/en/datasheet/st25dv04k.pdf),
+  system information, extended parameter placement, block commands/security status.
+  SHA-256 `bb6a621b7d3b26fd2e9bf3d824f3d51309342543c484148f51a3388cfc0a48e0`.
+
+The test suite covers literal addressed commands, both explicit response/address
+modes through a complete concrete adapter chain, all block sizes 1..32, CC examples,
+exact 65535-byte TLV maximum, cross-block length fields, ownership/preserved bytes,
+all I/O boundaries and partial writes, locked later blocks, no-op/clear, malformed
+mapping/messages, native session poisoning and release/acquisition failures.
+No physical card or payment was accessed. See [VALIDATION.md](VALIDATION.md): real
+Delphi/Windows/firmware, driver framing and physical preservation/writing remain pending.

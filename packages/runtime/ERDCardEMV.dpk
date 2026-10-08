@@ -8,6 +8,7 @@ requires
   ERDCardCore;
 
 contains
+  ERD.Card.EMV.Tags in '..\..\src\emv\ERD.Card.EMV.Tags.pas',
   ERD.Card.EMV.Data in '..\..\src\emv\ERD.Card.EMV.Data.pas',
   ERD.Card.EMV.Reader in '..\..\src\emv\ERD.Card.EMV.Reader.pas';
 

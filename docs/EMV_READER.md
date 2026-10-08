@@ -5,6 +5,10 @@ and `src/emv` to the unit search path, plus `src/pcsc` for a Windows reader.
 `ERDCardEMV.dpk` requires only `rtl` and `ERDCardCore`; PC/SC and VCL are not
 dependencies of the protocol component. Assign a connected `ICardTransport`.
 
+`ERD.Card.EMV.Tags` separately provides 46 source-attributed tag descriptions,
+encoding hints and length metadata for inspection tools. These do not replace
+typed field decoders or add payment support; see [the catalog guide](CARD_CATALOGS.md).
+
 ## Application discovery and explicit selection
 
 `DiscoverApplications(edContactPse)` selects `1PAY.SYS.DDF01`, obtains its SFI
