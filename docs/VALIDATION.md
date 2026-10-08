@@ -1,6 +1,6 @@
 # Library validation record
 
-Validated in the Linux cloud environment on 2026-10-08 after the legacy cleanup.
+Validated in the Linux cloud environment on 2026-10-08 for the combined DESFire AES administration and European ICAO access batch.
 
 | Check | Result |
 | --- | --- |
@@ -10,6 +10,9 @@ Validated in the Linux cloud environment on 2026-10-08 after the legacy cleanup.
 | AES-CBC/CMAC and EV2 secure-message codecs | 734 assertions in two groups passed through OpenSSL and again through the actual CNG adapter/Linux shim: NIST/NXP vectors, every encrypted-response bit, counters and exact padding/lengths |
 | Native DESFire component | 30382 assertions in eight groups passed through OpenSSL and again through CNG/Linux shim: public/EV1/EV2/NonFirst Plain/MACed/Full chains, 52 independent transcripts, verified writes, all I/O/protected-response bits, access/nonce/release failures |
 | Retained DESFire sessions and management | 106508 assertions passed through OpenSSL and again through CNG/Linux shim: 51 independent transcripts, backup/value/record staging and verification, authenticated directories, all ordinary create/delete forms, commit/abort evidence, every protected transaction response bit and transaction/admin I/O boundary, rights/bounds/quota/thread/lifetime failures |
+| DESFire AES key/access administration | 204490 assertions passed through OpenSSL and again through actual CNG/Linux shim: 26 independent transcripts, policy/count preflight, EV1 free/protected rights, current/other/PICC rotation with fresh new-key proof, protected wrong versions/settings/geometry, all I/O/protected-response bits, denied policy and no replay |
+| Native ICAO EAC primitives/SM | 505 assertions passed through dynamically loaded OpenSSL 3: official BAC SHA1/KDF/Retail MAC/protected APDUs and PACE brainpool mapping/shared keys, both native curves, scalar/point/reflection/failure/lifetime checks, zero nonce, padding/SSC overflow and canonical CardAccess |
+| ICAO BAC/PACE document component | 555397 assertions passed: nine independent exact transcripts, BAC and brainpool/NIST PACE, MRZ/CAN/ambiguous parameters, complete DG1/DG2/COM/SOD, 66000-byte photo/B1 offsets above 32767 and 65535, every I/O/protected-response bit, invalid padding/inner errors, entropy/release/bounds/reentrancy and owned results |
 | Injected PC/SC transport tests | 86 assertions in seven groups passed, including real thread execution and transport transaction capability |
 | Belgian eID decoders and reader | 1821 assertions in seven groups passed using synthetic exact APDU transcripts |
 | ICAO MRZ and DG1/DG2 data codecs | 297 assertions passed: published MRZ examples, synthetic FAC/CBEFF records and malformed inputs |
@@ -26,11 +29,11 @@ Validated in the Linux cloud environment on 2026-10-08 after the legacy cleanup.
 | Native Windows serial branches | 48 assertions passed against a Linux C ABI shim, including complete 8N1 status programming and 7O1 acquired verified-writing component/adapter/COM transcripts |
 | Native Windows adapter branches | 38 assertions passed against an isolated Linux C ABI shim |
 | Native Windows CNG branches | 51 assertions passed: native argument/length/IV handling, every encrypt/decrypt call failure, handle cleanup and system RNG failure without fallback |
-| Console examples | All thirteen built; hardware-free help/inspection checks passed, including DESFire management offline help/plan and invalid arguments, APDU/NDEF/Type 4/Type 5/DESFire valid/invalid cases, ATR known/unknown/bad-TCK and EMV known/private tags, magstripe parity and MSR206 frame/status cases |
+| Console examples | All fifteen built; hardware-free help/inspection checks passed, including DESFire key/access administration offline help/plan, ICAO help/CardAccess inspection, DESFire management offline help/plan and invalid arguments, APDU/NDEF/Type 4/Type 5/DESFire valid/invalid cases, ATR known/unknown/bad-TCK and EMV known/private tags, magstripe parity and MSR206 frame/status cases |
 | FPC range/overflow/heap checks | Passed; no unfreed allocations in passing test programs |
 | Python checker regression tests | All 15 passed |
-| Pascalcheck core profile | All 21 readers passed on eighty explicitly selected source files |
-| XML documentation | 1240 visible production API declarations inspected; zero findings; exported test-vector declarations also pass the full profile |
+| Pascalcheck core profile | All 21 readers passed on 92 explicitly selected source files |
+| XML documentation | 1331 visible production API declarations inspected; zero findings; exported test-vector declarations also pass the full profile |
 | Reference integrity | All 26 retained files match the original Git bytes and manifest hashes |
 | Patch whitespace | `git diff --check` passed |
 
@@ -62,7 +65,7 @@ lengths/padding, exact AID/MF/DF/EF selection, grouped reads, optional certifica
 states, bounded 61xx/6Cxx handling, EOF probes, 15-bit offsets, partial failures,
 no transport replay and transaction-release exception precedence. Its JPEG and
 certificate payloads are synthetic protocol fixtures, not decoded image or X.509
-validation tests. A total of 824581 Pascal assertions passed across 25 test-program
+validation tests. A total of 1789463 Pascal assertions passed across 29 test-program
 runs, including all three native ABI shims and the crypto/DESFire suites repeated
 through the actual CNG adapter.
 NDEF tests exercise complete MB/ME/chunk framing, independent Text/URI vectors,
@@ -124,6 +127,17 @@ whole-backup/aggregate/record-growth bounds, signed extremes, limited-credit reu
 calls, reentrancy and destruction without implicit commit/abort. No management batch
 rollback or TMAC receipt is claimed. The management example compiles and exercises only
 offline help/plan and invalid arguments; no destructive hardware action runs in CI.
+AES administration adds 26 independent transcripts for free-memory/key-version
+reads, key settings, ordinary-file rights/mode changes and existing AES current/
+other/PICC key rotation. Fresh mutual authentication with the new key and a matching
+version are required; bare current-key acknowledgement alone is not success.
+Valid-integrity wrong key versions/settings/file geometry, every operation I/O
+boundary and every protected-response bit fail without replay; lost post-dispatch
+proof is uncertain. Acquired key counts/permissions, read-only authority, invalid
+arguments, fixed settings, authenticated source credentials and retained ownership
+are checked. New-key proof does not replace a host credential-provisioning policy.
+All four fixture generators reproduce the checked-in units exactly after EOL
+normalization; original reference files still match Git/manifest hashes.
 The identical crypto/DESFire suites also exercise the Windows CNG
 adapter against a Linux OpenSSL-backed ABI shim. Native tests cover every CNG
 encrypt/decrypt call failure, native lengths/IV mutation and handle cleanup.
@@ -146,8 +160,24 @@ exact all-three selections, poisoned sessions, uncertain partial programming and
 cleanup. Status-only receipts never claim acquired read-back or trigger a second
 swipe. Native host MagTek capture, additional backends and physical/Windows checks
 remain pending. See [magstripe support](MAGSTRIPE.md) and [serial profiles](MSR206.md).
-The ICAO additions decode acquired files only; BAC/PACE, secure messaging and
-direct access to Dutch/Luxembourg/German documents are still pending.
+The ICAO additions now include native-provider BAC and PACE ECDH-GM/AES-128
+(parameter 12/13, MRZ/CAN), secure messaging and complete acquired LDS files.
+Official ICAO Part 11 Appendix D/G anchors and nine independent literal transcripts
+verify the cryptographic/protocol composition. The component returns owned DG1/DG2,
+COM and opaque SOD after exclusive release, including a complete synthetic 66,000-byte
+encoded JPEG payload through B1/DO54/DO53 at both offset boundaries. No JPEG pixel
+decode, SOD signature, issuer trust or national eID authorization is inferred.
+Tests cover every read I/O boundary and protected-response bit, altered negotiation,
+canonical CardAccess/version/domain selection, corrupted padding with valid MAC,
+protected errors, failed entropy, bounded scalar rejection, acquisition/release,
+reentrancy/configuration locking, file/aggregate limits and password copies.
+Standalone native tests cover both curves, published brainpool mapping/shared key,
+scalar/point/subgroup/infinity/reflection checks, failed-context lifetime, zero nonce,
+provider loading, method-two padding and command/response SSC exhaustion.
+The OpenSSL 3 backend runs dynamically on Linux; Windows loader/calling conventions,
+Delphi and physical Netherlands/Luxembourg/Germany card generations remain pending.
+Additional PACE/EAC, chip/passive authentication, SOD verification and national
+services remain separate features; see [EUROPEAN_EID.md](EUROPEAN_EID.md).
 EMV tests exercise supplied PDOL values, GPO 80/77, optional fields, Track 2 fallback,
 equal/conflicting duplicates, opaque issuer records, exact AID validation, status
 and field-count bounds, transaction failures and no replay of GPO/transport failures.
@@ -199,7 +229,8 @@ transcript verifies retained authentication and cleanup.
 Real payment-card behavior, contact/contactless schemes and Delphi package/IDE
 integration remain pending; no payment kernel or scheme certification is claimed.
 
-Pending: Delphi dcc32/dcc64 builds, runtime package builds, generated XML/Help
+Pending: Delphi dcc32/dcc64 builds, all eight runtime package builds, Windows
+OpenSSL loader/deployment/ABI checks, generated XML/Help
 Insight inspection in RAD Studio, and real Belpic 1.7/1.8 contact-card checks for
 T=0/T=1, padded files, photographs, issued/unissued certificates and card removal.
 Contactless reader/firmware/card compatibility and physical write/read-back tests

@@ -1,0 +1,13 @@
+package ERDCardCryptoOpenSSL;
+
+{$DESCRIPTION 'ERD Card optional OpenSSL 3 ICAO BAC/PACE and AES provider'}
+{$RUNONLY}
+
+requires
+  rtl,
+  ERDCardCore;
+
+contains
+  ERD.Card.Crypto.EAC.OpenSSL in '..\..\src\crypto\ERD.Card.Crypto.EAC.OpenSSL.pas';
+
+end.
