@@ -458,8 +458,10 @@ constructor TTlvNode.CreatePrimitive(const ATag: TBytes; const AValue: TBytes);
 begin
   inherited Create;
   ValidateTag(ATag, False);
+{$IF SizeOf(NativeInt) > SizeOf(Integer)}
   if Length(AValue) > MaxInt then
     raise ERangeError.Create('TLV value exceeds the supported buffer size.');
+{$IFEND}
   FTag := Copy(ATag, 0, Length(ATag));
   FValue := Copy(AValue, 0, Length(AValue));
   UpdateSizes(Self);

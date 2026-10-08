@@ -189,7 +189,14 @@ def check_project(path):
                 props = evaluate_properties(root, config, platform)
             except ValueError as error:
                 errors.append(f'{context}: {error}'); continue
-            for name in ['Base', 'Base_' + platform, flag, flag + '_' + platform]:
+            # RAD Studio removes empty platform configuration groups on save.
+            # Their flags are needed only when platform-specific settings exist.
+            required_flags = ['Base', 'Base_' + platform, flag]
+            platform_flag = flag + '_' + platform
+            if any(platform_flag.lower() in group.get('Condition', '').lower()
+                   for group in root.findall('m:PropertyGroup', NS)):
+                required_flags.append(platform_flag)
+            for name in required_flags:
                 if props.get(name, '').lower() != 'true':
                     errors.append(f'{context}: configuration activation {name} missing')
             for name in ['GenDll', 'GenPackage']:
@@ -270,18 +277,20 @@ def check_program(path):
 
 
 def check_packages(root):
-    errors, owners, deps = [], {}, {}
+    errors, owners, deps, contained_sources = [], {}, {}, {}
     for path in sorted((root / 'packages').rglob('*.dpk')):
         source = path.read_text(encoding='utf-8-sig')
         errors.extend(check_delphi_text(path))
         requires = re.search(r'\brequires\s+(.+?);', source, re.I | re.S)
         deps[path.stem] = re.findall(r'\b\w+\b', requires.group(1)) if requires else []
+        contained_sources[path.stem] = []
         design = path.parent.name == 'design'
         if ('{$DESIGNONLY}' if design else '{$RUNONLY}') not in source:
             errors.append(f'{path.name}: package role directive missing')
         if not design and any(d.lower() in ('vcl', 'designide', 'erdcarddesign') for d in deps[path.stem]):
             errors.append(f'{path.name}: runtime depends on VCL/design-time code')
         for unit, ref in re.findall(r"(ERD\.[\w.]+)\s+in\s+'([^']+)'", source):
+            contained_sources[path.stem].append(local_path(path.parent, ref))
             if not local_path(path.parent, ref).is_file():
                 errors.append(f'{path.name}: missing contained source {ref}')
             if unit.lower() in owners:
@@ -292,14 +301,26 @@ def check_packages(root):
         for ref in references:
             if ref not in known:
                 errors.append(f'{name}: missing dependency {ref}')
+        # An owned unit used by another package must come from its DCP, rather
+        # than being compiled into that package again (Delphi W1033).
+        for source_path in contained_sources[name]:
+            if not source_path.is_file():
+                continue
+            source = source_path.read_text(encoding='utf-8-sig')
+            for uses in re.findall(r'\buses\s+(.+?);', source, re.I | re.S):
+                for unit in re.findall(r'\bERD\.[\w.]+', uses):
+                    owner = owners.get(unit.lower())
+                    if owner and owner != name and owner not in references:
+                        errors.append(f'{name}: unit {unit} requires owning package {owner}')
     group = root / 'packages/ERDCards.groupproj'
     if group.is_file():
         try:
+            group_root = ET.parse(group).getroot()
             names = [Path(p.get('Include').replace('\\', '/')).stem
-                     for p in ET.parse(group).findall('.//m:Projects', NS)]
+                     for p in group_root.findall('.//m:Projects', NS)]
         except ET.ParseError:
             errors.append('runtime group: invalid XML')
-            names = []
+            return errors
         for index, name in enumerate(names):
             if name not in deps:
                 errors.append(f'runtime group: unknown package {name}')
@@ -307,8 +328,13 @@ def check_packages(root):
                 if dep.startswith('ERDCard') and dep not in names[:index]:
                     errors.append(f'runtime group: {name} precedes dependency {dep}')
         expected = {p.stem for p in (root / 'packages/runtime').glob('*.dpk')}
-        if set(names) != expected or len(names) != len(expected):
+        design = {p.stem for p in (root / 'packages/design').glob('*.dpk')}
+        if set(names) not in (expected, expected | design) or len(names) != len(set(names)):
             errors.append('runtime group: runtime package set differs')
+        for operation, suffix in [('Build', ''), ('Make', ':Make'), ('Clean', ':Clean')]:
+            target = group_root.find(f"m:Target[@Name='{operation}']/m:CallTarget", NS)
+            if target is None or target.get('Targets', '').split(';') != [name + suffix for name in names]:
+                errors.append(f'runtime group: {operation} target order differs from project order')
     return errors
 
 

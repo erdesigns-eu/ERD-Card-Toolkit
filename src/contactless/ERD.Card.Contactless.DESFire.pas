@@ -993,7 +993,7 @@ end;
 function TDesfireCardReader.ReadValue(const AAid:Cardinal; const AFile:Byte):Integer;
 var S:TDesfireFileSettings; Data,H:TBytes; Value:Integer; Good:Boolean;
 begin
-  Result:=0; if (AAid=0) or (AAid>$FFFFFF) or (AFile>31) or (FMaxTransfer<4) then InvalidDesfire;
+  if (AAid=0) or (AAid>$FFFFFF) or (AFile>31) or (FMaxTransfer<4) then InvalidDesfire;
   Start(AAid,True); Good:=False; Data:=nil; H:=nil;
   try
     S:=Settings(AFile); if S.FileType<>dftValue then InvalidDesfire; CheckAccess(S,False);
@@ -1665,7 +1665,7 @@ begin
         (S.FileBytes<>ADefinition.FileBytes) or (S.LowerLimit<>ADefinition.LowerLimit) or
         (S.UpperLimit<>ADefinition.UpperLimit) or (S.RecordBytes<>ADefinition.RecordBytes) or
         (S.MaxRecords<>ADefinition.MaxRecords) or (S.CurrentRecords<>0) or
-        (S.ValueOptions<>Ord(ADefinition.LimitedCreditEnabled)) then InvalidDesfire;
+        (S.ValueOptions<>Byte(Ord(ADefinition.LimitedCreditEnabled))) then InvalidDesfire;
       FEngine.FWriteAttempt:=False;
     except on E:Exception do
       begin if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName); raise; end;

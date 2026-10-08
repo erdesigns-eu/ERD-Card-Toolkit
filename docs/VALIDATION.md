@@ -1,10 +1,16 @@
 # Library validation record
 
-Protocol baseline: the component distribution/VCL demo batch, including DESFire AES
-administration and European ICAO access, passed in Linux on 2026-10-08. The current
-package-project repair changes project metadata, resources and build scripts only;
-protocol results below are retained baseline results. The repair was validated with
-distribution/configuration readers and Python/Pascal source checks, not Delphi.
+The complete protocol/component/example suite was rebuilt and rerun in Linux on
+2026-10-08 after the Delphi compiler-warning fixes, starting from the maintainer's
+IDE-saved project changes. All 1,789,463 reported assertions passed, including
+the native adapter shims, demo worker and registration tests. All 32 Python
+regression tests, 21 Pascal readers and distribution checks also passed.
+
+The maintainer reports successful package compilation and installation in RAD
+Studio 12 (Studio 23.0), Debug/Win32, after the earlier project repair. The supplied
+compiler log is evidence of that build, including the warnings addressed in this
+follow-up. A fresh Delphi build is still needed to confirm that these warnings and
+hints are gone; the Linux run does not establish that.
 
 | Check | Result |
 | --- | --- |
@@ -38,7 +44,7 @@ distribution/configuration readers and Python/Pascal source checks, not Delphi.
 | Palette registration / RTL streaming | 14 assertions passed: actual Register routine captures thirteen classes; inactive construction and FPC component stream round-trip for each; DesignIntf capture is not an IDE/ABI test |
 | Distribution / VCL source readers | Eleven MSBuild projects (all four Debug/Release × Win32/Win64 property combinations), two groups and two DFM forms passed: references, package ownership/order, explicit IDE package identity, native Base/configuration/platform activation, GenDll/GenPackage, named DCP dependencies, native integer-overflow/debug settings, BOM/CRLF/resources, runtime/design dependency separation, palette completeness, field/event bindings, form creation and Platform/Config output isolation; no Delphi/VCL execution |
 | FPC range/overflow/heap checks | Passed; no unfreed allocations in passing test programs |
-| Python checker regression tests | All 29 passed, including fourteen distribution-reader cases; new cases cover IDE package identity, native project flags/configuration inheritance, named dependencies, resource directives, BOM/CRLF, compiler property types and bounded condition parsing |
+| Python checker regression tests | All 32 passed, including seventeen distribution-reader cases; coverage includes IDE package identity, native configuration inheritance, omitted empty IDE platform groups, owning-package dependencies, group target order, named DCPs, resources, BOM/CRLF, compiler property types and bounded condition parsing |
 | Pascalcheck core profile | All 21 readers passed on 103 explicitly selected source files |
 | XML documentation | 1332 visible production API declarations inspected; zero findings; exported test-vector declarations also pass the full profile |
 | Reference integrity | All 26 retained files match the original Git bytes and manifest hashes |
@@ -66,9 +72,8 @@ constructor, a platform-dependent unreachable branch in the test handle factory,
 and unused test-result variable notes. None has been suppressed. Production PC/SC
 and eID/EMV/contactless units compile without additional FPC warnings in the tested branches.
 
-The existing protocol suite passed 1,789,463 assertions across 29 program runs.
-The new demo worker and registration tests add 53 assertions in two programs;
-the worker was rebuilt and rerun after the final request-ownership edits.
+The suite reported 1,789,463 passing assertions across 29 program runs, including
+39 demo worker and 14 inactive registration/streaming assertions.
 The full 21-reader profile covers 103 Pascal sources, including the VCL units.
 Only the non-VCL worker/executor and inactive component registration/streaming
 were compiled/executed under FPC. The actual forms, MSBuild projects, package BPLs
@@ -245,8 +250,8 @@ transcript verifies retained authentication and cleanup.
 Real payment-card behavior, contact/contactless schemes and Delphi package/IDE
 integration remain pending; no payment kernel or scheme certification is claimed.
 
-Pending: Delphi dcc32/dcc64 builds, all eight runtime package builds, the design-time
-BPL in the matching IDE architecture, both VCL applications, designer/DFM loading,
+Pending: a fresh Delphi rebuild after the warning fixes, other configurations and
+architectures, both VCL applications, designer/DFM loading,
 DPI/layout and Help Insight checks, Windows
 OpenSSL loader/deployment/ABI checks, generated XML/Help
 Insight inspection in RAD Studio, and real Belpic 1.7/1.8 contact-card checks for
@@ -289,5 +294,29 @@ conditions and property assignments in these files. It rejects unsupported synta
 it does not execute MSBuild tasks/imports, generate resources or build BPLs.
 Negative tests detect the old empty IDE package type, missing Base/activation/package flags, boolean debug
 metadata, incorrect overflow property, missing dependencies/resources and encoding.
-Actual IDE/DCC/MSBuild execution remains pending, including confirmation that this
-repair resolves the reported crash. See [focused retest steps](INSTALLATION.md).
+The maintainer subsequently confirmed that the packages build and install
+successfully. This establishes a working Debug/Win32 package baseline in the
+reported IDE; other targets and the warning-fix rebuild remain pending.
+See [installation and retest steps](INSTALLATION.md).
+
+## Delphi compiler-warning follow-up
+
+The source changes address the supplied W1021, W1023, W1036 and H2077 diagnostics:
+the TLV buffer-size check is compiled only when native lengths can exceed MaxInt;
+Belgian identity tags use byte-set membership; DESFire Boolean options use a
+matching byte comparison; unsupported MRZ formats explicitly raise before any
+unassigned digit is used. Dead result assignments are removed, EMV log-format
+validation still executes without storing its unused return value, and PC/SC
+discovery assigns its exhausted-retry status after the loop.
+
+W1033 implicit imports are addressed by restoring the six runtime dependencies
+and matching DCP references of the design package, together with its design-only
+role. The maintainer's combined project group is retained with dependencies before
+consumers in both project order and Build/Make/Clean targets. Runtime `.dproj`
+files remain unchanged. No warning/hint directives are disabled.
+
+The distribution checker now detects cross-package owned-unit imports without
+the required owning DCP and inconsistent group target order. It accepts empty
+platform configuration groups omitted by the IDE while still checking active
+overrides and effective Debug/Release × Win32/Win64 settings. These are bounded
+source readers, not a substitute for Delphi's package linker or IDE.

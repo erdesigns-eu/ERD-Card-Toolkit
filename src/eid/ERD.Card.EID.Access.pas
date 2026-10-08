@@ -83,7 +83,7 @@ begin
     mfTD1:begin Number:=Copy(Identity.Raw,6,9); Digit:=Identity.Raw[15]; Dates:=Copy(Identity.Raw,31,7)+Copy(Identity.Raw,39,7); end;
     mfTD2:begin Number:=Copy(Identity.Raw,37,9); Digit:=Identity.Raw[46]; Dates:=Copy(Identity.Raw,50,7)+Copy(Identity.Raw,58,7); end;
     mfTD3:begin Number:=Copy(Identity.Raw,45,9); Digit:=Identity.Raw[54]; Dates:=Copy(Identity.Raw,58,7)+Copy(Identity.Raw,66,7); end;
-  else InvalidAccess; end;
+  else raise EIcaoAccessError.Create('Invalid ICAO access protocol data.'); end;
   if Digit='<' then begin Number:=Identity.DocumentNumber; Digit:=TMrzCodec.CheckDigit(Number); end;
   Text:=Number+Digit+Dates; Result:=nil; SetLength(Result,Length(Text));
   for I:=1 to Length(Text) do Result[I-1]:=Ord(Text[I]); ValidatePassword(Result,ipkMrz);

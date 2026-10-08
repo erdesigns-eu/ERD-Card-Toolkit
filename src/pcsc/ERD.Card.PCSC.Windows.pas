@@ -179,7 +179,6 @@ var
 begin
   ANames := nil;
 {$IFDEF MSWINDOWS}
-  Result := PcscInsufficientBuffer;
   for Attempt := 1 to MaxDiscoveryAttempts do
   begin
     Characters := 0;
@@ -193,6 +192,7 @@ begin
     if not ParseReaderNames(Buffer, Characters, ANames) then Exit(PcscInternalError);
     Exit(PcscSuccess);
   end;
+  Result := PcscInsufficientBuffer;
 {$ELSE}
   Result := PcscUnsupportedFeature;
 {$ENDIF}

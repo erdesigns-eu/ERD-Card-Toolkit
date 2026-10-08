@@ -462,11 +462,10 @@ begin
   for I := 0 to Length(Result.Data.Fields) - 1 do
   begin
     Tag := Result.Data.Fields[I].Tag;
-    if (Tag = Ord(eitCardNumber)) or ((Tag >= Ord(eitValidityBegin)) and
-      (Tag <= Ord(eitSpecialStatus))) or (Tag = Ord(eitDuplicate)) or
-      (Tag = Ord(eitSpecialOrganization)) or ((Tag >= Ord(eitProtectionDateAndCountry)) and
-      (Tag <= Ord(eitRegionalFileNumber))) or ((Tag >= Ord(eitBrexitMention1)) and
-      (Tag <= Ord(eitEuStartDate))) then
+    if Tag in [Ord(eitCardNumber), Ord(eitValidityBegin)..Ord(eitSpecialStatus),
+      Ord(eitDuplicate), Ord(eitSpecialOrganization),
+      Ord(eitProtectionDateAndCountry)..Ord(eitRegionalFileNumber),
+      Ord(eitBrexitMention1)..Ord(eitEuStartDate)] then
     begin
       Text := StrictUtf8(Result.Data.Fields[I].Value);
       case Tag of
@@ -487,7 +486,7 @@ begin
         Ord(eitSpecialStatus): Result.SpecialStatus := Text;
       end;
     end;
-    if (Tag = Ord(eitMemberOfFamily)) and (Length(Result.Data.Fields[I].Value) <> 0) then
+    if (Tag = Byte(Ord(eitMemberOfFamily))) and (Length(Result.Data.Fields[I].Value) <> 0) then
       Fail('family flag length');
   end;
   Result.ChipNumber := Result.Data.GetBytes(Ord(eitChipNumber));

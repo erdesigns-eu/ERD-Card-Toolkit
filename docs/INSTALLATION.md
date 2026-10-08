@@ -2,8 +2,11 @@
 
 The library supplies eight runtime packages, one design-time palette package and
 source-linked VCL examples. The intended target is Delphi 10.4 or later on Windows,
-Win32 and Win64. Actual Delphi builds and IDE installation are still pending:
-Linux source readers and FPC execution do not establish Delphi compatibility.
+Win32 and Win64. The maintainer reports successful package builds and IDE
+installation in RAD Studio 12 (Studio 23.0), Debug/Win32, after the project repair.
+The compiler-warning follow-up still needs a fresh Delphi rebuild; other Delphi
+versions, configurations and architectures remain unverified. Linux source readers
+and FPC execution do not establish Delphi compatibility.
 
 ## Use source directly
 
@@ -16,10 +19,11 @@ application. Consult [EUROPEAN_EID.md](EUROPEAN_EID.md) for supported access pro
 
 ## Build runtime packages
 
-Open `packages/ERDCards.groupproj` in RAD Studio and build in the listed order:
-Core, MagStripe, PCSC, EID, EMV, Contactless, CryptoWindows, CryptoOpenSSL.
-The first six cover non-cryptographic components; either cryptographic provider
-can be omitted when it is not needed. Each package owns its units exactly once.
+Open `packages/ERDCards.groupproj` in RAD Studio. It builds Core, CryptoWindows,
+CryptoOpenSSL, PCSC, EID, EMV, MagStripe and Contactless, followed by the design
+package. The order keeps dependencies before their consumers. Either cryptographic
+provider can be omitted when building packages individually and it is not needed.
+Each package owns its units exactly once.
 No runtime package requires `vcl`, `designide` or the registration package.
 
 Alternatively, from the matching RAD Studio command prompt:
@@ -37,6 +41,9 @@ retained. For example:
 msbuild packages\ERDCards.groupproj /t:Build /p:Config=Release /p:Platform=Win64
 ```
 
+The project-group command also builds the design package. Use the batch script
+without `design` when only runtime packages are required.
+
 BPL/DCP outputs are isolated in `dist/packages/<Platform>/<Config>`; DCUs are
 further separated by package. Do not mix compiler versions, configurations or
 architectures. Rebuild the entire set after switching the Delphi version.
@@ -45,8 +52,8 @@ architectures. Rebuild the entire set after switching the Delphi version.
 
 First determine the architecture of the **IDE process**. It can differ from your
 application target: use the IDE-compatible compiler for the registration BPL.
-Build the runtime group for that architecture and configuration, then build
-`packages/design/ERDCardDesign.dproj`, or explicitly request the design package:
+Build the project group for that architecture and configuration, or explicitly
+request the runtime packages plus the design package through the script:
 
 ```bat
 tools\build-packages.cmd dcc32 design
@@ -69,6 +76,13 @@ The `ERD Cards` palette contains `TSmartCardReader`, `TBelgianEIDReader`,
 Default IDE component icons are used. The optional cryptographic backends are
 interface providers rather than palette components, so the design package does
 not depend on or load them.
+
+The design package must retain its six `ERDCard*` entries in `requires` and the
+matching DCP references in the IDE project. Removing them causes Delphi W1033
+implicit imports and recompiles runtime component classes into the design BPL.
+After changing these dependencies, close the IDE, rebuild the complete set for
+its architecture/configuration, and load the rebuilt design BPL. Avoid mixing
+older copies with the rebuilt packages.
 
 Constructors, registration and streaming do not connect to cards. Published scalar
 configuration is persisted in DFM files. Interface properties such as `Transport`,
