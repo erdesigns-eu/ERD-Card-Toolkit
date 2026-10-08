@@ -186,11 +186,37 @@ if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\InspectDesfire.exe" --settings-hex 000312343322 --file 0
 if not errorlevel 1 exit /b 1
 if errorlevel 2 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\crypto;src\eid;src\contactless;src\pcsc;tests\eid;tests\contactless" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\crypto\EacCrypto.Tests.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\EacCrypto.Tests.exe"
+if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\crypto;src\eid;src\contactless;src\pcsc;tests\eid;tests\contactless" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\eid\IcaoDocument.Tests.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\IcaoDocument.Tests.exe"
+if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\crypto;src\eid;src\contactless;src\pcsc;tests\eid;tests\contactless" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\contactless\DesfireManagement.Tests.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\DesfireManagement.Tests.exe"
+if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\crypto;src\eid;src\contactless;src\pcsc;tests\eid;tests\contactless" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" examples\eid\ReadIcaoDocument.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\ReadIcaoDocument.exe" --help
+if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\crypto;src\eid;src\contactless;src\pcsc;tests\eid;tests\contactless" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" examples\contactless\AdminDesfire.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\AdminDesfire.exe" --help
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\AdminDesfire.exe" --plan
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\ReadIcaoDocument.exe" --cardaccess 31143012060A04007F0007020204020202010202010D
+if errorlevel 1 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -Usrc\magstripe -N0"%CARD_BUILD%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" packages\runtime\ERDCardMagStripe.dpk
 if errorlevel 1 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -Usrc\core -N0"%CARD_BUILD%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" packages\runtime\ERDCardCore.dpk
 if errorlevel 1 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\crypto;%CARD_BUILD%" -N0"%CARD_BUILD%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" packages\runtime\ERDCardCryptoWindows.dpk
+if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\crypto;%CARD_BUILD%" -N0"%CARD_BUILD%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" packages\runtime\ERDCardCryptoOpenSSL.dpk
 if errorlevel 1 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\pcsc;%CARD_BUILD%" -N0"%CARD_BUILD%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" packages\runtime\ERDCardPCSC.dpk
 if errorlevel 1 exit /b %errorlevel%

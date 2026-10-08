@@ -320,17 +320,18 @@ raw = bytearray(raw_settings(2, 3, allowance=10)); raw[-1] = 3
 card.metadata(0xF5, b'\2', bytes(raw))
 vectors['Ev2UnexpectedValueOptions'] = card.pairs
 
-text = ['unit Desfire.SessionVectors;', '', '{$IFDEF FPC}{$MODE DELPHI}{$ENDIF}', '', 'interface', '', 'uses Desfire.Vectors;', '']
-for name in vectors:
-    text += ['/// <summary>Independent synthetic ' + name + ' transcript.</summary>',
-             '/// <returns>Owned literal command/response pairs; published test credentials only.</returns>',
-             'function ' + name + ': TDesfireWirePairs;']
-text += ['', 'implementation', '']
-for name, pairs in vectors.items():
-    text += ['function ' + name + ': TDesfireWirePairs;', 'begin', '  Result:=nil; SetLength(Result,' + str(len(pairs)) + ');']
-    for i, (command, response) in enumerate(pairs):
-        text += [f"  Result[{i}].Command:='{command.hex().upper()}';", f"  Result[{i}].Response:='{response.hex().upper()}';"]
-    text += ['end;', '']
-text += ['end.', '']
-(ROOT / 'tests/contactless/Desfire.SessionVectors.pas').write_text('\n'.join(text))
-print('Generated', len(vectors), 'independent session transcripts.')
+if __name__ == '__main__':
+    text = ['unit Desfire.SessionVectors;', '', '{$IFDEF FPC}{$MODE DELPHI}{$ENDIF}', '', 'interface', '', 'uses Desfire.Vectors;', '']
+    for name in vectors:
+        text += ['/// <summary>Independent synthetic ' + name + ' transcript.</summary>',
+                 '/// <returns>Owned literal command/response pairs; published test credentials only.</returns>',
+                 'function ' + name + ': TDesfireWirePairs;']
+    text += ['', 'implementation', '']
+    for name, pairs in vectors.items():
+        text += ['function ' + name + ': TDesfireWirePairs;', 'begin', '  Result:=nil; SetLength(Result,' + str(len(pairs)) + ');']
+        for i, (command, response) in enumerate(pairs):
+            text += [f"  Result[{i}].Command:='{command.hex().upper()}';", f"  Result[{i}].Response:='{response.hex().upper()}';"]
+        text += ['end;', '']
+    text += ['end.', '']
+    (ROOT / 'tests/contactless/Desfire.SessionVectors.pas').write_text('\n'.join(text))
+    print('Generated', len(vectors), 'independent session transcripts.')

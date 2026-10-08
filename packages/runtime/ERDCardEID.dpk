@@ -1,6 +1,6 @@
 package ERDCardEID;
 
-{$DESCRIPTION 'ERD Card Belgian eID: public contact-card files and non-visual reader'}
+{$DESCRIPTION 'ERD Card eID: Belgian contact files and ICAO BAC/PACE LDS reader'}
 {$RUNONLY}
 
 requires
@@ -8,6 +8,9 @@ requires
   ERDCardCore;
 
 contains
+  ERD.Card.EID.Access in '..\..\src\eid\ERD.Card.EID.Access.pas',
+  ERD.Card.EID.SecureMessaging in '..\..\src\eid\ERD.Card.EID.SecureMessaging.pas',
+  ERD.Card.EID.DocumentReader in '..\..\src\eid\ERD.Card.EID.DocumentReader.pas',
   ERD.Card.EID.MRZ in '..\..\src\eid\ERD.Card.EID.MRZ.pas',
   ERD.Card.EID.ICAO in '..\..\src\eid\ERD.Card.EID.ICAO.pas',
   ERD.Card.EID.Data in '..\..\src\eid\ERD.Card.EID.Data.pas',

@@ -212,7 +212,9 @@ including already formatted public DESFire NDEF files. Native DESFire access is 
 separate [component and EV1/EV2 AES profiles](DESFIRE.md), with maintained crypto backends.
 Further families include other Type 2
 security variants, authenticated ISO 15693 access, further programmable UID profiles and native
-DESFire D40/3DES/LRP, TMAC receipts and key/rights/configuration management.
+DESFire D40/3DES/LRP, TMAC receipts, EV2 key sets and extended configuration/rights.
+Basic EV1/EV2 AES key policy, rotation and ordinary-file access administration are
+implemented; see [DESFire](DESFIRE.md).
 Owned ordinary transactions and basic create/delete management are implemented; see [DESFIRE.md](DESFIRE.md).
 Public ISO 15693/Type 5 access is available through the separate components described
 in [ISO15693_TYPE5.md](ISO15693_TYPE5.md).

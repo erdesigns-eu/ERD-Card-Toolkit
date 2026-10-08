@@ -26,7 +26,7 @@ package. All exported declarations carry Delphi XML documentation.
 | EV2 NonFirst | Optional `77` authentication with a second explicit key after verified settings; new session keys, retained TI/counter | One key switch within each acquired data/value/record operation; key-set management is separate |
 | Secure file access | Plain/MACed/Full data/value/record reads and standard-data range writes; authenticated settings | Physical EV1/EV2/EV3/Light, firmware and reader compatibility remain unvalidated |
 | Backup/value/record modification | Owned sessions stage backup ranges, credit/debit/limited credit, linear/cyclic append and record clearing; explicit commit/abort and complete post-commit verification | Transaction-MAC files/receipts, readers/cards with additional transaction features |
-| Administration | Explicit PICC-level AES application create/delete and all five ordinary file create/delete operations, with verified directories/settings | Formatting, ChangeKey/ChangeFileSettings, ISO creation, SDM/TMAC, key sets, configuration and originality verification |
+| Administration | Explicit PICC-level AES application create/delete and all five ordinary file create/delete operations, with verified directories/settings; AES key rotation, key policy and ordinary access/mode changes | Formatting, ISO creation, SDM/TMAC, key sets, generation-specific configuration and originality verification |
 
 EV2 is a **secure-messaging dialect**, not a guessed card generation. NXP AN12343
 states that DESFire Light AES messaging works like DESFire EV2. The shared
@@ -396,6 +396,72 @@ wrong-thread/reentrancy, component lifetime and known commit/abort evidence.
 These prove tested protocol/buffer behavior, not real Windows ABI/policy or card
 compatibility. See [VALIDATION.md](VALIDATION.md).
 
+## AES key and access administration
+
+`OpenManagementSession(Aid)` returns the new derived `IDesfireManagement`; the
+existing `IDesfireSession` IID and method layout are unchanged. It provides native
+PICC free-memory (`6E`) and existing-key version (`64`) reads, `ChangeKeySettings`
+(`54`), `ChangeFileAccess` (`5F`) and `ChangeAesKey` (`C4`). The session retains the
+transport/provider independently of the creating component. A queried management
+view on a read-only/transactional session still refuses these mutations before I/O.
+Mutations require an explicit AES management session, with no NonFirst credential
+configured. They take **immediate effect** and cannot be rolled back by Abort.
+
+Key policy changes require acquired configuration-change permission and auth key
+zero. File access changes require the old ChangeAccessRights key/free route, acquired
+valid target key numbers (or E free/F never), and an ordinary strict file layout.
+The complete post-change settings must preserve geometry and every untouched byte.
+EV1 free-rights changes use Plain command/CMAC response semantics; other EV1 changes
+and EV2 changes use Full. ReadFreeMemory requires PICC context; key numbers/versions
+are acquired metadata, never evidence of possession on their own.
+
+AES rotation retains the key type and changes an existing 0..13 key only. The owner
+supplies 16 new bytes and an explicit version. Another target also needs 16 current
+old bytes, XORed into the native body; the authenticated target requires an empty
+old-key argument. Acquired master-key/change-key policy and key count gate dispatch.
+PICC AES uses native key-number type bit 80; application key numbers do not.
+EV1 includes native command CRC32 and, for another key, the separate new-key CRC;
+EV2 uses its Full-message frame and separate new-key CRC for another target.
+
+A current-key change can return a bare successful status because the old session
+has been invalidated. **Success requires fresh mutual authentication with the new
+key and an acquired matching new version**, including for another target. This is
+explicit post-write verification, not recovery or replay of ChangeKey. The retained
+session subsequently uses that new target; the source component's initial credentials
+remain unchanged. Save/provision credentials in the application's own policy.
+Any dispatch, acknowledgement, entropy, reauthentication or version failure before
+verification leaves the session uncertain, closes/releases it once and never repeats
+the change. A later Close/release error propagates separately: the session is closed
+and the already verified changes remain proven. The example reports that retained
+outcome alongside the exception, without rolling back or retrying.
+
+```pascal
+Management := Reader.OpenManagementSession(NativeAid);
+try
+  Management.ChangeAesKey(TargetKeyNumber, NewVersion, NewKey, OldKeyOrEmpty);
+  // The management session is now authenticated with the new target key.
+  Management.Close;
+finally
+  Management := nil;
+end;
+```
+
+Declare Management as `IDesfireManagement`, target/version as `Byte`, NativeAid as
+`Cardinal` and keys as `TBytes`. All secrets are caller-provisioned, never defaults.
+Use `ChangeFileAccess(FileId, dfcFull, ReadKey, WriteKey, ReadWriteKey, ChangeKey)`
+only with the actual intended policy; setting ChangeKey F or disabling policy bits
+may permanently prevent later changes under the current configuration.
+
+`AdminDesfire --help` documents explicit version/free-memory/settings/access/rotation
+arguments; `--plan` opens no hardware. Hardware mode uses exclusive Windows PC/SC
+and exact raw key files; secrets never appear in output. The runner only exercises
+offline modes. The new independent generator supplies 26 literal EV1/EV2 admin
+transcripts, including current/other/PICC rotation, both current-key acknowledgement
+forms, valid-integrity wrong versions/settings/geometry and denied policies.
+Fault tests check all admin I/O boundaries, all protected-response bits, mutated
+fresh-auth challenges, lost replies, RNG/release failures and no replay. The suite
+also executes through the actual CNG adapter with the Linux ABI shim.
+
 ## Sources
 
 Protocol facts were independently implemented; no PDF or external implementation
@@ -436,6 +502,7 @@ is redistributed or linked into this library:
   and [OpenSSL EVP](https://docs.openssl.org/3.5/man3/EVP_EncryptInit/).
 
 Next security/access additions are legacy D40 and EV1 DES/2K3DES/3K3DES, EV2 key sets,
-LRP and generation-specific extensions, TMAC receipts, key/rights/configuration
-management, ISO creation, originality and hardware profiles. Broad support is built per implemented/tested operation, never inferred
+LRP and generation-specific extensions, TMAC receipts, extended/SDM rights and
+configuration, ISO creation, originality and hardware profiles. Basic AES key policy,
+rotation and ordinary access administration are implemented. Broad support is built per implemented/tested operation, never inferred
 from one successful AES session or PC/SC connection.

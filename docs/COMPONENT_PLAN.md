@@ -29,8 +29,11 @@ are not compatibility requirements.
    tests supplied. Cryptographic authenticity, contactless PACE and real-card profile
    certification remain separate work. See [the eID guide](BELGIAN_EID.md).
    Shared ICAO MRZ/DG1/DG2 data codecs are available for the European expansion.
-   BAC/PACE, secure messaging and physical Dutch/Luxembourg/German card support
-   are separate pending access-layer work; see [the support matrix](EUROPEAN_EID.md).
+   `TICAODocumentReader` now implements explicit BAC and PACE ECDH-GM/AES-128
+   (NIST P-256/brainpoolP256r1, MRZ/CAN), protected complete DG1/DG2/COM/SOD reads
+   and large-photo B1 offsets through an optional OpenSSL 3 provider. Passive/SOD
+   verification, additional PACE/EAC/national services and physical
+   Dutch/Luxembourg/German card coverage remain pending; see [the support matrix](EUROPEAN_EID.md).
 5. **TEMVCardReader — implementation available; Delphi/hardware validation pending.**
    PSE/PPSE discovery, explicit AID/PDOL selection, GPO formats 80/77 and bounded AFL
    record reads. Optional PAN/expiry/name/IBAN and packed Track 2 data, with explicit
@@ -92,8 +95,10 @@ are not compatibility requirements.
    second supplied key while preserving TI and command counter. Retained sessions provide
    owned backup/value/record transactions, explicit commit/abort, full post-commit
    verification, protected directories and basic AES application/ordinary-file create/delete.
-   See [native DESFire](DESFIRE.md). D40/3DES, LRP, TMAC receipts, key/rights/configuration
-   management, originality and physical validation remain pending.
+   AES management also reads free memory/key versions and changes key policy/file
+   access; rotation proves the new key through fresh authentication/version reads.
+   See [native DESFire](DESFIRE.md). D40/3DES, LRP, TMAC receipts, key sets/extended
+   configuration, originality and physical validation remain pending.
    **TMemoryCardReaderWriter** remains planned for contact memory-card families and
    matching readers. Non-Java chips do not share one universal protocol.
 8. **Distribution.** Runtime/design-time packages, Delphi/Windows validation matrix,
@@ -113,6 +118,9 @@ and validation coverage. See [the cleanup record](LEGACY_CLEANUP.md).
 
 ## Next coherent batches
 
+Payments is the next user-requested batch after the combined AES administration/
+European ICAO access work. The remaining areas are:
+
 The Type 2, Type 4 and Type 5 NDEF increments combine pure codecs, record/descriptor
 handling, verified card components, examples, protocol failure tests and API
 documentation. Use the same complete scope for upcoming batches:
@@ -122,14 +130,16 @@ documentation. Use the same complete scope for upcoming batches:
    then YL160/MSR DLL bindings with verified SDK headers and buffer lengths.
    Physical/firmware coverage and status-versus-read-back evidence stay explicit.
 2. **DESFire expansion and additional chip families:** D40 and EV1 DES/2K3DES/3K3DES security,
-   EV2 key sets, LRP, TMAC receipts and key/rights/configuration administration, followed by
+   EV2 key sets, LRP, TMAC receipts and extended configuration/SDM/rights, followed by
    originality and physical card profiles. Owned ordinary transactions and basic create/delete
-   management are implemented. EV1/EV2 AES secure
+   management and verified AES key/policy/access administration are implemented. EV1/EV2 AES secure
    file access and EV2 NonFirst through maintained providers are implemented. Then Plus profiles,
    additional ISO 15693 authentication/reader backends,
    then contact memory chips. Public ISO 15693/Type 5 access is already implemented.
-3. **European eID access:** BAC/PACE and secure-messaging integration for the existing
-   MRZ/DG codecs, with concrete Netherlands/Luxembourg/Germany card profiles.
+3. **European eID:** BAC and PACE ECDH-GM/AES-128 secure access with complete
+   DG1/DG2/COM/SOD reads are implemented. Next: passive/SOD verification, chip/EAC
+   authentication, more PACE profiles and concrete Netherlands/Luxembourg/Germany
+   hardware/national-service integration.
 4. **Payments:** a concrete terminal/provider integration, followed by a separately
    integrated direct NFC kernel where supported; data-reading alone cannot authorize payment.
 
@@ -148,7 +158,8 @@ read/write claim from the transport.
   base runtime package. The small curated ATR hint catalog is an optional core unit;
   EMV metadata stays in the EMV package.
 - Cryptographic primitives use a maintained system library. Core contains the
-  provider contract/CMAC composition; Windows CNG has a separate runtime package.
+  AES/EAC provider contracts and MAC composition; Windows CNG and OpenSSL 3 have
+  separate optional runtime packages.
   Security modes and administrative/transactional commands need explicit profiles.
 - Do not activate readers in constructors or in the IDE designer.
 

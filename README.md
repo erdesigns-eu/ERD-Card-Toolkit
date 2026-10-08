@@ -28,6 +28,7 @@ outside the library. See [the cleanup record](docs/LEGACY_CLEANUP.md).
 | `TMagStripeReaderWriter` | Tracks 1–3 and device adapters for magstripe readers/writers |
 | `TSmartCardReader` | PC/SC connections, reader discovery, card events and byte transport |
 | `TBelgianEIDReader` | Belgian eID identity, address, photograph and available certificates |
+| `TICAODocumentReader` | ICAO BAC/PACE access, secure messaging and complete DG1/DG2/COM/SOD with encoded photos |
 | `TEMVCardReader` | Available payment applications, card data and records |
 | `TMemoryCardReaderWriter` | Supported memory-card families through appropriate reader adapters |
 | `TContactlessCardReader` | Supported contactless families through distinct card profiles |
@@ -35,7 +36,7 @@ outside the library. See [the cleanup record](docs/LEGACY_CLEANUP.md).
 | `TType4NdefCardReader` | Public ISO 7816 NDEF files with bounded CC/MLe/MLc and verified NLEN updates |
 | `TIso15693CardReader` | Explicit addressed ISO 15693 system information and guarded block access |
 | `TType5NdefCardReader` | Initialized public Type 5 NDEF memory with CC/security preflight and verified length-last updates |
-| `TDesfireCardReader` | Native DESFire files, EV1/EV2 AES secure messaging, EV2 NonFirst, verified standard-data writes, owned backup/value/record transactions and explicit application/file management |
+| `TDesfireCardReader` | Native DESFire files, EV1/EV2 AES secure messaging, EV2 NonFirst, verified standard-data writes, owned backup/value/record transactions and explicit application/file/key/access management |
 
 `TMagStripeReaderWriter` in `src/magstripe` provides exclusive read sessions and
 capability-checked selected-track writes with same-card verification and explicit
@@ -121,9 +122,11 @@ access layers are still pending. See [the programmable UID support matrix](docs/
 The remaining components are planned. See [the component plan](docs/COMPONENT_PLAN.md),
 [the PC/SC guide](docs/PCSC_TRANSPORT.md) and [the Belgian eID guide](docs/BELGIAN_EID.md).
 
-The eID package also provides shared ICAO TD1/TD2/TD3 MRZ and DG1/DG2 decoders,
-including encoded face images. Direct access to Dutch, Luxembourg and German
-documents still requires a separate BAC/PACE secure-messaging provider. See
+The eID package provides ICAO TD1/TD2/TD3 MRZ and DG1/DG2 decoders plus
+`TICAODocumentReader`: explicit BAC or PACE ECDH-GM/AES-128 (NIST/brainpool),
+MRZ/CAN, protected complete files and large encoded photos. An optional OpenSSL 3
+provider supplies native crypto. Exact Dutch/Luxembourg/German card generations,
+passive authentication, EAC and national services require further work. See
 [the European eID support boundary](docs/EUROPEAN_EID.md).
 
 ## Using the core
@@ -134,6 +137,8 @@ package; there is no design-time dependency or registration package yet.
 `ICardAesProvider`/AES-CMAC utilities are in Core. The optional separate
 `ERDCardCryptoWindows.dpk` provides the CNG backend from `src/crypto`, without
 adding an OS cryptographic-library import to the base core package.
+`ERDCardCryptoOpenSSL.dpk` optionally supplies the dynamically loaded OpenSSL 3
+BAC/PACE backend; install a matching native library for its actual tests/use.
 
 ```pascal
 uses System.SysUtils, ERD.Card.Bytes, ERD.Card.APDU;
@@ -186,6 +191,11 @@ Type 5 updates, interrupted writes and both catalogs.
 without hardware; explicit reader modes inspect metadata, optionally using a
 supplied raw AES key file. Crypto/DESFire tests include NIST/NXP vectors,
 independently generated transcripts and the actual CNG adapter through a Linux ABI shim.
+`AdminDesfire --help`/`--plan` demonstrate the new AES administration API offline.
+`ReadIcaoDocument --cardaccess <hex>` inspects advertised PACE without a library or
+reader. Its explicit hardware mode uses a password file and can save encoded photos.
+Tests check official ICAO BAC/PACE vectors, native EC agreement, independent APDU
+transcripts and complete large-photo reads with secure messaging.
 The tests exercise the actual Pascal units with range and overflow checks, all
 command cases, length boundaries, invalid inputs, independent buffers and responses,
 ATR checksums, TLV normalization, tree ownership and resource limits. Transport
@@ -209,8 +219,10 @@ tools\run-core-tests.cmd dcc32
 tools\run-core-tests.cmd dcc64
 ```
 
-The Windows script builds the Pascal tests, console examples and all seven runtime
-packages with XML documentation, range checks and overflow checks.
+The Windows script builds the Pascal tests, console examples and all eight runtime
+packages with XML documentation, range checks and overflow checks. The new BAC/PACE
+tests require matching OpenSSL 3 `libcrypto-3.dll` available to their Windows
+executables; application code can instead supply an explicit native-library path.
 It has not been executed in the Linux development environment. Verify the generated
 XML documentation and Help Insight in the target IDE as described in
 [the documentation standard](docs/API_DOCUMENTATION.md).
