@@ -45,8 +45,8 @@ int32_t CloseHandle(uintptr_t value) {
 }
 int32_t SetCommState(uintptr_t value, const serial_dcb *state) {
     counts[2]++;
-    if (value != handle || !state || state->length != 28 || state->baud != 9600 || state->flags != 1 ||
-        state->reserved || state->reserved1 || state->byte_size != 8 || state->parity || state->stop ||
+    if (value != handle || !state || state->length != 28 || state->baud != 9600 || state->flags != (mode == 21 ? 3u : 1u) ||
+        state->reserved || state->reserved1 || state->byte_size != (mode == 21 ? 7u : 8u) || state->parity != (mode == 21 ? 1u : 0u) || state->stop ||
         state->xon != 0x11 || state->xoff != 0x13 || state->xon_limit || state->xoff_limit)
         return 0;
     return mode != 2;
@@ -85,17 +85,39 @@ static int protocol_send(const uint8_t *bytes, uint32_t size) {
     step++;
     return 1;
 }
+static int protocol_7hl_send(const uint8_t *bytes, uint32_t size) {
+    static const uint8_t commands[][7] = {
+        {0x7F}, {2,0x23,3,0x22}, {2,0x3C,'2','5','5',3,0x0F}, {2,0x3E,3,0x3F},
+        {2,0x4F,3,0x4E}, {2,0x6E,3,0x6F}, {2,0x42,3,0x43},
+        {2,'2','3',4,3,4}, {2,0x40,3,0x41}, {2,0x52,3,0x53}, {0x7F}
+    };
+    static const uint8_t command_sizes[] = {1,4,7,4,4,4,4,6,4,4,1};
+    static const uint8_t replies[][8] = {
+        {0x3A}, {2,0x77,3,0x76}, {2,0x5E,3,0x5F}, {2,'2','5','5',3,0x33},
+        {2,0x5E,3,0x5F}, {2,0x5E,3,0x5F}, {2,0x5E,3,0x5F}, {2,0x5E,3,0x5F},
+        {2,0x5E,3,0x5F,2,0x5E,3,0x5F}, {2,'2','3',3,0}, {0}
+    };
+    static const uint8_t reply_sizes[] = {1,4,4,6,4,4,4,4,8,5,0};
+    if (step >= 11 || size != command_sizes[step] || memcmp(bytes, commands[step], size) || reply_offset != reply_size)
+        return 0;
+    reply_offset = 0;
+    reply_size = reply_sizes[step];
+    memcpy(reply, replies[step], reply_size);
+    step++;
+    return 1;
+}
 int32_t WriteFile(uintptr_t value, const uint8_t *bytes, uint32_t size, uint32_t *written, const void *overlapped) {
     counts[5]++;
     if (value != handle || !bytes || !size || size > 4096 || !written || overlapped) return 0;
     if (mode == 20 && !protocol_send(bytes, size)) return 0;
+    if (mode == 21 && !protocol_7hl_send(bytes, size)) return 0;
     *written = mode == 5 ? size - 1 : (mode == 10 ? size + 1 : size);
     return mode != 11;
 }
 int32_t ReadFile(uintptr_t value, uint8_t *bytes, uint32_t size, uint32_t *received, const void *overlapped) {
     counts[6]++;
     if (value != handle || !bytes || size != 1 || !received || overlapped) return 0;
-    if (mode == 20) {
+    if (mode == 20 || mode == 21) {
         if (reply_offset >= reply_size) return 0;
         bytes[0] = reply[reply_offset++];
     } else bytes[0] = 0x79;

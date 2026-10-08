@@ -16,13 +16,20 @@ uses
   ERD.Card.MagStripe;
 
 type
+  /// <summary>Explicit 9600-baud framing; never inferred by sending card commands.</summary>
+  TMagStripeSerialFormat = (
+    /// <summary>Eight data bits, no parity, one stop bit: MSR206/MSR605.</summary>
+    mssf8N1,
+    /// <summary>Seven data bits, odd parity, one stop bit: default MSR206-7HL Rev F.</summary>
+    mssf7O1
+  );
   /// <summary>Exclusive synchronous serial byte channel; no protocol framing or automatic resend.</summary>
   /// <remarks>Use on one caller thread without reentrancy. Open failure grants no ownership;
   /// Close cancels/releases owned resources and clears local ownership even on error.
   /// Each I/O enforces its supplied remaining deadline. A partial send is an error, never resumed.</remarks>
   IMagStripeSerialPort = interface
     ['{31C4C54E-E953-42A4-90C3-601B334282DD}']
-    /// <summary>Opens the configured port exclusively and sets 9600 baud, 8 data bits, no parity, one stop bit.</summary>
+    /// <summary>Opens the configured port exclusively with its explicitly configured serial format.</summary>
     /// <remarks>No hardware/software flow control. Does not send a reader command.</remarks>
     procedure Open;
     /// <summary>Closes an acquired channel once; pending device commands require protocol-specific cancellation.</summary>
@@ -46,9 +53,18 @@ type
 /// <param name="APortName">Bare COM1..COM65535, case-insensitive ASCII; paths and alternate device names are refused.</param>
 /// <returns>Retained interface owning an exclusive handle after explicit Open; destructor best-effort closes it.</returns>
 /// <exception cref="EMagStripeError">Port name is invalid.</exception>
-/// <remarks>Uses Windows kernel32 serial APIs, no vendor DLL. On other platforms Open raises unsupported.
+/// <remarks>Default 9600/8N1. Uses Windows kernel32 serial APIs, no vendor DLL. On other platforms Open raises unsupported.
 /// Synchronous driver timeouts require a conforming serial driver; Windows/driver validation remains separate.</remarks>
-function CreateWindowsMagStripeSerialPort(const APortName: string): IMagStripeSerialPort;
+function CreateWindowsMagStripeSerialPort(const APortName: string): IMagStripeSerialPort; overload;
+
+/// <summary>Creates an inactive exclusive Windows COM channel with explicit 9600-baud framing.</summary>
+/// <param name="APortName">Bare COM1..COM65535; the same strict validation as the default factory.</param>
+/// <param name="AFormat">8N1 or 7O1; must match the reader configuration.</param>
+/// <returns>Retained channel; does not open hardware until Open.</returns>
+/// <exception cref="EMagStripeError">Name or format is invalid.</exception>
+/// <remarks>One stop bit and no flow control; parity checking is enabled for 7O1.</remarks>
+function CreateWindowsMagStripeSerialPort(const APortName: string;
+  const AFormat: TMagStripeSerialFormat): IMagStripeSerialPort; overload;
 
 implementation
 
@@ -56,11 +72,12 @@ type
   TWindowsSerialPort = class(TInterfacedObject, IMagStripeSerialPort)
   private
     FPath: UnicodeString;
+    FFormat: TMagStripeSerialFormat;
     FHandle: NativeUInt;
     FOpen: Boolean;
     procedure CheckOpen;
   public
-    constructor Create(const APortName: string);
+    constructor Create(const APortName: string; const AFormat: TMagStripeSerialFormat);
     destructor Destroy; override;
     procedure Open;
     procedure Close;
@@ -132,15 +149,25 @@ end;
 
 function CreateWindowsMagStripeSerialPort(const APortName: string): IMagStripeSerialPort;
 begin
-  Result := TWindowsSerialPort.Create(APortName);
+  Result := TWindowsSerialPort.Create(APortName, mssf8N1);
 end;
 
-constructor TWindowsSerialPort.Create(const APortName: string);
+function CreateWindowsMagStripeSerialPort(const APortName: string;
+  const AFormat: TMagStripeSerialFormat): IMagStripeSerialPort;
+begin
+  Result := TWindowsSerialPort.Create(APortName, AFormat);
+end;
+
+constructor TWindowsSerialPort.Create(const APortName: string; const AFormat: TMagStripeSerialFormat);
 var
   I, Number: Integer;
   Name: string;
 begin
   inherited Create;
+  if (Ord(AFormat) < Ord(Low(TMagStripeSerialFormat))) or
+    (Ord(AFormat) > Ord(High(TMagStripeSerialFormat))) then
+    raise EMagStripeError.Create('Invalid serial format.');
+  FFormat := AFormat;
   if (Length(APortName) < 4) or (Length(APortName) > 8) then
     raise EMagStripeError.Create('Expected a bare COM port name.');
   Name := UpperCase(APortName);
@@ -186,6 +213,12 @@ begin
     Dcb.BaudRate := 9600;
     Dcb.Flags := 1; // fBinary; DTR/RTS and all flow-control flags disabled.
     Dcb.ByteSize := 8;
+    if FFormat = mssf7O1 then
+    begin
+      Dcb.Flags := 3; // fBinary and fParity; no flow control.
+      Dcb.ByteSize := 7;
+      Dcb.Parity := 1; // ODDPARITY.
+    end;
     Dcb.XonChar := $11;
     Dcb.XoffChar := $13;
     if not NativeSetState(Handle, @Dcb) then SerialFailure;

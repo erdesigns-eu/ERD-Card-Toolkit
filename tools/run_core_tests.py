@@ -55,6 +55,7 @@ def main():
                     'tests/contactless/Type4Ndef.Tests.dpr',
                     'tests/magstripe/MagStripe.Tests.dpr',
                     'tests/magstripe/Msr206.Tests.dpr',
+                    'tests/magstripe/Msr2067HL.Tests.dpr',
                     'examples/core/InspectApdu.dpr', 'examples/pcsc/InspectReader.dpr',
                     'examples/eid/ReadBelgianEid.dpr', 'examples/emv/InspectEmv.dpr',
                     'examples/contactless/InspectContactless.dpr',
@@ -64,7 +65,7 @@ def main():
                     'examples/magstripe/InspectMsr206.dpr'):
         subprocess.run(command + [project], cwd=REPO, check=True)
     suffix = '.exe' if os.name == 'nt' else ''
-    for project in ('CardCore.Tests', 'ProtocolCore.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'MagStripe.Tests', 'Msr206.Tests'):
+    for project in ('CardCore.Tests', 'ProtocolCore.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'MagStripe.Tests', 'Msr206.Tests', 'Msr2067HL.Tests'):
         result = subprocess.run([str(build / (project + suffix))], cwd=REPO,
                                 capture_output=True, text=True)
         print(result.stdout, end='', flush=True)

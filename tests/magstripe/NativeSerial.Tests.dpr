@@ -12,7 +12,7 @@ uses
 {$ELSE}
   System.SysUtils,
 {$ENDIF}
-  ERD.Card.Bytes, ERD.Card.MagStripe, ERD.Card.MagStripe.Tracks, ERD.Card.MagStripe.Serial, ERD.Card.MagStripe.MSR206;
+  ERD.Card.Bytes, ERD.Card.MagStripe, ERD.Card.MagStripe.Tracks, ERD.Card.MagStripe.Serial, ERD.Card.MagStripe.MSR206, ERD.Card.MagStripe.MSR2067HL;
 
 // Linux test-shim exports only; never run this project against Windows kernel32.
 procedure Configure(const AMode: Integer); cdecl;
@@ -38,7 +38,7 @@ var
   Raised: Boolean;
   Value: Byte;
   Component: TMagStripeReaderWriter;
-  Data: TMagStripeTracks;
+  Data, ReadBack: TMagStripeTracks;
   Receipt: TMagStripeProgrammingReceipt;
 begin
   Configure(0);
@@ -116,6 +116,22 @@ begin
     Check((Receipt.DeviceStatus=$30) and not Receipt.HostReadBackVerified,'Full component/adapter/native COM chain reports status only');
     Check((Count(0)=1) and (Count(1)=1) and (Count(5)=9) and (Count(6)=18), 'Actual native calls follow exact protocol and cleanup without replay');
     Check(Count(4)=2,'Open and operation each discard RX only');
+  finally Component.Free; end;
+  Port:=nil;
+
+  Configure(21);
+  Port:=CreateWindowsMagStripeSerialPort('COM12',mssf7O1);
+  Component:=TMagStripeReaderWriter.Create(nil);
+  try
+    Component.Device:=TMsr2067HLMagStripeAdapter.Create(Port);
+    Component.TimeoutMs:=4321;
+    Data[mstTrack1]:=''; Data[mstTrack2]:='23'; Data[mstTrack3]:='';
+    ReadBack:=Component.WriteTracks([mstTrack2],Data,mscHigh);
+    Check((ReadBack[mstTrack2]='23') and (ReadBack[mstTrack1]='') and (ReadBack[mstTrack3]=''),
+      'Native 7O1 full verified write acquires selected same-swipe data');
+    Check((Count(0)=1) and (Count(1)=1) and (Count(2)=1) and (Count(5)=11) and (Count(6)=44),
+      'Actual 7O1 DCB and exact USI1 write/read-back chain without replay or another swipe');
+    Check(Count(4)=2,'7HL native RX-only purge at open and prepare');
   finally Component.Free; end;
   Port:=nil;
 end;
