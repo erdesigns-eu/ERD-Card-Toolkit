@@ -14,7 +14,7 @@ uses
 {$ENDIF}
   ERD.Card.Bytes, ERD.Card.PCSC.Api, ERD.Card.MagStripe.Tracks,
   ERD.Card.MagStripe, ERD.Card.Contactless.Type2, ERD.Card.EID.Access,
-  ERD.Card.Crypto.EAC;
+  ERD.Card.Crypto.EAC, ERD.Card.Memory, ERD.Card.Memory.Counter;
 
 type
 {$IFDEF FPC}
@@ -55,7 +55,21 @@ type
     /// <summary>Read one swipe with the explicit MSR206-7HL adapter.</summary>
     cdoTrackRead,
     /// <summary>Program selected tracks with independent MSR206-7HL read-back verification.</summary>
-    cdoTrackWrite
+    cdoTrackWrite,
+    /// <summary>Inspect explicit ACS memory-profile capabilities offline.</summary>
+    cdoMemoryCapabilities,
+    /// <summary>Read the connected card ATR and negotiated protocol without selecting a memory profile.</summary>
+    cdoReaderStatus,
+    /// <summary>Read ordinary main memory and protection without a PIN attempt.</summary>
+    cdoMemorySnapshot,
+    /// <summary>Read a bounded ordinary-memory range.</summary>
+    cdoMemoryRead,
+    /// <summary>Verify one supplied ordinary-memory PIN using the configured retry budget.</summary>
+    cdoMemoryVerify,
+    /// <summary>Write a selected ordinary-memory range with independent read-back.</summary>
+    cdoMemoryWrite,
+    /// <summary>Read a caller-declared public counter-chip range through ACR38x CCID.</summary>
+    cdoCounterRead
   );
   /// <summary>One explicit request copied by the job before its worker starts.</summary>
   TCardDemoRequest = record
@@ -73,7 +87,7 @@ type
     PasswordKind: TIcaoPasswordKind;
     /// <summary>PACE ECDH-GM domain parameter 12 or 13.</summary>
     PaceCurve: TCardPaceCurve;
-    /// <summary>ASCII access bytes; the job wipes its owned copy on completion.</summary>
+    /// <summary>ICAO access bytes or card-order memory PIN; the job wipes its owned copy on completion.</summary>
     Password: TBytes;
     /// <summary>OpenSSL 3 library path; empty uses provider default.</summary>
     CryptoLibrary: string;
@@ -87,6 +101,24 @@ type
     Coercivity: TMagStripeCoercivity;
     /// <summary>Serial swipe deadline in milliseconds, from 1 through 600000.</summary>
     TimeoutMs: Cardinal;
+    /// <summary>Explicit ordinary-memory chip geometry.</summary>
+    MemoryModel: TMemoryCardModel;
+    /// <summary>Explicit ACS reader command/response dialect.</summary>
+    MemoryDialect: TAcsMemoryDialect;
+    /// <summary>Known physical I2C page size for writes.</summary>
+    MemoryPageSize: TMemoryCardPageSize;
+    /// <summary>Minimum remaining ordinary SLE PIN attempts before verification or writing.</summary>
+    MinimumPinAttempts: Integer;
+    /// <summary>Zero-based address for an explicit memory range.</summary>
+    MemoryAddress: Integer;
+    /// <summary>Positive byte count for a memory read.</summary>
+    MemoryCount: Integer;
+    /// <summary>Selected write payload, copied before the worker starts.</summary>
+    MemoryBytes: TBytes;
+    /// <summary>Explicit SLE counter-chip profile.</summary>
+    CounterModel: TSleCounterModel;
+    /// <summary>Caller-declared counter-card readable window, one through 256 bytes.</summary>
+    CounterReadableBytes: Integer;
   end;
   /// <summary>Owned completion data moved to the UI exactly once.</summary>
   TCardDemoResult = record
@@ -110,6 +142,10 @@ type
     NdefBytes: TBytes;
     /// <summary>Acquired swipe or verified written payloads, indexed by track.</summary>
     Tracks: TMagStripeTracks;
+    /// <summary>Owned ordinary-memory data, protection and retry status; no supplied PIN copies.</summary>
+    Memory: TMemoryCardSnapshot;
+    /// <summary>Owned public counter-card range; ordinary-memory geometry does not apply.</summary>
+    CounterBytes: TBytes;
   end;
   /// <summary>Worker-only operation executor; implementations must not access VCL controls.</summary>
   ICardDemoOperations = interface
@@ -169,9 +205,10 @@ begin
   FLockReady := True;
   if AOperations = nil then raise EArgumentException.Create('Worker executor is required.');
   FRequest := ARequest;
-  FRequest.Password := nil; FRequest.NdefBytes := nil;
+  FRequest.Password := nil; FRequest.NdefBytes := nil; FRequest.MemoryBytes := nil;
   FRequest.Password := Copy(ARequest.Password, 0, Length(ARequest.Password));
   FRequest.NdefBytes := Copy(ARequest.NdefBytes, 0, Length(ARequest.NdefBytes));
+  FRequest.MemoryBytes := Copy(ARequest.MemoryBytes, 0, Length(ARequest.MemoryBytes));
   FOperations := AOperations;
 end;
 
@@ -232,6 +269,7 @@ begin
         Completed.Text := ''; Completed.Photo := nil;
         Completed.NdefBytes := nil; Completed.Readers := nil;
         Completed.Tracks := Default(TMagStripeTracks);
+        Completed.Memory := Default(TMemoryCardSnapshot); Completed.CounterBytes := nil;
       end;
     end;
   end;

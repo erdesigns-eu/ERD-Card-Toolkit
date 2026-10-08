@@ -17,7 +17,7 @@ uses
   System.SysUtils, System.Classes, System.SyncObjs,
 {$ENDIF}
   ERD.Card.Bytes, ERD.Card.Demo.Job, ERD.Card.Demo.Operations,
-  ERD.Card.MagStripe.Tracks, ERD.Card.MagStripe;
+  ERD.Card.MagStripe.Tracks, ERD.Card.MagStripe, ERD.Card.Memory, ERD.Card.Memory.Counter;
 
 type
   TTestOperations = class(TInterfacedObject, ICardDemoOperations)
@@ -111,6 +111,9 @@ begin
   if (Length(R.Password) <> 2) or (R.Password[0] <> $31) or
     (Length(R.NdefBytes) <> 2) or (R.NdefBytes[0] <> $D1) then
     raise Exception.Create('Request copy was aliased.');
+  if (Length(R.MemoryBytes) > 0) and (R.MemoryBytes[0] <> $A1) then
+    raise Exception.Create('Memory write request was aliased.');
+  D.Memory.Data := HexToBytes('DEADBEEF'); D.CounterBytes := HexToBytes('AB');
   D.Tracks := R.Tracks;
   D.Photo := HexToBytes('010203'); D.NdefBytes := HexToBytes('AABB');
   D.Text := 'owned result'; D.WriteVerified := FVerified;
@@ -135,14 +138,14 @@ var R: TCardDemoRequest; D, Again: TCardDemoResult;
 begin
   R := Default(TCardDemoRequest); D := Default(TCardDemoResult);
   R.Password := HexToBytes('3132'); R.NdefBytes := HexToBytes('D101');
-  R.Tracks[mstTrack1] := 'ABC';
+  R.Tracks[mstTrack1] := 'ABC'; R.MemoryBytes := HexToBytes('A1B2');
   Backend := TTestOperations.Create(Fail, Verified); Executor := Backend;
   CallerId := TThread.CurrentThread.ThreadID;
   Job := TCardDemoJob.Create(R, Executor);
   Job.StartWork;
   try
     Check(not Job.TryTakeResult(D), 'Running work published early.');
-    R.Password[0] := 0; R.NdefBytes[0] := 0; R.Tracks[mstTrack1] := 'CHANGED';
+    R.Password[0] := 0; R.NdefBytes[0] := 0; R.Tracks[mstTrack1] := 'CHANGED'; R.MemoryBytes[0] := 0;
     Backend.Release;
     AwaitResult(Job, D);
     Job.WaitFor;
@@ -158,11 +161,14 @@ begin
     begin
       Check(D.ErrorClass = 'EInvalidOpException', 'Failure class was not preserved.');
       Check(Pos('secret', string(D.Text)) = 0, 'Exception message leaked.');
-      if not Verified then Check((D.Text = '') and (Length(D.Photo) = 0), 'Partial failure data published.');
+      if not Verified then Check((D.Text = '') and (Length(D.Photo) = 0) and (Length(D.Memory.Data) = 0) and (Length(D.CounterBytes) = 0), 'Partial failure data published.');
     end;
   finally Job.Free; end;
   if not Fail or Verified then
+  begin
     Check(BytesToHex(D.Photo) = '010203', 'Result ownership did not survive job destruction.');
+    Check(BytesToHex(D.Memory.Data) = 'DEADBEEF', 'Memory result ownership did not survive job destruction.');
+  end;
   Executor := nil;
 end;
 
@@ -253,10 +259,45 @@ begin
   Check((not D.Success) and (D.ErrorClass = 'ENdefError'), 'Malformed NDEF touched hardware.');
 end;
 
+procedure TestMemoryDemo;
+var R: TCardDemoRequest; D: TCardDemoResult; Job: TCardDemoJob; I: Integer;
+begin
+  for I := 0 to 1 do
+  begin
+    R := Default(TCardDemoRequest); D := Default(TCardDemoResult);
+    R.Operation := cdoMemoryCapabilities; R.MemoryDialect := TAcsMemoryDialect(I);
+    Job := TCardDemoJob.Create(R, CreateCardDemoOperations); Job.StartWork;
+    try AwaitResult(Job, D); finally Job.Free; end;
+    Check(D.Success and (Pos('SLE4442', string(D.Text)) > 0), 'Offline memory capabilities failed.');
+    Check((Pos('SLE6636', string(D.Text)) > 0) = (I = 0), 'ACR39 counter capabilities incorrectly claimed.');
+  end;
+  for I := 0 to 7 do
+  begin
+    R := Default(TCardDemoRequest); D := Default(TCardDemoResult);
+    R.ReaderName := 'must not connect'; R.MemoryModel := mcmSle4442;
+    R.MemoryDialect := amdAcr38Ccid; R.MinimumPinAttempts := 1;
+    case I of
+      0: begin R.Operation := cdoMemoryRead; R.MemoryAddress := 255; R.MemoryCount := 2; end;
+      1: begin R.Operation := cdoMemoryWrite; R.MemoryBytes := HexToBytes('00'); end;
+      2: begin R.Operation := cdoMemoryVerify; R.Password := HexToBytes('12'); end;
+      3: begin R.Operation := cdoCounterRead; R.MemoryDialect := amdAcr39;
+               R.CounterReadableBytes := 16; R.MemoryCount := 1; end;
+      4: begin R.Operation := cdoCounterRead; R.CounterReadableBytes := 0; R.MemoryCount := 1; end;
+      5: begin R.Operation := cdoMemoryRead; R.MemoryCount := 1; R.MinimumPinAttempts := 0; end;
+      6: begin R.Operation := cdoReaderStatus; R.ReaderName := ''; end;
+      7: begin R.Operation := cdoMemoryWrite; R.Password := HexToBytes('123456'); R.MemoryBytes := nil; end;
+    end;
+    Job := TCardDemoJob.Create(R, CreateCardDemoOperations); Job.StartWork;
+    try AwaitResult(Job, D); finally Job.Free; end;
+    Check((not D.Success) and (D.ErrorClass = 'EArgumentException'), 'Invalid memory request touched hardware.');
+    Check((D.Text = '') and (Length(D.Memory.Data) = 0) and (Length(D.CounterBytes) = 0), 'Failed memory request published partial data.');
+  end;
+end;
+
 begin
   try
     TestWorker(False, False); TestWorker(True, False); TestWorker(True, True);
-    TestJoin; TestSuspendedAndRestart; TestOffline;
+    TestJoin; TestSuspendedAndRestart; TestOffline; TestMemoryDemo;
     Writeln('PASS: ', Checks, ' demo worker assertions.');
   except on E: Exception do begin Writeln(E.ClassName, ': ', E.Message); ExitCode := 1; end; end;
 end.

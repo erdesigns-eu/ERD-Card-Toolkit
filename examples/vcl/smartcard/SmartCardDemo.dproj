@@ -73,7 +73,7 @@
         <SanitizedProjectName>SmartCardDemo</SanitizedProjectName>
         <DCC_BplOutput>..\..\..\dist\vcl\$(Platform)\$(Config)</DCC_BplOutput>
         <DCC_DcpOutput>..\..\..\dist\vcl\$(Platform)\$(Config)</DCC_DcpOutput>
-        <DCC_UnitSearchPath>..\..\..\src\core;..\..\..\src\crypto;..\..\..\src\pcsc;..\..\..\src\eid;..\..\..\src\emv;..\..\..\src\magstripe;..\..\..\src\contactless;..\shared;..\..\..\dist\vcl\$(Platform)\$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>..\..\..\src\core;..\..\..\src\crypto;..\..\..\src\pcsc;..\..\..\src\eid;..\..\..\src\emv;..\..\..\src\magstripe;..\..\..\src\memory;..\..\..\src\contactless;..\shared;..\..\..\dist\vcl\$(Platform)\$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_RangeChecking>true</DCC_RangeChecking>
         <DCC_IntegerOverflowCheck>true</DCC_IntegerOverflowCheck>
         <DCC_GenerateDocumentation>true</DCC_GenerateDocumentation>

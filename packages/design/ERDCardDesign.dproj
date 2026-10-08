@@ -157,6 +157,8 @@
         <DCCReference Include="..\..\src\emv\ERD.Card.EMV.Reader.pas"/>
         <DCCReference Include="..\..\src\magstripe\ERD.Card.MagStripe.pas"/>
         <DCCReference Include="..\..\src\magstripe\ERD.Card.MagStripe.Tracks.pas"/>
+        <DCCReference Include="..\..\src\memory\ERD.Card.Memory.Counter.pas" />
+        <DCCReference Include="..\..\src\memory\ERD.Card.Memory.Capabilities.pas" />
         <DCCReference Include="..\..\src\memory\ERD.Card.Memory.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Ndef.pas"/>
         <DCCReference Include="..\..\src\pcsc\ERD.Card.PCSC.Api.pas"/>

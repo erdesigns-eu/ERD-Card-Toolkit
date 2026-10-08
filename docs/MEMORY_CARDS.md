@@ -153,6 +153,78 @@ chains and corrupts every acknowledgement status bit and read-back data bit.
 Free Pascal execution and the source readers do not replace Delphi, driver or
 physical read/write checks. Hardware validation of these new profiles remains pending.
 
-Next candidates include SLE4406/4436/5536/6636 counter cards and SLE4404's separate
-security/application areas, which require their own semantics and tests; they are
-not exposed as ordinary EEPROM profiles in this implementation.
+## Counter-chip profiles and reader capabilities
+
+`TSleCounterCardReaderWriter` implements the distinct SLE4406/4436/5536/6636
+command profile from ACR38x CCID reference 6.05, section 9.3.7. These chips are
+not treated as ordinary EEPROM. ACR39 counter commands are not documented in
+our selected reference and are not claimed available.
+
+| Operation | SLE4406 | SLE4436 | SLE5536 / SLE6636 |
+| --- | --- | --- | --- |
+| Public byte reads | Yes | Yes | Yes |
+| One-to-zero byte programming / carry | Yes | Yes | Yes |
+| Backup programming / carry-backup | No | Yes | Yes |
+| Raw two-byte certificate calculation | No | Key 1/2, without CBC | Key 1/2, with or without CBC |
+
+`ReadableBytes` is required and has **no guessed chip-capacity default**. It declares
+an application-known accessible window starting at byte zero, up to the reader's
+256-byte addressing limit. Actual chip geometry, reserved/partial bytes, readable
+regions and counter stages must come from the specific card data sheet/application.
+The shared ACS selector does not distinguish these models or establish capacity.
+
+`ReadMemory(Address, Count)` reads this window without a code attempt. `WriteByte`
+requires complete expected-before and expected-after images for the window. It
+compares actual contents before dispatch, refuses zero-to-one changes in the
+addressed byte and verifies the entire declared window after the single write.
+Ordinary/backup programming permits no expected changes elsewhere; identical
+ordinary data is a no-op. Carry operations always dispatch, even if the addressed
+byte is unchanged, because they can erase a lower counter stage. Supply a window
+covering **all affected stages** and derive the expected image from the actual
+chip layout; the component does not compute balances or infer counter arithmetic.
+A successful verification concerns this window, not all physical chip state.
+
+```pascal
+Counter := TSleCounterCardReaderWriter.Create(nil);
+try
+  Counter.Model := scmSle5536;
+  Counter.ReadableBytes := KnownReadableBytes;
+  Counter.Transport := Card.Transport; // Explicit ACR38x CCID reader.
+  Before := Counter.ReadMemory(0, Counter.ReadableBytes);
+  After := Copy(Before, 0, Length(Before));
+  After[KnownWritableAddress] := Before[KnownWritableAddress] and $FE;
+  Counter.WriteByte(KnownWritableAddress, After[KnownWritableAddress],
+    scwBackup, Before, After);
+finally
+  Counter.Free;
+end;
+```
+
+`ReadCertificate(Key, ClockPulses, Challenge)` performs one FF84 challenge,
+requires exactly 6102, then performs one FFC0 retrieval and requires two bytes
+plus 9000. Challenge length is six; clock pulses are explicitly supplied. Returned
+bytes are raw card calculations, **not proof of authenticity**. No host algorithm,
+issuer/key verification or generic GET RESPONSE fallback is implied.
+
+`TSleCounterCodec.PresentCode` exposes the documented three-byte code command as
+an explicit low-level builder. It consumes a presentation-counter bit; the reader
+**does not restore that counter** and 9000 is not proof that the code is correct.
+The high-level component therefore does not automatically present codes, unlock
+personalisation or reset presentation counters. Callers of the low-level builder
+own/wipe its credential-bearing command and must implement chip-specific proof.
+
+`TAcsMemoryCapabilityCatalog.ForDialect` returns offline value sets for ordinary
+reads/writes, supplied PIN, PIN replacement, permanent protection, counter profiles
+and raw certificate calculation. It **does not query reader firmware or detect
+hardware support**. This distinction is also visible in the VCL demo: offline
+profile capabilities and connected ATR/negotiated protocol are separate operations.
+
+The memory page offers snapshot/range reads, one supplied-PIN verification and
+ordinary verified writes. PIN entry is hexadecimal in card byte order, never a
+suggested/default PIN. I2C writes require explicitly selected physical page size.
+Counter profiles offer public reads in the demo; deliberate carry/backup writes
+are available through the component API. See [VCL steps](VCL_DEMOS.md) and the
+[pending hardware matrix](HARDWARE_MATRIX.md).
+
+SLE4404, authenticated AT88SC/CryptoMemory, additional reader dialects and
+chip-specific counter arithmetic/personalisation proof remain future work.

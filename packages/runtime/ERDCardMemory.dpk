@@ -10,6 +10,8 @@ requires
   ERDCardCore;
 
 contains
+  ERD.Card.Memory.Counter in '..\..\src\memory\ERD.Card.Memory.Counter.pas',
+  ERD.Card.Memory.Capabilities in '..\..\src\memory\ERD.Card.Memory.Capabilities.pas',
   ERD.Card.Memory in '..\..\src\memory\ERD.Card.Memory.pas';
 
 end.

@@ -24,6 +24,7 @@ Beoogd platform: **Delphi 10.4+, Windows Win32/Win64**.
 | NDEF | `TType2NdefCardReader`, `TType4NdefCardReader`, `TType5NdefCardReader` | Publieke NDEF lezen en vervangen met terugleescontrole, binnen het gekozen kaartprofiel. |
 | ISO 15693 | `TIso15693CardReader` | Systeeminformatie en geadresseerde geheugenblokken lezen/schrijven. |
 | Contact-memorychips | `TMemoryCardReaderWriter` | SLE4432/4442/5532/5542, SLE4418/4428/5518/5528 en I²C 1–1024 kilobit via expliciete ACS-profielen; PINs, geverifieerde writes en SLE-bescherming. |
+| SLE-counterchips | `TSleCounterCardReaderWriter` | SLE4406/4436/5536/6636 via ACR38x CCID: publiek lezen, bit/carry/backup-programmering met controle en ruwe certificaatberekening; expliciet leesvenster vereist. |
 | Tools | Losse codecs en catalogs | APDU, ATR, BER-TLV, hex/bytes, MRZ, NDEF, magstripe-pariteit/LRC en ATR/EMV-metadata. |
 
 **Schrijfcontrole:** MSR206/MSR605-programmering levert apparaatstatus; MSR206-7HL
@@ -36,7 +37,7 @@ Lezerondersteuning en kaartondersteuning zijn afzonderlijk: het juiste protocolp
 ## Wat zit er nog niet in?
 
 - **Betalingen:** geen terminal/providerintegratie, betaaltransacties of directe NFC-betaalkernel.
-- **Overige contact-memorychips:** onder andere SLE4406/4436/5536/6636-counterkaarten, SLE4404 en andere readerdialecten ontbreken nog.
+- **Overige contact-memorychips:** SLE4404, AT88SC/CryptoMemory en andere readerdialecten ontbreken nog. Voor SLE-counterchips ontbreken automatische tellerberekening en geverifieerde personalisatie/code-ontgrendeling.
 - **Volledige Europese eID-ondersteuning:** Nederlandse, Luxemburgse en Duitse kaartgeneraties/nationale diensten zijn nog niet gevalideerd; aanvullende PACE/EAC-profielen ontbreken.
 - **Cryptografische documentauthenticiteit:** certificaten, handtekeningen en SOD kunnen worden gelezen, maar issuer/SOD-verificatie en chipauthenticatie ontbreken nog.
 - **Alle MIFARE/DESFire-varianten:** onder andere MIFARE Plus, DESFire D40/3DES, LRP, TMAC en uitgebreid sleutelset/configuratiebeheer ontbreken.
@@ -44,8 +45,8 @@ Lezerondersteuning en kaartondersteuning zijn afzonderlijk: het juiste protocolp
 
 ## Packages en voorbeelden
 
-- **9 runtime packages** en **1 zelfstandig design-time package** met **14 palette-componenten**. Runtimecomponenten hebben geen VCL/design-time-afhankelijkheid; het palette bevat zijn benodigde sources expliciet en vereist geen ERD-runtime-BPL's.
-- **SmartCardDemo:** offline NDEF, UID, Belgische eID/foto, ICAO/foto, EMV-applicatiedetectie, DESFire-versie en Type 2/4 NDEF-vervanging.
+- **9 runtime packages** en **1 zelfstandig design-time package** met **15 palette-componenten**. Runtimecomponenten hebben geen VCL/design-time-afhankelijkheid; het palette bevat zijn benodigde sources expliciet en vereist geen ERD-runtime-BPL's.
+- **SmartCardDemo:** offline NDEF, UID, Belgische eID/foto, ICAO/foto, EMV-applicatiedetectie, DESFire-versie, Type 2/4 NDEF-vervanging en een contact-memorypagina met PIN, geverifieerde writes, counterreads en expliciete ACS-profielcapabilities.
 - **MagStripeDemo:** offline trackcontrole, swipes lezen en geverifieerd schrijven via MSR206-7HL.
 - **Consolevoorbeelden** voor de afzonderlijke componenten en uitgebreidere beheeroperaties.
 

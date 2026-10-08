@@ -4,12 +4,56 @@ interface
 
 uses
   System.Classes, Vcl.Controls, Vcl.Forms, Vcl.StdCtrls, Vcl.ExtCtrls, System.SysUtils,
-  Vcl.Dialogs, ERD.Card.Bytes, ERD.Card.Demo.Job, ERD.Card.Demo.Form;
+  Vcl.Dialogs, Vcl.ComCtrls, ERD.Card.Bytes, ERD.Card.Demo.Job, ERD.Card.Demo.Form;
 
 type
   /// <summary>Explicit PC/SC card operations with a background worker and optional face preview.</summary>
   TSmartCardDemoForm = class(TCardDemoForm)
   published
+    /// <summary>Card operations and contact-memory pages.</summary>
+    OperationPages: TPageControl;
+    /// <summary>Existing smart-card and NDEF operations.</summary>
+    CardTab: TTabSheet;
+    /// <summary>Explicit ACS memory-profile operations.</summary>
+    MemoryTab: TTabSheet;
+    /// <summary>Memory operation label.</summary>
+    MemoryActionLabel: TLabel;
+    /// <summary>Offline capabilities, ATR/status, reads, PIN verification or verified writing.</summary>
+    MemoryActionBox: TComboBox;
+    /// <summary>Run the selected memory operation asynchronously.</summary>
+    MemoryRunButton: TButton;
+    /// <summary>Actual chip model label.</summary>
+    MemoryModelLabel: TLabel;
+    /// <summary>Explicit ordinary-memory or counter-chip profile; never auto-detected.</summary>
+    MemoryModelBox: TComboBox;
+    /// <summary>Explicit ACR38x CCID or ACR39 reader dialect.</summary>
+    MemoryDialectBox: TComboBox;
+    /// <summary>Decimal byte range and counter-readable-window label.</summary>
+    MemoryRangeLabel: TLabel;
+    /// <summary>Zero-based decimal start address.</summary>
+    MemoryAddressEdit: TEdit;
+    /// <summary>Positive decimal read length.</summary>
+    MemoryCountEdit: TEdit;
+    /// <summary>Caller-declared counter readable window; zero is unconfigured.</summary>
+    CounterWindowEdit: TEdit;
+    /// <summary>Hexadecimal write payload label.</summary>
+    MemoryDataLabel: TLabel;
+    /// <summary>Explicit main-memory replacement bytes.</summary>
+    MemoryDataEdit: TEdit;
+    /// <summary>Card-order hexadecimal PIN label.</summary>
+    MemoryPinLabel: TLabel;
+    /// <summary>Masked PIN hex input; copied and cleared after job start.</summary>
+    MemoryPinEdit: TEdit;
+    /// <summary>Explicit acknowledgement that the supplied range may be changed.</summary>
+    MemoryWriteCheck: TCheckBox;
+    /// <summary>Physical I2C page size and remaining PIN-attempt budget label.</summary>
+    MemoryPolicyLabel: TLabel;
+    /// <summary>Known physical I2C page size; must be selected for I2C writes.</summary>
+    MemoryPageBox: TComboBox;
+    /// <summary>Minimum remaining PIN attempts, from one through eight.</summary>
+    MemoryAttemptsEdit: TEdit;
+    /// <summary>Explicit profile and no-retry guidance.</summary>
+    MemoryGuidance: TLabel;
     /// <summary>Reader and explicit operation inputs.</summary>
     InputPanel: TPanel;
     /// <summary>Exact reader-name label.</summary>
@@ -76,6 +120,9 @@ type
     /// <summary>Encode an NDEF Text record offline.</summary>
     /// <param name="Sender">VCL event sender.</param>
     procedure EncodeClick(Sender: TObject);
+    /// <summary>Validate and copy explicit memory settings before starting one worker.</summary>
+    /// <param name="Sender">VCL event sender.</param>
+    procedure MemoryRunClick(Sender: TObject);
     /// <summary>Save the acquired encoded photo after choosing a destination.</summary>
     /// <param name="Sender">VCL event sender.</param>
     procedure SavePhotoClick(Sender: TObject);
@@ -100,11 +147,13 @@ implementation
 uses
   Vcl.Imaging.jpeg, ERD.Card.Crypto, ERD.Card.Crypto.EAC,
   ERD.Card.EID.Access, ERD.Card.Contactless.Type2, ERD.Card.Ndef,
-  ERD.Card.Ndef.Records;
+  ERD.Card.Ndef.Records, ERD.Card.Memory, ERD.Card.Memory.Counter,
+  ERD.Card.Memory.Capabilities;
 
 {$R *.dfm}
 
 procedure TSmartCardDemoForm.FormCreate(Sender: TObject);
+var M: TMemoryCardModel; C: TSleCounterModel;
 begin
   OperationBox.Items.Text := 'Offline NDEF inspect'#13#10'Read UID (PC/SC storage)'#13#10+
     'Read Belgian eID + photo'#13#10'Read ICAO DG1/DG2 + photo'#13#10+
@@ -117,6 +166,15 @@ begin
   SecurityBox.Items.Text := 'BAC'#13#10'PACE ECDH-GM AES-128';
   PasswordKindBox.Items.Text := 'MRZ information'#13#10'CAN';
   CurveBox.Items.Text := 'NIST P-256 (12)'#13#10'brainpool P256 (13)';
+  MemoryActionBox.Items.Text := 'Offline profile capabilities'#13#10'Connected ATR / protocol'#13#10+
+    'Read memory snapshot'#13#10'Read selected range'#13#10'Verify supplied PIN once'#13#10'Write range + verify';
+  MemoryActionBox.ItemIndex := 0;
+  for M := Low(TMemoryCardModel) to High(TMemoryCardModel) do
+    MemoryModelBox.Items.Add(TAcsMemoryCapabilityCatalog.ModelName(M));
+  for C := Low(TSleCounterModel) to High(TSleCounterModel) do
+    MemoryModelBox.Items.Add(TAcsMemoryCapabilityCatalog.CounterName(C));
+  MemoryDialectBox.Items.Text := 'ACR38x CCID (explicit)'#13#10'ACR39 (explicit)';
+  MemoryPageBox.Items.Text := '8 bytes'#13#10'16 bytes'#13#10'32 bytes'#13#10'64 bytes'#13#10'128 bytes';
 end;
 
 procedure TSmartCardDemoForm.SetBusy(const AValue: Boolean);
@@ -193,6 +251,73 @@ begin
   Password := '';
 end;
 
+procedure TSmartCardDemoForm.MemoryRunClick(Sender: TObject);
+var R: TCardDemoRequest; L: TMemoryCardLayout; CounterIndex: Integer;
+begin
+  R := Default(TCardDemoRequest);
+  try
+    try
+      case MemoryActionBox.ItemIndex of
+        0: R.Operation := cdoMemoryCapabilities;
+        1: R.Operation := cdoReaderStatus;
+        2: R.Operation := cdoMemorySnapshot;
+        3: R.Operation := cdoMemoryRead;
+        4: R.Operation := cdoMemoryVerify;
+        5: R.Operation := cdoMemoryWrite;
+      else raise EArgumentException.Create('Select a memory operation.'); end;
+      R.ReaderName := ReaderBox.Text;
+      if R.Operation <> cdoReaderStatus then
+      begin
+        if MemoryDialectBox.ItemIndex < 0 then
+          raise EArgumentException.Create('Select the matching ACS reader dialect.');
+        R.MemoryDialect := TAcsMemoryDialect(MemoryDialectBox.ItemIndex);
+      end;
+      if not (R.Operation in [cdoMemoryCapabilities, cdoReaderStatus]) then
+      begin
+        if MemoryModelBox.ItemIndex < 0 then raise EArgumentException.Create('Select the actual chip model.');
+        CounterIndex := MemoryModelBox.ItemIndex - Ord(High(TMemoryCardModel)) - 1;
+        if R.Operation in [cdoMemoryRead, cdoMemoryWrite] then
+          R.MemoryAddress := StrToInt(MemoryAddressEdit.Text);
+        if R.Operation = cdoMemoryRead then R.MemoryCount := StrToInt(MemoryCountEdit.Text);
+        if CounterIndex >= 0 then
+        begin
+          if not (R.Operation in [cdoMemorySnapshot, cdoMemoryRead]) then
+            raise EArgumentException.Create('The counter demo offers public reads; use the counter component for explicit programming.');
+          R.CounterModel := TSleCounterModel(CounterIndex);
+          R.CounterReadableBytes := StrToInt(CounterWindowEdit.Text);
+          if R.Operation = cdoMemorySnapshot then
+          begin R.MemoryAddress := 0; R.MemoryCount := R.CounterReadableBytes; end;
+          R.Operation := cdoCounterRead;
+        end
+        else
+        begin
+          R.MemoryModel := TMemoryCardModel(MemoryModelBox.ItemIndex);
+          L := TMemoryCardCodec.Layout(R.MemoryModel);
+          R.MinimumPinAttempts := StrToInt(MemoryAttemptsEdit.Text);
+          R.MemoryPageSize := mps8;
+          if MemoryPageBox.ItemIndex >= 0 then R.MemoryPageSize := TMemoryCardPageSize(MemoryPageBox.ItemIndex);
+          if R.Operation in [cdoMemoryVerify, cdoMemoryWrite] then
+          begin
+            if Length(MemoryPinEdit.Text) > 6 then raise EArgumentException.Create('PIN exceeds its bound.');
+            R.Password := HexToBytes(MemoryPinEdit.Text);
+          end;
+          if R.Operation = cdoMemoryWrite then
+          begin
+            if not MemoryWriteCheck.Checked then raise EArgumentException.Create('Acknowledge the requested memory change.');
+            if (L.Selector <= 2) and (MemoryPageBox.ItemIndex < 0) then
+              raise EArgumentException.Create('Select the physical I2C page size from the chip data sheet.');
+            if Length(MemoryDataEdit.Text) > MemoryCardMaxBytes * 2 then
+              raise EArgumentException.Create('Write payload exceeds its bound.');
+            R.MemoryBytes := HexToBytes(MemoryDataEdit.Text);
+          end;
+        end;
+      end;
+      StartRequest(R);
+      MemoryPinEdit.Clear; MemoryWriteCheck.Checked := False;
+    except on E: Exception do OutputMemo.Lines.Text := E.ClassName + ': ' + E.Message; end;
+  finally TCardCrypto.Clear(R.Password); end;
+end;
+
 procedure TSmartCardDemoForm.EncodeClick(Sender: TObject);
 var Message: TNdefMessage;
 begin
@@ -211,7 +336,8 @@ begin
   begin
     OutputMemo.Lines.Add('Failed: ' + AResult.ErrorClass + '. No automatic retry.');
     if AResult.WriteVerified then OutputMemo.Lines.Add('The write was verified before cleanup failed.')
-    else if AResult.ErrorClass = 'EContactlessWriteUncertain' then
+    else if (AResult.ErrorClass = 'EContactlessWriteUncertain') or
+      (AResult.ErrorClass = 'EMemoryCardWriteUncertain') then
       OutputMemo.Lines.Add('The write outcome is uncertain. Check card state before repeating.');
   end;
   if AResult.Success and (AResult.Operation = cdoReaders) then
@@ -221,6 +347,14 @@ begin
     for I := 0 to High(AResult.Readers) do ReaderBox.Items.Add(AResult.Readers[I]);
     ReaderBox.Text := SelectedReader;
   end;
+  if Length(AResult.CounterBytes) > 0 then
+    OutputMemo.Lines.Add('Counter public memory hex: ' + BytesToHex(AResult.CounterBytes));
+  if Length(AResult.Memory.Data) > 0 then
+    OutputMemo.Lines.Add('Memory hex: ' + BytesToHex(AResult.Memory.Data));
+  if Length(AResult.Memory.Protection) > 0 then
+    OutputMemo.Lines.Add('Protection hex (zero bits are locked): ' + BytesToHex(AResult.Memory.Protection));
+  if AResult.Memory.HasSecurity then
+    OutputMemo.Lines.Add('Remaining PIN attempts: ' + IntToStr(AResult.Memory.Security.RemainingAttempts));
   if Length(AResult.NdefBytes) > 0 then NdefEdit.Text := BytesToHex(AResult.NdefBytes);
   FPhoto := AResult.Photo; FPhotoIsJpeg2000 := AResult.PhotoIsJpeg2000;
   SavePhotoButton.Enabled := Length(FPhoto) > 0;

@@ -14,6 +14,10 @@ if errorlevel 1 exit /b %errorlevel%
 set "CARD_BUILD=dist\core\%CARD_COMPILER%"
 if not exist "%CARD_BUILD%" mkdir "%CARD_BUILD%"
 if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\memory" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\memory\MemoryCounter.Tests.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\MemoryCounter.Tests.exe"
+if errorlevel 1 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\memory" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\memory\MemoryCard.Tests.dpr
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\MemoryCard.Tests.exe"
@@ -220,7 +224,7 @@ if errorlevel 1 exit /b %errorlevel%
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\ReadIcaoDocument.exe" --cardaccess 31143012060A04007F0007020204020202010202010D
 if errorlevel 1 exit /b %errorlevel%
-%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\crypto;src\pcsc;src\eid;src\emv;src\contactless;src\magstripe;examples\vcl\shared" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\demos\DemoJob.Tests.dpr
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\crypto;src\pcsc;src\eid;src\emv;src\contactless;src\magstripe;src\memory;examples\vcl\shared" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\demos\DemoJob.Tests.dpr
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\DemoJob.Tests.exe"
 if errorlevel 1 exit /b %errorlevel%

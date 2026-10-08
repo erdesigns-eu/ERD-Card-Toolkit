@@ -66,6 +66,8 @@ contains
   ERD.Card.EMV.Reader in '..\..\src\emv\ERD.Card.EMV.Reader.pas',
   ERD.Card.MagStripe in '..\..\src\magstripe\ERD.Card.MagStripe.pas',
   ERD.Card.MagStripe.Tracks in '..\..\src\magstripe\ERD.Card.MagStripe.Tracks.pas',
+  ERD.Card.Memory.Counter in '..\..\src\memory\ERD.Card.Memory.Counter.pas',
+  ERD.Card.Memory.Capabilities in '..\..\src\memory\ERD.Card.Memory.Capabilities.pas',
   ERD.Card.Memory in '..\..\src\memory\ERD.Card.Memory.pas',
   ERD.Card.Ndef in '..\..\src\contactless\ERD.Card.Ndef.pas',
   ERD.Card.PCSC.Api in '..\..\src\pcsc\ERD.Card.PCSC.Api.pas',

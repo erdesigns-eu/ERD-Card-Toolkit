@@ -106,7 +106,7 @@ are not compatibility requirements.
    explicitly locks SLE protection bits. See [memory profiles](MEMORY_CARDS.md).
    Further contact memory-card families and matching readers remain planned. Non-Java chips do not share one universal protocol.
 8. **Distribution — source/projects available; Delphi/IDE validation pending.**
-   Nine runtime packages, fourteen-component standalone palette registration, isolated Win32/Win64
+   Nine runtime packages, fifteen-component standalone palette registration, isolated Win32/Win64
    Debug/Release build projects, console examples and two worker-based VCL read/write
    demos are supplied. See [installation](INSTALLATION.md), [demos](VCL_DEMOS.md) and
    [validation](VALIDATION.md). Published scalar configuration is streamed; interface
@@ -147,9 +147,10 @@ documentation. Use the same complete scope for upcoming batches:
    management and verified AES key/policy/access administration are implemented. EV1/EV2 AES secure
    file access and EV2 NonFirst through maintained providers are implemented. Then Plus profiles,
    additional ISO 15693 authentication/reader backends,
-   then additional contact memory families such as SLE4406/4436/5536/6636 counter
-   cards and SLE4404. The initial SLE/I2C memory and public ISO 15693/Type 5 access
-   profiles are implemented.
+   then SLE4404 and authenticated AT88SC/CryptoMemory contact-memory profiles.
+   SLE/I2C memory, explicit SLE4406/4436/5536/6636 counter commands and public
+   ISO 15693/Type 5 access are implemented. Chip-specific counter arithmetic and
+   personalisation-code proof remain separate extensions.
 4. **European eID:** BAC and PACE ECDH-GM/AES-128 secure access with complete
    DG1/DG2/COM/SOD reads are implemented. Next: passive/SOD verification, chip/EAC
    authentication, more PACE profiles and concrete Netherlands/Luxembourg/Germany

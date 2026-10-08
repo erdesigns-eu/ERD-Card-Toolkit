@@ -54,6 +54,32 @@ protected data. Successful replacement shows the canonical wire message that was
 written. An uncertain-write exception is displayed as uncertain; the demo never
 repeats a write automatically.
 
+## Contact-memory page
+
+The exact reader selector remains above both tabs. The new memory tab exposes:
+
+| Operation | Inputs and scope |
+| --- | --- |
+| Offline profile capabilities | Explicit ACR38x CCID/ACR39 dialect only; no device is opened or reader support detected |
+| Connected ATR / protocol | Exact reader; displays raw ATR and actual negotiated T=0/T=1, without probing memory commands |
+| Memory snapshot / range | Explicit SLE/I2C model and matching dialect; snapshot includes protection/retry status without attempting a PIN |
+| Verify supplied PIN once | Explicit PIN-equipped model, card-order hexadecimal PIN and minimum remaining attempts |
+| Write range + verify | Explicit range/payload and change acknowledgement; supplied PIN for secured SLE, empty for plain SLE/I2C; explicit physical page size for I2C |
+| Counter snapshot / range | SLE4406/4436/5536/6636, ACR38x CCID and application-known readable window; public reads only in this demo |
+
+No model or dialect is automatically selected. PIN and write payload arrays are
+copied before the worker starts. PIN input and change acknowledgement are cleared
+after starting. PIN bytes and backend exception messages are not displayed.
+Snapshot/range hex and protection are shown only after successful operation cleanup.
+An uncertain memory write remains visible as uncertain; read-back proof is retained
+if only later transaction/connection cleanup fails. The demo does not repeat it.
+
+For an initial hardware check, inspect offline capabilities, obtain the connected
+ATR/protocol, then read a known public range. Compare the snapshot to a known image.
+Use disposable cards and a known unlocked location for deliberate writes; check
+protection and retry budget first. Counter programming/carry, permanent locking
+and PIN replacement are component APIs rather than buttons on this page.
+
 ## MagStripeDemo
 
 `Inspect tracks offline` validates selected unframed payloads and reports bit counts

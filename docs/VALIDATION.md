@@ -1,22 +1,25 @@
 # Library validation record
 
 The complete protocol/component/example suite was rebuilt and rerun in Linux on
-2026-10-08 after adding contact memory profiles and the standalone design source
-bundle, starting from the maintainer's latest IDE changes (`951ea62`). A total of
-1,792,478 assertions passed across 32 program runs: the prior 1,789,463 protocol
-assertions plus 2,955 memory-card, 45 demo-worker and 15 registration assertions.
-All 33 Python regression tests, 21 Pascal readers on 106 sources and distribution
-checks for twelve projects also passed.
-After the final credential-cleanup refinement, the 2,955-assertion memory suite
-and the Python/Pascal/distribution checks were rebuilt/rerun successfully; the
-other protocol sources were unchanged.
+2026-10-08 after adding ordinary/counter memory profiles, the VCL memory page and
+the standalone design source bundle, starting from the maintainer's latest IDE
+changes (`951ea62`). The full run passed 1,826,733 assertions across 33 program runs:
+1,789,463 existing protocol assertions, 34,232 counter/profile, 2,955 ordinary-memory,
+67 demo-worker and 16 registration assertions. All 33 Python regression tests,
+21 Pascal readers on 109 sources and distribution checks for twelve projects passed.
+
+After adding acquisition/ownership/carry-no-op cases, the counter suite was rebuilt
+and rerun with 34,278 assertions. After separating counter data from ordinary
+snapshot metadata, the worker/executor suite was rebuilt and rerun with 67
+assertions. These targeted checks supplement the full run; they are not another
+complete-suite run. The production protocol implementations were unchanged.
 
 The maintainer confirmed warning-free compilation and installation of the prior
 packages in RAD Studio 12 (Studio 23.0), Debug/Win32. Both VCL demos subsequently
 reported EThread during startup; the shared post-construction StartWork fix was
 merged. The maintainer also intentionally removed the design package's runtime
 BPL dependencies after an installation failure. This follow-up keeps that choice
-and explicitly bundles all 38 registration/runtime source units. Fresh Delphi
+and explicitly bundles all 40 registration/runtime source units. Fresh Delphi
 builds and IDE installation of this new bundle/memory package, VCL execution,
 Help Insight and physical memory-card compatibility remain unverified.
 
@@ -36,6 +39,7 @@ Help Insight and physical memory-card compatibility remain unverified.
 | ICAO MRZ and DG1/DG2 data codecs | 297 assertions passed: published MRZ examples, synthetic FAC/CBEFF records and malformed inputs |
 | EMV data codecs, application reader and diagnostics | 1605 assertions in nine groups passed, including exact PSE/PPSE/GPO/AFL/GET DATA/log transcripts and resource limits |
 | Contact memory profiles | 2955 assertions in nine groups passed: nineteen geometries, literal ACR38/ACR39/SLE/PIN/protection/page/bank transcripts, wrong/blocked retry counters, every write/PIN-chain I/O failure, every acknowledgement status/read-back data bit, no-op/locked ranges, release evidence, credential copies and acquisition recovery; no physical chip access |
+| SLE counter chips / capabilities | Final targeted run: 34,278 assertions passed; four explicit models, all write modes/address boundaries, literal select/program/carry/backup/challenge/retrieval commands, every write-chain I/O failure, wrong statuses/lengths, all window data bits, stale preflight, zero-to-one refusal, release evidence, owned input arrays, failed acquisition recovery and mandatory carry dispatch; ACR39 counter support is not claimed |
 | Contactless Classic/Type 2 storage and programmable UID | 6365 assertions in twelve groups passed, including protected pages, complete snapshots, four/seven-byte Gen2 programming, separate factory FUID one-time writes and uncertain outcomes |
 | Raw RF UID programming and ACR122U adapter | 8179 assertions in twenty-three groups passed, including Gen1a/Gen1b/unsealed UFUID, partial UFUID/ZUID/PFUID, Type 2 DirectWrite, Gen3, all six Gen4 layouts, partial writes, USCUID/GDM hidden/public sources, password-command wiping, bit framing and complete adapter-chain transcripts |
 | Password-authenticated Type 2 user memory | 2062 assertions in seven groups passed for both EV1 sizes and NTAG213/215/216, including retained-session PWD_AUTH/PACK, bounded snapshots, verified writes and concrete adapter integration |
@@ -49,13 +53,13 @@ Help Insight and physical memory-card compatibility remain unverified.
 | Native Windows adapter branches | 38 assertions passed against an isolated Linux C ABI shim |
 | Native Windows CNG branches | 51 assertions passed: native argument/length/IV handling, every encrypt/decrypt call failure, handle cleanup and system RNG failure without fallback |
 | Console examples | All sixteen built; hardware-free help/inspection checks passed, including memory-model geometry and DESFire key/access administration offline help/plan, ICAO help/CardAccess inspection, DESFire management offline help/plan and invalid arguments, APDU/NDEF/Type 4/Type 5/DESFire valid/invalid cases, ATR known/unknown/bad-TCK and EMV known/private tags, magstripe parity and MSR206 frame/status cases |
-| Demo worker and offline operations | 45 assertions passed in the VCL-start follow-up: real worker/caller separation, request ownership, single delivery, join, nil executor, sanitized errors, verified-write evidence, offline operations and hardware preflight, suspended destruction, duplicate start and completed restart |
-| Palette registration / RTL streaming | 15 assertions passed: actual Register routine captures fourteen classes; inactive construction and FPC component stream round-trip for each; DesignIntf capture is not an IDE/ABI test |
+| Demo worker and offline operations | 67 assertions passed in the VCL-start follow-up: real worker/caller separation, request ownership, single delivery, join, nil executor, sanitized errors, verified-write evidence, offline operations and hardware preflight, suspended destruction, duplicate start and completed restart |
+| Palette registration / RTL streaming | 16 assertions passed: actual Register routine captures fifteen classes; inactive construction and FPC component stream round-trip for each; DesignIntf capture is not an IDE/ABI test |
 | Distribution / VCL source readers | Twelve MSBuild projects (all four Debug/Release × Win32/Win64 property combinations), two groups and two DFM forms passed: references, package ownership/order, explicit IDE package identity, native Base/configuration/platform activation, GenDll/GenPackage, named DCP dependencies, native integer-overflow/debug settings, BOM/CRLF/resources, runtime/design dependency separation, palette completeness, field/event bindings, form creation and Platform/Config output isolation; no Delphi/VCL execution |
 | FPC range/overflow/heap checks | Passed; no unfreed allocations in passing test programs |
 | Python checker regression tests | All 33 passed, including eighteen distribution-reader cases; coverage includes IDE package identity, native configuration inheritance, omitted empty IDE platform groups, owning-package dependencies, explicit standalone design copies without dependency-owned duplicates, group target order, named DCPs, resources, BOM/CRLF, compiler property types and bounded condition parsing |
-| Pascalcheck core profile | All 21 readers passed on 106 explicitly selected source files |
-| XML documentation | 1410 visible production API declarations inspected; zero findings; exported test-vector declarations also pass the full profile |
+| Pascalcheck core profile | All 21 readers passed on 109 explicitly selected source files |
+| XML documentation | 1450 visible production API declarations inspected; zero findings; exported test-vector declarations also pass the full profile |
 | Reference integrity | All 26 retained files match the original Git bytes and manifest hashes |
 | Patch whitespace | `git diff --check` passed |
 
@@ -81,9 +85,9 @@ constructor, a platform-dependent unreachable branch in the test handle factory,
 and unused test-result variable notes. None has been suppressed. Production PC/SC
 and eID/EMV/contactless units compile without additional FPC warnings in the tested branches.
 
-The suite reported 1,792,478 passing assertions across 32 program runs, including
-2,955 memory-card, 45 demo worker and 15 inactive registration/streaming assertions.
-The full 21-reader profile covers 106 Pascal sources, including the VCL units.
+The suite reported 1,826,733 passing assertions across 33 program runs, including
+34,232 counter/profile, 2,955 memory-card, 67 demo-worker and 16 registration assertions.
+The full 21-reader profile covers 109 Pascal sources, including the VCL units.
 Only the non-VCL worker/executor and inactive component registration/streaming
 were compiled/executed under FPC. The actual forms, MSBuild projects, package BPLs
 and batch scripts require [Delphi/Windows validation](INSTALLATION.md).
@@ -95,7 +99,7 @@ lengths/padding, exact AID/MF/DF/EF selection, grouped reads, optional certifica
 states, bounded 61xx/6Cxx handling, EOF probes, 15-bit offsets, partial failures,
 no transport replay and transaction-release exception precedence. Its JPEG and
 certificate payloads are synthetic protocol fixtures, not decoded image or X.509
-validation tests. A total of 1792478 Pascal assertions passed across 32 test-program
+validation tests. A total of 1826733 Pascal assertions passed across 33 test-program
 runs, including all three native ABI shims and the crypto/DESFire suites repeated
 through the actual CNG adapter.
 NDEF tests exercise complete MB/ME/chunk framing, independent Text/URI vectors,
@@ -344,10 +348,25 @@ lock operations and fresh new-PIN proof after reset. These are implemented profi
 not physical reader/firmware certification. See [memory access](MEMORY_CARDS.md).
 
 The new design bundle uses only rtl/vcl/designide SDK dependencies and explicitly
-contains the complete 38-unit registration source closure, including Memory.
-All fourteen inactive components construct and round-trip through the FPC RTL
+contains the complete 40-unit registration source closure, including Memory.
+All fifteen inactive components construct and round-trip through the FPC RTL
 streaming test. The bounded reader rejects missing source ownership and a bundle
 that also loads a runtime package owning the same units. This does not test the
 Delphi package linker/loader: the standalone installation change still needs a
 fresh build and install in the user's IDE. Runtime packages remain separate for
 applications. See [installation](INSTALLATION.md).
+
+## VCL memory page and counter scope
+
+The worker copies memory payload/PIN arrays before starting. Synthetic worker tests
+exercise mutation of caller buffers, owned completion arrays, suppression of partial
+ordinary/counter data on failure, offline ACS profile capabilities and invalid
+memory requests before hardware creation. Form/DFM readers inspect both tabs and
+bindings; actual VCL rendering and Delphi compilation remain untested here.
+
+Counter geometry is a caller-declared readable window, not an inferred chip size.
+Programming verifies the expected-before and expected-after window and refuses
+zero-to-one transitions at the programmed address. Carry arithmetic, personalisation
+code proof and host certificate verification are not implemented. The raw code
+builder explicitly documents consumption of the presentation counter; it is never
+automatically executed by the high-level component.

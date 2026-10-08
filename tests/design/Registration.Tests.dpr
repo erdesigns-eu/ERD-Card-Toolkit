@@ -9,7 +9,7 @@ var C: TComponentClass; Original, Loaded: TComponent;
 begin
   try
     ERD.Card.Design.Register.Register;
-    if Length(CapturedComponents) <> 14 then raise Exception.Create('Expected fourteen palette components.');
+    if Length(CapturedComponents) <> 15 then raise Exception.Create('Expected fifteen palette components.');
     Checks := 1;
     for C in CapturedComponents do
     begin

@@ -182,6 +182,8 @@
         </DelphiCompile>
         <DCCReference Include="rtl.dcp"/>
         <DCCReference Include="ERDCardCore.dcp"/>
+        <DCCReference Include="..\..\src\memory\ERD.Card.Memory.Counter.pas" />
+        <DCCReference Include="..\..\src\memory\ERD.Card.Memory.Capabilities.pas" />
         <DCCReference Include="..\..\src\memory\ERD.Card.Memory.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
