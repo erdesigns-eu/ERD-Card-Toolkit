@@ -15,7 +15,7 @@ uses
   ERD.Card.Crypto.OpenSSL,
 {$ENDIF}
   ERD.Card.Contactless, ERD.Card.Contactless.DESFire,
-  ERD.Card.Contactless.DESFire.EV2, Desfire.Vectors;
+  ERD.Card.Contactless.DESFire.EV2, ERD.Card.Contactless.DESFire.EV1, Desfire.Vectors;
 
 type
   TFixedProvider = class(TInterfacedObject,ICardAesProvider)
@@ -23,6 +23,7 @@ type
     FBase:ICardAesProvider;
   public
     RandomFails,MalformedRandom:Boolean;
+    RandomCalls,RandomFailCall:Integer;
     constructor Create(const Base:ICardAesProvider);
     function EncryptCbc(const AKey,AIv,AData:TBytes):TBytes;
     function DecryptCbc(const AKey,AIv,AData:TBytes):TBytes;
@@ -52,9 +53,11 @@ function TFixedProvider.DecryptCbc(const AKey,AIv,AData:TBytes):TBytes;
 begin Result:=FBase.DecryptCbc(AKey,AIv,AData); end;
 function TFixedProvider.RandomBytes(const ACount:Integer):TBytes;
 begin
-  if RandomFails then raise ECardCryptoError.Create('Synthetic RNG failure');
+  Inc(RandomCalls);
+  if RandomFails or (RandomCalls=RandomFailCall) then raise ECardCryptoError.Create('Synthetic RNG failure');
   if ACount<>16 then raise ECardCryptoError.Create('Unexpected nonce size');
   Result:=HexToBytes('B04D0787C93EE0CC8CACC8E86F16C6FE');
+  if RandomCalls>1 then Result:=HexToBytes('112233445566778899AABBCCDDEEFF00');
   if MalformedRandom then SetLength(Result,15);
 end;
 
@@ -86,6 +89,10 @@ begin
     Check(Failed,'Busy transport setter refused');
     Failed:=False; try Reader.AuthenticationKey:=nil; except on E:EDesfireError do Failed:=True; end;
     Check(Failed,'Busy credential setter refused');
+    Failed:=False; try Reader.ReauthenticationKey:=nil; except on E:EDesfireError do Failed:=True; end;
+    Check(Failed,'Busy NonFirst credential setter refused');
+    Failed:=False; try Reader.ReauthenticationKeyNumber:=1; except on E:EDesfireError do Failed:=True; end;
+    Check(Failed,'Busy NonFirst key number setter refused');
   end;
   if Calls>Length(Pairs) then raise ECardTransportError.Create('Command replay or unexpected continuation');
   if not BytesEqual(ACommand,HexToBytes(Pairs[Calls-1].Command)) then
@@ -101,7 +108,7 @@ end;
 procedure Configure(const Reader:TDesfireCardReader; const T:TTranscript; const Mode:TDesfireCommunication);
 var K:TBytes;
 begin
-  Reader.Transport:=T; Reader.Security:=dfsEv2Aes; Reader.CryptoProvider:=TFixedProvider.Create(Base);
+  Reader.Transport:=T; Reader.ReauthenticationKey:=nil; Reader.Security:=dfsEv2Aes; Reader.CryptoProvider:=TFixedProvider.Create(Base);
   K:=HexToBytes('00000000000000000000000000000000'); Reader.AuthenticationKey:=K;
   Reader.MinimumCommunication:=Mode; T.Reader:=Reader;
   K[0]:=1; Check(Reader.AuthenticationKey[0]=0,'Caller key was copied');
@@ -341,6 +348,203 @@ begin
   Writeln('PASS: Local bounds, credential/nonce failures, no-op writes and typed native status.');
 end;
 
+procedure ConfigureGeneration(const Reader:TDesfireCardReader; const T:TTranscript;
+  const Mode:TDesfireCommunication; const NonFirst:Boolean);
+var Key:TBytes;
+begin
+  Configure(Reader,T,Mode);
+  if NonFirst then
+  begin
+    Key:=HexToBytes('000102030405060708090A0B0C0D0E0F');
+    Reader.ReauthenticationKey:=Key; Reader.ReauthenticationKeyNumber:=1;
+    Key[0]:=99; Check(Reader.ReauthenticationKey[0]=0,'NonFirst key copied');
+    Key:=Reader.ReauthenticationKey; Key[0]:=99;
+    Check(Reader.ReauthenticationKey[0]=0,'NonFirst getter independent'); TCardCrypto.Clear(Key);
+  end
+  else Reader.Security:=dfsEv1Aes;
+end;
+
+procedure GenerationSuccess;
+var T:TTranscript; Transport:ICardTransport; Reader:TDesfireCardReader; Data:TBytes;
+  Pairs:TDesfireWirePairs; Mode:TDesfireCommunication; I,J,G:Integer;
+  Files:TDesfireFiles;
+  procedure ReadFixture(const APairs:TDesfireWirePairs; const Kind,Count:Integer; const NonFirst:Boolean = False);
+  begin
+    T:=TTranscript.Create(APairs); Transport:=T; ConfigureGeneration(Reader,T,dfcFull,NonFirst);
+    case Kind of
+      0,1:begin Data:=Reader.ReadData($CDEF01,0,0,Count); Check(Length(Data)=Count,'EV1 exact data bytes'); end;
+      2:Check(Reader.ReadValue($CDEF01,2)=-17,'EV1 signed value');
+      3,4:begin Data:=Reader.ReadRecords($CDEF01,Kind,0,2);
+        Check(BytesEqual(Data,HexToBytes('1112131421222324')),'EV1 complete record order'); end;
+    end;
+    Check((T.Calls=Length(APairs)) and (T.Ends=1) and not Reader.Busy,'EV1 read complete and released');
+  end;
+begin
+  Reader:=TDesfireCardReader.Create(nil);
+  try
+    for G:=0 to 1 do
+      for I:=0 to 2 do
+      begin
+        Mode:=TDesfireCommunication(I); Reader.MaxFrameDataBytes:=48;
+        if G=0 then case Mode of dfcPlain:Pairs:=Ev1ReadPlain; dfcMac:Pairs:=Ev1ReadMac; dfcFull:Pairs:=Ev1ReadFull; end
+        else case Mode of dfcPlain:Pairs:=Ev2NonFirstReadPlain; dfcMac:Pairs:=Ev2NonFirstReadMac; dfcFull:Pairs:=Ev2NonFirstReadFull; end;
+        T:=TTranscript.Create(Pairs); Transport:=T; ConfigureGeneration(Reader,T,Mode,G=1); T.Reenter:=True;
+        Data:=Reader.ReadData($CDEF01,0,0,25);
+        for J:=0 to High(Data) do Check(Data[J]=J,'Independent EV1/NonFirst bytes');
+        Check((Length(Data)=25) and (T.Calls=Length(Pairs)) and not Reader.Busy,'Generation read transcript complete');
+        if G=0 then case Mode of dfcPlain:Pairs:=Ev1WritePlain; dfcMac:Pairs:=Ev1WriteMac; dfcFull:Pairs:=Ev1WriteFull; end
+        else case Mode of dfcPlain:Pairs:=Ev2NonFirstWritePlain; dfcMac:Pairs:=Ev2NonFirstWriteMac; dfcFull:Pairs:=Ev2NonFirstWriteFull; end;
+        T:=TTranscript.Create(Pairs); Transport:=T; ConfigureGeneration(Reader,T,Mode,G=1);
+        FillChar(Data[0],Length(Data),$22); Reader.WriteData($CDEF01,0,0,Data);
+        Check((T.Calls=Length(Pairs)) and (T.Writes=1),'Generation verified write');
+        Reader.MaxFrameDataBytes:=16;
+        if G=0 then case Mode of dfcPlain:Pairs:=Ev1WritePlainChained; dfcMac:Pairs:=Ev1WriteMacChained; dfcFull:Pairs:=Ev1WriteFullChained; end
+        else case Mode of dfcPlain:Pairs:=Ev2NonFirstWritePlainChained; dfcMac:Pairs:=Ev2NonFirstWriteMacChained; dfcFull:Pairs:=Ev2NonFirstWriteFullChained; end;
+        T:=TTranscript.Create(Pairs); Transport:=T; ConfigureGeneration(Reader,T,Mode,G=1);
+        Reader.WriteData($CDEF01,0,0,Data);
+        Check((T.Calls=Length(Pairs)) and (T.Ends=1),'Generation inbound/outbound chaining');
+      end;
+    Reader.MaxFrameDataBytes:=48;
+    ReadFixture(Ev1ReadBackup,1,25); ReadFixture(Ev1ReadValue,2,4);
+    ReadFixture(Ev1ReadLinear,3,8); ReadFixture(Ev1ReadCyclic,4,8);
+    ReadFixture(Ev2NonFirstReadBackup,1,25,True); ReadFixture(Ev2NonFirstReadValue,2,4,True);
+    ReadFixture(Ev2NonFirstReadLinear,3,8,True); ReadFixture(Ev2NonFirstReadCyclic,4,8,True);
+    Pairs:=Ev1Directory; T:=TTranscript.Create(Pairs); Transport:=T;
+    ConfigureGeneration(Reader,T,dfcFull,False); Files:=Reader.ReadFiles($CDEF01);
+    Check((Length(Files)=5) and (T.Calls=Length(Pairs)) and (T.Ends=1),'EV1 directory and authenticated metadata');
+    ReadFixture(Ev1ReadLength12,0,12); ReadFixture(Ev1ReadLength13,0,13);
+    ReadFixture(Ev1ReadLength16,0,16); ReadFixture(Ev1ReadLength28,0,28);
+    ReadFixture(Ev1ReadLength29,0,29); ReadFixture(Ev1ReadMarkerPadding,0,25);
+    Pairs:=Ev1ReadFull; T:=TTranscript.Create(Pairs); Transport:=T;
+    ConfigureGeneration(Reader,T,dfcFull,False); SetLength(Data,25);
+    for J:=0 to 24 do Data[J]:=J;
+    Reader.WriteData($CDEF01,0,0,Data);
+    Check((T.Writes=0) and (T.Calls=Length(Pairs)),'EV1 matching bytes verified no-op');
+  finally Reader.Free; Transport:=nil; end;
+  Writeln('PASS: EV1 AES and EV2 NonFirst complete reads/writes, all modes, file types and CRC block boundaries.');
+end;
+
+procedure GenerationFailures;
+var T:TTranscript; Transport:ICardTransport; Reader:TDesfireCardReader; Data:TBytes;
+  Pairs:TDesfireWirePairs; Provider:TFixedProvider; I,J,K,G,Stage,Size,FirstWrite:Integer;
+  Failed,Uncertain:Boolean;
+begin
+  Reader:=TDesfireCardReader.Create(nil); Data:=nil; SetLength(Data,25); FillChar(Data[0],25,$22);
+  try
+    for G:=0 to 1 do
+    begin
+      if G=0 then Pairs:=Ev1WriteFullChained else Pairs:=Ev2NonFirstWriteFullChained;
+      FirstWrite:=0;
+      for I:=0 to High(Pairs) do
+        if (Pos('903D',Pairs[I].Command)=1) or (Pos('908D',Pairs[I].Command)=1) then begin FirstWrite:=I+1; Break; end;
+      Check(FirstWrite>0,'Generation write fixture boundary'); Reader.MaxFrameDataBytes:=16;
+      for I:=1 to Length(Pairs) do
+      begin
+        T:=TTranscript.Create(Pairs); Transport:=T; ConfigureGeneration(Reader,T,dfcFull,G=1); T.FailCall:=I;
+        Failed:=False; Uncertain:=False;
+        try Reader.WriteData($CDEF01,0,0,Data);
+        except on E:Exception do begin Failed:=True; Uncertain:=E is EContactlessWriteUncertain; end; end;
+        Check(Failed and (Uncertain=(I>=FirstWrite)),'Generation exact write uncertainty boundary');
+        Check((T.Calls=I) and (T.Ends=1) and not Reader.Busy and not T.Active,'Generation no retry and cleanup');
+      end;
+      Reader.MaxFrameDataBytes:=48;
+      if G=0 then Pairs:=Ev1WriteFull else Pairs:=Ev2NonFirstWriteFull;
+      for I:=0 to High(Pairs) do
+        for J:=0 to Length(Pairs[I].Response) div 2-1 do
+          for K:=0 to 7 do
+          begin
+            T:=TTranscript.Create(Pairs); Transport:=T; ConfigureGeneration(Reader,T,dfcFull,G=1);
+            T.CorruptCall:=I+1; T.CorruptByte:=J; T.CorruptBit:=K; Failed:=False;
+            try Reader.WriteData($CDEF01,0,0,Data); except on E:Exception do Failed:=True; end;
+            Check(Failed,'Every EV1/NonFirst response bit rejected');
+            Check((T.Ends=1) and not Reader.Busy and not T.Active,'Generation corruption cleanup');
+            Check(T.Calls<=Length(Pairs)+1,'Generation bounded continuation and no replay');
+          end;
+      T:=TTranscript.Create(Pairs); Transport:=T; ConfigureGeneration(Reader,T,dfcFull,G=1); T.EndFails:=True;
+      Uncertain:=False; try Reader.WriteData($CDEF01,0,0,Data); except on E:EContactlessWriteUncertain do Uncertain:=True; end;
+      Check(Uncertain and not Reader.Busy,'Generation failed release retains write uncertainty');
+    end;
+    for G:=0 to 1 do
+    begin
+      if G=0 then Pairs:=Ev1ReadBadCrc else Pairs:=Ev1ReadBadPadding;
+      T:=TTranscript.Create(Pairs); Transport:=T; ConfigureGeneration(Reader,T,dfcFull,False); Failed:=False;
+      try Data:=Reader.ReadData($CDEF01,0,0,25); except on E:ECardCryptoError do Failed:=True; end;
+      Check(Failed and (T.Calls=5) and not Reader.Busy,'Valid ciphertext with invalid CRC/padding rejected');
+    end;
+    // Authentication is a fixed handshake, never a variable-length file chain.
+    for G:=0 to 1 do
+      for Stage:=0 to 1 do
+        for Size:=0 to 40 do
+        begin
+          if Size=16 then Continue;
+          if G=0 then begin Pairs:=Ev1ReadFull; I:=2+Stage; end
+          else begin Pairs:=Ev2NonFirstReadFull; I:=5+Stage; end;
+          Pairs[I-1].Response:=StringOfChar('0',Size*2);
+          if Stage=0 then Pairs[I-1].Response:=Pairs[I-1].Response+'91AF'
+          else Pairs[I-1].Response:=Pairs[I-1].Response+'9100';
+          T:=TTranscript.Create(Pairs); Transport:=T; ConfigureGeneration(Reader,T,dfcFull,G=1);
+          Failed:=False; try Data:=Reader.ReadData($CDEF01,0,0,25);
+          except on E:EDesfireError do Failed:=True; end;
+          Check(Failed and (T.Calls=I) and (T.Ends=1) and not Reader.Busy,'All invalid authentication lengths rejected immediately');
+        end;
+    Pairs:=Ev2NonFirstReadPlain; T:=TTranscript.Create(Pairs); Transport:=T;
+    ConfigureGeneration(Reader,T,dfcMac,True); Failed:=False;
+    try Data:=Reader.ReadData($CDEF01,0,0,25); except on E:EDesfireError do Failed:=True; end;
+    Check(Failed and (T.Calls=4),'Minimum mode checked before NonFirst key switch');
+    Pairs:=Ev2NonFirstReadFull; T:=TTranscript.Create(Pairs); Transport:=T;
+    ConfigureGeneration(Reader,T,dfcFull,True); Provider:=TFixedProvider.Create(Base);
+    Provider.RandomFailCall:=2; Reader.CryptoProvider:=Provider; Failed:=False;
+    try Data:=Reader.ReadData($CDEF01,0,0,25); except on E:ECardCryptoError do Failed:=True; end;
+    Check(Failed and (T.Calls=5) and (T.Ends=1),'NonFirst RNG failure sends no second challenge');
+    T:=TTranscript.Create(Pairs); Transport:=T; ConfigureGeneration(Reader,T,dfcFull,True);
+    Reader.ReauthenticationKey:=nil; Failed:=False;
+    try Data:=Reader.ReadData($CDEF01,0,0,25); except on E:EDesfireError do Failed:=True; end;
+    Check(Failed and (T.Calls=4),'Key-1 rights do not inherit key-0 authentication');
+    T:=TTranscript.Create(Pairs); Transport:=T; ConfigureGeneration(Reader,T,dfcFull,True);
+    Reader.ReauthenticationKeyNumber:=2; Failed:=False;
+    try Data:=Reader.ReadData($CDEF01,0,0,25); except on E:ECardTransportError do Failed:=True; end;
+    Check(Failed and (T.Calls=5) and not Reader.Busy,'NonFirst explicit key number transmitted without fallback');
+    T:=TTranscript.Create(Pairs); Transport:=T; ConfigureGeneration(Reader,T,dfcFull,True);
+    Reader.Security:=dfsEv1Aes; Failed:=False;
+    try Data:=Reader.ReadData($CDEF01,0,0,25); except on E:EDesfireError do Failed:=True; end;
+    Check(Failed and (T.Begins=0) and (T.Calls=0),'NonFirst configured with EV1 refused before I/O');
+    Failed:=False; try Reader.ReauthenticationKeyNumber:=14; except on E:EDesfireError do Failed:=True; end;
+    Check(Failed,'NonFirst key number bounded');
+    Failed:=False; try Reader.ReauthenticationKey:=HexToBytes('00'); except on E:EDesfireError do Failed:=True; end;
+    Check(Failed,'NonFirst secret size bounded');
+  finally Reader.Free; Transport:=nil; end;
+  Writeln('PASS: EV1/NonFirst every I/O and response bit, wrong CRC/padding, target rights, failed RNG and release.');
+end;
+
+procedure Ev1CodecContracts;
+var A,B,Key,SessionIv,Before,Wire,Data:TBytes; Failed:Boolean; I:Integer;
+begin
+  A:=HexToBytes('B04D0787C93EE0CC8CACC8E86F16C6FE'); B:=HexToBytes('FA659AD0DCA738DD65DC7DC38612AD81');
+  Key:=TDesfireEv1Codec.DeriveKey(A,B);
+  Check(BytesEqual(Key,HexToBytes('B04D0787FA659AD06F16C6FE8612AD81')),'Independent EV1 session key');
+  Check(BytesEqual(TDesfireEv1Codec.Crc32(HexToBytes('313233343536373839')),HexToBytes('D9C60B34')),'CRC32 unfinalized known answer');
+  Check(BytesEqual(TDesfireEv1Codec.Crc32(nil),HexToBytes('FFFFFFFF')),'CRC32 empty preset');
+  SessionIv:=nil; SetLength(SessionIv,16); Before:=Copy(SessionIv,0,16);
+  Wire:=TDesfireEv1Codec.EncodeCommand(Base,Key,SessionIv,$F5,HexToBytes('00'),nil,dfcPlain,False);
+  Check(BytesEqual(Wire,HexToBytes('00')) and not BytesEqual(SessionIv,Before),'EV1 metadata advances IV without transmitting CMAC');
+  Before:=Copy(SessionIv,0,16);
+  for I:=0 to 26 do
+  begin
+    Wire:=nil; SetLength(Wire,I); Failed:=False;
+    try Data:=TDesfireEv1Codec.DecodeResponse(Base,Key,SessionIv,Wire,dfcMac,7);
+    except on E:ECardCryptoError do Failed:=True; end;
+    Check(Failed and BytesEqual(SessionIv,Before),'Invalid response never advances EV1 IV');
+  end;
+  SessionIv:=HexToBytes('0000'); Failed:=False;
+  try Wire:=TDesfireEv1Codec.EncodeCommand(Base,Key,SessionIv,$F5,HexToBytes('00'),nil,dfcMac,False);
+  except on E:ECardCryptoError do Failed:=True; end;
+  Check(Failed,'EV1 IV size contract');
+  TCardCrypto.Clear(A); TCardCrypto.Clear(B); TCardCrypto.Clear(Key); TCardCrypto.Clear(SessionIv);
+  TCardCrypto.Clear(Before); TCardCrypto.Clear(Wire); TCardCrypto.Clear(Data);
+  Writeln('PASS: EV1 key/CRC known answers and transactional IV advancement.');
+end;
+
+
 begin
   try
 {$IFDEF MSWINDOWS}
@@ -349,6 +553,7 @@ begin
     Base:=TCardOpenSslAesProvider.Create;
 {$ENDIF}
     CodecTests; SuccessfulChains; FailureChains; DiscoveryAndPolicy; BoundsAndNoop;
-    Writeln('PASS: 5 DESFire groups; ',Assertions,' assertions.');
+    Ev1CodecContracts; GenerationSuccess; GenerationFailures;
+    Writeln('PASS: 8 DESFire groups; ',Assertions,' assertions.');
   except on E:Exception do begin Writeln(E.ClassName,': ',E.Message); ExitCode:=1; end; end;
 end.

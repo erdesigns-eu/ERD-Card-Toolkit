@@ -13,7 +13,7 @@ uses
   System.SysUtils, System.Classes,
 {$ENDIF}
   ERD.Card.Transport, ERD.Card.Crypto, ERD.Card.Contactless,
-  ERD.Card.Contactless.DESFire.EV2;
+  ERD.Card.Contactless.DESFire.EV2, ERD.Card.Contactless.DESFire.EV1;
 
 const
   /// <summary>Hard bound for an individual acquired/plain DESFire transfer; wire fields remain 24-bit.</summary>
@@ -40,7 +40,9 @@ type
     /// <summary>Unauthenticated legacy native commands, public plaintext access only.</summary>
     dfsPublic,
     /// <summary>AuthenticateEV2First with caller-supplied AES key and EV2 Plain/MACed/Full messaging.</summary>
-    dfsEv2Aes
+    dfsEv2Aes,
+    /// <summary>EV1 AuthenticateAES with chained-IV AES-CMAC and encrypted CRC32 messaging.</summary>
+    dfsEv1Aes
   );
   /// <summary>Supported ordinary native DESFire file types; administration and transaction writes are separate.</summary>
   TDesfireFileType = (
@@ -162,7 +164,9 @@ type
     FTransport,FActiveTransport: ICardTransport;
     FProvider: ICardAesProvider;
     FTransaction: ICardTransaction;
-    FKey: TBytes;
+    FKey,FRekey,FSessionIv: TBytes;
+    FRekeyNumber,FSessionKeyNumber: Byte;
+    FReauthenticated: Boolean;
     FKeyNumber: Byte;
     FSecurity: TDesfireSecurity;
     FMinimum: TDesfireCommunication;
@@ -182,7 +186,11 @@ type
     procedure SetMaxFrameData(const AValue: Integer);
     procedure Start(const AAid: Cardinal; const AAuthenticate: Boolean);
     procedure Finish(const ASucceeded: Boolean);
-    procedure Authenticate;
+    procedure ValidateCredentials;
+    procedure Authenticate(const AReauthenticate: Boolean = False);
+    procedure SetRekey(const AValue: TBytes);
+    function GetRekey: TBytes;
+    procedure SetRekeyNumber(const AValue: Byte);
     function Frame(const AInstruction: Byte; const AData: TBytes; out AStatus: Byte;
       const AWrite: Boolean): TBytes;
     function Exchange(const AInstruction: Byte; const AData: TBytes; const AMaxResponse: Integer;
@@ -197,7 +205,7 @@ type
     /// <summary>Creates an inactive component with public access, a 64 KiB transfer bound and 48-byte command frames.</summary>
     /// <param name="AOwner">Optional component owner.</param>
     constructor Create(AOwner: TComponent); override;
-    /// <summary>Clears locally retained authentication bytes; callers must not destroy a busy component.</summary>
+    /// <summary>Clears both locally retained authentication credentials and session bytes; callers must not destroy a busy component.</summary>
     destructor Destroy; override;
     /// <summary>Selects PICC level and reads version without authentication or automatic family selection.</summary>
     /// <returns>Complete independent version only after successful transaction release.</returns>
@@ -217,7 +225,7 @@ type
     /// <param name="AFile">Native file number 0..31.</param>
     /// <param name="AOffset">Zero-based byte offset.</param>
     /// <param name="ACount">Positive exact byte count, at most MaxTransferBytes and within acquired file size.</param>
-    /// <returns>Independent plaintext only after required MAC verification, settings coherence and release.</returns>
+    /// <returns>Independent plaintext only after required MAC/CRC verification, settings coherence and release.</returns>
     /// <exception cref="Exception">Access, secure messaging, bounds or transport fails.</exception>
     function ReadData(const AAid: Cardinal; const AFile: Byte; const AOffset,ACount: Integer): TBytes;
     /// <summary>Reads the signed current value from a value file; does not debit or credit.</summary>
@@ -246,13 +254,19 @@ type
     procedure WriteData(const AAid: Cardinal; const AFile: Byte; const AOffset: Integer; const AData: TBytes);
     /// <summary>Retained connected native-wrapping transport with ICardTransaction; cannot change while busy.</summary>
     property Transport: ICardTransport read FTransport write SetTransport;
-    /// <summary>Retained maintained AES backend; required for the explicit EV2 AES profile.</summary>
+    /// <summary>Retained maintained AES backend; required for the explicit EV1/EV2 AES profiles.</summary>
     property CryptoProvider: ICardAesProvider read FProvider write SetProvider;
     /// <summary>Owned copy of exactly 16 authentication bytes, or empty to clear; getter returns a separate copy.</summary>
     property AuthenticationKey: TBytes read GetKey write SetKey;
     /// <summary>Explicit application authentication key number 0..13; not automatically guessed.</summary>
     property KeyNumber: Byte read FKeyNumber write SetKeyNumber;
-    /// <summary>Explicit public or EV2 AES profile, default public; no downgrade/fallback.</summary>
+    /// <summary>Optional owned EV2 NonFirst AES key; empty disables switching. Getter returns an independent copy.</summary>
+    /// <remarks>Data/value/record reads and standard writes first retrieve settings under AuthenticationKey, then switch
+    /// once before checking data access. TI and command counter remain unchanged. ReadFiles uses the initial key.</remarks>
+    property ReauthenticationKey: TBytes read GetRekey write SetRekey;
+    /// <summary>Explicit target application key number 0..13 for the optional EV2 NonFirst switch.</summary>
+    property ReauthenticationKeyNumber: Byte read FRekeyNumber write SetRekeyNumber;
+    /// <summary>Explicit public, EV1 AES or EV2 AES profile, default public; no downgrade/fallback.</summary>
     property Security: TDesfireSecurity read FSecurity write SetSecurity;
     /// <summary>Minimum acquired file mode for authenticated operations, default MACed; choose Plain explicitly if intended.</summary>
     property MinimumCommunication: TDesfireCommunication read FMinimum write SetMinimum;
@@ -366,7 +380,10 @@ constructor TDesfireCardReader.Create(AOwner:TComponent);
 begin inherited Create(AOwner); FMinimum:=dfcMac; FMaxTransfer:=65536; FMaxFrameData:=48; end;
 
 destructor TDesfireCardReader.Destroy;
-begin TCardCrypto.Clear(FKey); TDesfireEv2Codec.ClearKeys(FKeys); TCardCrypto.Clear(FTi); inherited Destroy; end;
+begin
+  TCardCrypto.Clear(FKey); TCardCrypto.Clear(FRekey);
+  TDesfireEv2Codec.ClearKeys(FKeys); TCardCrypto.Clear(FTi); TCardCrypto.Clear(FSessionIv); inherited Destroy;
+end;
 
 procedure TDesfireCardReader.SetTransport(const AValue:ICardTransport);
 begin if FBusy then InvalidDesfire; FTransport:=AValue; end;
@@ -380,6 +397,23 @@ begin
 end;
 function TDesfireCardReader.GetKey:TBytes;
 begin Result:=CopyBytes(FKey); end;
+procedure TDesfireCardReader.SetRekey(const AValue:TBytes);
+var B:TBytes;
+begin
+  if FBusy or not (Length(AValue) in [0,16]) then InvalidDesfire;
+  B:=CopyBytes(AValue); TCardCrypto.Clear(FRekey); FRekey:=B;
+end;
+function TDesfireCardReader.GetRekey:TBytes;
+begin Result:=CopyBytes(FRekey); end;
+procedure TDesfireCardReader.SetRekeyNumber(const AValue:Byte);
+begin if FBusy or (AValue>13) then InvalidDesfire; FRekeyNumber:=AValue; end;
+
+procedure TDesfireCardReader.ValidateCredentials;
+begin
+  if (FSecurity<>dfsPublic) and ((FProvider=nil) or (Length(FKey)<>16)) then InvalidDesfire;
+  if (Length(FRekey)>0) and (FSecurity<>dfsEv2Aes) then InvalidDesfire;
+end;
+
 procedure TDesfireCardReader.SetKeyNumber(const AValue:Byte);
 begin if FBusy or (AValue>13) then InvalidDesfire; FKeyNumber:=AValue; end;
 procedure TDesfireCardReader.SetSecurity(const AValue:TDesfireSecurity);
@@ -438,34 +472,59 @@ begin
   finally TCardCrypto.Clear(Buffer); TCardCrypto.Clear(Chunk); TCardCrypto.Clear(Part); end;
 end;
 
-procedure TDesfireCardReader.Authenticate;
-var Key,Zero,Header,Cipher,RndA,RndB,Plain,Challenge,Rotated:TBytes; Status:Byte; I:Integer;
+procedure TDesfireCardReader.Authenticate(const AReauthenticate:Boolean);
+var Key,Initial,Header,Cipher,RndA,RndB,Plain,Challenge,Rotated,Received:TBytes;
+  Status,Instruction,Number:Byte; I,Expected,Offset:Integer;
 begin
-  Key:=CopyBytes(FKey); Zero:=nil; Header:=nil; Cipher:=nil; RndA:=nil; RndB:=nil;
-  Plain:=nil; Challenge:=nil; Rotated:=nil;
+  if AReauthenticate and ((FSecurity<>dfsEv2Aes) or not FAuthenticated or
+    (Length(FRekey)<>16) or FReauthenticated) then InvalidDesfire;
+  Number:=FKeyNumber; Key:=CopyBytes(FKey);
+  if AReauthenticate then begin TCardCrypto.Clear(Key); Key:=CopyBytes(FRekey); Number:=FRekeyNumber; end;
+  Initial:=nil; Header:=nil; Cipher:=nil; RndA:=nil; RndB:=nil;
+  Plain:=nil; Challenge:=nil; Rotated:=nil; Received:=nil;
+  FAuthenticated:=False;
   try
-    SetLength(Zero,16); SetLength(Header,2); Header[0]:=FKeyNumber;
-    Cipher:=Frame($71,Header,Status,False);
+    SetLength(Initial,16); SetLength(Header,1); Header[0]:=Number;
+    Instruction:=$71; Expected:=32; Offset:=4;
+    if FSecurity=dfsEv1Aes then begin Instruction:=$AA; Expected:=16; Offset:=0; end
+    else if AReauthenticate then begin Instruction:=$77; Expected:=16; Offset:=0; end
+    else SetLength(Header,2); // LenCap=0, explicit all-zero PCD capabilities.
+    Cipher:=Frame(Instruction,Header,Status,False);
     if (Status<>$AF) or (Length(Cipher)<>16) then InvalidDesfire;
-    RndB:=FProvider.DecryptCbc(Key,Zero,Cipher); if Length(RndB)<>16 then InvalidDesfire;
+    RndB:=FProvider.DecryptCbc(Key,Initial,Cipher); if Length(RndB)<>16 then InvalidDesfire;
+    if FSecurity=dfsEv1Aes then begin TCardCrypto.Clear(Initial); Initial:=CopyBytes(Cipher); end;
     RndA:=FProvider.RandomBytes(16); if Length(RndA)<>16 then InvalidDesfire;
     SetLength(Plain,32); Move(RndA[0],Plain[0],16);
     for I:=0 to 15 do Plain[16+I]:=RndB[(I+1) mod 16];
-    Challenge:=FProvider.EncryptCbc(Key,Zero,Plain); if Length(Challenge)<>32 then InvalidDesfire;
+    Challenge:=FProvider.EncryptCbc(Key,Initial,Plain); if Length(Challenge)<>32 then InvalidDesfire;
+    if FSecurity=dfsEv1Aes then begin TCardCrypto.Clear(Initial); Initial:=Copy(Challenge,16,16); end;
     TCardCrypto.Clear(Cipher); Cipher:=Frame($AF,Challenge,Status,False);
-    if (Status<>0) or (Length(Cipher)<>32) then InvalidDesfire;
-    TCardCrypto.Clear(Plain); Plain:=FProvider.DecryptCbc(Key,Zero,Cipher);
-    if Length(Plain)<>32 then InvalidDesfire;
+    if (Status<>0) or (Length(Cipher)<>Expected) then InvalidDesfire;
+    TCardCrypto.Clear(Plain); Plain:=FProvider.DecryptCbc(Key,Initial,Cipher);
+    if Length(Plain)<>Expected then InvalidDesfire;
     SetLength(Rotated,16); for I:=0 to 15 do Rotated[I]:=RndA[(I+1) mod 16];
-    if not TCardCrypto.EqualSecret(Rotated,Copy(Plain,4,16)) then InvalidDesfire;
-    // LenCap=0 advertises all-zero PCD capabilities; the authenticated echo must agree.
-    for I:=26 to 31 do if Plain[I]<>0 then InvalidDesfire;
-    FTi:=Copy(Plain,0,4); FKeys:=TDesfireEv2Codec.DeriveKeys(FProvider,Key,RndA,RndB);
-    FCounter:=0; FAuthenticated:=True;
+    Received:=Copy(Plain,Offset,16);
+    if not TCardCrypto.EqualSecret(Rotated,Received) then InvalidDesfire;
+    TDesfireEv2Codec.ClearKeys(FKeys);
+    if FSecurity=dfsEv1Aes then
+    begin
+      FKeys.Encryption:=TDesfireEv1Codec.DeriveKey(RndA,RndB);
+      TCardCrypto.Clear(FSessionIv); SetLength(FSessionIv,16);
+    end
+    else
+    begin
+      if not AReauthenticate then
+      begin
+        for I:=26 to 31 do if Plain[I]<>0 then InvalidDesfire;
+        FTi:=Copy(Plain,0,4); FCounter:=0;
+      end;
+      FKeys:=TDesfireEv2Codec.DeriveKeys(FProvider,Key,RndA,RndB);
+    end;
+    FSessionKeyNumber:=Number; FReauthenticated:=AReauthenticate; FAuthenticated:=True;
   finally
-    TCardCrypto.Clear(Key); TCardCrypto.Clear(Zero); TCardCrypto.Clear(Header); TCardCrypto.Clear(Cipher);
+    TCardCrypto.Clear(Key); TCardCrypto.Clear(Initial); TCardCrypto.Clear(Header); TCardCrypto.Clear(Cipher);
     TCardCrypto.Clear(RndA); TCardCrypto.Clear(RndB); TCardCrypto.Clear(Plain);
-    TCardCrypto.Clear(Challenge); TCardCrypto.Clear(Rotated);
+    TCardCrypto.Clear(Challenge); TCardCrypto.Clear(Rotated); TCardCrypto.Clear(Received);
   end;
 end;
 
@@ -473,19 +532,19 @@ procedure TDesfireCardReader.Start(const AAid:Cardinal; const AAuthenticate:Bool
 var Data,Selected:TBytes; Owns:Boolean;
 begin
   if FBusy or (FTransport=nil) or (AAid>$FFFFFF) then InvalidDesfire;
-  if AAuthenticate and (FSecurity=dfsEv2Aes) and ((FProvider=nil) or (Length(FKey)<>16)) then InvalidDesfire;
+  if AAuthenticate then ValidateCredentials;
   if not Supports(FTransport,ICardTransaction,FTransaction) then InvalidDesfire;
-  FBusy:=True; FActiveTransport:=FTransport; FWriteAttempt:=False; FAuthenticated:=False;
+  FBusy:=True; FActiveTransport:=FTransport; FWriteAttempt:=False; FAuthenticated:=False; FReauthenticated:=False;
   Owns:=False; Data:=nil; Selected:=nil;
   try
     try
       FTransaction.BeginTransaction; Owns:=True;
       Data:=TDesfireCodec.ApplicationBytes(AAid); Selected:=Exchange($5A,Data,0,False);
       if Length(Selected)<>0 then InvalidDesfire;
-      if AAuthenticate and (FSecurity=dfsEv2Aes) then Authenticate;
+      if AAuthenticate and (FSecurity<>dfsPublic) then Authenticate;
     except
       if Owns then try FTransaction.EndTransaction; except end;
-      TDesfireEv2Codec.ClearKeys(FKeys); TCardCrypto.Clear(FTi);
+      TDesfireEv2Codec.ClearKeys(FKeys); TCardCrypto.Clear(FTi); TCardCrypto.Clear(FSessionIv);
       FActiveTransport:=nil; FTransaction:=nil; FBusy:=False; FAuthenticated:=False; raise;
     end;
   finally TCardCrypto.Clear(Data); TCardCrypto.Clear(Selected); end;
@@ -496,8 +555,8 @@ begin
   try
     if ASucceeded then FTransaction.EndTransaction else try FTransaction.EndTransaction; except end;
   finally
-    TDesfireEv2Codec.ClearKeys(FKeys); TCardCrypto.Clear(FTi); FCounter:=0;
-    FAuthenticated:=False; FActiveTransport:=nil; FTransaction:=nil; FBusy:=False;
+    TDesfireEv2Codec.ClearKeys(FKeys); TCardCrypto.Clear(FTi); TCardCrypto.Clear(FSessionIv); FCounter:=0;
+    FAuthenticated:=False; FReauthenticated:=False; FSessionKeyNumber:=0; FActiveTransport:=nil; FTransaction:=nil; FBusy:=False;
   end;
 end;
 
@@ -507,7 +566,18 @@ var Packet,Wire:TBytes; Limit:Integer;
 begin
   Result:=nil; Packet:=nil; Wire:=nil;
   try
-    if FAuthenticated then
+    if FAuthenticated and (FSecurity=dfsEv1Aes) then
+    begin
+      Packet:=TDesfireEv1Codec.EncodeCommand(FProvider,FKeys.Encryption,FSessionIv,
+        AInstruction,AHeader,AData,AMode,AWrite);
+      Limit:=AExpected+8;
+      if (AMode=dfcFull) and not AWrite then Limit:=((AExpected+4+15) div 16)*16;
+      Wire:=Exchange(AInstruction,Packet,Limit,AWrite);
+      if AWrite then
+        Result:=TDesfireEv1Codec.DecodeResponse(FProvider,FKeys.Encryption,FSessionIv,Wire,dfcMac,AExpected)
+      else Result:=TDesfireEv1Codec.DecodeResponse(FProvider,FKeys.Encryption,FSessionIv,Wire,AMode,AExpected);
+    end
+    else if FAuthenticated then
     begin
       Packet:=TDesfireEv2Codec.EncodeCommand(FProvider,FKeys,FTi,FCounter,AInstruction,AHeader,AData,AMode);
       Limit:=AExpected;
@@ -532,7 +602,14 @@ begin
   H:=nil; Wire:=nil; Packet:=nil;
   try
     SetLength(H,1); H[0]:=AFile;
-    if FAuthenticated then
+    if FAuthenticated and (FSecurity=dfsEv1Aes) then
+    begin
+      Packet:=TDesfireEv1Codec.EncodeCommand(FProvider,FKeys.Encryption,FSessionIv,$F5,H,nil,dfcPlain,False);
+      Wire:=Exchange($F5,Packet,25,False); if Length(Wire)<8 then InvalidDesfire;
+      Packet:=TDesfireEv1Codec.DecodeResponse(FProvider,FKeys.Encryption,FSessionIv,Wire,dfcMac,Length(Wire)-8);
+      Result:=TDesfireCodec.FileSettings(AFile,Packet);
+    end
+    else if FAuthenticated then
     begin
       Packet:=TDesfireEv2Codec.EncodeCommand(FProvider,FKeys,FTi,FCounter,$F5,H,nil,dfcMac);
       Wire:=Exchange($F5,Packet,25,False); Inc(FCounter);
@@ -550,14 +627,15 @@ end;
 procedure TDesfireCardReader.CheckAccess(const ASettings:TDesfireFileSettings; const AWrite:Boolean);
 var Key:Byte; FreeValue:Boolean;
   function Granted(const K:Byte):Boolean;
-  begin Result:=(K=$E) or (FAuthenticated and (K=FKeyNumber)); end;
+  begin Result:=(K=$E) or (FAuthenticated and (K=FSessionKeyNumber)); end;
 begin
-  if AWrite then Key:=ASettings.WriteKey else Key:=ASettings.ReadKey;
-  FreeValue:=not AWrite and (ASettings.FileType=dftValue) and ((ASettings.ValueOptions and 2)<>0);
-  if not (Granted(Key) or Granted(ASettings.ReadWriteKey) or FreeValue) then InvalidDesfire;
   if FAuthenticated then
   begin if Ord(ASettings.Communication)<Ord(FMinimum) then InvalidDesfire; end
   else if ASettings.Communication<>dfcPlain then InvalidDesfire;
+  if FAuthenticated and (Length(FRekey)>0) and not FReauthenticated then Authenticate(True);
+  if AWrite then Key:=ASettings.WriteKey else Key:=ASettings.ReadKey;
+  FreeValue:=not AWrite and (ASettings.FileType=dftValue) and ((ASettings.ValueOptions and 2)<>0);
+  if not (Granted(Key) or Granted(ASettings.ReadWriteKey) or FreeValue) then InvalidDesfire;
 end;
 
 procedure TDesfireCardReader.CheckSettings(const ASettings:TDesfireFileSettings);
@@ -574,7 +652,7 @@ begin
   Result:=nil;
   if not (ASettings.FileType in [dftStandard,dftBackup]) or (AOffset<0) or (ACount<1) or
     (ACount>FMaxTransfer) or (AOffset>ASettings.FileBytes-ACount) then InvalidDesfire;
-  CheckAccess(ASettings,False); Cmd:=$BD; if FAuthenticated then Cmd:=$AD;
+  CheckAccess(ASettings,False); Cmd:=$BD; if FAuthenticated and (FSecurity=dfsEv2Aes) then Cmd:=$AD;
   Result:=Send(Cmd,TDesfireCodec.RangeHeader(ASettings.FileNumber,AOffset,ACount),nil,
     ASettings.Communication,ACount,False);
 end;
@@ -604,14 +682,11 @@ function TDesfireCardReader.ReadFiles(const AAid:Cardinal):TDesfireFiles;
 var Files:TDesfireFiles; Ids:TBytes; I,J:Integer; Good:Boolean;
 begin
   Result:=nil; if (AAid=0) or (AAid>$FFFFFF) then InvalidDesfire;
-  if (FSecurity=dfsEv2Aes) and ((FProvider=nil) or (Length(FKey)<>16)) then InvalidDesfire;
+  ValidateCredentials;
   Start(AAid,False); Good:=False; Ids:=nil;
   try
     Ids:=Exchange($6F,nil,32,False);
-    if FSecurity=dfsEv2Aes then
-    begin
-      if (FProvider=nil) or (Length(FKey)<>16) then InvalidDesfire; Authenticate;
-    end;
+    if FSecurity<>dfsPublic then Authenticate;
     SetLength(Files,Length(Ids));
     for I:=0 to High(Ids) do
     begin
@@ -664,7 +739,7 @@ begin
     S:=Settings(AFile); if not (S.FileType in [dftLinearRecords,dftCyclicRecords]) then InvalidDesfire;
     CheckAccess(S,False);
     if (AOffset>S.CurrentRecords-ACount) or (ACount>FMaxTransfer div S.RecordBytes) then InvalidDesfire;
-    Cmd:=$BB; if FAuthenticated then Cmd:=$AB;
+    Cmd:=$BB; if FAuthenticated and (FSecurity=dfsEv2Aes) then Cmd:=$AB;
     Data:=Send(Cmd,TDesfireCodec.RangeHeader(AFile,AOffset,ACount),nil,S.Communication,ACount*S.RecordBytes,False);
     CheckSettings(S); Good:=True;
   finally Finish(Good); end;
@@ -687,7 +762,7 @@ begin
         if not BytesEqual(Old,Data) then
         begin
           Header:=TDesfireCodec.RangeHeader(AFile,AOffset,Length(Data)); Cmd:=$3D;
-          if FAuthenticated then Cmd:=$8D;
+          if FAuthenticated and (FSecurity=dfsEv2Aes) then Cmd:=$8D;
           if FAuthenticated then Reply:=Send(Cmd,Header,Data,S.Communication,0,True)
           else
           begin

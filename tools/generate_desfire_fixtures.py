@@ -168,6 +168,182 @@ exchange(pairs, 0xBD, bytes.fromhex('00000000190000'), b'\x22' * 25, response_fr
 exchange(pairs, 0xF5, b'\0', raw)
 vectors['PublicWriteChained'] = pairs
 
+# EV1 AES: independently synthesized chained-IV transcripts. CRC uses zlib's
+# finalized implementation, inverted to DESFire's unfinalized convention.
+import zlib
+
+
+def crc32(data):
+    return (zlib.crc32(data) ^ 0xFFFFFFFF).to_bytes(4, 'little')
+
+
+def chained_cmac(key, initial, data):
+    # Standard CMAC subkeys stay independent of the session starting IV.
+    def double(block):
+        number = int.from_bytes(block, 'big')
+        return (((number << 1) & ((1 << 128) - 1)) ^ (0x87 if number >> 127 else 0)).to_bytes(16, 'big')
+    k1 = double(aes(key, bytes(16), bytes(16)))
+    k2 = double(k1)
+    complete = bool(data) and len(data) % 16 == 0
+    padded = data if complete else pad(data)
+    last = bytes(a ^ b for a, b in zip(padded[-16:], k1 if complete else k2))
+    return aes(key, initial, padded[:-16] + last)[-16:]
+
+
+# Anchors the separately implemented chained variant to maintained standard CMAC.
+for length in range(65):
+    message = bytes(range(length))
+    assert chained_cmac(KEY, bytes(16), message) == cmac(KEY, message)
+
+
+def ev1_read_write(mode, write=False, chained=False, kind=0, count=25, malformed=None):
+    pairs = start()
+    first_cipher = aes(KEY, bytes(16), RNDB)
+    challenge = aes(KEY, first_cipher, RNDA + RNDB[1:] + RNDB[:1])
+    pairs.append((wrap(0xAA, b'\0'), first_cipher + bytes.fromhex('91AF')))
+    pairs.append((wrap(0xAF, challenge), aes(KEY, challenge[-16:], RNDA[1:] + RNDA[:1]) + bytes.fromhex('9100')))
+    key = RNDA[:4] + RNDB[:4] + RNDA[12:] + RNDB[12:]
+    current_iv = bytes(16)
+    frame, response_frame = (16, 7) if chained else (48, 256)
+    file = 0 if kind in (0, 1) else kind
+    raw = settings(mode, kind)
+
+    def command(code, header, body, returned, communication, writing=False, corrupt=None):
+        nonlocal current_iv
+        message = bytes([code]) + header + body
+        if writing and communication == 3:
+            padded = body + crc32(message)
+            padded += bytes(-len(padded) % 16)
+            encrypted = aes(key, current_iv, padded)
+            current_iv = encrypted[-16:]
+            request = header + encrypted
+        else:
+            current_iv = chained_cmac(key, current_iv, message)
+            request = header + body + (current_iv[:8] if writing and communication == 1 else b'')
+        if communication == 3 and not writing:
+            check = crc32(returned + b'\0')
+            if corrupt == 'crc':
+                check = bytes([check[0] ^ 1]) + check[1:]
+            padded = returned + check + bytes(-(len(returned) + 4) % 16)
+            if corrupt in ('pad', 'marker'):
+                padding_start = len(returned) + 4
+                assert padding_start < len(padded)
+                padded = padded[:padding_start] + bytes([0x80 if corrupt == 'marker' else 1]) + padded[padding_start + 1:]
+            response = aes(key, current_iv, padded)
+            current_iv = response[-16:]
+        else:
+            current_iv = chained_cmac(key, current_iv, returned + b'\0')
+            response = returned + current_iv[:8]
+        exchange(pairs, code, request, response, frame, response_frame)
+
+    def metadata():
+        command(0xF5, bytes([file]), b'', raw, 0)
+
+    metadata()
+    if kind == 2:
+        acquired = (-17).to_bytes(4, 'little', signed=True)
+        header, code = bytes([file]), 0x6C
+    elif kind in (3, 4):
+        acquired = bytes.fromhex('1112131421222324')
+        header, code = bytes([file]) + bytes(3) + (2).to_bytes(3, 'little'), 0xBB
+    else:
+        acquired = MEMORY[:count]
+        header, code = bytes([file]) + bytes(3) + count.to_bytes(3, 'little'), 0xBD
+    command(code, header, b'', acquired, mode, corrupt=malformed)
+    metadata()
+    if write:
+        command(0x3D, header, b'\x22' * count, b'', mode, writing=True)
+        command(0xBD, header, b'', b'\x22' * count, mode)
+        metadata()
+    return pairs
+
+
+for mode, label in [(0, 'Plain'), (1, 'Mac'), (3, 'Full')]:
+    vectors['Ev1Read' + label] = ev1_read_write(mode)
+    vectors['Ev1Write' + label] = ev1_read_write(mode, write=True)
+    vectors['Ev1Write' + label + 'Chained'] = ev1_read_write(mode, write=True, chained=True)
+for kind, label in [(1, 'Backup'), (2, 'Value'), (3, 'Linear'), (4, 'Cyclic')]:
+    vectors['Ev1Read' + label] = ev1_read_write(3, kind=kind)
+for count in [12, 13, 16, 28, 29]:
+    vectors['Ev1ReadLength' + str(count)] = ev1_read_write(3, count=count)
+for label, corrupt in [('BadCrc', 'crc'), ('BadPadding', 'pad'), ('MarkerPadding', 'marker')]:
+    vectors['Ev1Read' + label] = ev1_read_write(3, malformed=corrupt)
+
+
+# EV2 NonFirst uses distinct credentials and card/reader nonces. The first
+# authenticated F5 consumes counter 1 before switching; TI and counter persist.
+SECOND_KEY = bytes(range(16))
+SECOND_RNDA = bytes.fromhex('112233445566778899AABBCCDDEEFF00')
+SECOND_RNDB = bytes.fromhex('102030405060708090A0B0C0D0E0F001')
+second_vector = SECOND_RNDA[:2] + bytes(a ^ b for a, b in zip(SECOND_RNDA[2:8], SECOND_RNDB[:6])) + SECOND_RNDB[6:] + SECOND_RNDA[8:]
+SECOND_ENC = cmac(SECOND_KEY, bytes.fromhex('A55A00010080') + second_vector)
+SECOND_MAC = cmac(SECOND_KEY, bytes.fromhex('5AA500010080') + second_vector)
+
+
+def nonfirst_read_write(mode, write=False, chained=False, kind=0):
+    global ENC, MAC
+    pairs = start()
+    authenticate(pairs)
+    file = 0 if kind in (0, 1) else kind
+    raw = settings(mode, kind)[:2] + bytes.fromhex('1011') + settings(mode, kind)[4:]
+    frame, response_frame = (16, 7) if chained else (48, 256)
+    exchange(pairs, 0xF5, packet(0xF5, bytes([file]), b'', 0, 1), answer(raw, 1, 1), frame, response_frame)
+    pairs.append((wrap(0x77, b'\1'), aes(SECOND_KEY, bytes(16), SECOND_RNDB) + bytes.fromhex('91AF')))
+    pairs.append((wrap(0xAF, aes(SECOND_KEY, bytes(16), SECOND_RNDA + SECOND_RNDB[1:] + SECOND_RNDB[:1])),
+                  aes(SECOND_KEY, bytes(16), SECOND_RNDA[1:] + SECOND_RNDA[:1]) + bytes.fromhex('9100')))
+    old_enc, old_mac = ENC, MAC
+    ENC, MAC = SECOND_ENC, SECOND_MAC
+    try:
+        counter = 1
+        if kind == 2:
+            header, code, acquired = bytes([file]), 0x6C, (-17).to_bytes(4, 'little', signed=True)
+        elif kind in (3, 4):
+            header, code, acquired = bytes([file]) + bytes(3) + (2).to_bytes(3, 'little'), 0xAB, bytes.fromhex('1112131421222324')
+        else:
+            header, code, acquired = bytes([file]) + bytes(3) + (25).to_bytes(3, 'little'), 0xAD, MEMORY[:25]
+
+        def command(code, hdr, body, returned, communication):
+            nonlocal counter
+            request = packet(code, hdr, body, counter, communication)
+            counter += 1
+            exchange(pairs, code, request, answer(returned, counter, communication), frame, response_frame)
+
+        command(code, header, b'', acquired, mode)
+        command(0xF5, bytes([file]), b'', raw, 1)
+        if write:
+            command(0x8D, header, b'\x22' * 25, b'', mode)
+            command(0xAD, header, b'', b'\x22' * 25, mode)
+            command(0xF5, b'\0', b'', raw, 1)
+    finally:
+        ENC, MAC = old_enc, old_mac
+    return pairs
+
+
+for mode, label in [(0, 'Plain'), (1, 'Mac'), (3, 'Full')]:
+    vectors['Ev2NonFirstRead' + label] = nonfirst_read_write(mode)
+    vectors['Ev2NonFirstWrite' + label] = nonfirst_read_write(mode, write=True)
+    vectors['Ev2NonFirstWrite' + label + 'Chained'] = nonfirst_read_write(mode, write=True, chained=True)
+
+for kind, label in [(1, 'Backup'), (2, 'Value'), (3, 'Linear'), (4, 'Cyclic')]:
+    vectors['Ev2NonFirstRead' + label] = nonfirst_read_write(3, kind=kind)
+
+# EV1 metadata directory: public enumeration, then AuthenticateAES and five
+# chained-IV/CMAC-protected settings. Reuse independently synthesized settings.
+pairs = start()
+exchange(pairs, 0x6F, b'', bytes(range(5)))
+first_cipher = aes(KEY, bytes(16), RNDB)
+challenge = aes(KEY, first_cipher, RNDA + RNDB[1:] + RNDB[:1])
+pairs.append((wrap(0xAA, b'\0'), first_cipher + bytes.fromhex('91AF')))
+pairs.append((wrap(0xAF, challenge), aes(KEY, challenge[-16:], RNDA[1:] + RNDA[:1]) + bytes.fromhex('9100')))
+key = RNDA[:4] + RNDB[:4] + RNDA[12:] + RNDB[12:]
+current_iv = bytes(16)
+for kind in range(5):
+    current_iv = chained_cmac(key, current_iv, bytes([0xF5, kind]))
+    raw = settings(3, kind)
+    current_iv = chained_cmac(key, current_iv, raw + b'\0')
+    exchange(pairs, 0xF5, bytes([kind]), raw + current_iv[:8])
+vectors['Ev1Directory'] = pairs
+
 text = ['unit Desfire.Vectors;', '', '{$IFDEF FPC}{$MODE DELPHI}{$ENDIF}', '', 'interface', '', 'type',
         '  /// <summary>Synthetic independently generated command/response pair; contains published test keys only.</summary>',
         '  TDesfireWirePair = record',

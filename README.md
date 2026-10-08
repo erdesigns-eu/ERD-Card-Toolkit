@@ -35,7 +35,7 @@ outside the library. See [the cleanup record](docs/LEGACY_CLEANUP.md).
 | `TType4NdefCardReader` | Public ISO 7816 NDEF files with bounded CC/MLe/MLc and verified NLEN updates |
 | `TIso15693CardReader` | Explicit addressed ISO 15693 system information and guarded block access |
 | `TType5NdefCardReader` | Initialized public Type 5 NDEF memory with CC/security preflight and verified length-last updates |
-| `TDesfireCardReader` | Native DESFire files, EV2 AES authentication/secure messaging and verified standard-data writes |
+| `TDesfireCardReader` | Native DESFire files, EV1/EV2 AES secure messaging, EV2 NonFirst key switching and verified standard-data writes |
 
 `TMagStripeReaderWriter` in `src/magstripe` provides exclusive read sessions and
 capability-checked selected-track writes with same-card verification and explicit
@@ -95,10 +95,11 @@ physical-card compatibility still require validation; see
 [the ISO 15693/Type 5 guide](docs/ISO15693_TYPE5.md).
 `TDesfireCardReader` adds native discovery, standard/backup data, signed values and
 linear/cyclic record reads, plus verified standard-data range writes. Its explicit
-EV2 AES profile implements mutual authentication and Plain/MACed/Full messaging
-with authenticated settings and a caller-supplied key. Windows CNG and optional
+EV1/EV2 AES profiles implement mutual authentication and Plain/MACed/Full messaging
+with authenticated settings and caller-supplied keys. Optional EV2 NonFirst switches
+to a second key while preserving the acquired transaction identifier/counter. Windows CNG and optional
 Linux OpenSSL supply the AES/CSPRNG backends; see [the DESFire guide](docs/DESFIRE.md).
-Legacy D40/EV1 security, LRP, backup transactions and administration remain separate
+Legacy D40/3DES security, LRP, backup transactions and administration remain separate
 extensions; physical reader/card coverage is still pending.
 `TRawUidProgrammer` adds four-byte Gen1a/Gen1b/unsealed UFUID and seven-byte Type 2
 DirectWrite UID programming, with an opt-in ACR122U/PN532 raw-RF adapter. It preserves
