@@ -1,6 +1,10 @@
 # Library validation record
 
-Validated in the Linux cloud environment on 2026-10-08 for the component distribution/VCL demo batch, including the existing DESFire AES administration and European ICAO access suite.
+Protocol baseline: the component distribution/VCL demo batch, including DESFire AES
+administration and European ICAO access, passed in Linux on 2026-10-08. The current
+package-project repair changes project metadata, resources and build scripts only;
+protocol results below are retained baseline results. The repair was validated with
+distribution/configuration readers and Python/Pascal source checks, not Delphi.
 
 | Check | Result |
 | --- | --- |
@@ -32,9 +36,9 @@ Validated in the Linux cloud environment on 2026-10-08 for the component distrib
 | Console examples | All fifteen built; hardware-free help/inspection checks passed, including DESFire key/access administration offline help/plan, ICAO help/CardAccess inspection, DESFire management offline help/plan and invalid arguments, APDU/NDEF/Type 4/Type 5/DESFire valid/invalid cases, ATR known/unknown/bad-TCK and EMV known/private tags, magstripe parity and MSR206 frame/status cases |
 | Demo worker and offline operations | 39 assertions passed: real worker/caller separation, request byte/string ownership, single delivery, join on destruction, nil executor, sanitized errors, verified write evidence after cleanup failure, offline NDEF/track inspection and hardware preflight refusals |
 | Palette registration / RTL streaming | 14 assertions passed: actual Register routine captures thirteen classes; inactive construction and FPC component stream round-trip for each; DesignIntf capture is not an IDE/ABI test |
-| Distribution / VCL source readers | Eleven MSBuild projects, two groups and two DFM forms passed: references, package ownership/order, runtime/design dependency separation, palette completeness, field/event bindings, form creation and Platform/Config output isolation; no Delphi/VCL execution |
+| Distribution / VCL source readers | Eleven MSBuild projects (all four Debug/Release × Win32/Win64 property combinations), two groups and two DFM forms passed: references, package ownership/order, explicit IDE package identity, native Base/configuration/platform activation, GenDll/GenPackage, named DCP dependencies, native integer-overflow/debug settings, BOM/CRLF/resources, runtime/design dependency separation, palette completeness, field/event bindings, form creation and Platform/Config output isolation; no Delphi/VCL execution |
 | FPC range/overflow/heap checks | Passed; no unfreed allocations in passing test programs |
-| Python checker regression tests | All 21 passed, including six distribution-reader positive/negative cases |
+| Python checker regression tests | All 29 passed, including fourteen distribution-reader cases; new cases cover IDE package identity, native project flags/configuration inheritance, named dependencies, resource directives, BOM/CRLF, compiler property types and bounded condition parsing |
 | Pascalcheck core profile | All 21 readers passed on 103 explicitly selected source files |
 | XML documentation | 1332 visible production API declarations inspected; zero findings; exported test-vector declarations also pass the full profile |
 | Reference integrity | All 26 retained files match the original Git bytes and manifest hashes |
@@ -262,3 +266,28 @@ or payment-processing support is claimed.
 The scripts detect selected common errors; they do not prove compiler or hardware
 compatibility. Refer to [the protocol guide](PROTOCOL_CORE.md),
 [the PC/SC guide](PCSC_TRANSPORT.md) and [the eID guide](BELGIAN_EID.md) for the API boundaries.
+
+
+## Native package-project repair
+
+The user supplied `Delphi Packages/Core.dproj` and `Core.dpk` after reporting an
+IDE access violation in `delphicoreide290.bpl`. The user confirmed that this native
+Core package compiles successfully in Delphi. Both files are unchanged and are
+used as the reference for this repair; this is user-reported evidence for the Core
+source units, not a completed test of the rewritten ERD project set.
+The nine package projects now declare `Borland.ProjectType=Package`; this was empty
+in the earlier generated files. All eleven shipped project files now have
+Base/Debug/Release configuration keys/parents, Windows activation groups, native
+package generation flags/names and valid numeric debug-information metadata.
+All 24 shipped project/package/group/application-source files use UTF-8 with BOM
+and CRLF. Their `.res` files are generated through the IDE/MSBuild pipeline.
+The package and VCL build scripts now invoke MSBuild rather than bypassing that
+resource-generation step with direct DCC calls.
+
+The new bounded property reader evaluates only the explicit comparison/and/or
+conditions and property assignments in these files. It rejects unsupported syntax;
+it does not execute MSBuild tasks/imports, generate resources or build BPLs.
+Negative tests detect the old empty IDE package type, missing Base/activation/package flags, boolean debug
+metadata, incorrect overflow property, missing dependencies/resources and encoding.
+Actual IDE/DCC/MSBuild execution remains pending, including confirmation that this
+repair resolves the reported crash. See [focused retest steps](INSTALLATION.md).

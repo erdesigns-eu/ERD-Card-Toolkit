@@ -1,4 +1,4 @@
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
   <PropertyGroup><ProjectGuid>{DD042AB6-D275-57A0-B3A1-D89E500B69CA}</ProjectGuid><ProjectVersion>12.0</ProjectVersion></PropertyGroup>
   <ItemGroup>
     <Projects Include="runtime\ERDCardCore.dproj"><Dependencies/></Projects>

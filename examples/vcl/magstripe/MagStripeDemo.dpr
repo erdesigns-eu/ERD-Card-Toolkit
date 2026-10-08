@@ -1,4 +1,4 @@
-program MagStripeDemo;
+﻿program MagStripeDemo;
 
 uses
   Vcl.Forms,
@@ -6,6 +6,8 @@ uses
   ERD.Card.Demo.Form in '..\shared\ERD.Card.Demo.Form.pas',
   ERD.Card.Demo.Job in '..\shared\ERD.Card.Demo.Job.pas',
   ERD.Card.Demo.Operations in '..\shared\ERD.Card.Demo.Operations.pas';
+
+{$R *.res}
 
 begin
   Application.Initialize;

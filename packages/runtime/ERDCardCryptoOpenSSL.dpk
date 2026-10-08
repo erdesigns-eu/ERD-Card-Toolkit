@@ -1,4 +1,7 @@
-package ERDCardCryptoOpenSSL;
+﻿package ERDCardCryptoOpenSSL;
+
+{$R *.res}
+{$IMPLICITBUILD ON}
 
 {$DESCRIPTION 'ERD Card optional OpenSSL 3 ICAO BAC/PACE and AES provider'}
 {$RUNONLY}

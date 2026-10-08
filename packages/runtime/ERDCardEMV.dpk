@@ -1,4 +1,7 @@
-package ERDCardEMV;
+﻿package ERDCardEMV;
+
+{$R *.res}
+{$IMPLICITBUILD ON}
 
 {$DESCRIPTION 'ERD Card EMV: application discovery, data codecs and non-visual reader'}
 {$RUNONLY}

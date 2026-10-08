@@ -1,4 +1,7 @@
-package ERDCardCore;
+﻿package ERDCardCore;
+
+{$R *.res}
+{$IMPLICITBUILD ON}
 
 {$DESCRIPTION 'ERD Card core: bytes, APDU, ATR and BER-TLV codecs'}
 {$RUNONLY}

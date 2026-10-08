@@ -14,8 +14,8 @@ if not "%~2"=="" if /i not "%~2"=="design" (
 )
 where %CARD_COMPILER% >nul 2>&1
 if errorlevel 1 exit /b %errorlevel%
-set "CARD_BUILD=dist\packages\%CARD_PLATFORM%\Debug"
-set "CARD_UNITS=src\core;src\crypto;src\pcsc;src\eid;src\emv;src\magstripe;src\contactless;src\design;%CARD_BUILD%"
+where msbuild >nul 2>&1
+if errorlevel 1 exit /b %errorlevel%
 for %%P in (ERDCardCore ERDCardMagStripe ERDCardPCSC ERDCardEID ERDCardEMV ERDCardContactless ERDCardCryptoWindows ERDCardCryptoOpenSSL) do (
   call :build_runtime %%P
   if errorlevel 1 exit /b 1
@@ -29,8 +29,6 @@ exit /b 0
 call :build_package runtime %~1
 exit /b %errorlevel%
 :build_package
-set "CARD_DCU=%CARD_BUILD%\%~2\dcu"
-if not exist "%CARD_DCU%" mkdir "%CARD_DCU%"
-if errorlevel 1 exit /b %errorlevel%
-%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"%CARD_UNITS%" -N0"%CARD_DCU%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" "packages\%~1\%~2.dpk"
+rem MSBuild generates the package .res before invoking the selected Delphi compiler.
+msbuild "packages\%~1\%~2.dproj" /t:Build /p:Config=Debug /p:Platform=%CARD_PLATFORM% /p:DCC_BuildAllUnits=true /nologo /v:minimal
 exit /b %errorlevel%
