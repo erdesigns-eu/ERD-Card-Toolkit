@@ -75,7 +75,7 @@ var
 
 implementation
 
-uses System.SysUtils, ERD.Card.MagStripe, ERD.Card.MagStripe.Tracks;
+uses System.SysUtils, ERD.Card.MagStripe;
 
 {$R *.dfm}
 

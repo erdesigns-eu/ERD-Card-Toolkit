@@ -2,7 +2,8 @@ unit SmartCardDemo.Main;
 
 interface
 
-uses System.Classes, Vcl.Controls, Vcl.Forms, Vcl.StdCtrls, Vcl.ExtCtrls,
+uses
+  System.Classes, Vcl.Controls, Vcl.Forms, Vcl.StdCtrls, Vcl.ExtCtrls, System.SysUtils,
   Vcl.Dialogs, ERD.Card.Bytes, ERD.Card.Demo.Job, ERD.Card.Demo.Form;
 
 type
@@ -96,7 +97,8 @@ var
 
 implementation
 
-uses System.SysUtils, Vcl.Imaging.jpeg, ERD.Card.Crypto, ERD.Card.Crypto.EAC,
+uses
+  Vcl.Imaging.jpeg, ERD.Card.Crypto, ERD.Card.Crypto.EAC,
   ERD.Card.EID.Access, ERD.Card.Contactless.Type2, ERD.Card.Ndef,
   ERD.Card.Ndef.Records;
 
