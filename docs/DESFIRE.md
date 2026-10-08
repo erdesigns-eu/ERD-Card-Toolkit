@@ -2,8 +2,8 @@
 
 `TDesfireCardReader` is an RTL-only nonvisual component for native ISO-wrapped
 DESFire commands over a connected `ICardTransport` with `ICardTransaction`.
-It supplies application/file discovery, data/value/record reading and verified
-standard-data writing. Explicit EV1 and EV2 AES profiles include mutual
+It supplies application/file discovery, data/value/record reading, verified
+standard-data writing and retained transaction/management sessions. Explicit EV1 and EV2 AES profiles include mutual
 authentication and Plain, MACed and Full messaging. EV2 additionally supports an
 optional NonFirst switch to a second application key. No constructor opens a reader.
 
@@ -18,15 +18,15 @@ package. All exported declarations carry Delphi XML documentation.
 | Layer/operation | Implemented behavior | Separate work/evidence |
 | --- | --- | --- |
 | Native wrapping | `90 INS 00 00 [Lc Data] 00`, `91xx` status and bounded `AF` chains | Raw RF and arbitrary reader pseudo-APDUs are different backends |
-| Public discovery | PICC version/application IDs, public application file directory | Authentication-gated directory listing needs its own command policy; explicit known AID/file access is available |
+| Discovery | One-shot public discovery and retained authenticated application/file directories and key settings | Generation-specific extended directories/settings remain separate |
 | Ordinary file settings | Standard, backup, signed value, linear/cyclic records; strict geometry/access parsing | Extended access rights, SDM, transaction-MAC and generation-specific file types |
 | Public file access | Plaintext free-access reads and verified standard-data range writes | No key guessing or automatic authentication fallback |
 | EV1 AES | `AuthenticateAES` (`AA`), fresh CSPRNG nonce, mutual verification, AES session key and chained IV | Native EV1 AES dialect; D40/DES/2K3DES/3K3DES are separate profiles |
 | EV2 AES | `AuthenticateEV2First`, fresh CSPRNG nonce, mutual nonce/capability-echo verification, session ENC/MAC keys and TI | Explicit AES profile, no LRP negotiation |
 | EV2 NonFirst | Optional `77` authentication with a second explicit key after verified settings; new session keys, retained TI/counter | One key switch within each acquired data/value/record operation; key-set management is separate |
 | Secure file access | Plain/MACed/Full data/value/record reads and standard-data range writes; authenticated settings | Physical EV1/EV2/EV3/Light, firmware and reader compatibility remain unvalidated |
-| Backup/value/record modification | Settings and reading available | Application-owned transactions, commit/abort/receipts, credit/debit and record writing remain next work |
-| Administration | Existing applications/files only | Formatting, create/delete, key changes, configuration, key sets and originality verification |
+| Backup/value/record modification | Owned sessions stage backup ranges, credit/debit/limited credit, linear/cyclic append and record clearing; explicit commit/abort and complete post-commit verification | Transaction-MAC files/receipts, readers/cards with additional transaction features |
+| Administration | Explicit PICC-level AES application create/delete and all five ordinary file create/delete operations, with verified directories/settings | Formatting, ChangeKey/ChangeFileSettings, ISO creation, SDM/TMAC, key sets, configuration and originality verification |
 
 EV2 is a **secure-messaging dialect**, not a guessed card generation. NXP AN12343
 states that DESFire Light AES messaging works like DESFire EV2. The shared
@@ -136,7 +136,7 @@ Configuring a NonFirst key with Public or EV1 file access is refused before acqu
 settings. A denied directory status is not retried or treated as an empty list.
 Known native AID/file operations do not require directory enumeration.
 `ReadVersion` and `ReadApplicationIds` deliberately use unauthenticated PICC
-queries. No operation guesses AIDs, creates files or changes access rights.
+queries. The one-shot APIs never guess AIDs or modify directories. Retained management sessions provide explicit create/delete commands; they do not change existing access rights.
 
 ## Message and ownership rules
 
@@ -248,9 +248,112 @@ rollback, backup commit/abort, credit/debit, record append or administrative
 command is sent. Backup transactions need explicit ownership of pending card
 changes; a standard-data API cannot safely commit unknown application state.
 
+## Retained transactions and management
+
+`Reader.OpenSession(Aid, Access)` returns an owned `IDesfireSession`. It copies the
+component's credentials/configuration and retains its transport/provider references.
+The component can then be destroyed or configured independently; its `Busy` property
+describes its own one-shot operations. The session holds its own exclusive transport
+transaction, so a second operation on that physical transport cannot nest. Use all
+session operations and release its final interface reference on the opening thread.
+Do not insert raw transport commands or externally mutate the selected application.
+Reentrant calls and wrong-thread operations fail before card I/O.
+
+Authority is explicit, without a default:
+
+| Access | Authority and ownership contract |
+| --- | --- |
+| `dsaReadOnly` | Retained directory/settings/data/value/record reads; cannot mutate, commit or abort |
+| `dsaManage` | Immediate application/file create/delete only; no backup transaction ownership |
+| `dsaFreshTransaction` | Caller attests a fresh reset/RF activation under exclusive ownership with no prior pending application changes; the library does not infer this from transport acquisition or send a hidden reset |
+| `dsaDiscardPending` | Explicitly discards earlier pending application changes through one verified `AbortTransaction` before staging; requires a normal successful response, including its MAC for AES |
+
+Owned sessions preflight the complete ordinary file directory before any discard or
+transaction write. Transaction-MAC/extended files are refused before mutation because
+this transaction profile does not handle their receipt or commit rules. A bare `910C`
+NoChanges response is a native error, not an authenticated clean-state proof: the
+session is released and cannot continue or restart authentication automatically.
+Choose the fresh-state policy only when the caller can meet its stated contract.
+
+```pascal
+Session := Reader.OpenSession(NativeAid, dsaFreshTransaction);
+try
+  Session.WriteBackup(BackupNumber, Offset, SuppliedBytes);
+  Session.Credit(ValueNumber, CreditAmount);
+  Session.Debit(ValueNumber, DebitAmount);
+  Session.LimitedCredit(ValueNumber, LimitedAmount);
+  Session.AppendRecord(RecordNumber, CompleteRecord);
+  Session.Commit;
+  // Success requires Outcome=dsoCommitted AND VerificationSucceeded=True.
+finally
+  Session := nil;
+end;
+```
+
+Here `Session` is `IDesfireSession`; amounts/offset are `Integer`, native file numbers
+are `Byte` and supplied bytes/record are `TBytes`. File IDs, amounts, keys and clean-state
+attestation are supplied by the application owner. Each changed backup file is captured
+in full; value snapshots are signed four-byte values; record snapshots retain native
+newest-first order. Overlapping backup ranges compose against the journal. A matching
+staged range and clearing an already empty journal are no-op mutations. Credit requires
+ReadWrite access; debit/GetValue permit Read, Write or ReadWrite; limited credit requires
+Write or ReadWrite, the acquired enable flag/allowance and at most one use per touched
+file. Signed arithmetic uses a wider intermediate and acquired lower/upper limits.
+Complete linear records fail when full; cyclic writes evict the oldest expected record.
+
+Snapshot, staged-growth and aggregate expected bytes must fit the copied
+`MaxTransferBytes` (64 KiB by default). This can reject a small range update of a larger
+backup file: full-file preservation verification requires its complete snapshot.
+At most 256 mutations are dispatched per session; reaching that bound still permits
+explicit Commit or Abort. Staging acknowledgements do not claim that pending data is
+visible through reads before commit. Commit sends one `C7` (EV2 option `00`, EV1/public
+no option), checks its acknowledgement, reacquires settings and verifies **all touched
+contents**, including unchanged backup bytes, signed values and record count/order.
+Clear/append/eviction are checked against the same owned journal. No TMAC receipt is
+requested or fabricated.
+
+| Outcome | Evidence |
+| --- | --- |
+| `dsoActive` | Session remains acquired; acknowledged staging may be pending |
+| `dsoCommitted` | Commit acknowledgement passed integrity checks; `VerificationSucceeded` is true only after all post-commit checks and release succeed |
+| `dsoAborted` | Abort acknowledgement was verified, or an owned session had no staged changes |
+| `dsoClosed` | Session released with no unresolved mutation |
+| `dsoUncertain` | A mutation may have executed, its result is unknown, or pending changes were abandoned |
+
+If the commit acknowledgement is lost, outcome is Uncertain. If it was verified but
+read-back or release fails, outcome stays Committed with VerificationSucceeded=False.
+A verified abort likewise retains Aborted if release fails. Mutation/integrity/verification
+failures raise `EContactlessWriteUncertain` carrying only the originating exception
+class. `PendingChanges` describes acknowledged unresolved staging; false does **not**
+prove that a failed first write never reached the card. Inspect Outcome as well.
+Local argument/authority errors before I/O preserve an active session; failures after
+card I/O close it, since the secure-message state can no longer be assumed usable.
+Close/destruction sends neither commit nor abort, never replays a mutation and never
+resets the card. Explicitly closing pending changes records Uncertain; any later card
+recovery belongs to a separate owner-directed operation.
+
+Management sessions expose `ReadApplicationIds` at PICC level, and protected
+`ReadApplicationSettings`/`ReadFiles` in their appropriate context. `CreateApplication`
+requires PICC selection, key 0 or acquired free-create/delete permission and an explicit
+nonzero AID/settings/AES key count (1..14). Native card creation initializes card-default
+keys; this API never authenticates with a guessed default or changes those keys.
+`DeleteApplication` is PICC-level only. `TDesfireFileDefinition` specifies all ordinary
+file geometry, communication and access nibbles; unused fields must be zero.
+`CreateFile` verifies acquired settings; a value's initial amount is acknowledged input,
+not a fabricated GetValue result when read access is unavailable. `DeleteFile` preflights ordinary settings and verifies
+directory absence. Administrative create/delete effects are immediate: Abort cannot
+undo them, and a later failure cannot roll back earlier successful commands.
+Authentication-gated directory access is MACed under EV2; EV1 advances its chained
+command CMAC without appending a command tag and verifies the response CMAC.
+DESFire Light is pre-provisioned; sharing its AES dialect does not imply that it accepts
+application/file administration. No format, key rotation, rights changes, ISO-file
+creation, SDM or generation-specific configuration is implemented by this batch.
+
 ## Example and validation
 
 ```text
+ManageDesfire --help
+ManageDesfire --plan
 InspectDesfire --help
 InspectDesfire --settings-hex 00031234332211 --file 0
 InspectDesfire --reader "Exact compatible reader name" --aid CDEF01
@@ -261,9 +364,16 @@ InspectDesfire --reader "Exact compatible reader name" --aid CDEF01 --ev1-key-fi
 The example reads metadata, accepts an explicitly supplied exact 16-byte raw key
 file for EV1 or EV2 and prints no key, UID or payload. Offline inspection needs no reader.
 Its help and valid/truncated settings modes are smoke-tested without hardware.
+`ManageDesfire` adds explicit administration and transactional actions. `--plan` shows
+five demo file definitions without opening hardware. Hardware mode uses an exclusive
+Windows PC/SC connection, supplied raw AES key and explicit authority. `--ownership
+fresh-reset` attests caller-established fresh state; `discard-pending` authorizes discarding
+earlier pending changes. Create/delete actions require `manage`. The demo creates
+Full-mode key-0 files; update/clear actions operate on that explicit layout. Destructive
+management actions are never executed by the smoke-test runner.
 
 Tests combine NIST AES-CBC/CMAC vectors, NXP authentication/session-key/Full-message
-vectors and 52 literal independently generated transcripts. The optional fixture
+vectors and 52 original plus 51 retained-session independently generated transcripts. The optional fixture
 generator uses Python `cryptography`; neither runtime nor test runner needs it.
 The transcripts cover both AES generations, EV2 NonFirst with distinct second
 credentials/nonces and nonzero retained counter, all three communication modes,
@@ -276,6 +386,13 @@ failure; replay, downgrade, wrong rights, missing credentials, failed RNG, relea
 errors, no-op writes and independent buffers are checked. The same suites run
 through real OpenSSL and the actual CNG adapter linked to an OpenSSL-based Linux
 ABI shim, plus native-call failure/length/IV-mutation/handle-cleanup tests.
+Retained-session tests additionally cover full-file backup preservation and overlapping
+no-ops, signed credit/debit/limited credit, their distinct access routes, linear/cyclic
+ordering/eviction/clearing, authenticated directories, all ordinary create/delete forms,
+PICC AES application management, every transaction/administration I/O boundary,
+every bit of protected EV1/EV2 transaction responses, valid-integrity wrong committed
+contents, clean-state authority, TMAC preflight, signed overflow, mutation quota,
+wrong-thread/reentrancy, component lifetime and known commit/abort evidence.
 These prove tested protocol/buffer behavior, not real Windows ABI/policy or card
 compatibility. See [VALIDATION.md](VALIDATION.md).
 
@@ -288,7 +405,7 @@ is redistributed or linked into this library:
   native ISO wrapping, public file conditions and version examples.
   SHA-256 `8c3b4f6b905b95d9205dc53a1f460a27848a5041a62367b053ac893a9ae9d6ba`.
 - [NXP AN12343 Rev 1.1](https://www.nxp.com/docs/en/application-note/AN12343.pdf),
-  sections 7.1/8, Tables 15/16/21–26/33/35: AES EV2 authentication, KDF, communication
+  sections 6/7.1/8, Tables 10/15/16/21–26/32/33/35–37: AES EV2 authentication, KDF, communication
   and independently transcribed known-answer vectors. SHA-256
   `df0e07ac422c37290fbe795a6ae496ff109998c5679ffd58411fce16735789f6`.
 - [NXP DESFire EV2 short data sheet Rev 3.2](https://www.nxp.com/docs/en/data-sheet/MF3DX2_MF3DHX2_SDS.pdf),
@@ -307,13 +424,18 @@ is redistributed or linked into this library:
   `getFileSettingsMac` and `authenticateAesEv2NonFirst` wire format/counter/response semantics only. No implementation
   or logging patterns are imported. SHA-256
   `24bd621945872118819edf010e5250ef46285a3b53d2bca44c833fd3f95b788a`.
+- [Proxmark3 native commands](https://github.com/RfidResearchGroup/proxmark3/blob/a48ce253f73a82a603da11bf3003864c65155a77/client/src/mifare/desfirecore.c)
+  and [secure-channel command modes](https://github.com/RfidResearchGroup/proxmark3/blob/a48ce253f73a82a603da11bf3003864c65155a77/client/src/mifare/desfiresecurechan.c),
+  protocol corroboration for AES directory/admin/commit/abort framing and distinct
+  EV1/EV2 command policies. SHA-256 respectively
+  `ff2df3680399aa5c13ade89845ed2bed65666a9429e5d01264712d791d40c3f7`
+  and `0a25b22ce45178b81deb7351f83bee0c22e7b24fd272c70bba261f8e2ed0e44d`. No external implementation is copied or linked.
 - [NIST SP 800-38A](https://csrc.nist.gov/pubs/sp/800/38/a/final) and
   [SP 800-38B](https://csrc.nist.gov/pubs/sp/800/38/b/upd1/final), published AES-CBC/CMAC vectors.
 - [Microsoft CNG functions](https://learn.microsoft.com/en-us/windows/win32/seccng/cng-functions)
   and [OpenSSL EVP](https://docs.openssl.org/3.5/man3/EVP_EncryptInit/).
 
 Next security/access additions are legacy D40 and EV1 DES/2K3DES/3K3DES, EV2 key sets,
-LRP and generation-specific extensions, transaction ownership/receipts and
-backup/value/record modification, then administration/originality and hardware
-profiles. Broad support is built per implemented/tested operation, never inferred
+LRP and generation-specific extensions, TMAC receipts, key/rights/configuration
+management, ISO creation, originality and hardware profiles. Broad support is built per implemented/tested operation, never inferred
 from one successful AES session or PC/SC connection.

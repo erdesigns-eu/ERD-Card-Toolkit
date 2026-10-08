@@ -164,6 +164,19 @@ if errorlevel 1 exit /b %errorlevel%
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\Desfire.Tests.exe"
 if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\crypto;src\contactless;tests\contactless" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\contactless\DesfireSession.Tests.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\DesfireSession.Tests.exe"
+if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\crypto;src\contactless;src\pcsc" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" examples\contactless\ManageDesfire.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\ManageDesfire.exe" --help
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\ManageDesfire.exe" --plan
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\ManageDesfire.exe" --unknown
+if not errorlevel 1 exit /b 1
+if errorlevel 2 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\crypto;src\contactless;src\pcsc" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" examples\contactless\InspectDesfire.dpr
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\InspectDesfire.exe" --help

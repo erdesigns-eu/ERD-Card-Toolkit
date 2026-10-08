@@ -360,5 +360,6 @@ for name, pairs in vectors.items():
         text += [f"  Result[{index}].Command:='{command.hex().upper()}';", f"  Result[{index}].Response:='{response.hex().upper()}';"]
     text += ['end;', '']
 text += ['end.', '']
-(ROOT / 'tests/contactless/Desfire.Vectors.pas').write_text('\n'.join(text))
-print('Generated', len(vectors), 'independent synthetic transcripts.')
+if __name__ == '__main__':
+    (ROOT / 'tests/contactless/Desfire.Vectors.pas').write_text('\n'.join(text))
+    print('Generated', len(vectors), 'independent synthetic transcripts.')
