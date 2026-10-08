@@ -12,7 +12,7 @@ uses
   System.SysUtils,
 {$ENDIF}
   ERD.Card.Bytes, ERD.Card.MagStripe.Tracks, ERD.Card.MagStripe,
-  ERD.Card.MagStripe.Serial, ERD.Card.MagStripe.MSR206;
+  ERD.Card.MagStripe.Serial, ERD.Card.MagStripe.MSR206, ERD.Card.MagStripe.MSR2067HL;
 
 procedure Inspect;
 var
@@ -21,11 +21,12 @@ var
   Profile: TMsr206Profile;
   T: TMagStripeTrack;
   Timeout: Integer;
+  Is7HL: Boolean;
 begin
   if (ParamCount=0) or ((ParamCount=1) and (ParamStr(1)='--help')) then
   begin
     Writeln('Usage: InspectMsr206 --frame-hex HEX');
-    Writeln('       InspectMsr206 --port COM12 --profile msr206|msr605 [--timeout 10000]');
+    Writeln('       InspectMsr206 --port COM12 --profile msr206|msr605|msr206-7hl [--timeout 10000]');
     Writeln('Hardware mode reads one swipe using the explicit three-track ISO profile.');
     Writeln('Shows payload lengths only; never programs a card. Native COM requires Windows.');
     Exit;
@@ -40,9 +41,11 @@ begin
   begin
     if not (ParamCount in [4,6]) or (ParamStr(1)<>'--port') or (ParamStr(3)<>'--profile') then
       raise EMagStripeError.Create('Invalid arguments; use --help.');
+    Is7HL := ParamStr(4)='msr206-7hl';
+    Profile := msrp206ThreeTrackHL;
     if ParamStr(4)='msr206' then Profile:=msrp206ThreeTrackHL
     else if ParamStr(4)='msr605' then Profile:=msrp605ThreeTrack
-    else raise EMagStripeError.Create('Unknown profile; no fallback is performed.');
+    else if not Is7HL then raise EMagStripeError.Create('Unknown profile; no fallback is performed.');
     Timeout := 10000;
     if ParamCount=6 then
       if (ParamStr(5)<>'--timeout') or not TryStrToInt(ParamStr(6),Timeout) then
@@ -50,7 +53,11 @@ begin
     if (Timeout<1) or (Timeout>600000) then raise EMagStripeError.Create('Timeout must be 1..600000 ms.');
     Component := TMagStripeReaderWriter.Create(nil);
     try
-      Component.Device := TMsr206MagStripeAdapter.Create(CreateWindowsMagStripeSerialPort(ParamStr(2)),Profile);
+      if Is7HL then
+        Component.Device := TMsr2067HLMagStripeAdapter.Create(
+          CreateWindowsMagStripeSerialPort(ParamStr(2),mssf7O1))
+      else
+        Component.Device := TMsr206MagStripeAdapter.Create(CreateWindowsMagStripeSerialPort(ParamStr(2)),Profile);
       Component.TimeoutMs := Timeout;
       Data := Component.ReadTracks([mstTrack1,mstTrack2,mstTrack3]);
     finally Component.Free; end;

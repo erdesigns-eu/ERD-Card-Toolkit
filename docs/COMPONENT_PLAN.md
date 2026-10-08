@@ -45,7 +45,9 @@ are not compatibility requirements.
    adapters use bounded host sources. Runtime package, console example and injected
    tests supplied. MSR206/MSR605 ISO profiles add native Windows COM reads and
    all-three nonempty programming with explicit high/low coercivity and status-only
-   receipts; see [the serial guide](MSR206.md). Native MagTek capture, additional
+   receipts; see [the serial guide](MSR206.md). The separate [7HL profile](MSR206_7HL.md)
+   supplies all seven combinations with acquired same-swipe verified writes, USI1
+   framing and native 7O1. Native MagTek capture, additional
    writer profiles, physical validation and verified YL160/MSR DLL/ABI bindings
    remain pending. See [the magstripe guide](MAGSTRIPE.md).
 7. **TContactlessCardReader — storage profiles implemented; Delphi/hardware validation pending.**
@@ -102,8 +104,8 @@ The Type 2 and Type 4 NDEF increments combine pure codecs, record/descriptor
 handling, verified card components, examples, protocol failure tests and API
 documentation. Use the same complete scope for upcoming batches:
 
-1. **Further magstripe profiles:** MSR206-7HL's separate protocol and acquired
-   read-back access, additional physical track combinations, native MagTek capture,
+1. **Further magstripe profiles:** additional MSR206 physical model combinations
+   and native MagTek capture,
    then YL160/MSR DLL bindings with verified SDK headers and buffer lengths.
    Physical/firmware coverage and status-versus-read-back evidence stay explicit.
 2. **Additional chip families:** DESFire through a maintained authenticated crypto

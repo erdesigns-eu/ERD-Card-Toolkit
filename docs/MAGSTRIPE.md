@@ -1,6 +1,6 @@
 # Magstripe codecs, component and input adapters
 
-`src/magstripe` supplies five RTL-only units and the optional
+`src/magstripe` supplies six RTL-only units and the optional
 `packages/runtime/ERDCardMagStripe.dpk` runtime package. Add `src/magstripe` to the
 unit search path for source-based use; the package requires only `rtl`. No VCL,
 PC/SC, third-party DLL, USB library or design-time activation is needed.
@@ -13,6 +13,7 @@ PC/SC, third-party DLL, USB library or design-time activation is needed.
 | Financial Track 1 format B / Track 2 | Typed PAN, name, expiry, service code and opaque discretionary suffix | Issuer semantics, authentication and payment authorization |
 | `TMagStripeReaderWriter` | Exclusive read sessions; verified-result `WriteTracks`; separate status-only `ProgramTracks` with exact permitted combinations | Real reader/writer validation and additional backends |
 | MSR206/MSR605 three-track ISO serial profiles | Windows COM reader and all-three nonempty status-only programmer with explicit high/low coercivity | Delphi/Windows/firmware and physical swipe/write checks; see [MSR206](MSR206.md) |
+| MSR206-7HL Rev F three-track VC | Native 7O1 serial, USI1 framing, all seven selected-track combinations with same-swipe acquired verified writing | Delphi/Windows/firmware and physical preservation/write checks; see [7HL](MSR206_7HL.md) |
 | MagTek D99875191 Rev 20 unencrypted HID ISO/ABA | Fixed 337-byte report parser and read adapter; explicit optional OS zero report-ID byte | Host HID opening, descriptor/identity checks, physical reader/firmware validation |
 | MagTek D99875206 Rev 20 default keyboard ISO/ABA | Ordered complete CR-terminated frame parser and read adapter | Isolated host keyboard capture, key mapping and physical reader validation |
 | YL160 `lib160.dll` / MSR605X `MSR_API.dll` | Legacy research retained; new common device contract available | Verified SDK headers, buffer capacities, return codes, bitness/calling convention and native bindings |

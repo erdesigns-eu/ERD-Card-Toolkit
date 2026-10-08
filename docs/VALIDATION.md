@@ -1,6 +1,6 @@
 # Library validation record
 
-Validated in the Linux cloud environment on 2026-10-07 after the legacy cleanup.
+Validated in the Linux cloud environment on 2026-10-08 after the legacy cleanup.
 
 | Check | Result |
 | --- | --- |
@@ -17,13 +17,14 @@ Validated in the Linux cloud environment on 2026-10-07 after the legacy cleanup.
 | Public Type 4 NDEF files | 48480 assertions in four groups passed: mapping 1.0/2.0 CC/APDU transcripts, whole-file bounds, explicit file selection, MLe/MLc segmentation and every partial/later-command failure |
 | Magstripe codecs, component and MagTek input adapters | 57326 assertions in four groups passed: published parity/LRC vectors, all track lengths and single-bit errors, financial fields, synthetic HID/keyboard frames and verified-write failure contracts |
 | MSR206/MSR605 ISO serial profiles and generic status programming | 9052 assertions in six groups passed: published frames, all statuses/combinations, complete chains, every I/O failure and programming reply corruption, aggregate deadlines and poisoned-session cleanup |
-| Native Windows serial branches | 45 assertions passed against a Linux C ABI shim, including a complete component/adapter/COM programming transcript |
+| MSR206-7HL USI1 and same-swipe verified writing | 28393 assertions in five groups passed: all seven combinations, literal BCC/commands, complete read/write chains, every I/O failure/response corruption, independent mismatches, streaming bounds and inter-character timing |
+| Native Windows serial branches | 48 assertions passed against a Linux C ABI shim, including complete 8N1 status programming and 7O1 acquired verified-writing component/adapter/COM transcripts |
 | Native Windows adapter branches | 38 assertions passed against an isolated Linux C ABI shim |
 | Console examples | APDU valid/invalid cases passed; PC/SC, eID, EMV, contactless, NDEF and Type 4 help work without hardware; NDEF message and Type 4 CC valid/truncated cases passed; magstripe text/bit vectors and corrupt parity passed; MSR206 published frame and failed-status cases passed |
 | FPC range/overflow/heap checks | Passed; no unfreed allocations in passing test programs |
 | Python checker regression tests | All 15 passed |
-| Pascalcheck core profile | All 21 readers passed on fifty-six explicitly selected source files |
-| XML documentation | 939 visible API declarations inspected; zero findings |
+| Pascalcheck core profile | All 21 readers passed on fifty-eight explicitly selected source files |
+| XML documentation | 955 visible API declarations inspected; zero findings |
 | Reference integrity | All 26 retained files match the original Git bytes and manifest hashes |
 | Patch whitespace | `git diff --check` passed |
 

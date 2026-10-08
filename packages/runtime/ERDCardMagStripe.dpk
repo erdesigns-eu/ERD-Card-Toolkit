@@ -1,12 +1,13 @@
 package ERDCardMagStripe;
 
-{$DESCRIPTION 'ERD Card MagStripe: track codecs, sessions, MagTek input and MSR206/MSR605 serial programming'}
+{$DESCRIPTION 'ERD Card MagStripe: track codecs, sessions, MagTek input and MSR206/MSR605 programming and 7HL same-swipe verified writing'}
 {$RUNONLY}
 
 requires
   rtl;
 
 contains
+  ERD.Card.MagStripe.MSR2067HL in '..\..\src\magstripe\ERD.Card.MagStripe.MSR2067HL.pas',
   ERD.Card.MagStripe.Serial in '..\..\src\magstripe\ERD.Card.MagStripe.Serial.pas',
   ERD.Card.MagStripe.MSR206 in '..\..\src\magstripe\ERD.Card.MagStripe.MSR206.pas',
   ERD.Card.MagStripe.Tracks in '..\..\src\magstripe\ERD.Card.MagStripe.Tracks.pas',

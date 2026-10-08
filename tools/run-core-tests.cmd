@@ -115,6 +115,10 @@ if errorlevel 2 exit /b %errorlevel%
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\Msr206.Tests.exe"
 if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\magstripe" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\magstripe\Msr2067HL.Tests.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\Msr2067HL.Tests.exe"
+if errorlevel 1 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\magstripe" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" examples\magstripe\InspectMsr206.dpr
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\InspectMsr206.exe" --help
