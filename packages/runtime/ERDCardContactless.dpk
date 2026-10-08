@@ -8,6 +8,7 @@ requires
   ERDCardCore;
 
 contains
+  ERD.Card.Contactless.DESFire.EV1 in '..\..\src\contactless\ERD.Card.Contactless.DESFire.EV1.pas',
   ERD.Card.Contactless.DESFire in '..\..\src\contactless\ERD.Card.Contactless.DESFire.pas',
   ERD.Card.Contactless.DESFire.EV2 in '..\..\src\contactless\ERD.Card.Contactless.DESFire.EV2.pas',
   ERD.Card.Contactless.ISO15693 in '..\..\src\contactless\ERD.Card.Contactless.ISO15693.pas',

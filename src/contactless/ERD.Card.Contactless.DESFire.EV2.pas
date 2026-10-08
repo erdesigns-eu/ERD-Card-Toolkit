@@ -15,13 +15,13 @@ uses
   ERD.Card.Crypto;
 
 type
-  /// <summary>Explicit DESFire EV2 file communication mode.</summary>
+  /// <summary>Explicit native DESFire file communication mode; codecs interpret it for their selected generation.</summary>
   TDesfireCommunication = (
-    /// <summary>Plaintext without message authentication; authenticated sessions still advance the counter.</summary>
+    /// <summary>Plain file mode; EV2 has no transmitted MAC, while EV1 AES responses remain CMAC protected.</summary>
     dfcPlain,
-    /// <summary>Plaintext protected by an eight-byte EV2 AES-CMAC.</summary>
+    /// <summary>MACed file mode; generation-specific codec determines framing and truncation.</summary>
     dfcMac,
-    /// <summary>AES-CBC encrypted data with method-two padding and EV2 AES-CMAC.</summary>
+    /// <summary>Full encrypted file mode; EV1 AES uses CRC32, EV2 uses method-two padding and AES-CMAC.</summary>
     dfcFull
   );
   /// <summary>Owned EV2 AES session keys derived from the caller's authentication key and both fresh nonces.</summary>

@@ -86,10 +86,11 @@ are not compatibility requirements.
    generations, other Type 2 authentication, additional DESFire security, Plus and
    broader reader backends remain separate profiles; see [the contactless guide](CONTACTLESS.md).
    `TDesfireCardReader` now implements native ordinary-file discovery, data/value/record
-   reads and verified standard-data writes. An explicit EV2 AES profile provides mutual
+   reads and verified standard-data writes. Explicit EV1/EV2 AES profiles provide mutual
    authentication and Plain/MACed/Full messaging through maintained Windows CNG or
-   optional Linux OpenSSL; settings are MACed after authentication. See
-   [native DESFire](DESFIRE.md). D40/EV1 security, LRP, transaction ownership and
+   optional Linux OpenSSL; settings are authenticated. EV2 NonFirst can switch to a
+   second supplied key while preserving TI and command counter. See
+   [native DESFire](DESFIRE.md). D40/3DES security, LRP, transaction ownership and
    backup/value/record writes, administration and physical validation remain pending.
    **TMemoryCardReaderWriter** remains planned for contact memory-card families and
    matching readers. Non-Java chips do not share one universal protocol.
@@ -118,10 +119,10 @@ documentation. Use the same complete scope for upcoming batches:
    and native MagTek capture,
    then YL160/MSR DLL bindings with verified SDK headers and buffer lengths.
    Physical/firmware coverage and status-versus-read-back evidence stay explicit.
-2. **DESFire expansion and additional chip families:** D40/EV1 AES/3DES security,
-   EV2 NonFirst/key sets, LRP and owned backup/value/record transactions, followed by
-   administration/originality and physical card profiles. Initial EV2 AES secure
-   file access through maintained providers is implemented. Then Plus profiles,
+2. **DESFire expansion and additional chip families:** D40 and EV1 DES/2K3DES/3K3DES security,
+   EV2 key sets, LRP and owned backup/value/record transactions, followed by
+   administration/originality and physical card profiles. EV1/EV2 AES secure
+   file access and EV2 NonFirst through maintained providers are implemented. Then Plus profiles,
    additional ISO 15693 authentication/reader backends,
    then contact memory chips. Public ISO 15693/Type 5 access is already implemented.
 3. **European eID access:** BAC/PACE and secure-messaging integration for the existing

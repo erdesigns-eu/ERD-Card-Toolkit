@@ -27,6 +27,7 @@ begin
     Writeln('Usage: InspectDesfire --settings-hex HEX --file 0..31');
     Writeln('       InspectDesfire --reader EXACT_NAME --aid NATIVE_HEX');
     Writeln('       InspectDesfire --reader EXACT_NAME --aid NATIVE_HEX --ev2-key-file PATH --key-number 0..13 --minimum plain|mac|full');
+    Writeln('       Replace --ev2-key-file with --ev1-key-file for the explicit EV1 AES profile.');
     Writeln('Metadata only; native wrapped DESFire profile, no writes or key/UID/payload output.');
     Writeln('Key file is exactly 16 raw bytes. Never use production keys in test transcripts.'); Exit;
   end;
@@ -45,16 +46,17 @@ begin
   try
     if ParamCount=10 then
     begin
-      if (ParamStr(5)<>'--ev2-key-file') or (ParamStr(7)<>'--key-number') or (ParamStr(9)<>'--minimum') or
+      if not ((ParamStr(5)='--ev2-key-file') or (ParamStr(5)='--ev1-key-file')) or (ParamStr(7)<>'--key-number') or (ParamStr(9)<>'--minimum') or
         not TryStrToInt(ParamStr(8),Number) or (Number<0) or (Number>13) then
-        raise EDesfireError.Create('Invalid explicit EV2 profile arguments.');
+        raise EDesfireError.Create('Invalid explicit AES profile arguments.');
       Stream:=TFileStream.Create(ParamStr(6),fmOpenRead or fmShareDenyWrite);
       try
         if Stream.Size<>16 then raise EDesfireError.Create('Authentication key file must contain exactly 16 raw bytes.');
         SetLength(Key,16); Stream.ReadBuffer(Key[0],16);
       finally Stream.Free; end;
       Reader.CryptoProvider:=TCardWindowsAesProvider.Create; Reader.AuthenticationKey:=Key;
-      Reader.KeyNumber:=Number; Reader.Security:=dfsEv2Aes;
+      Reader.KeyNumber:=Number;
+      if ParamStr(5)='--ev1-key-file' then Reader.Security:=dfsEv1Aes else Reader.Security:=dfsEv2Aes;
       if ParamStr(10)='plain' then Reader.MinimumCommunication:=dfcPlain
       else if ParamStr(10)='mac' then Reader.MinimumCommunication:=dfcMac
       else if ParamStr(10)='full' then Reader.MinimumCommunication:=dfcFull

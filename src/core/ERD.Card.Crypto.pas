@@ -57,6 +57,16 @@ type
     /// <returns>Independent complete 16-byte MAC; no protocol-specific truncation.</returns>
     /// <exception cref="ECardCryptoError">Provider, bounds or primitive result fail.</exception>
     class function Cmac(const AProvider: ICardAesProvider; const AKey, AMessage: TBytes): TBytes; static;
+    /// <summary>Calculates the DESFire EV1 chained AES-CMAC variant with an explicit starting IV.</summary>
+    /// <param name="AProvider">Non-nil maintained AES backend.</param>
+    /// <param name="AKey">Exactly 16 borrowed secret bytes.</param>
+    /// <param name="AIv">Exactly 16 borrowed session-IV bytes, never modified.</param>
+    /// <param name="AMessage">Zero through 1048560 bytes.</param>
+    /// <returns>Independent full 16-byte result; caller advances its session IV explicitly.</returns>
+    /// <remarks>A nonzero IV is a protocol variant, not ordinary NIST CMAC.</remarks>
+    /// <exception cref="ECardCryptoError">Provider, bounds or primitive result fail.</exception>
+    class function CmacChained(const AProvider: ICardAesProvider;
+      const AKey, AIv, AMessage: TBytes): TBytes; static;
     /// <summary>Compares every byte of equal-length buffers without an early mismatch exit.</summary>
     /// <param name="ALeft">First borrowed buffer.</param>
     /// <param name="ARight">Second borrowed buffer.</param>
@@ -96,6 +106,15 @@ end;
 
 class function TCardCrypto.Cmac(const AProvider: ICardAesProvider;
   const AKey, AMessage: TBytes): TBytes;
+var Zero: TBytes;
+begin
+  Zero:=nil;
+  try SetLength(Zero,16); Result:=CmacChained(AProvider,AKey,Zero,AMessage);
+  finally Clear(Zero); end;
+end;
+
+class function TCardCrypto.CmacChained(const AProvider: ICardAesProvider;
+  const AKey, AIv, AMessage: TBytes): TBytes;
 var Zero,L,K1,K2,Blocks,Cipher: TBytes; N,Last,Remaining,I: Integer;
   function DoubleBlock(const A: TBytes): TBytes;
   var J: Integer; Carry,Next: Byte;
@@ -109,7 +128,7 @@ var Zero,L,K1,K2,Blocks,Cipher: TBytes; N,Last,Remaining,I: Integer;
   end;
 begin
   Result:=nil;
-  if (AProvider=nil) or (Length(AKey)<>16) or (Length(AMessage)>1048560) then
+  if (AProvider=nil) or (Length(AKey)<>16) or (Length(AIv)<>16) or (Length(AMessage)>1048560) then
     raise ECardCryptoError.Create('Invalid AES-CMAC arguments.');
   Zero:=nil; L:=nil; K1:=nil; K2:=nil; Blocks:=nil; Cipher:=nil;
   try
@@ -127,7 +146,7 @@ begin
       Blocks[Last+Remaining]:=$80;
       for I:=0 to 15 do Blocks[Last+I]:=Blocks[Last+I] xor K2[I];
     end;
-    Cipher:=AProvider.EncryptCbc(AKey,Zero,Blocks);
+    Cipher:=AProvider.EncryptCbc(AKey,AIv,Blocks);
     if Length(Cipher)<>Length(Blocks) then raise ECardCryptoError.Create('Invalid AES provider result.');
     Result:=Copy(Cipher,Last,16);
   finally
