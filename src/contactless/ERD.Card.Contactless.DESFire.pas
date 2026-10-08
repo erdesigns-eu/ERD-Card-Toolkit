@@ -48,13 +48,13 @@ type
   TDesfireFileType = (
     /// <summary>Standard data file; verified range writing is supported.</summary>
     dftStandard,
-    /// <summary>Backup data file; reading only in this component.</summary>
+    /// <summary>Backup data file; retained sessions stage and verify transactional range updates.</summary>
     dftBackup,
-    /// <summary>Signed value file with backup; reading only.</summary>
+    /// <summary>Signed value file; retained sessions support credit, debit and limited credit.</summary>
     dftValue,
-    /// <summary>Linear record file with backup; reading only.</summary>
+    /// <summary>Linear record file; retained sessions append complete records or clear the file.</summary>
     dftLinearRecords,
-    /// <summary>Cyclic record file with backup; reading only.</summary>
+    /// <summary>Cyclic record file; retained sessions append with oldest-record eviction or clear the file.</summary>
     dftCyclicRecords
   );
   /// <summary>Strict ordinary file settings in the selected native application.</summary>
@@ -80,7 +80,7 @@ type
     LowerLimit: Integer;
     /// <summary>Signed upper value-file limit, otherwise zero.</summary>
     UpperLimit: Integer;
-    /// <summary>Acquired limited-credit value, otherwise zero; no credit operation is implemented.</summary>
+    /// <summary>Acquired limited-credit allowance, otherwise zero; retained sessions validate limited credit against it.</summary>
     LimitedCreditValue: Integer;
     /// <summary>Raw value options 0..3: limited credit and free GetValue indicators.</summary>
     ValueOptions: Byte;
@@ -111,6 +111,168 @@ type
     SoftwareMajor: Byte;
     /// <summary>Software storage-size code, retained without guessed capacity.</summary>
     StorageCode: Byte;
+  end;
+  /// <summary>Explicit session authority; transport exclusivity alone does not prove a clean card transaction.</summary>
+  TDesfireSessionAccess = (
+    /// <summary>Read operations only; never sends commit, abort or administrative writes.</summary>
+    dsaReadOnly,
+    /// <summary>Explicit immediate application/file management; no backup transaction writes.</summary>
+    dsaManage,
+    /// <summary>Caller attests a fresh reset/RF activation under exclusive ownership, with no prior pending changes.</summary>
+    dsaFreshTransaction,
+    /// <summary>Explicitly discards existing application pending changes with a verified AbortTransaction before staging.</summary>
+    dsaDiscardPending
+  );
+  /// <summary>Session completion evidence; commit acknowledgement and data verification remain distinct.</summary>
+  TDesfireSessionOutcome = (
+    /// <summary>Exclusive card session remains active.</summary>
+    dsoActive,
+    /// <summary>Commit acknowledgement was verified; inspect VerificationSucceeded for read-back/release completion.</summary>
+    dsoCommitted,
+    /// <summary>Abort acknowledgement was verified, or an owned session had no staged changes to abort.</summary>
+    dsoAborted,
+    /// <summary>Session closed with no unresolved mutation.</summary>
+    dsoClosed,
+    /// <summary>A mutation or commit/abort may have executed, or staged changes were abandoned; never replay blindly.</summary>
+    dsoUncertain
+  );
+  /// <summary>Owned ordinary native file-creation configuration; unused geometry fields must be zero.</summary>
+  TDesfireFileDefinition = record
+    /// <summary>Native file number 0..31.</summary>
+    FileNumber: Byte;
+    /// <summary>Standard, backup, value, linear or cyclic record file.</summary>
+    FileType: TDesfireFileType;
+    /// <summary>Explicit Plain/MACed/Full data communication mode.</summary>
+    Communication: TDesfireCommunication;
+    /// <summary>Explicit read nibble, 0..13 key, E free or F denied.</summary>
+    ReadKey: Byte;
+    /// <summary>Explicit write nibble.</summary>
+    WriteKey: Byte;
+    /// <summary>Explicit alternative read/write nibble.</summary>
+    ReadWriteKey: Byte;
+    /// <summary>Explicit change-access nibble.</summary>
+    ChangeKey: Byte;
+    /// <summary>Data-file size 1..FFFFFF, otherwise zero.</summary>
+    FileBytes: Integer;
+    /// <summary>Signed value lower bound, otherwise zero.</summary>
+    LowerLimit: Integer;
+    /// <summary>Signed value upper bound, otherwise zero.</summary>
+    UpperLimit: Integer;
+    /// <summary>Initial signed value within the configured bounds, otherwise zero.</summary>
+    InitialValue: Integer;
+    /// <summary>Explicit limited-credit flag for value files, otherwise false.</summary>
+    LimitedCreditEnabled: Boolean;
+    /// <summary>Record byte size 1..FFFFFF, otherwise zero.</summary>
+    RecordBytes: Integer;
+    /// <summary>Record capacity 1..FFFFFF, otherwise zero.</summary>
+    MaxRecords: Integer;
+  end;
+  /// <summary>Owned strict ordinary GetKeySettings result; no inferred extended key-set configuration.</summary>
+  TDesfireApplicationSettings = record
+    /// <summary>Acquired first key-settings byte, including management policy flags.</summary>
+    KeySettings: Byte;
+    /// <summary>Acquired second byte: key type, ISO-ID flag and key count.</summary>
+    KeyConfiguration: Byte;
+    /// <summary>Independent complete two-byte response.</summary>
+    RawBytes: TBytes;
+  end;
+  /// <summary>Retained single-thread DESFire session with immutable copied configuration and one exclusive acquisition.</summary>
+  /// <remarks>Independent of its creating component's lifetime. Release the final interface reference on the opening
+  /// thread. No automatic commit/abort, recovery or replay; Close/destruction only release transport and local keys.
+  /// Journal snapshots and aggregate expected bytes are bounded by the copied MaxTransferBytes, at most 256 mutations.</remarks>
+  IDesfireSession = interface
+    ['{175579E0-7E28-4F21-BB43-B90824EAA511}']
+    /// <summary>Reads native PICC application IDs under the configured public/AES profile.</summary>
+    /// <returns>Owned unique nonzero AIDs; PICC-level sessions only.</returns>
+    function ReadApplicationIds: TDesfireApplicationIds;
+    /// <summary>Reads ordinary key settings in the selected PICC/application context.</summary>
+    /// <returns>Owned exact settings; unsupported extensions fail.</returns>
+    function ReadApplicationSettings: TDesfireApplicationSettings;
+    /// <summary>Reads the authenticated ordinary file directory in the selected nonzero application.</summary>
+    /// <returns>Owned file settings; unknown file types fail instead of returning a partial directory.</returns>
+    function ReadFiles: TDesfireFiles;
+    /// <summary>Reads one explicit bounded standard/backup range within the retained session.</summary>
+    /// <param name="AFile">Native file number 0..31.</param>
+    /// <param name="AOffset">Nonnegative byte offset.</param>
+    /// <param name="ACount">Positive exact bounded byte count.</param>
+    /// <returns>Owned verified currently visible bytes; staged changes are not assumed visible.</returns>
+    function ReadData(const AFile: Byte; const AOffset, ACount: Integer): TBytes;
+    /// <summary>Reads a value file through a permitted Read, Write or ReadWrite route.</summary>
+    /// <param name="AFile">Native value-file number.</param>
+    /// <returns>Acquired signed value within file bounds.</returns>
+    function ReadValue(const AFile: Byte): Integer;
+    /// <summary>Reads explicit complete records in native newest-first order.</summary>
+    /// <param name="AFile">Native linear/cyclic record-file number.</param>
+    /// <param name="AOffset">Nonnegative newest-relative record offset.</param>
+    /// <param name="ACount">Positive exact bounded record count.</param>
+    /// <returns>Owned verified concatenated records.</returns>
+    function ReadRecords(const AFile: Byte; const AOffset, ACount: Integer): TBytes;
+    /// <summary>Stages a backup-data range; captures the full original file and verifies its expected contents after commit.</summary>
+    /// <param name="AFile">Native backup file; standard-data writes use the separate component API.</param>
+    /// <param name="AOffset">Nonnegative range offset.</param>
+    /// <param name="AData">Nonempty copied data fitting file geometry and the aggregate journal bound.</param>
+    procedure WriteBackup(const AFile: Byte; const AOffset: Integer; const AData: TBytes);
+    /// <summary>Stages positive credit through ReadWrite access, with signed-limit preflight and post-commit verification.</summary>
+    /// <param name="AFile">Native value-file number.</param>
+    /// <param name="AAmount">Positive amount 1..High(Integer).</param>
+    procedure Credit(const AFile: Byte; const AAmount: Integer);
+    /// <summary>Stages positive debit through Read, Write or ReadWrite access, with signed-limit preflight.</summary>
+    /// <param name="AFile">Native value-file number.</param>
+    /// <param name="AAmount">Positive amount.</param>
+    procedure Debit(const AFile: Byte; const AAmount: Integer);
+    /// <summary>Stages one limited credit per touched value file when enabled and within its acquired allowance.</summary>
+    /// <param name="AFile">Native value-file number; Write or ReadWrite access required.</param>
+    /// <param name="AAmount">Positive amount fitting allowance and signed upper limit.</param>
+    procedure LimitedCredit(const AFile: Byte; const AAmount: Integer);
+    /// <summary>Stages one complete newest record, preserving prior records and modelling cyclic oldest-record eviction.</summary>
+    /// <param name="AFile">Native linear/cyclic record file.</param>
+    /// <param name="AData">Exactly the acquired record size; copied before I/O.</param>
+    procedure AppendRecord(const AFile: Byte; const AData: TBytes);
+    /// <summary>Explicitly stages removal of all records, verified as empty after commit.</summary>
+    /// <param name="AFile">Native linear/cyclic record file.</param>
+    procedure ClearRecords(const AFile: Byte);
+    /// <summary>Commits owned staged changes exactly once, verifies all touched files, then releases the session.</summary>
+    /// <exception cref="EContactlessWriteUncertain">Dispatch, integrity, verification or release fails; inspect Outcome.</exception>
+    /// <remarks>EV2 sends option zero, without TMAC receipts; EV1/public sends no option. Ordinary file types only.</remarks>
+    procedure Commit;
+    /// <summary>Explicitly aborts owned staged changes, verifies acknowledgement and releases the session.</summary>
+    /// <exception cref="EContactlessWriteUncertain">An abort or its release fails; no recovery command is sent.</exception>
+    procedure Abort;
+    /// <summary>Creates an AES native application from PICC-level management access and verifies directory presence.</summary>
+    /// <param name="AAid">Explicit nonzero 24-bit AID.</param>
+    /// <param name="AKeySettings">Explicit first settings byte; no policy default.</param>
+    /// <param name="AKeyCount">Explicit AES key count 1..14.</param>
+    /// <remarks>Native creation initializes card-default keys; no key is guessed or changed by this API.</remarks>
+    procedure CreateApplication(const AAid: Cardinal; const AKeySettings, AKeyCount: Byte);
+    /// <summary>Explicitly deletes one existing application from PICC-level management access and verifies absence.</summary>
+    /// <param name="AAid">Explicit nonzero 24-bit AID; never formats the PICC.</param>
+    procedure DeleteApplication(const AAid: Cardinal);
+    /// <summary>Creates an ordinary file and verifies acquired type, geometry and access settings.</summary>
+    /// <param name="ADefinition">Explicit validated native configuration; no ISO/SDM/TMAC extensions.</param>
+    /// <remarks>Creation is immediate; Commit/Abort cannot undo it. Initial value is an acknowledged creation input.</remarks>
+    procedure CreateFile(const ADefinition: TDesfireFileDefinition);
+    /// <summary>Explicitly deletes an existing ordinary file after strict settings preflight, then verifies directory absence.</summary>
+    /// <param name="AFile">Native file number 0..31.</param>
+    /// <remarks>Deletion is immediate and cannot be undone with Abort.</remarks>
+    procedure DeleteFile(const AFile: Byte);
+    /// <summary>Releases an active session without commit or abort; abandoned staged changes produce Uncertain.</summary>
+    /// <remarks>Idempotent after completion. A failed explicit release propagates; destruction suppresses cleanup errors.</remarks>
+    procedure Close;
+    /// <summary>Returns completion evidence without card I/O.</summary>
+    /// <returns>Current session outcome, retained after closure.</returns>
+    function GetOutcome: TDesfireSessionOutcome;
+    /// <summary>Reports successful post-commit verification and transaction release.</summary>
+    /// <returns>True only after Commit completed all checks.</returns>
+    function GetVerificationSucceeded: Boolean;
+    /// <summary>Reports acknowledged staged changes not yet committed or aborted.</summary>
+    /// <returns>True while changes remain unresolved, including abandoned sessions.</returns>
+    function GetPendingChanges: Boolean;
+    /// <summary>Current completion evidence.</summary>
+    property Outcome: TDesfireSessionOutcome read GetOutcome;
+    /// <summary>All touched files were verified after commit and release succeeded.</summary>
+    property VerificationSucceeded: Boolean read GetVerificationSucceeded;
+    /// <summary>Owned staged changes remain unresolved.</summary>
+    property PendingChanges: Boolean read GetPendingChanges;
   end;
   /// <summary>Pure strict codecs for wrapped ordinary DESFire native commands and settings.</summary>
   TDesfireCodec = class
@@ -158,7 +320,7 @@ type
   /// <summary>Nonvisual native DESFire discovery, data/value/record reading and verified standard-data writing.</summary>
   /// <remarks>One caller thread, no reentrancy. Every operation selects its explicit native application in an
   /// exclusive transaction, optionally authenticates afresh and clears session secrets at release. No retries,
-  /// default keys, implicit reset, formatting, key changes, backup commits/aborts, credits or record writes.</remarks>
+  /// default keys, implicit reset, formatting or key changes. OpenSession adds explicit owned transactions and management.</remarks>
   TDesfireCardReader = class(TComponent)
   private
     FTransport,FActiveTransport: ICardTransport;
@@ -174,7 +336,9 @@ type
     FBusy,FAuthenticated,FWriteAttempt: Boolean;
     FKeys: TDesfireEv2Keys;
     FTi: TBytes;
-    FCounter: Integer;
+    FCounter,FAttempts: Integer;
+    function Metadata(const AInstruction: Byte; const AHeader: TBytes;
+      const AMaxBytes: Integer; const AMutation: Boolean): TBytes;
     procedure SetTransport(const AValue: ICardTransport);
     procedure SetProvider(const AValue: ICardAesProvider);
     procedure SetKey(const AValue: TBytes);
@@ -252,6 +416,12 @@ type
     /// <remarks>Requires both read and write access. Matching acquired bytes are a verified no-op. Chained writes
     /// are not atomic; the component sends no rollback, commit or abort and preserves bytes outside the range.</remarks>
     procedure WriteData(const AAid: Cardinal; const AFile: Byte; const AOffset: Integer; const AData: TBytes);
+    /// <summary>Opens an independent retained session using immutable copied configuration and explicit authority.</summary>
+    /// <param name="AAid">Native AID; zero only for PICC reads/management, nonzero for owned transactions.</param>
+    /// <param name="AAccess">Explicit read, management or transaction-ownership policy; no default.</param>
+    /// <returns>Exclusive single-thread session; independent of component lifetime.</returns>
+    /// <exception cref="Exception">Arguments, acquisition, authentication or ordinary-file preflight fails.</exception>
+    function OpenSession(const AAid: Cardinal; const AAccess: TDesfireSessionAccess): IDesfireSession;
     /// <summary>Retained connected native-wrapping transport with ICardTransaction; cannot change while busy.</summary>
     property Transport: ICardTransport read FTransport write SetTransport;
     /// <summary>Retained maintained AES backend; required for the explicit EV1/EV2 AES profiles.</summary>
@@ -281,6 +451,64 @@ type
 implementation
 
 uses ERD.Card.Bytes, ERD.Card.APDU;
+
+type
+  TDesfireJournalEntry = record
+    Settings: TDesfireFileSettings;
+    Expected: TBytes;
+    UsedLimitedCredit: Boolean;
+  end;
+  TDesfireSession = class(TInterfacedObject,IDesfireSession)
+  private
+    FEngine: TDesfireCardReader;
+    FAid: Cardinal;
+    FAccess: TDesfireSessionAccess;
+    FOutcome: TDesfireSessionOutcome;
+    FPending,FVerified,FInCall: Boolean;
+    FThread: NativeUInt;
+    FJournal: array of TDesfireJournalEntry;
+    FMutations: Integer;
+    function Enter: Integer;
+    function Poison(const ABefore: Integer): Boolean;
+    procedure RequireOwner;
+    procedure RequireManagement;
+    function FileIds: TBytes;
+    function AppSettings: TDesfireApplicationSettings;
+    function Granted(const AKey: Byte): Boolean;
+    procedure ValueAccess(const S:TDesfireFileSettings; const ACommand: Byte);
+    function Value(const S:TDesfireFileSettings): Integer;
+    function Records(const S:TDesfireFileSettings; const AOffset,ACount:Integer):TBytes;
+    function Journal(const S:TDesfireFileSettings):Integer;
+    procedure CheckStatic(const A,B:TDesfireFileSettings);
+    procedure AdjustValue(const AFile:Byte; const AAmount:Integer; const ACommand:Byte);
+    procedure ClearJournal;
+    function JournalBytes: Integer;
+  public
+    constructor Create(const AReader:TDesfireCardReader; const AAid:Cardinal; const AAccess:TDesfireSessionAccess);
+    destructor Destroy; override;
+    function ReadApplicationIds:TDesfireApplicationIds;
+    function ReadApplicationSettings:TDesfireApplicationSettings;
+    function ReadFiles:TDesfireFiles;
+    function ReadData(const AFile:Byte; const AOffset,ACount:Integer):TBytes;
+    function ReadValue(const AFile:Byte):Integer;
+    function ReadRecords(const AFile:Byte; const AOffset,ACount:Integer):TBytes;
+    procedure WriteBackup(const AFile:Byte; const AOffset:Integer; const AData:TBytes);
+    procedure Credit(const AFile:Byte; const AAmount:Integer);
+    procedure Debit(const AFile:Byte; const AAmount:Integer);
+    procedure LimitedCredit(const AFile:Byte; const AAmount:Integer);
+    procedure AppendRecord(const AFile:Byte; const AData:TBytes);
+    procedure ClearRecords(const AFile:Byte);
+    procedure Commit;
+    procedure Abort;
+    procedure CreateApplication(const AAid:Cardinal; const AKeySettings,AKeyCount:Byte);
+    procedure DeleteApplication(const AAid:Cardinal);
+    procedure CreateFile(const ADefinition:TDesfireFileDefinition);
+    procedure DeleteFile(const AFile:Byte);
+    procedure Close;
+    function GetOutcome:TDesfireSessionOutcome;
+    function GetVerificationSucceeded:Boolean;
+    function GetPendingChanges:Boolean;
+  end;
 
 procedure InvalidDesfire;
 begin raise EDesfireError.Create('Invalid or unsupported DESFire configuration, response or access.'); end;
@@ -432,6 +660,7 @@ begin
   Result:=nil; AStatus:=0; CommandBytes:=TDesfireCodec.Command(AInstruction,AData);
   try
     if AWrite then FWriteAttempt:=True;
+    Inc(FAttempts);
     R:=TApduCodec.DecodeResponse(FActiveTransport.Exchange(CommandBytes));
     if ((R.StatusWord shr 8)<>$91) or (Length(R.Data)>256) then InvalidDesfire;
     AStatus:=R.StatusWord and $FF;
@@ -777,5 +1006,636 @@ begin
     except on E:Exception do begin if FWriteAttempt then raise EContactlessWriteUncertain.Create(E.ClassName); raise; end; end;
   finally TCardCrypto.Clear(Data); TCardCrypto.Clear(Old); TCardCrypto.Clear(Reply); TCardCrypto.Clear(Header); end;
 end;
+
+function SignedBytes(const AValue:Integer):TBytes;
+var V:Int64; I:Integer;
+begin
+  Result:=nil; V:=AValue; if V<0 then Inc(V,Int64($100000000)); SetLength(Result,4);
+  for I:=0 to 3 do Result[I]:=(V shr (I*8)) and $FF;
+end;
+
+function OneByte(const AValue:Byte):TBytes;
+begin Result:=nil; SetLength(Result,1); Result[0]:=AValue; end;
+
+function Joined(const A,B:TBytes):TBytes;
+begin
+  Result:=nil; SetLength(Result,Length(A)+Length(B));
+  if Length(A)>0 then Move(A[0],Result[0],Length(A));
+  if Length(B)>0 then Move(B[0],Result[Length(A)],Length(B));
+end;
+
+function DefinitionHeader(const D:TDesfireFileDefinition; out Command:Byte):TBytes;
+var Tail:TBytes; V:Integer;
+  procedure Add24(const N:Integer);
+  var L:Integer;
+  begin
+    if (N<1) or (N>$FFFFFF) then InvalidDesfire;
+    L:=Length(Tail); SetLength(Tail,L+3);
+    Tail[L]:=N and $FF; Tail[L+1]:=(N shr 8) and $FF; Tail[L+2]:=N shr 16;
+  end;
+begin
+  Result:=nil; Command:=0; Tail:=nil;
+  if (D.FileNumber>31) or (Ord(D.FileType)<0) or (Ord(D.FileType)>4) or
+    (Ord(D.Communication)<0) or (Ord(D.Communication)>2) or
+    (D.ReadKey>15) or (D.WriteKey>15) or (D.ReadWriteKey>15) or (D.ChangeKey>15) then InvalidDesfire;
+  case D.FileType of
+    dftStandard,dftBackup:
+      begin
+        if (D.LowerLimit<>0) or (D.UpperLimit<>0) or (D.InitialValue<>0) or
+          D.LimitedCreditEnabled or (D.RecordBytes<>0) or (D.MaxRecords<>0) then InvalidDesfire;
+        Command:=$CD; if D.FileType=dftBackup then Command:=$CB; Add24(D.FileBytes);
+      end;
+    dftValue:
+      begin
+        if (D.FileBytes<>0) or (D.RecordBytes<>0) or (D.MaxRecords<>0) or
+          (D.LowerLimit>D.UpperLimit) or (D.InitialValue<D.LowerLimit) or
+          (D.InitialValue>D.UpperLimit) then InvalidDesfire;
+        Command:=$CC; Tail:=Joined(SignedBytes(D.LowerLimit),SignedBytes(D.UpperLimit));
+        Tail:=Joined(Tail,SignedBytes(D.InitialValue)); Tail:=Joined(Tail,OneByte(Ord(D.LimitedCreditEnabled)));
+      end;
+    dftLinearRecords,dftCyclicRecords:
+      begin
+        if (D.FileBytes<>0) or (D.LowerLimit<>0) or (D.UpperLimit<>0) or
+          (D.InitialValue<>0) or D.LimitedCreditEnabled then InvalidDesfire;
+        Command:=$C1; if D.FileType=dftCyclicRecords then Command:=$C0;
+        Add24(D.RecordBytes); Add24(D.MaxRecords);
+      end;
+  end;
+  V:=Ord(D.Communication); if D.Communication=dfcFull then V:=3;
+  SetLength(Result,4); Result[0]:=D.FileNumber; Result[1]:=V;
+  Result[2]:=(D.ReadWriteKey shl 4) or D.ChangeKey; Result[3]:=(D.ReadKey shl 4) or D.WriteKey;
+  Result:=Joined(Result,Tail);
+end;
+
+function TDesfireCardReader.Metadata(const AInstruction:Byte; const AHeader:TBytes;
+  const AMaxBytes:Integer; const AMutation:Boolean):TBytes;
+var Packet,Wire:TBytes;
+begin
+  Result:=nil; Packet:=nil; Wire:=nil;
+  try
+    if FAuthenticated and (FSecurity=dfsEv2Aes) then
+    begin
+      Packet:=TDesfireEv2Codec.EncodeCommand(FProvider,FKeys,FTi,FCounter,AInstruction,AHeader,nil,dfcMac);
+      Wire:=Exchange(AInstruction,Packet,AMaxBytes+8,AMutation); Inc(FCounter);
+      if Length(Wire)<8 then InvalidDesfire;
+      Result:=TDesfireEv2Codec.DecodeResponse(FProvider,FKeys,FTi,FCounter,Wire,dfcMac,Length(Wire)-8);
+    end
+    else if FAuthenticated then
+    begin
+      Packet:=TDesfireEv1Codec.EncodeCommand(FProvider,FKeys.Encryption,FSessionIv,AInstruction,AHeader,nil,dfcPlain,False);
+      Wire:=Exchange(AInstruction,Packet,AMaxBytes+8,AMutation); if Length(Wire)<8 then InvalidDesfire;
+      Result:=TDesfireEv1Codec.DecodeResponse(FProvider,FKeys.Encryption,FSessionIv,Wire,dfcMac,Length(Wire)-8);
+    end
+    else Result:=Exchange(AInstruction,AHeader,AMaxBytes,AMutation);
+  finally TCardCrypto.Clear(Packet); TCardCrypto.Clear(Wire); end;
+end;
+
+function TDesfireCardReader.OpenSession(const AAid:Cardinal; const AAccess:TDesfireSessionAccess):IDesfireSession;
+begin
+  Result:=nil; if FBusy then InvalidDesfire;
+  Result:=TDesfireSession.Create(Self,AAid,AAccess);
+end;
+
+constructor TDesfireSession.Create(const AReader:TDesfireCardReader;
+  const AAid:Cardinal; const AAccess:TDesfireSessionAccess);
+var Ids,Reply:TBytes; I:Integer; S:TDesfireFileSettings;
+begin
+  inherited Create;
+  if (AAid>$FFFFFF) or (Ord(AAccess)<0) or (Ord(AAccess)>3) or
+    ((AAid=0) and (AAccess in [dsaFreshTransaction,dsaDiscardPending])) or
+    ((AAid=0) and ((AReader.FKeyNumber<>0) or (Length(AReader.FRekey)>0))) then InvalidDesfire;
+  FEngine:=TDesfireCardReader.Create(nil); FThread:=NativeUInt(TThread.CurrentThread.ThreadID);
+  FAid:=AAid; FAccess:=AAccess;
+  FEngine.FTransport:=AReader.FTransport; FEngine.FProvider:=AReader.FProvider;
+  FEngine.FKey:=CopyBytes(AReader.FKey); FEngine.FRekey:=CopyBytes(AReader.FRekey);
+  FEngine.FKeyNumber:=AReader.FKeyNumber; FEngine.FRekeyNumber:=AReader.FRekeyNumber;
+  FEngine.FSecurity:=AReader.FSecurity; FEngine.FMinimum:=AReader.FMinimum;
+  FEngine.FMaxTransfer:=AReader.FMaxTransfer; FEngine.FMaxFrameData:=AReader.FMaxFrameData;
+  Ids:=nil; Reply:=nil;
+  try
+    try
+      FEngine.Start(FAid,True);
+      if FAccess in [dsaFreshTransaction,dsaDiscardPending] then
+      begin
+        // Reject TMAC/extended files before changing the application's pending state.
+        Ids:=FileIds;
+        for I:=0 to High(Ids) do
+        begin
+          S:=FEngine.Settings(Ids[I]);
+          if not (S.FileType in [dftStandard,dftBackup,dftValue,dftLinearRecords,dftCyclicRecords]) then InvalidDesfire;
+        end;
+        if FAccess=dsaDiscardPending then
+        begin
+          Reply:=FEngine.Metadata($A7,nil,0,True); if Length(Reply)<>0 then InvalidDesfire;
+          FEngine.FWriteAttempt:=False;
+        end;
+      end;
+    except on E:Exception do
+      begin
+        if FEngine.FWriteAttempt then raise EContactlessWriteUncertain.Create(E.ClassName); raise;
+      end;
+    end;
+  finally TCardCrypto.Clear(Ids); TCardCrypto.Clear(Reply); end;
+end;
+
+destructor TDesfireSession.Destroy;
+begin
+  if FEngine<>nil then
+  begin
+    if FEngine.FBusy then FEngine.Finish(False);
+    FEngine.Free;
+  end;
+  ClearJournal; inherited Destroy;
+end;
+
+procedure TDesfireSession.ClearJournal;
+var I:Integer;
+begin for I:=0 to High(FJournal) do TCardCrypto.Clear(FJournal[I].Expected); FJournal:=nil; end;
+
+function TDesfireSession.Enter:Integer;
+begin
+  if (FOutcome<>dsoActive) or FInCall or (FEngine=nil) or not FEngine.FBusy or
+    (NativeUInt(TThread.CurrentThread.ThreadID)<>FThread) then InvalidDesfire;
+  FInCall:=True; Result:=FEngine.FAttempts;
+end;
+
+function TDesfireSession.Poison(const ABefore:Integer):Boolean;
+begin
+  Result:=False;
+  if FEngine.FAttempts=ABefore then Exit;
+  Result:=FPending or FEngine.FWriteAttempt;
+  if FOutcome=dsoActive then
+    if Result then FOutcome:=dsoUncertain else FOutcome:=dsoClosed;
+  if FEngine.FBusy then FEngine.Finish(False);
+  ClearJournal;
+end;
+
+procedure TDesfireSession.RequireOwner;
+begin
+  if not (FAccess in [dsaFreshTransaction,dsaDiscardPending]) or
+    (FAid=0) then InvalidDesfire;
+end;
+
+procedure TDesfireSession.RequireManagement;
+var S:TDesfireApplicationSettings;
+begin
+  if FAccess<>dsaManage then InvalidDesfire;
+  S:=AppSettings;
+  if ((S.KeySettings and 4)=0) and not (FEngine.FAuthenticated and (FEngine.FSessionKeyNumber=0)) then InvalidDesfire;
+end;
+
+function TDesfireSession.AppSettings:TDesfireApplicationSettings;
+var Wire:TBytes;
+begin
+  Result:=Default(TDesfireApplicationSettings); Wire:=FEngine.Metadata($45,nil,2,False);
+  if (Length(Wire)<>2) or ((Wire[1] and $10)<>0) or ((Wire[1] and $C0)=$C0) or
+    ((Wire[1] and $F)<1) or ((Wire[1] and $F)>14) then InvalidDesfire;
+  Result.KeySettings:=Wire[0]; Result.KeyConfiguration:=Wire[1]; Result.RawBytes:=CopyBytes(Wire);
+end;
+
+function TDesfireSession.FileIds:TBytes;
+var I,J:Integer;
+begin
+  if FAid=0 then InvalidDesfire; Result:=FEngine.Metadata($6F,nil,32,False);
+  for I:=0 to High(Result) do
+  begin
+    if Result[I]>31 then InvalidDesfire;
+    for J:=0 to I-1 do if Result[I]=Result[J] then InvalidDesfire;
+  end;
+end;
+
+function TDesfireSession.Granted(const AKey:Byte):Boolean;
+begin Result:=(AKey=$E) or (FEngine.FAuthenticated and (AKey=FEngine.FSessionKeyNumber)); end;
+
+procedure TDesfireSession.ValueAccess(const S:TDesfireFileSettings; const ACommand:Byte);
+var Allowed:Boolean;
+begin
+  if S.FileType<>dftValue then InvalidDesfire;
+  if FEngine.FAuthenticated then
+  begin
+    if Ord(S.Communication)<Ord(FEngine.FMinimum) then InvalidDesfire;
+    if (Length(FEngine.FRekey)>0) and not FEngine.FReauthenticated then FEngine.Authenticate(True);
+  end
+  else if S.Communication<>dfcPlain then InvalidDesfire;
+  Allowed:=Granted(S.ReadWriteKey);
+  case ACommand of
+    $0C: ; // Credit specifically requires ReadWrite, not just Write.
+    $1C:Allowed:=Allowed or Granted(S.WriteKey);
+    $DC,$6C:Allowed:=Allowed or Granted(S.WriteKey) or Granted(S.ReadKey);
+  else InvalidDesfire; end;
+  if (ACommand=$6C) and ((S.ValueOptions and 2)<>0) then Allowed:=True;
+  if not Allowed then InvalidDesfire;
+end;
+
+function TDesfireSession.Value(const S:TDesfireFileSettings):Integer;
+var B:TBytes;
+begin
+  if FEngine.FMaxTransfer<4 then InvalidDesfire; ValueAccess(S,$6C);
+  B:=nil;
+  try
+    B:=FEngine.Send($6C,OneByte(S.FileNumber),nil,S.Communication,4,False);
+    Result:=TDesfireCodec.SignedValue(B);
+    if (Result<S.LowerLimit) or (Result>S.UpperLimit) then InvalidDesfire;
+  finally TCardCrypto.Clear(B); end;
+end;
+
+function TDesfireSession.Records(const S:TDesfireFileSettings; const AOffset,ACount:Integer):TBytes;
+var Cmd:Byte;
+begin
+  Result:=nil;
+  if not (S.FileType in [dftLinearRecords,dftCyclicRecords]) or (AOffset<0) or
+    (ACount<1) or (AOffset>S.CurrentRecords-ACount) or
+    (ACount>FEngine.FMaxTransfer div S.RecordBytes) then InvalidDesfire;
+  FEngine.CheckAccess(S,False); Cmd:=$BB;
+  if FEngine.FSecurity=dfsEv2Aes then Cmd:=$AB;
+  Result:=FEngine.Send(Cmd,TDesfireCodec.RangeHeader(S.FileNumber,AOffset,ACount),nil,S.Communication,
+    ACount*S.RecordBytes,False);
+end;
+
+procedure TDesfireSession.CheckStatic(const A,B:TDesfireFileSettings);
+var Left,Right:TBytes;
+begin
+  Left:=CopyBytes(A.RawBytes); Right:=CopyBytes(B.RawBytes);
+  if (A.FileType<>B.FileType) or (Length(Left)<>Length(Right)) then InvalidDesfire;
+  case A.FileType of
+    dftValue:begin FillChar(Left[12],4,0); FillChar(Right[12],4,0); end;
+    dftLinearRecords,dftCyclicRecords:begin FillChar(Left[10],3,0); FillChar(Right[10],3,0); end;
+  end;
+  if not BytesEqual(Left,Right) then InvalidDesfire;
+end;
+
+function TDesfireSession.JournalBytes:Integer;
+var I:Integer;
+begin Result:=0; for I:=0 to High(FJournal) do Inc(Result,Length(FJournal[I].Expected)); end;
+
+function TDesfireSession.Journal(const S:TDesfireFileSettings):Integer;
+var B:TBytes; Required:Integer;
+begin
+  for Result:=0 to High(FJournal) do
+    if FJournal[Result].Settings.FileNumber=S.FileNumber then
+    begin CheckStatic(FJournal[Result].Settings,S); Exit; end;
+  case S.FileType of
+    dftBackup:Required:=S.FileBytes;
+    dftValue:Required:=4;
+    dftLinearRecords,dftCyclicRecords:
+      begin
+        if S.CurrentRecords>FEngine.FMaxTransfer div S.RecordBytes then InvalidDesfire;
+        Required:=S.CurrentRecords*S.RecordBytes;
+      end;
+  else InvalidDesfire; Required:=0; end;
+  if Required>FEngine.FMaxTransfer-JournalBytes then InvalidDesfire;
+  B:=nil;
+  try
+    case S.FileType of
+      dftBackup:B:=FEngine.ReadSelected(S,0,S.FileBytes);
+      dftValue:B:=SignedBytes(Value(S));
+      dftLinearRecords,dftCyclicRecords:if Required>0 then B:=Records(S,0,S.CurrentRecords)
+        else FEngine.CheckAccess(S,False);
+    end;
+    FEngine.CheckSettings(S); Result:=Length(FJournal); SetLength(FJournal,Result+1);
+    FJournal[Result].Settings:=S; FJournal[Result].Expected:=B; B:=nil;
+  finally TCardCrypto.Clear(B); end;
+end;
+
+function TDesfireSession.GetOutcome:TDesfireSessionOutcome;
+begin Result:=FOutcome; end;
+function TDesfireSession.GetVerificationSucceeded:Boolean;
+begin Result:=FVerified; end;
+function TDesfireSession.GetPendingChanges:Boolean;
+begin Result:=FPending; end;
+
+procedure TDesfireSession.Close;
+begin
+  if FOutcome<>dsoActive then Exit;
+  if FInCall or (NativeUInt(TThread.CurrentThread.ThreadID)<>FThread) then InvalidDesfire;
+  if FPending then FOutcome:=dsoUncertain else FOutcome:=dsoClosed;
+  try FEngine.Finish(True); finally ClearJournal; end;
+end;
+
+function TDesfireSession.ReadApplicationIds:TDesfireApplicationIds;
+var Before:Integer;
+begin
+  Before:=Enter;
+  try
+    try
+      Result:=nil; if FAid<>0 then InvalidDesfire;
+      Result:=TDesfireCodec.ApplicationIds(FEngine.Metadata($6A,nil,3072,False));
+    except on E:Exception do
+      begin if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName); raise; end;
+    end;
+  finally  FInCall:=False; end;
+end;
+
+function TDesfireSession.ReadApplicationSettings:TDesfireApplicationSettings;
+var Before:Integer;
+begin
+  Before:=Enter;
+  try
+    try
+      Result:=AppSettings;
+    except on E:Exception do
+      begin if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName); raise; end;
+    end;
+  finally  FInCall:=False; end;
+end;
+
+function TDesfireSession.ReadFiles:TDesfireFiles;
+var Before:Integer; Ids:TBytes; I:Integer;
+begin
+  Before:=Enter;
+  try
+    try
+      Result:=nil; Ids:=FileIds; SetLength(Result,Length(Ids));
+      for I:=0 to High(Ids) do Result[I]:=FEngine.Settings(Ids[I]);
+    except on E:Exception do
+      begin if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName); raise; end;
+    end;
+  finally  FInCall:=False; end;
+end;
+
+function TDesfireSession.ReadData(const AFile:Byte; const AOffset,ACount:Integer):TBytes;
+var Before:Integer; S:TDesfireFileSettings;
+begin
+  Before:=Enter;
+  try
+    try
+      Result:=nil; if (AFile>31) or (AOffset<0) or (ACount<1) or (ACount>FEngine.FMaxTransfer) then InvalidDesfire;
+      S:=FEngine.Settings(AFile); Result:=FEngine.ReadSelected(S,AOffset,ACount); FEngine.CheckSettings(S);
+    except on E:Exception do
+      begin if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName); raise; end;
+    end;
+  finally  FInCall:=False; end;
+end;
+
+function TDesfireSession.ReadValue(const AFile:Byte):Integer;
+var Before:Integer; S:TDesfireFileSettings;
+begin
+  Before:=Enter;
+  try
+    try
+      if (AFile>31) or (FEngine.FMaxTransfer<4) then InvalidDesfire;
+      S:=FEngine.Settings(AFile); Result:=Value(S); FEngine.CheckSettings(S);
+    except on E:Exception do
+      begin if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName); raise; end;
+    end;
+  finally  FInCall:=False; end;
+end;
+
+function TDesfireSession.ReadRecords(const AFile:Byte; const AOffset,ACount:Integer):TBytes;
+var Before:Integer; S:TDesfireFileSettings;
+begin
+  Before:=Enter;
+  try
+    try
+      Result:=nil; if (AFile>31) or (AOffset<0) or (ACount<1) then InvalidDesfire;
+      S:=FEngine.Settings(AFile); Result:=Records(S,AOffset,ACount); FEngine.CheckSettings(S);
+    except on E:Exception do
+      begin if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName); raise; end;
+    end;
+  finally  FInCall:=False; end;
+end;
+
+procedure TDesfireSession.WriteBackup(const AFile:Byte; const AOffset:Integer; const AData:TBytes);
+var Before:Integer; S:TDesfireFileSettings; Index:Integer; Cmd:Byte; Data,Reply:TBytes;
+begin
+  Before:=Enter;
+  try
+    try
+      RequireOwner; if FMutations>=256 then InvalidDesfire;
+      if (AFile>31) or (AOffset<0) or (Length(AData)<1) or (Length(AData)>FEngine.FMaxTransfer) then InvalidDesfire;
+      Data:=CopyBytes(AData); S:=FEngine.Settings(AFile);
+      if (S.FileType<>dftBackup) or (AOffset>S.FileBytes-Length(Data)) then InvalidDesfire;
+      FEngine.CheckAccess(S,True); Index:=Journal(S);
+      if not BytesEqual(Copy(FJournal[Index].Expected,AOffset,Length(Data)),Data) then
+      begin
+        Cmd:=$3D; if FEngine.FSecurity=dfsEv2Aes then Cmd:=$8D;
+        if FEngine.FAuthenticated then Reply:=FEngine.Send(Cmd,TDesfireCodec.RangeHeader(AFile,AOffset,Length(Data)),Data,S.Communication,0,True)
+        else Reply:=FEngine.Metadata(Cmd,Joined(TDesfireCodec.RangeHeader(AFile,AOffset,Length(Data)),Data),0,True);
+        Move(Data[0],FJournal[Index].Expected[AOffset],Length(Data)); FPending:=True; Inc(FMutations);
+      end;
+    except on E:Exception do
+      begin if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName); raise; end;
+    end;
+  finally TCardCrypto.Clear(Data); TCardCrypto.Clear(Reply); FInCall:=False; end;
+end;
+
+procedure TDesfireSession.AdjustValue(const AFile:Byte; const AAmount:Integer; const ACommand:Byte);
+var Before:Integer; S:TDesfireFileSettings; Index:Integer; Expected:Int64; Reply:TBytes;
+begin
+  Before:=Enter;
+  try
+    try
+      RequireOwner; if FMutations>=256 then InvalidDesfire; if (AFile>31) or (AAmount<1) then InvalidDesfire;
+      S:=FEngine.Settings(AFile); ValueAccess(S,ACommand); Index:=Journal(S);
+      if ACommand=$1C then
+        if ((S.ValueOptions and 1)=0) or FJournal[Index].UsedLimitedCredit or
+          (AAmount>S.LimitedCreditValue) then InvalidDesfire;
+      Expected:=TDesfireCodec.SignedValue(FJournal[Index].Expected);
+      if ACommand=$DC then Dec(Expected,AAmount) else Inc(Expected,AAmount);
+      if (Expected<S.LowerLimit) or (Expected>S.UpperLimit) then InvalidDesfire;
+      if FEngine.FAuthenticated then Reply:=FEngine.Send(ACommand,OneByte(AFile),SignedBytes(AAmount),S.Communication,0,True)
+      else Reply:=FEngine.Metadata(ACommand,Joined(OneByte(AFile),SignedBytes(AAmount)),0,True);
+      if Length(Reply)<>0 then InvalidDesfire;
+      TCardCrypto.Clear(FJournal[Index].Expected); FJournal[Index].Expected:=SignedBytes(Integer(Expected));
+      FJournal[Index].UsedLimitedCredit:=FJournal[Index].UsedLimitedCredit or (ACommand=$1C);
+      FPending:=True; Inc(FMutations);
+    except on E:Exception do
+      begin if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName); raise; end;
+    end;
+  finally  FInCall:=False; end;
+end;
+
+procedure TDesfireSession.Credit(const AFile:Byte; const AAmount:Integer);
+begin AdjustValue(AFile,AAmount,$0C); end;
+
+procedure TDesfireSession.Debit(const AFile:Byte; const AAmount:Integer);
+begin AdjustValue(AFile,AAmount,$DC); end;
+
+procedure TDesfireSession.LimitedCredit(const AFile:Byte; const AAmount:Integer);
+begin AdjustValue(AFile,AAmount,$1C); end;
+
+procedure TDesfireSession.AppendRecord(const AFile:Byte; const AData:TBytes);
+var Before:Integer; S:TDesfireFileSettings; Index,Count,OldBytes:Integer; Cmd:Byte; Data,Expected,Reply:TBytes;
+begin
+  Before:=Enter;
+  try
+    try
+      RequireOwner; if FMutations>=256 then InvalidDesfire; if (AFile>31) or (Length(AData)<1) or (Length(AData)>FEngine.FMaxTransfer) then InvalidDesfire;
+      Data:=CopyBytes(AData); S:=FEngine.Settings(AFile);
+      if not (S.FileType in [dftLinearRecords,dftCyclicRecords]) or (Length(Data)<>S.RecordBytes) then InvalidDesfire;
+      FEngine.CheckAccess(S,True); Index:=Journal(S);
+      Count:=Length(FJournal[Index].Expected) div S.RecordBytes;
+      if (S.FileType=dftLinearRecords) and (Count>=S.MaxRecords) then InvalidDesfire;
+      OldBytes:=Length(FJournal[Index].Expected);
+      if Count>=S.MaxRecords then Dec(OldBytes,S.RecordBytes);
+      if Length(Data)+OldBytes>FEngine.FMaxTransfer-(JournalBytes-Length(FJournal[Index].Expected)) then InvalidDesfire;
+      Expected:=Joined(Data,Copy(FJournal[Index].Expected,0,OldBytes));
+      Cmd:=$3B; if FEngine.FSecurity=dfsEv2Aes then Cmd:=$8B;
+      if FEngine.FAuthenticated then Reply:=FEngine.Send(Cmd,TDesfireCodec.RangeHeader(AFile,0,Length(Data)),Data,S.Communication,0,True)
+      else Reply:=FEngine.Metadata(Cmd,Joined(TDesfireCodec.RangeHeader(AFile,0,Length(Data)),Data),0,True);
+      if Length(Reply)<>0 then InvalidDesfire;
+      TCardCrypto.Clear(FJournal[Index].Expected); FJournal[Index].Expected:=Expected; Expected:=nil;
+      FPending:=True; Inc(FMutations);
+    except on E:Exception do
+      begin if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName); raise; end;
+    end;
+  finally TCardCrypto.Clear(Data); TCardCrypto.Clear(Expected); FInCall:=False; end;
+end;
+
+procedure TDesfireSession.ClearRecords(const AFile:Byte);
+var Before:Integer; S:TDesfireFileSettings; Index:Integer; Reply:TBytes;
+begin
+  Before:=Enter;
+  try
+    try
+      RequireOwner; if FMutations>=256 then InvalidDesfire; if AFile>31 then InvalidDesfire; S:=FEngine.Settings(AFile);
+      if not (S.FileType in [dftLinearRecords,dftCyclicRecords]) then InvalidDesfire;
+      FEngine.CheckAccess(S,True); Index:=Journal(S);
+      if Length(FJournal[Index].Expected)>0 then
+      begin
+        Reply:=FEngine.Metadata($EB,OneByte(AFile),0,True); if Length(Reply)<>0 then InvalidDesfire;
+        TCardCrypto.Clear(FJournal[Index].Expected); FPending:=True; Inc(FMutations);
+      end;
+    except on E:Exception do
+      begin if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName); raise; end;
+    end;
+  finally  FInCall:=False; end;
+end;
+
+procedure TDesfireSession.Commit;
+var Before:Integer; Reply,Header,Actual:TBytes; I,Count:Integer; S:TDesfireFileSettings;
+begin
+  Before:=Enter;
+  try
+    try
+      RequireOwner; if not FPending then InvalidDesfire;
+      Header:=nil; if FEngine.FSecurity=dfsEv2Aes then Header:=OneByte(0);
+      Reply:=FEngine.Metadata($C7,Header,0,True); if Length(Reply)<>0 then InvalidDesfire;
+      FOutcome:=dsoCommitted; FPending:=False;
+      for I:=0 to High(FJournal) do
+      begin
+        S:=FEngine.Settings(FJournal[I].Settings.FileNumber); CheckStatic(FJournal[I].Settings,S);
+        Actual:=nil;
+        case S.FileType of
+          dftBackup:Actual:=FEngine.ReadSelected(S,0,S.FileBytes);
+          dftValue:Actual:=SignedBytes(Value(S));
+          dftLinearRecords,dftCyclicRecords:
+            begin
+              Count:=Length(FJournal[I].Expected) div S.RecordBytes;
+              if S.CurrentRecords<>Count then InvalidDesfire;
+              if Count>0 then Actual:=Records(S,0,Count);
+            end;
+        end;
+        if not BytesEqual(Actual,FJournal[I].Expected) then InvalidDesfire;
+        TCardCrypto.Clear(Actual); FEngine.CheckSettings(S);
+      end;
+      FEngine.Finish(True); FVerified:=True; ClearJournal;
+    except on E:Exception do
+      begin if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName); raise; end;
+    end;
+  finally TCardCrypto.Clear(Actual); FInCall:=False; end;
+end;
+
+procedure TDesfireSession.Abort;
+var Before:Integer; Reply:TBytes;
+begin
+  Before:=Enter;
+  try
+    try
+      RequireOwner;
+      if FPending then begin Reply:=FEngine.Metadata($A7,nil,0,True); if Length(Reply)<>0 then InvalidDesfire; end;
+      FOutcome:=dsoAborted; FPending:=False; FEngine.Finish(True); ClearJournal;
+    except on E:Exception do
+      begin if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName); raise; end;
+    end;
+  finally  FInCall:=False; end;
+end;
+
+procedure TDesfireSession.CreateApplication(const AAid:Cardinal; const AKeySettings,AKeyCount:Byte);
+var Before:Integer; Ids:TDesfireApplicationIds; I:Integer; Found:Boolean; Header,Reply:TBytes;
+begin
+  Before:=Enter;
+  try
+    try
+      if (FAccess<>dsaManage) or (FAid<>0) or (AAid=0) or (AAid>$FFFFFF) or
+        (AKeyCount<1) or (AKeyCount>14) or
+        (((AKeySettings shr 4)<14) and ((AKeySettings shr 4)>=AKeyCount)) then InvalidDesfire;
+      RequireManagement; Ids:=TDesfireCodec.ApplicationIds(FEngine.Metadata($6A,nil,3072,False));
+      for I:=0 to High(Ids) do if Ids[I]=AAid then InvalidDesfire;
+      Header:=Joined(TDesfireCodec.ApplicationBytes(AAid),Joined(OneByte(AKeySettings),OneByte($80 or AKeyCount)));
+      Reply:=FEngine.Metadata($CA,Header,0,True); if Length(Reply)<>0 then InvalidDesfire;
+      Ids:=TDesfireCodec.ApplicationIds(FEngine.Metadata($6A,nil,3072,False)); Found:=False;
+      for I:=0 to High(Ids) do Found:=Found or (Ids[I]=AAid); if not Found then InvalidDesfire;
+      FEngine.FWriteAttempt:=False;
+    except on E:Exception do
+      begin if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName); raise; end;
+    end;
+  finally  FInCall:=False; end;
+end;
+
+procedure TDesfireSession.DeleteApplication(const AAid:Cardinal);
+var Before:Integer; Ids:TDesfireApplicationIds; I:Integer; Found:Boolean; Reply:TBytes;
+begin
+  Before:=Enter;
+  try
+    try
+      if (FAccess<>dsaManage) or (FAid<>0) or (AAid=0) or (AAid>$FFFFFF) then InvalidDesfire;
+      RequireManagement; Ids:=TDesfireCodec.ApplicationIds(FEngine.Metadata($6A,nil,3072,False)); Found:=False;
+      for I:=0 to High(Ids) do Found:=Found or (Ids[I]=AAid); if not Found then InvalidDesfire;
+      Reply:=FEngine.Metadata($DA,TDesfireCodec.ApplicationBytes(AAid),0,True); if Length(Reply)<>0 then InvalidDesfire;
+      Ids:=TDesfireCodec.ApplicationIds(FEngine.Metadata($6A,nil,3072,False));
+      for I:=0 to High(Ids) do if Ids[I]=AAid then InvalidDesfire;
+      FEngine.FWriteAttempt:=False;
+    except on E:Exception do
+      begin if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName); raise; end;
+    end;
+  finally  FInCall:=False; end;
+end;
+
+procedure TDesfireSession.CreateFile(const ADefinition:TDesfireFileDefinition);
+var Before:Integer; Header,Ids,Reply:TBytes; Cmd:Byte; I:Integer; S:TDesfireFileSettings;
+begin
+  Before:=Enter;
+  try
+    try
+      if (FAccess<>dsaManage) or (FAid=0) then InvalidDesfire; Header:=DefinitionHeader(ADefinition,Cmd);
+      RequireManagement; Ids:=FileIds;
+      for I:=0 to High(Ids) do if Ids[I]=ADefinition.FileNumber then InvalidDesfire;
+      Reply:=FEngine.Metadata(Cmd,Header,0,True); if Length(Reply)<>0 then InvalidDesfire;
+      S:=FEngine.Settings(ADefinition.FileNumber);
+      if (S.FileType<>ADefinition.FileType) or (S.Communication<>ADefinition.Communication) or
+        (S.ReadKey<>ADefinition.ReadKey) or (S.WriteKey<>ADefinition.WriteKey) or
+        (S.ReadWriteKey<>ADefinition.ReadWriteKey) or (S.ChangeKey<>ADefinition.ChangeKey) or
+        (S.FileBytes<>ADefinition.FileBytes) or (S.LowerLimit<>ADefinition.LowerLimit) or
+        (S.UpperLimit<>ADefinition.UpperLimit) or (S.RecordBytes<>ADefinition.RecordBytes) or
+        (S.MaxRecords<>ADefinition.MaxRecords) or (S.CurrentRecords<>0) or
+        (S.ValueOptions<>Ord(ADefinition.LimitedCreditEnabled)) then InvalidDesfire;
+      FEngine.FWriteAttempt:=False;
+    except on E:Exception do
+      begin if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName); raise; end;
+    end;
+  finally  FInCall:=False; end;
+end;
+
+procedure TDesfireSession.DeleteFile(const AFile:Byte);
+var Before:Integer; Ids,Reply:TBytes; I:Integer; Found:Boolean; S:TDesfireFileSettings;
+begin
+  Before:=Enter;
+  try
+    try
+      if (FAccess<>dsaManage) or (FAid=0) or (AFile>31) then InvalidDesfire;
+      RequireManagement; Ids:=FileIds; Found:=False;
+      for I:=0 to High(Ids) do Found:=Found or (Ids[I]=AFile); if not Found then InvalidDesfire;
+      S:=FEngine.Settings(AFile);
+      if not (S.FileType in [dftStandard,dftBackup,dftValue,dftLinearRecords,dftCyclicRecords]) then InvalidDesfire;
+      Reply:=FEngine.Metadata($DF,OneByte(AFile),0,True); if Length(Reply)<>0 then InvalidDesfire;
+      Ids:=FileIds; for I:=0 to High(Ids) do if Ids[I]=AFile then InvalidDesfire;
+      FEngine.FWriteAttempt:=False;
+    except on E:Exception do
+      begin if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName); raise; end;
+    end;
+  finally  FInCall:=False; end;
+end;
+
 
 end.

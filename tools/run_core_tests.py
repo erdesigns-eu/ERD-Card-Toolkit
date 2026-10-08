@@ -46,7 +46,7 @@ def main():
                 command.append('-Fl' + str(crt_path.parent))
     for project in ('tests/core/CardCore.Tests.dpr', 'tests/core/ProtocolCore.Tests.dpr',
                     'tests/core/CardCatalogs.Tests.dpr',
-                    'tests/crypto/CardCrypto.Tests.dpr', 'tests/contactless/Desfire.Tests.dpr',
+                    'tests/crypto/CardCrypto.Tests.dpr', 'tests/contactless/Desfire.Tests.dpr', 'tests/contactless/DesfireSession.Tests.dpr',
                     'tests/transport/CardTransport.Tests.dpr', 'tests/eid/BelgianEid.Tests.dpr',
                     'tests/eid/Icao.Tests.dpr',
                     'tests/emv/Emv.Tests.dpr',
@@ -65,13 +65,13 @@ def main():
                     'examples/contactless/InspectNdef.dpr',
                     'examples/contactless/InspectType4Ndef.dpr',
                     'examples/contactless/InspectType5Ndef.dpr',
-                    'examples/contactless/InspectDesfire.dpr',
+                    'examples/contactless/InspectDesfire.dpr', 'examples/contactless/ManageDesfire.dpr',
                     'examples/core/InspectCardTools.dpr',
                     'examples/magstripe/InspectMagStripe.dpr',
                     'examples/magstripe/InspectMsr206.dpr'):
         subprocess.run(command + [project], cwd=REPO, check=True)
     suffix = '.exe' if os.name == 'nt' else ''
-    for project in ('CardCore.Tests', 'ProtocolCore.Tests', 'CardCatalogs.Tests', 'CardCrypto.Tests', 'Desfire.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'Iso15693Type5.Tests', 'MagStripe.Tests', 'Msr206.Tests', 'Msr2067HL.Tests'):
+    for project in ('CardCore.Tests', 'ProtocolCore.Tests', 'CardCatalogs.Tests', 'CardCrypto.Tests', 'Desfire.Tests', 'DesfireSession.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'Iso15693Type5.Tests', 'MagStripe.Tests', 'Msr206.Tests', 'Msr2067HL.Tests'):
         result = subprocess.run([str(build / (project + suffix))], cwd=REPO,
                                 capture_output=True, text=True)
         print(result.stdout, end='', flush=True)
@@ -137,7 +137,7 @@ def main():
         crypto_env = os.environ.copy()
         crypto_env['LD_LIBRARY_PATH'] = str(crypto_build) + os.pathsep + crypto_env.get('LD_LIBRARY_PATH', '')
         for project in ('tests/crypto/NativeCrypto.Tests.dpr', 'tests/crypto/CardCrypto.Tests.dpr',
-                        'tests/contactless/Desfire.Tests.dpr'):
+                        'tests/contactless/Desfire.Tests.dpr', 'tests/contactless/DesfireSession.Tests.dpr'):
             subprocess.run(crypto_command + [project], cwd=REPO, check=True)
             native = subprocess.run([str(crypto_build / Path(project).stem)], cwd=REPO,
                                     env=crypto_env, capture_output=True, text=True)
@@ -272,6 +272,16 @@ def main():
         raise RuntimeError('DESFire example accepted truncated settings')
     print('PASS: DESFire console help and exact/truncated settings cases.', flush=True)
 
+    manage = str(build / ('ManageDesfire' + suffix))
+    for arguments, expected in [(['--help'], 'Usage: ManageDesfire'),
+                                (['--plan'], 'Demo files: 5')]:
+        inspected = subprocess.run([manage] + arguments, capture_output=True, text=True, check=True)
+        if expected not in inspected.stdout:
+            raise RuntimeError('DESFire management example did not show its offline mode')
+    inspected = subprocess.run([manage, '--unknown'], capture_output=True, text=True)
+    if inspected.returncode != 1 or 'EDesfireError' not in inspected.stdout:
+        raise RuntimeError('DESFire management example did not reject invalid arguments')
+    print('PASS: DESFire management offline help/plan and invalid arguments.', flush=True)
     subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests/tools', '-v'],
                    cwd=REPO, check=True)
     subprocess.run([sys.executable, 'tools/pascalcheck/run.py', '--profile', 'core',

@@ -35,7 +35,7 @@ outside the library. See [the cleanup record](docs/LEGACY_CLEANUP.md).
 | `TType4NdefCardReader` | Public ISO 7816 NDEF files with bounded CC/MLe/MLc and verified NLEN updates |
 | `TIso15693CardReader` | Explicit addressed ISO 15693 system information and guarded block access |
 | `TType5NdefCardReader` | Initialized public Type 5 NDEF memory with CC/security preflight and verified length-last updates |
-| `TDesfireCardReader` | Native DESFire files, EV1/EV2 AES secure messaging, EV2 NonFirst key switching and verified standard-data writes |
+| `TDesfireCardReader` | Native DESFire files, EV1/EV2 AES secure messaging, EV2 NonFirst, verified standard-data writes, owned backup/value/record transactions and explicit application/file management |
 
 `TMagStripeReaderWriter` in `src/magstripe` provides exclusive read sessions and
 capability-checked selected-track writes with same-card verification and explicit
@@ -99,7 +99,9 @@ EV1/EV2 AES profiles implement mutual authentication and Plain/MACed/Full messag
 with authenticated settings and caller-supplied keys. Optional EV2 NonFirst switches
 to a second key while preserving the acquired transaction identifier/counter. Windows CNG and optional
 Linux OpenSSL supply the AES/CSPRNG backends; see [the DESFire guide](docs/DESFIRE.md).
-Legacy D40/3DES security, LRP, backup transactions and administration remain separate
+Retained sessions add owned backup/value/record transactions, explicit commit/abort and
+post-commit verification, authenticated directories and basic application/file create/delete.
+Legacy D40/3DES security, LRP, TMAC receipts and key/configuration management remain separate
 extensions; physical reader/card coverage is still pending.
 `TRawUidProgrammer` adds four-byte Gen1a/Gen1b/unsealed UFUID and seven-byte Type 2
 DirectWrite UID programming, with an opt-in ACR122U/PN532 raw-RF adapter. It preserves
