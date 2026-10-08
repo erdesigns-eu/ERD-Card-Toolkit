@@ -135,10 +135,15 @@ type
     /// <summary>Runs one operation, sanitizes failure details and publishes completion under a lock.</summary>
     procedure Execute; override;
   public
-    /// <summary>Copies request buffers and starts a worker with the supplied executor.</summary>
+    /// <summary>Copies request buffers into a suspended worker; call StartWork after construction returns.</summary>
     /// <param name="ARequest">Caller-owned request; later caller edits do not affect the job.</param>
     /// <param name="AOperations">Non-nil worker executor, retained until worker completion.</param>
     constructor Create(const ARequest: TCardDemoRequest; const AOperations: ICardDemoOperations);
+    /// <summary>Starts the fully constructed worker exactly once on the caller thread.</summary>
+    /// <exception cref="EInvalidOpException">This job has already been started.</exception>
+    /// <remarks>Do not call inherited Start directly or start from a constructor: Delphi's
+    /// TThread.AfterConstruction must complete its suspended-thread initialization first.</remarks>
+    procedure StartWork;
     /// <summary>Joins the worker, clears owned access bytes and releases its lock.</summary>
     destructor Destroy; override;
     /// <summary>Moves completed data to the caller once without waiting for a running operation.</summary>
@@ -168,8 +173,13 @@ begin
   FRequest.Password := Copy(ARequest.Password, 0, Length(ARequest.Password));
   FRequest.NdefBytes := Copy(ARequest.NdefBytes, 0, Length(ARequest.NdefBytes));
   FOperations := AOperations;
+end;
+
+procedure TCardDemoJob.StartWork;
+begin
+  if FStarted then raise EInvalidOpException.Create('Worker has already been started.');
   FStarted := True;
-  try Start; except FStarted := False; raise; end;
+  try inherited Start; except FStarted := False; raise; end;
 end;
 
 destructor TCardDemoJob.Destroy;
