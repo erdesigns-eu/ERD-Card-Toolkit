@@ -106,9 +106,10 @@ are not compatibility requirements.
    explicitly locks SLE protection bits. See [memory profiles](MEMORY_CARDS.md).
    [SLE4404](SLE4404.md) adds distinct guarded code access, bit programming and
    explicit verified erases. Generic RFID keyboard and host-fed HID report adapters
-   are supplied separately through ERDCardInput. Further chip families/readers remain planned. Non-Java chips do not share one universal protocol.
+   are supplied separately through ERDCardInput. The concrete [TWN4 backend](TWN4.md)
+   adds supplied-key Classic and public Type 2 memory access through PRS/USB-CDC. Further chip families/readers remain planned. Non-Java chips do not share one universal protocol.
 8. **Distribution — source/projects available; Delphi/IDE validation pending.**
-   Ten runtime packages, eighteen-component standalone palette registration, isolated Win32/Win64
+   Eleven runtime packages, nineteen-component standalone palette registration, isolated Win32/Win64
    Debug/Release build projects, console examples and two worker-based VCL read/write
    demos are supplied. See [installation](INSTALLATION.md), [demos](VCL_DEMOS.md) and
    [validation](VALIDATION.md). Published scalar configuration is streamed; interface

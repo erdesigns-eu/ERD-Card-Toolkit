@@ -21,6 +21,7 @@ knoppen of nieuwe projecten al aanwezig zijn. Betalingen blijven buiten scope.
 | MemoryCardDemo | Alle aanwezige gewone SLE/I2C-modellen/dialecten, geheugen/protectie/retrypolicy, PIN, geverifieerde writes, ondersteunde PIN-vervanging en permanente bescherming | Snapshot/range, PIN en writes in SmartCardDemo; PIN-vervanging/bescherming ontbreken |
 | SleCounterDemo | SLE4406/4436/5536/6636 met bekende vensters, bit/carry/backup-programmering en ruwe certificaatberekening | Alleen publieke reads in SmartCardDemo |
 | Sle4404Demo | Bekende layout/counters, publiek/beveiligd lezen, user-codebewijs, bitprogrammering, scratchpad- en applicatie-erases met beide codes | Alleen publieke reads in SmartCardDemo |
+| Twn4Demo | PRS/USB-CDC reader/version/tag inspection, supplied-key Classic and public Type 2 reads/verified writes, explicit CRC mode | Console/API example available; no VCL example yet |
 | RfidInputDemo | Keyboard-invoer; 8/9-byte toetsenbordreports en vaste ASCII-velden; ASCII/hex/decimaal, framing/deadlines en expliciete byteconversie | Keyboard-invoertab in SmartCardDemo; ruwe reportprofielen/conversie ontbreken |
 
 Naast de kaartoperaties krijgen de bijbehorende **offline encoders/decoders**
@@ -35,7 +36,7 @@ De bestaande workerbasis wordt gedeeld. Elke demo krijgt eigen invoer en een kle
 kaartgerichte uitvoerlaag, zodat een ontwikkelaar het relevante voorbeeld kan
 kopiëren zonder een applicatie met alle kaartfamilies te hoeven meenemen.
 
-1. Reader/tools, RFID en gewone/SLE-counter/SLE4404-memorydemo's.
+1. Reader/tools, RFID/TWN4 en gewone/SLE-counter/SLE4404-memorydemo's.
 2. Belgische eID, ICAO en volledige EMV-uitlezing.
 3. Classic/Type 2, Type 4 en ISO 15693/Type 5.
 4. Programmeerbare UID's en DESFire-transacties/administratie.

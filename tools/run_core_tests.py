@@ -34,6 +34,7 @@ def main():
                '-Fu' + str(REPO / 'src/magstripe'),
                '-Fu' + str(REPO / 'src/memory'),
                '-Fu' + str(REPO / 'src/input'),
+               '-Fu' + str(REPO / 'src/readers'),
                '-Fu' + str(REPO / 'src/contactless'),
                '-Fu' + str(REPO / 'src/design'),
                '-Fu' + str(REPO / 'examples/vcl/shared'),
@@ -48,7 +49,7 @@ def main():
             crt_path = Path(crt.stdout.strip())
             if crt_path.is_file():
                 command.append('-Fl' + str(crt_path.parent))
-    for project in ('tests/input/RfidInput.Tests.dpr', 'tests/memory/Sle4404.Tests.dpr', 'tests/memory/MemoryCounter.Tests.dpr', 'tests/memory/MemoryCard.Tests.dpr', 'examples/memory/InspectMemoryCard.dpr', 'examples/memory/InspectSle4404.dpr',
+    for project in ('examples/readers/InspectTwn4.dpr', 'tests/readers/Twn4.Tests.dpr', 'tests/input/RfidInput.Tests.dpr', 'tests/memory/Sle4404.Tests.dpr', 'tests/memory/MemoryCounter.Tests.dpr', 'tests/memory/MemoryCard.Tests.dpr', 'examples/memory/InspectMemoryCard.dpr', 'examples/memory/InspectSle4404.dpr',
                     'tests/core/CardCore.Tests.dpr', 'tests/core/ProtocolCore.Tests.dpr',
                     'tests/core/CardCatalogs.Tests.dpr',
                     'tests/demos/DemoJob.Tests.dpr',
@@ -83,7 +84,7 @@ def main():
     subprocess.run(command + ['-Fu' + str(REPO / 'tests/design'),
                               'tests/design/Registration.Tests.dpr'], cwd=REPO, check=True)
     suffix = '.exe' if os.name == 'nt' else ''
-    for project in ('RfidInput.Tests', 'Sle4404.Tests', 'MemoryCounter.Tests', 'MemoryCard.Tests', 'DemoJob.Tests', 'Registration.Tests', 'EacCrypto.Tests', 'IcaoDocument.Tests', 'DesfireManagement.Tests', 'CardCore.Tests', 'ProtocolCore.Tests', 'CardCatalogs.Tests', 'CardCrypto.Tests', 'Desfire.Tests', 'DesfireSession.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'Iso15693Type5.Tests', 'MagStripe.Tests', 'Msr206.Tests', 'Msr2067HL.Tests'):
+    for project in ('Twn4.Tests', 'RfidInput.Tests', 'Sle4404.Tests', 'MemoryCounter.Tests', 'MemoryCard.Tests', 'DemoJob.Tests', 'Registration.Tests', 'EacCrypto.Tests', 'IcaoDocument.Tests', 'DesfireManagement.Tests', 'CardCore.Tests', 'ProtocolCore.Tests', 'CardCatalogs.Tests', 'CardCrypto.Tests', 'Desfire.Tests', 'DesfireSession.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'Iso15693Type5.Tests', 'MagStripe.Tests', 'Msr206.Tests', 'Msr2067HL.Tests'):
         result = subprocess.run([str(build / (project + suffix))], cwd=REPO,
                                 capture_output=True, text=True)
         print(result.stdout, end='', flush=True)
@@ -162,6 +163,17 @@ def main():
                 raise RuntimeError('Native CNG test leaked memory')
     else:
         print('SKIP: native PC/SC and serial ABI shims requires Linux and GCC.', flush=True)
+    twn4 = str(build / ('InspectTwn4' + suffix))
+    for argv, expected in [(['--help'], 'TWN4 PRS ASCII / USB-CDC'),
+                           (['--frame', '0005'], '303030350D'),
+                           (['--frame', '0005', '--crc'], '30303035313541370D')]:
+        result = subprocess.run([twn4] + argv, capture_output=True, text=True, check=True)
+        if expected not in result.stdout:
+            raise RuntimeError('TWN4 offline example output mismatch')
+    for argv in [[], ['--unknown'], ['--frame', '00'], ['--port', 'COM17', '--frame', '0005']]:
+        result = subprocess.run([twn4] + argv, capture_output=True, text=True)
+        if result.returncode == 0:
+            raise RuntimeError('TWN4 example accepted invalid arguments')
     example = str(build / ('InspectApdu' + suffix))
     valid = subprocess.run([example, '0000000002AABB00'], capture_output=True, text=True, check=True)
     if 'Data bytes: 2' not in valid.stdout or 'Le: 256' not in valid.stdout:

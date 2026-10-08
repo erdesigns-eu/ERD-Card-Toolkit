@@ -29,3 +29,11 @@ terminator/prefix/length and presented encoding; for raw reports record descript
 report-ID framing and known fixed-field/status protocol. Keyboard input, 8/9-byte
 boot reports and declared ASCII fields are separate profiles. No AliExpress model
 or generic HID card-memory/UID writing has been certified. See [RFID input](RFID_HID.md).
+
+TWN4 PRS ASCII / USB-CDC is implemented for explicit supplied-key Classic
+Mini/1K/4K block operations and public Ultralight/EV1/NTAG user pages. Expected ID,
+current contents, final preflight and independent write read-back are exercised in
+synthetic tests. Real TWN4 firmware/CDC driver, 4K reader-sector conventions and
+every physical chip/model combination remain pending. No memory programming is
+claimed for the supplied keyboard-only EM4100/TK4100 readers; see [TWN4](TWN4.md)
+and [reader models](RFID_READER_MODELS.md).

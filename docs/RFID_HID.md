@@ -72,7 +72,9 @@ Configuration changes and recursive feed from callbacks are refused. Reset is fo
 known source/frame boundaries only; DiscardFrame is for missing/invalid reports.
 
 No generic HID card memory reading, writing, UID programming or reader configuration
-commands are supplied. Those require documented reader/chip protocols. Physical
+commands are supplied. Those require documented reader/chip protocols. The separate [TWN4 memory backend](TWN4.md)
+adds actual Classic/Type 2 commands through PRS/USB-CDC, not keyboard HID.
+The [supplied reader investigation](RFID_READER_MODELS.md) distinguishes these interfaces. Physical
 AliExpress reader checks, raw host integration and Delphi VCL execution remain pending.
 
 ## References

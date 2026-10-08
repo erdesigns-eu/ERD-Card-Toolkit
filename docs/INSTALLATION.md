@@ -1,10 +1,10 @@
 # Installing the Delphi components
 
-The library supplies ten runtime packages, one design-time palette package and
+The library supplies eleven runtime packages, one design-time palette package and
 source-linked VCL examples. The intended target is Delphi 10.4 or later on Windows,
 Win32 and Win64. The maintainer reports successful package builds and IDE
 installation in RAD Studio 12 (Studio 23.0), Debug/Win32, after the project repair.
-The maintainer subsequently confirmed warning-free builds. The new Memory/Input
+The maintainer subsequently confirmed warning-free builds. The new Memory/Input/TWN4
 packages and standalone source bundle need a fresh Delphi rebuild; other Delphi
 versions, configurations and architectures remain unverified. Linux source readers
 and FPC execution do not establish Delphi compatibility.
@@ -21,7 +21,7 @@ application. Consult [EUROPEAN_EID.md](EUROPEAN_EID.md) for supported access pro
 ## Build runtime packages
 
 Open `packages/ERDCards.groupproj` in RAD Studio. It builds Core, CryptoWindows,
-CryptoOpenSSL, PCSC, EID, EMV, MagStripe, Contactless, Memory and Input, followed by the design
+CryptoOpenSSL, PCSC, EID, EMV, MagStripe, Contactless, Memory, Input and TWN4, followed by the design
 package. The order keeps dependencies before their consumers. Either cryptographic
 provider can be omitted when building packages individually and it is not needed.
 Each runtime unit has one runtime-package owner. The standalone design package
@@ -72,7 +72,7 @@ its `DesignIntf` unit is a headless FPC test shim.
 
 The `ERD Cards` palette contains `TSmartCardReader`, `TBelgianEIDReader`,
 `TICAODocumentReader`, `TEMVCardReader`, `TMagStripeReaderWriter`, `TMemoryCardReaderWriter`, `TSleCounterCardReaderWriter` and `TSle4404CardReaderWriter`.
-`ERD Input` contains `TRfidKeyboardReader` and `TRfidHidReportReader`.
+`ERD Input` contains `TRfidKeyboardReader`, `TRfidHidReportReader` and `TTwn4CardReaderWriter`.
 `ERD Contactless` contains `TContactlessCardReader`, `TType2NdefCardReader`,
 `TType4NdefCardReader`, `TIso15693CardReader`, `TType5NdefCardReader`,
 `TDesfireCardReader`, `TType2PasswordCardReader` and `TRawUidProgrammer`.

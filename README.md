@@ -5,7 +5,7 @@ De oude CardStudio-applicatie is vervangen door losse componenten, tools en voor
 Betalingen vallen buiten de huidige scope.
 
 **Status:** bestaande packages bouwen en installeren volgens de Delphi-hertest van
-de gebruiker zonder warnings. De nieuwe memoryprofielen en het zelfstandige
+de gebruiker zonder warnings. De nieuwe Memory/Input/TWN4-profielen en het zelfstandige
 designpackage moeten nog in Delphi en met echte lezers/kaarten worden getest.
 Beoogd platform: **Delphi 10.4+, Windows Win32/Win64**.
 
@@ -27,6 +27,7 @@ Beoogd platform: **Delphi 10.4+, Windows Win32/Win64**.
 | SLE-counterchips | `TSleCounterCardReaderWriter` | SLE4406/4436/5536/6636 via ACR38x CCID: publiek lezen, bit/carry/backup-programmering met controle en ruwe certificaatberekening; expliciet leesvenster vereist. |
 | SLE4404 | `TSle4404CardReaderWriter` | ACR38x CCID: publiek/beveiligd lezen, user-codecontrole, bitprogrammering en expliciete scratchpad/applicatie-erases met terugleescontrole; bekende layout vereist. |
 | USB-HID RFID | `TRfidKeyboardReader`, `TRfidHidReportReader` | Keyboard-input en host-aangeleverde 8/9-byte toetsenbordreports of vaste ASCII-velden; expliciete ASCII/hex/decimale profielen. |
+| ELATEC TWN4 | `TTwn4CardReaderWriter` | PRS/USB-CDC: tag-ID, Classic-blokken met aangeleverde sleutel en publieke Type 2-pagina’s lezen/geverifieerd schrijven; geschikte firmware vereist. |
 | Tools | Losse codecs en catalogs | APDU, ATR, BER-TLV, hex/bytes, MRZ, NDEF, magstripe-pariteit/LRC en ATR/EMV-metadata. |
 
 **Schrijfcontrole:** MSR206/MSR605-programmering levert apparaatstatus; MSR206-7HL
@@ -48,7 +49,7 @@ Lezerondersteuning en kaartondersteuning zijn afzonderlijk: het juiste protocolp
 
 ## Packages en voorbeelden
 
-- **10 runtime packages** en **1 zelfstandig design-time package** met **18 palette-componenten**. Runtimecomponenten hebben geen VCL/design-time-afhankelijkheid; het palette bevat zijn benodigde sources expliciet en vereist geen ERD-runtime-BPL's.
+- **11 runtime packages** en **1 zelfstandig design-time package** met **19 palette-componenten**. Runtimecomponenten hebben geen VCL/design-time-afhankelijkheid; het palette bevat zijn benodigde sources expliciet en vereist geen ERD-runtime-BPL's.
 - **SmartCardDemo:** offline NDEF, UID, Belgische eID/foto, ICAO/foto, EMV-applicatiedetectie, DESFire-versie, Type 2/4 NDEF-vervanging en een contact-memorypagina met PIN, geverifieerde writes, counter/SLE4404-reads, expliciete ACS-profielcapabilities en een RFID-keyboardinvoertab.
 - **MagStripeDemo:** offline trackcontrole, swipes lezen en geverifieerd schrijven via MSR206-7HL.
 - **Consolevoorbeelden** voor de afzonderlijke componenten en uitgebreidere beheeroperaties.
@@ -79,7 +80,7 @@ waarbij de compilerarchitectuur moet overeenkomen met de **IDE**, niet noodzakel
 - [Installatie en packages](docs/INSTALLATION.md) · [VCL-demo’s en teststappen](docs/VCL_DEMOS.md)
 - [Magstripe](docs/MAGSTRIPE.md) · [Belgische eID](docs/BELGIAN_EID.md) · [Europese eID/ICAO](docs/EUROPEAN_EID.md) · [EMV](docs/EMV_READER.md)
 - [Contactless/MIFARE](docs/CONTACTLESS.md) · [DESFire](docs/DESFIRE.md) · [UID-profielen](docs/PROGRAMMABLE_UID.md) · [ISO 15693/Type 5](docs/ISO15693_TYPE5.md)
-- [Contact-memorykaarten](docs/MEMORY_CARDS.md) · [SLE4404](docs/SLE4404.md) · [USB-HID RFID](docs/RFID_HID.md) · [Delphi-problemen en oplossingen](docs/DELPHI_PROBLEMEN.md)
+- [Contact-memorykaarten](docs/MEMORY_CARDS.md) · [SLE4404](docs/SLE4404.md) · [USB-HID RFID](docs/RFID_HID.md) · [TWN4-geheugen](docs/TWN4.md) · [Aangeleverde reader-modellen](docs/RFID_READER_MODELS.md) · [Delphi-problemen en oplossingen](docs/DELPHI_PROBLEMEN.md)
 - [Planning](docs/COMPONENT_PLAN.md) · [Validatieresultaten](docs/VALIDATION.md) · [API-documentatiestandaard](docs/API_DOCUMENTATION.md)
 
 Alle publieke API’s hebben Delphi XML-documentatie voor Help Insight.

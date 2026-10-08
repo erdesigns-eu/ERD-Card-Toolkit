@@ -1,21 +1,21 @@
 # Library validation record
 
 The complete protocol/component/example suite was rebuilt and rerun in Linux on
-2026-10-08 after adding ordinary/counter memory, SLE4404 and USB-HID RFID input,
+2026-10-08 after adding ordinary/counter memory, SLE4404, USB-HID RFID input and TWN4 memory,
 the VCL memory/RFID pages and standalone design bundle, starting from the
-maintainer's latest IDE changes (`951ea62`). The full run passed **1,952,523 assertions
-across 35 program runs**: 1,789,463 existing protocol assertions, 65,619 RFID
+maintainer's latest IDE changes (`951ea62`). The full run passed **2,080,220 assertions
+across 36 program runs**: 1,789,463 existing protocol assertions, 65,619 RFID
 input/profile, 60,114 SLE4404, 34,280 counter/profile, 2,955 ordinary-memory,
-73 demo-worker and 19 registration assertions. All 34 Python regression tests,
-21 Pascal readers on 115 sources and distribution checks for thirteen projects passed.
+73 demo-worker, 127,696 TWN4 and 20 registration assertions. All 34 Python regression tests,
+21 Pascal readers on 119 sources and distribution checks for fourteen projects passed.
 
 The maintainer confirmed warning-free compilation and installation of the prior
 packages in RAD Studio 12 (Studio 23.0), Debug/Win32. Both VCL demos subsequently
 reported EThread during startup; the shared post-construction StartWork fix was
 merged. The maintainer also intentionally removed the design package's runtime
 BPL dependencies after an installation failure. This follow-up keeps that choice
-and explicitly bundles all 43 registration/runtime source units. Fresh Delphi
-builds and IDE installation of this new bundle/Memory/Input packages, VCL execution,
+and explicitly bundles all 44 registration/runtime source units. Fresh Delphi
+builds and IDE installation of this new bundle/Memory/Input/TWN4 packages, VCL execution,
 Help Insight and physical memory-card compatibility remain unverified.
 
 | Check | Result |
@@ -33,6 +33,7 @@ Help Insight and physical memory-card compatibility remain unverified.
 | Belgian eID decoders and reader | 1821 assertions in seven groups passed using synthetic exact APDU transcripts |
 | ICAO MRZ and DG1/DG2 data codecs | 297 assertions passed: published MRZ examples, synthetic FAC/CBEFF records and malformed inputs |
 | EMV data codecs, application reader and diagnostics | 1605 assertions in nine groups passed, including exact PSE/PPSE/GPO/AFL/GET DATA/log transcripts and resource limits |
+| TWN4 PRS/CDC memory | 127696 assertions passed: literal ASCII/CRC/tag/Classic/Type 2 chains, all byte-I/O failure boundaries and block/page read-back bits, stale/changed IDs/content, both key types, no-ops, pre/post-dispatch deadlines/reversal, ownership and cleanup; native TWN4 hardware not tested |
 | RFID input/report profiles | 65619 assertions passed: exhaustive two-byte decimal conversion plus independent wide/overflow vectors, literal boot/report-ID/ASCII fields, framing/deadlines/discard recovery, held keys/errors, event ownership and reentrancy; no physical USB opening |
 | SLE4404 | 60114 assertions passed: literal code/program/scratchpad/application erase transcripts, budgets/success proof, all I/O boundaries and read-back bits, chunking, stale state, owned caller buffers and release uncertainty; no physical card |
 | Contact memory profiles | 2955 assertions in nine groups passed: nineteen geometries, literal ACR38/ACR39/SLE/PIN/protection/page/bank transcripts, wrong/blocked retry counters, every write/PIN-chain I/O failure, every acknowledgement status/read-back data bit, no-op/locked ranges, release evidence, credential copies and acquisition recovery; no physical chip access |
@@ -49,14 +50,14 @@ Help Insight and physical memory-card compatibility remain unverified.
 | Native Windows serial branches | 48 assertions passed against a Linux C ABI shim, including complete 8N1 status programming and 7O1 acquired verified-writing component/adapter/COM transcripts |
 | Native Windows adapter branches | 38 assertions passed against an isolated Linux C ABI shim |
 | Native Windows CNG branches | 51 assertions passed: native argument/length/IV handling, every encrypt/decrypt call failure, handle cleanup and system RNG failure without fallback |
-| Console examples | All seventeen built; hardware-free help/inspection checks passed, including SLE4404 help/window and invalid-before-hardware checks, memory-model geometry and DESFire key/access administration offline help/plan, ICAO help/CardAccess inspection, DESFire management offline help/plan and invalid arguments, APDU/NDEF/Type 4/Type 5/DESFire valid/invalid cases, ATR known/unknown/bad-TCK and EMV known/private tags, magstripe parity and MSR206 frame/status cases |
+| Console examples | All eighteen built; hardware-free help/inspection checks passed, including TWN4 offline framing/help and SLE4404 help/window and invalid-before-hardware checks, memory-model geometry and DESFire key/access administration offline help/plan, ICAO help/CardAccess inspection, DESFire management offline help/plan and invalid arguments, APDU/NDEF/Type 4/Type 5/DESFire valid/invalid cases, ATR known/unknown/bad-TCK and EMV known/private tags, magstripe parity and MSR206 frame/status cases |
 | Demo worker and offline operations | 73 assertions passed in the VCL-start follow-up: real worker/caller separation, request ownership, single delivery, join, nil executor, sanitized errors, verified-write evidence, offline operations and hardware preflight, suspended destruction, duplicate start and completed restart |
-| Palette registration / RTL streaming | 19 assertions passed: actual Register routine captures eighteen classes; inactive construction and FPC component stream round-trip for each; DesignIntf capture is not an IDE/ABI test |
+| Palette registration / RTL streaming | 20 assertions passed: actual Register routine captures nineteen classes; inactive construction and FPC component stream round-trip for each; DesignIntf capture is not an IDE/ABI test |
 | Distribution / VCL source readers | Twelve MSBuild projects (all four Debug/Release × Win32/Win64 property combinations), two groups and two DFM forms passed: references, package ownership/order, explicit IDE package identity, native Base/configuration/platform activation, GenDll/GenPackage, named DCP dependencies, native integer-overflow/debug settings, BOM/CRLF/resources, runtime/design dependency separation, palette completeness, field/event bindings, form creation and Platform/Config output isolation; no Delphi/VCL execution |
 | FPC range/overflow/heap checks | Passed; no unfreed allocations in passing test programs |
 | Python checker regression tests | All 34 passed, including nineteen distribution-reader cases; coverage includes IDE package identity, native configuration inheritance, omitted empty IDE platform groups, owning-package dependencies, explicit standalone design copies without dependency-owned duplicates, group target order, named DCPs, resources, BOM/CRLF, compiler property types and bounded condition parsing |
-| Pascalcheck core profile | All 21 readers passed on 115 explicitly selected source files |
-| XML documentation | 1553 visible production API declarations inspected; zero findings; exported test-vector declarations also pass the full profile |
+| Pascalcheck core profile | All 21 readers passed on 119 explicitly selected source files |
+| XML documentation | 1584 visible production API declarations inspected; zero findings; exported test-vector declarations also pass the full profile |
 | Reference integrity | All 26 retained files match the original Git bytes and manifest hashes |
 | Patch whitespace | `git diff --check` passed |
 
@@ -79,13 +80,13 @@ It uses the host Linux ABI, not Windows calling conventions or an actual driver.
 
 FPC reports an intentional private-constructor warning for the internal TLV
 constructor, a platform-dependent unreachable branch in the test handle factory,
-and unused test-result variable notes. None has been suppressed. Production RFID/SLE4404/PCSC
+and unused test-result variable notes. None has been suppressed. Production TWN4/RFID/SLE4404/PCSC
 and eID/EMV/contactless units compile without additional FPC warnings in the tested branches.
 
-The suite reported 1,952,523 passing assertions across 35 program runs, including
+The suite reported 2,080,220 passing assertions across 36 program runs, including
 65,619 RFID, 60,114 SLE4404, 34,280 counter/profile, 2,955 memory-card,
-73 demo-worker and 19 registration assertions.
-The full 21-reader profile covers 115 Pascal sources, including the VCL units.
+73 demo-worker, 127,696 TWN4 and 20 registration assertions.
+The full 21-reader profile covers 119 Pascal sources, including the VCL units.
 Only the non-VCL worker/executor and inactive component registration/streaming
 were compiled/executed under FPC. The actual forms, MSBuild projects, package BPLs
 and batch scripts require [Delphi/Windows validation](INSTALLATION.md).
@@ -97,7 +98,7 @@ lengths/padding, exact AID/MF/DF/EF selection, grouped reads, optional certifica
 states, bounded 61xx/6Cxx handling, EOF probes, 15-bit offsets, partial failures,
 no transport replay and transaction-release exception precedence. Its JPEG and
 certificate payloads are synthetic protocol fixtures, not decoded image or X.509
-validation tests. A total of 1952523 Pascal assertions passed across 35 test-program
+validation tests. A total of 2080220 Pascal assertions passed across 36 test-program
 runs, including all three native ABI shims and the crypto/DESFire suites repeated
 through the actual CNG adapter.
 NDEF tests exercise complete MB/ME/chunk framing, independent Text/URI vectors,
