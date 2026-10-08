@@ -243,5 +243,26 @@ alpha `414C494345FF` → `ALICE`. Controleer daarna reader/ICCID, metadata en
 read-only records. Test writes alleen met een test-SIM en exact uitgelezen beforebytes.
 De terugleesstatus en eventuele cleanup-onzekerheid moeten zichtbaar blijven.
 Standalone contacten met CCP/EXT-links worden expliciet geweigerd. Ruwe SMS-records
-blijven volledig behouden; er is geen SMS-verzendactie. Compileer alle negen demos
+blijven volledig behouden; er is geen SMS-verzendactie. Compileer alle twaalf demos
 Win32/Win64: de gedeelde executors gebruiken nu ook `src/sim`.
+
+## MifareClassicDemo, Type2Demo en Type4NdefDemo
+
+Deze projecten gebruiken expliciet het PC/SC storage-profiel (Classic/Type 2)
+of ISO APDU's (Type 4). Readerondersteuning voor dat profiel is vereist.
+
+- Classic: controleer offline layout/trailers, selecteer het werkelijke model,
+  block, reader-slot en aangeleverde A/B-key. Lees eerst. Manufacturer- en
+  trailerwrites blijven door de component geweigerd. De writeactie levert
+  uitsluitend readerstatus; lees zelf opnieuw voor een aparte controle.
+- Type 2: kies het werkelijke Ultralight/EV1/NTAG-model. Lees een fysieke pagina
+  of volledige gebruikerszone. Paginawrites zijn status-only; NDEF vervangen
+  of wissen gebruikt de bestaande volledige terugleescontrole. PWD_AUTH/PACK
+  via raw RF is nog niet in dit voorbeeld opgenomen.
+- Type 4: inspecteer offline CC `000F20003A00340406E10401000000`. Op hardware
+  kies je mapping 1.0/2.0 expliciet; lees CC en selecteer de werkelijke FID
+  (decimal 57604 voor E104). FID 0 werkt alleen met een ondubbelzinnige CC.
+  Proprietaire toegangsrechten worden niet als publieke NDEF behandeld.
+
+Geen constructor opent hardware. Test ack/ongeldige modellen/keys en beschermde
+pagina’s vóór writes op testkaarten; onzekere uitkomsten mogen niet worden herhaald.

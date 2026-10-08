@@ -1,8 +1,8 @@
 # VCL-voorbeelden: dekking en volgende uitbreiding
 
-Er zijn nu **negen runnable projecten**: SmartCardDemo, MagStripeDemo en de zeven
+Er zijn nu **twaalf runnable projecten**: SmartCardDemo, MagStripeDemo en de tien
 familiedemo’s ReaderToolsDemo, RfidInputDemo, Twn4Demo, MemoryCardDemo,
-SleCounterDemo, Sle4404Demo en SimCardDemo. De nieuwe projecten delen formulier-, invoer- en
+SleCounterDemo, Sle4404Demo, SimCardDemo, MifareClassicDemo, Type2Demo en Type4NdefDemo. De nieuwe projecten delen formulier-, invoer- en
 workerbasis. Hun Delphi/Windows/UI- en hardwaretests staan nog open. De overige
 projectnamen hieronder zijn gepland. Betalingen blijven buiten scope.
 
@@ -14,9 +14,9 @@ projectnamen hieronder zijn gepland. Betalingen blijven buiten scope.
 | BelgianEidDemo | Identiteit, adres, foto opslaan, beschikbare certificaten en ruwe handtekeningen exporteren | Identiteit/adres/foto in SmartCardDemo; volledige bestandsexport ontbreekt |
 | IcaoDocumentDemo | BAC/PACE, MRZ/CAN, CardAccess/DG1/DG2/COM/SOD, alle foto's bekijken/opslaan en ruwe bestanden exporteren | Toegang en identiteit/eerste foto in SmartCardDemo; volledige export en alle foto's ontbreken |
 | EmvDemo | PSE/PPSE, expliciete applicatie/PDOL, GPO/AFL/records, beschikbare bankvelden, GET DATA en transactielogs; offline EMV/TLV-diagnostiek | Alleen applicatiedetectie in SmartCardDemo |
-| MifareClassicDemo | Mini/1K/4K-layout, aangeleverde sleutel A/B, blokken lezen en ondersteunde datablokken geverifieerd schrijven | Alleen algemene UID-uitlezing in SmartCardDemo |
-| Type2Demo | Ultralight/EV1/NTAG-modellen, pagina's/geheugen lezen, gebruikerspagina's schrijven, ondersteunde PWD_AUTH/PACK-profielen en Type 2 NDEF | Publieke NDEF lezen/vervangen in SmartCardDemo; pagina's en beveiligde toegang ontbreken |
-| Type4NdefDemo | Ondersteunde capability/file-selectie en publieke NDEF lezen/vervangen met terugleescontrole | Lezen/vervangen in SmartCardDemo; apart voorbeeld en inspectie ontbreken |
+| MifareClassicDemo | Mini/1K/4K-layout, aangeleverde sleutel A/B, blokken lezen en ondersteunde datablokken geverifieerd schrijven | Apart project aanwezig: UID, offline trailerlayout, aangeleverde A/B-sleutel en slot, blokreads en datablokwrites met statusreceipt; onafhankelijke blokwrite-verificatie ontbreekt in dit PC/SC-profiel |
+| Type2Demo | Ultralight/EV1/NTAG-modellen, pagina's/geheugen lezen, gebruikerspagina's schrijven, ondersteunde PWD_AUTH/PACK-profielen en Type 2 NDEF | Apart project aanwezig: UID, fysieke pagina’s, volledig user-memorysnapshot, status-only paginawrites en geverifieerde NDEF-read/write/clear; PWD_AUTH/PACK-demo volgt |
+| Type4NdefDemo | Ondersteunde capability/file-selectie en publieke NDEF lezen/vervangen met terugleescontrole | Apart project aanwezig: offline/full CC, alle filedescriptors, expliciete mapping/FID, public NDEF-read/write/clear met controle |
 | Iso15693Demo | Expliciete readerbackend, systeeminformatie, UID/wire-volgorde, blokken/status lezen en schrijven, publiek Type 5 NDEF | Nog geen VCL-voorbeeld |
 | UidProgrammingDemo | Alle geïmplementeerde UID-profielen, expliciete kaart/readerkeuze, verwachte beginstaat, behoud van metadata, programmeeruitkomst en afzonderlijke RF-verificatie | Nog geen VCL-voorbeeld |
 | DesfireDemo | Publieke informatie; EV1/EV2 AES, bestanden/waarden/records, writes, backuptransacties/commit/abort, directories, applicatie/bestandbeheer en sleutel/toegangsbeheer | Alleen publieke versie in SmartCardDemo |

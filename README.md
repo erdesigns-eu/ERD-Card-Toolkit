@@ -6,7 +6,7 @@ Betalingen vallen buiten de huidige scope.
 
 **Status:** bestaande packages bouwen en installeren volgens de Delphi-hertest van
 de gebruiker zonder warnings. De nieuwe Memory/Input/TWN4-profielen en het zelfstandige
-designpackage en de zeven nieuwe VCL-familiedemo’s en SIM/USIM-package moeten nog in Delphi en met echte lezers/kaarten worden getest.
+designpackage en de tien nieuwe VCL-familiedemo’s en SIM/USIM-package moeten nog in Delphi en met echte lezers/kaarten worden getest.
 Beoogd platform: **Delphi 10.4+, Windows Win32/Win64**.
 
 ## Wat zit erin?
@@ -54,9 +54,9 @@ Lezerondersteuning en kaartondersteuning zijn afzonderlijk: het juiste protocolp
 - **12 runtime packages** en **1 zelfstandig design-time package** met **20 palette-componenten**. Runtimecomponenten hebben geen VCL/design-time-afhankelijkheid; het palette bevat zijn benodigde sources expliciet en vereist geen ERD-runtime-BPL's.
 - **SmartCardDemo:** offline NDEF, UID, Belgische eID/foto, ICAO/foto, EMV-applicatiedetectie, DESFire-versie, Type 2/4 NDEF-vervanging en een contact-memorypagina met PIN, geverifieerde writes, counter/SLE4404-reads, expliciete ACS-profielcapabilities en een RFID-keyboardinvoertab.
 - **MagStripeDemo:** offline trackcontrole, swipes lezen en geverifieerd schrijven via MSR206-7HL.
-- **Zeven losse familiedemo’s:** ReaderToolsDemo (APDU/ATR/TLV/NDEF en readerstatus), RfidInputDemo (keyboard/HID-profielen en conversie), Twn4Demo (PRS/CDC), MemoryCardDemo (SLE/I²C, PIN-vervanging/bescherming), SleCounterDemo en Sle4404Demo (programmering en ondersteunde beveiligde toegang/erases), SimCardDemo (SIM/USIM, bestanden/records, PIN en contacten).
+- **Tien losse familiedemo’s:** ReaderToolsDemo (APDU/ATR/TLV/NDEF en readerstatus), RfidInputDemo (keyboard/HID-profielen en conversie), Twn4Demo (PRS/CDC), MemoryCardDemo (SLE/I²C, PIN-vervanging/bescherming), SleCounterDemo en Sle4404Demo (programmering en ondersteunde beveiligde toegang/erases), SimCardDemo (SIM/USIM, bestanden/records, PIN en contacten), MifareClassicDemo (layout/blokken), Type2Demo (pagina’s/geheugen/NDEF) en Type4NdefDemo (CC/bestanden/NDEF).
 - **Consolevoorbeelden** voor de afzonderlijke componenten en uitgebreidere beheeroperaties.
-- **VCL-dekking:** de huidige demo’s tonen nog niet alle API-functies. De zeven familiedemo’s delen hun formulier- en workerbasis. eID/ICAO, uitgebreid EMV, overige contactless en aanvullende magstripevoorbeelden volgen; zie [de concrete checklist](docs/VCL_COVERAGE.md).
+- **VCL-dekking:** de huidige demo’s tonen nog niet alle API-functies. De tien familiedemo’s delen hun formulier- en workerbasis. eID/ICAO, uitgebreid EMV, beveiligde Type 2, ISO 15693/UID/DESFire en aanvullende magstripevoorbeelden volgen; zie [de concrete checklist](docs/VCL_COVERAGE.md).
 
 De VCL-demo’s voeren kaartoperaties op een achtergrondthread uit en linken de source
 rechtstreeks. Palette-installatie is daarvoor niet nodig. Interfaces zoals transport,

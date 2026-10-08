@@ -359,9 +359,73 @@ begin
   end;
 end;
 
+procedure TestStorageDemos;
+var F: TCardDemoFamily; Actions: TCardFamilyActions; R: TCardDemoRequest; D: TCardDemoResult;
+  H: THardware; Hardware: ICardFamilyHardware; S: TScript; T: ICardTransport; I,J,K,Prev: Integer; Reached,Failed: Boolean;
+begin
+  for F := dfClassic to dfType4 do
+  begin
+    Actions := CardFamilyActions(F); H := THardware.Create; Hardware := H;
+    for I := 0 to High(Actions) do
+      if Actions[I].Pcsc then
+      begin
+        R := Request(F,Actions[I].Id); Put(R,F,'key','000102030405');
+        if F = dfClassic then Put(R,F,'data','000102030405060708090A0B0C0D0E0F');
+        if F = dfType2 then begin Put(R,F,'data','00010203'); Put(R,F,'page','4'); end; Put(R,F,'ndef','D101055402656E4869');
+        Reached := False; try CreateCardFamilyOperations(F,Hardware).Run(R,D); except on E: EReachedHardware do Reached := True; end;
+        Check(Reached,'Valid storage action acquisition '+Actions[I].Id);
+        Prev := H.Acquires;
+        if Actions[I].Mutation then
+        begin R.MutationAcknowledged := False; Failed := False;
+          try CreateCardFamilyOperations(F,Hardware).Run(R,D); except on E: EArgumentException do Failed := True; end;
+          Check(Failed and (H.Acquires = Prev),'Storage acknowledgement preflight'); R.MutationAcknowledged := True; end;
+        for J := 0 to High(Actions[I].Fields) do
+          if Actions[I].Fields[J].Choices <> '' then
+          begin
+            R.Arguments[J] := '-1'; Failed := False;
+            try CreateCardFamilyOperations(F,Hardware).Run(R,D); except on E: EArgumentException do Failed := True; end;
+            Check(Failed and (H.Acquires = Prev),'Storage enum preflight'); R.Arguments[J] := '0';
+          end;
+      end;
+    Hardware := nil;
+  end;
+  R := Request(dfClassic,'layout'); CreateCardFamilyOperations(dfClassic).Run(R,D);
+  Check(Pos('3 trailer True',string(D.Text)) > 0,'Classic offline sector trailer');
+  R := Request(dfType4,'decodecc'); CreateCardFamilyOperations(dfType4).Run(R,D);
+  Check(Pos('FID E104 capacity 256 read 00 write 00',string(D.Text)) > 0,'Literal CC offline inspection');
+  for K := 0 to 4 do
+  begin
+    S := TScript.Create; T := S; H := THardware.Create; Hardware := H; H.Transport := T;
+    if K < 2 then
+    begin
+      F := dfClassic; if K = 0 then R := Request(F,'read') else R := Request(F,'write');
+      Put(R,F,'key','000102030405'); Put(R,F,'data','000102030405060708090A0B0C0D0E0F');
+      S.Add('FF82000006000102030405','9000'); S.Add('FF860000050100016000','9000');
+      if K = 0 then S.Add('FFB0000110','000102030405060708090A0B0C0D0E0F9000')
+      else S.Add('FFD6000110000102030405060708090A0B0C0D0E0F','9000');
+    end
+    else if K < 4 then
+    begin
+      F := dfType2; if K = 2 then R := Request(F,'page') else R := Request(F,'writepage');
+      Put(R,F,'page','4'); Put(R,F,'data','00010203');
+      if K = 2 then S.Add('FFB0000404','000102039000') else S.Add('FFD600040400010203','9000');
+    end
+    else
+    begin
+      F := dfType4; R := Request(F,'capabilities'); Put(R,F,'version','1');
+      S.Add('00A4040007D276000085010100','9000'); S.Add('00A4000C02E103','9000'); S.Add('00B000000F','000F20003A00340406E104010000009000');
+    end;
+    CreateCardFamilyOperations(F,Hardware).Run(R,D);
+    Check(D.Success and (S.Position = Length(S.Steps)) and (S.Begins = 1) and (S.Ends = 1),'Complete storage transcript');
+    Check((H.Acquires = 1) and (H.Releases = 1),'Storage connection lifetime');
+    if K in [1,3] then Check(not D.WriteVerified and (Pos('independent read-back has not',string(D.Text)) > 0),'Status receipt is not read-back proof');
+    Hardware := nil; T := nil;
+  end;
+end;
+
 begin
   try
-    TestSimRoutes; TestOffline; TestPreflight; TestCounterAndSleRoutes;
+    TestStorageDemos; TestSimRoutes; TestOffline; TestPreflight; TestCounterAndSleRoutes;
     TestTwnRoutes(0,False); TestTwnRoutes(1,False); TestTwnRoutes(2,False); TestTwnRoutes(3,False); TestTwnRoutes(3,True);
     TestMemoryWrite(-1,False,False); TestMemoryWrite(6,False,False);
     TestMemoryWrite(7,False,False); TestMemoryWrite(-1,True,False); TestMemoryWrite(-1,False,True);

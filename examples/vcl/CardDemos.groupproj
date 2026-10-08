@@ -30,6 +30,15 @@
       <Projects Include="simcard\SimCardDemo.dproj">
             <Dependencies/>
         </Projects>
+    <Projects Include="mifareclassic\MifareClassicDemo.dproj">
+            <Dependencies/>
+        </Projects>
+    <Projects Include="type2\Type2Demo.dproj">
+            <Dependencies/>
+        </Projects>
+    <Projects Include="type4ndef\Type4NdefDemo.dproj">
+            <Dependencies/>
+        </Projects>
   </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -119,14 +128,41 @@
     <Target Name="SimCardDemo:Make">
         <MSBuild Projects="simcard\SimCardDemo.dproj" Targets="Make"/>
     </Target>
+    <Target Name="MifareClassicDemo">
+        <MSBuild Projects="mifareclassic\MifareClassicDemo.dproj"/>
+    </Target>
+    <Target Name="MifareClassicDemo:Clean">
+        <MSBuild Projects="mifareclassic\MifareClassicDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MifareClassicDemo:Make">
+        <MSBuild Projects="mifareclassic\MifareClassicDemo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Type2Demo">
+        <MSBuild Projects="type2\Type2Demo.dproj"/>
+    </Target>
+    <Target Name="Type2Demo:Clean">
+        <MSBuild Projects="type2\Type2Demo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Type2Demo:Make">
+        <MSBuild Projects="type2\Type2Demo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Type4NdefDemo">
+        <MSBuild Projects="type4ndef\Type4NdefDemo.dproj"/>
+    </Target>
+    <Target Name="Type4NdefDemo:Clean">
+        <MSBuild Projects="type4ndef\Type4NdefDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Type4NdefDemo:Make">
+        <MSBuild Projects="type4ndef\Type4NdefDemo.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="MagStripeDemo;SmartCardDemo;ReaderToolsDemo;MemoryCardDemo;SleCounterDemo;Sle4404Demo;Twn4Demo;RfidInputDemo;SimCardDemo"/>
+        <CallTarget Targets="MagStripeDemo;SmartCardDemo;ReaderToolsDemo;MemoryCardDemo;SleCounterDemo;Sle4404Demo;Twn4Demo;RfidInputDemo;SimCardDemo;MifareClassicDemo"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="MagStripeDemo:Clean;SmartCardDemo:Clean;ReaderToolsDemo:Clean;MemoryCardDemo:Clean;SleCounterDemo:Clean;Sle4404Demo:Clean;Twn4Demo:Clean;RfidInputDemo:Clean;SimCardDemo:Clean"/>
+        <CallTarget Targets="MagStripeDemo:Clean;SmartCardDemo:Clean;ReaderToolsDemo:Clean;MemoryCardDemo:Clean;SleCounterDemo:Clean;Sle4404Demo:Clean;Twn4Demo:Clean;RfidInputDemo:Clean;SimCardDemo:Clean;MifareClassicDemo:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="MagStripeDemo:Make;SmartCardDemo:Make;ReaderToolsDemo:Make;MemoryCardDemo:Make;SleCounterDemo:Make;Sle4404Demo:Make;Twn4Demo:Make;RfidInputDemo:Make;SimCardDemo:Make"/>
+        <CallTarget Targets="MagStripeDemo:Make;SmartCardDemo:Make;ReaderToolsDemo:Make;MemoryCardDemo:Make;SleCounterDemo:Make;Sle4404Demo:Make;Twn4Demo:Make;RfidInputDemo:Make;SimCardDemo:Make;MifareClassicDemo:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

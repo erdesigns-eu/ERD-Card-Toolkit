@@ -22,7 +22,13 @@ type
     /// <summary>Rfid family demonstration.</summary>
     dfRfid,
     /// <summary>Sim family demonstration.</summary>
-    dfSim
+    dfSim,
+    /// <summary>Classic family demonstration.</summary>
+    dfClassic,
+    /// <summary>Type2 family demonstration.</summary>
+    dfType2,
+    /// <summary>Type4 family demonstration.</summary>
+    dfType4
   );
   /// <summary>One named form input; secrets are decoded to owned buffers, never stored as public arguments.</summary>
   TCardFamilyField = record
@@ -84,6 +90,9 @@ begin
     dfTwn4: Result := 'Twn4Demo';
     dfRfid: Result := 'RfidInputDemo';
     dfSim: Result := 'SimCardDemo';
+    dfClassic: Result := 'MifareClassicDemo';
+    dfType2: Result := 'Type2Demo';
+    dfType4: Result := 'Type4NdefDemo';
   else raise EArgumentException.Create('Unknown demo family.'); end;
 end;
 
@@ -826,6 +835,128 @@ begin
       Result[18].Fields[0].DefaultText := ''; Result[18].Fields[0].Secret := False; Result[18].Fields[0].Choices := '';
       Result[18].Fields[1].Name := 'width'; Result[18].Fields[1].LabelText := 'Exact field byte width';
       Result[18].Fields[1].DefaultText := '16'; Result[18].Fields[1].Secret := False; Result[18].Fields[1].Choices := '';
+    end;
+    dfClassic:
+    begin
+      SetLength(Result,4);
+      Result[0].Id := 'uid'; Result[0].LabelText := 'Read reader-order UID';
+      Result[0].Mutation := False; Result[0].Pcsc := True;
+      SetLength(Result[0].Fields,0);
+      Result[1].Id := 'layout'; Result[1].LabelText := 'Offline block / trailer layout';
+      Result[1].Mutation := False; Result[1].Pcsc := False;
+      SetLength(Result[1].Fields,1);
+      Result[1].Fields[0].Name := 'classicmodel'; Result[1].Fields[0].LabelText := 'Actual Classic model';
+      Result[1].Fields[0].DefaultText := '0'; Result[1].Fields[0].Secret := False; Result[1].Fields[0].Choices := 'Mini|1K|4K';
+      Result[2].Id := 'read'; Result[2].LabelText := 'Authenticate + read block';
+      Result[2].Mutation := True; Result[2].Pcsc := True;
+      SetLength(Result[2].Fields,5);
+      Result[2].Fields[0].Name := 'classicmodel'; Result[2].Fields[0].LabelText := 'Actual Classic model';
+      Result[2].Fields[0].DefaultText := '0'; Result[2].Fields[0].Secret := False; Result[2].Fields[0].Choices := 'Mini|1K|4K';
+      Result[2].Fields[1].Name := 'block'; Result[2].Fields[1].LabelText := 'Physical block';
+      Result[2].Fields[1].DefaultText := '1'; Result[2].Fields[1].Secret := False; Result[2].Fields[1].Choices := '';
+      Result[2].Fields[2].Name := 'keytype'; Result[2].Fields[2].LabelText := 'Supplied key type';
+      Result[2].Fields[2].DefaultText := '0'; Result[2].Fields[2].Secret := False; Result[2].Fields[2].Choices := 'A|B';
+      Result[2].Fields[3].Name := 'key'; Result[2].Fields[3].LabelText := 'Supplied six-byte key (hex)';
+      Result[2].Fields[3].DefaultText := ''; Result[2].Fields[3].Secret := True; Result[2].Fields[3].Choices := '';
+      Result[2].Fields[4].Name := 'slot'; Result[2].Fields[4].LabelText := 'Actual volatile reader key slot';
+      Result[2].Fields[4].DefaultText := '0'; Result[2].Fields[4].Secret := False; Result[2].Fields[4].Choices := '';
+      Result[3].Id := 'write'; Result[3].LabelText := 'Write data block: status receipt only';
+      Result[3].Mutation := True; Result[3].Pcsc := True;
+      SetLength(Result[3].Fields,6);
+      Result[3].Fields[0].Name := 'classicmodel'; Result[3].Fields[0].LabelText := 'Actual Classic model';
+      Result[3].Fields[0].DefaultText := '0'; Result[3].Fields[0].Secret := False; Result[3].Fields[0].Choices := 'Mini|1K|4K';
+      Result[3].Fields[1].Name := 'block'; Result[3].Fields[1].LabelText := 'Physical block';
+      Result[3].Fields[1].DefaultText := '1'; Result[3].Fields[1].Secret := False; Result[3].Fields[1].Choices := '';
+      Result[3].Fields[2].Name := 'keytype'; Result[3].Fields[2].LabelText := 'Supplied key type';
+      Result[3].Fields[2].DefaultText := '0'; Result[3].Fields[2].Secret := False; Result[3].Fields[2].Choices := 'A|B';
+      Result[3].Fields[3].Name := 'key'; Result[3].Fields[3].LabelText := 'Supplied six-byte key (hex)';
+      Result[3].Fields[3].DefaultText := ''; Result[3].Fields[3].Secret := True; Result[3].Fields[3].Choices := '';
+      Result[3].Fields[4].Name := 'slot'; Result[3].Fields[4].LabelText := 'Actual volatile reader key slot';
+      Result[3].Fields[4].DefaultText := '0'; Result[3].Fields[4].Secret := False; Result[3].Fields[4].Choices := '';
+      Result[3].Fields[5].Name := 'data'; Result[3].Fields[5].LabelText := 'Replacement bytes (hex)';
+      Result[3].Fields[5].DefaultText := ''; Result[3].Fields[5].Secret := False; Result[3].Fields[5].Choices := '';
+    end;
+    dfType2:
+    begin
+      SetLength(Result,7);
+      Result[0].Id := 'uid'; Result[0].LabelText := 'Read reader-order UID';
+      Result[0].Mutation := False; Result[0].Pcsc := True;
+      SetLength(Result[0].Fields,0);
+      Result[1].Id := 'page'; Result[1].LabelText := 'Read explicit physical page';
+      Result[1].Mutation := False; Result[1].Pcsc := True;
+      SetLength(Result[1].Fields,2);
+      Result[1].Fields[0].Name := 'type2model'; Result[1].Fields[0].LabelText := 'Actual Type 2 model';
+      Result[1].Fields[0].DefaultText := '0'; Result[1].Fields[0].Secret := False; Result[1].Fields[0].Choices := 'Ultralight|EV1 48|EV1 128|NTAG213|NTAG215|NTAG216';
+      Result[1].Fields[1].Name := 'page'; Result[1].Fields[1].LabelText := 'Physical page';
+      Result[1].Fields[1].DefaultText := '4'; Result[1].Fields[1].Secret := False; Result[1].Fields[1].Choices := '';
+      Result[2].Id := 'memory'; Result[2].LabelText := 'Read full public user-memory snapshot';
+      Result[2].Mutation := False; Result[2].Pcsc := True;
+      SetLength(Result[2].Fields,1);
+      Result[2].Fields[0].Name := 'type2model'; Result[2].Fields[0].LabelText := 'Actual Type 2 model';
+      Result[2].Fields[0].DefaultText := '0'; Result[2].Fields[0].Secret := False; Result[2].Fields[0].Choices := 'Ultralight|EV1 48|EV1 128|NTAG213|NTAG215|NTAG216';
+      Result[3].Id := 'writepage'; Result[3].LabelText := 'Write user page: status receipt only';
+      Result[3].Mutation := True; Result[3].Pcsc := True;
+      SetLength(Result[3].Fields,3);
+      Result[3].Fields[0].Name := 'type2model'; Result[3].Fields[0].LabelText := 'Actual Type 2 model';
+      Result[3].Fields[0].DefaultText := '0'; Result[3].Fields[0].Secret := False; Result[3].Fields[0].Choices := 'Ultralight|EV1 48|EV1 128|NTAG213|NTAG215|NTAG216';
+      Result[3].Fields[1].Name := 'page'; Result[3].Fields[1].LabelText := 'Physical user page';
+      Result[3].Fields[1].DefaultText := '4'; Result[3].Fields[1].Secret := False; Result[3].Fields[1].Choices := '';
+      Result[3].Fields[2].Name := 'data'; Result[3].Fields[2].LabelText := 'Replacement bytes (hex)';
+      Result[3].Fields[2].DefaultText := ''; Result[3].Fields[2].Secret := False; Result[3].Fields[2].Choices := '';
+      Result[4].Id := 'readndef'; Result[4].LabelText := 'Read public NDEF';
+      Result[4].Mutation := False; Result[4].Pcsc := True;
+      SetLength(Result[4].Fields,1);
+      Result[4].Fields[0].Name := 'type2model'; Result[4].Fields[0].LabelText := 'Actual Type 2 model';
+      Result[4].Fields[0].DefaultText := '0'; Result[4].Fields[0].Secret := False; Result[4].Fields[0].Choices := 'Ultralight|EV1 48|EV1 128|NTAG213|NTAG215|NTAG216';
+      Result[5].Id := 'writendef'; Result[5].LabelText := 'Replace public NDEF + verify';
+      Result[5].Mutation := True; Result[5].Pcsc := True;
+      SetLength(Result[5].Fields,2);
+      Result[5].Fields[0].Name := 'type2model'; Result[5].Fields[0].LabelText := 'Actual Type 2 model';
+      Result[5].Fields[0].DefaultText := '0'; Result[5].Fields[0].Secret := False; Result[5].Fields[0].Choices := 'Ultralight|EV1 48|EV1 128|NTAG213|NTAG215|NTAG216';
+      Result[5].Fields[1].Name := 'ndef'; Result[5].Fields[1].LabelText := 'Complete NDEF message (hex)';
+      Result[5].Fields[1].DefaultText := ''; Result[5].Fields[1].Secret := False; Result[5].Fields[1].Choices := '';
+      Result[6].Id := 'clearndef'; Result[6].LabelText := 'Clear public NDEF + verify';
+      Result[6].Mutation := True; Result[6].Pcsc := True;
+      SetLength(Result[6].Fields,1);
+      Result[6].Fields[0].Name := 'type2model'; Result[6].Fields[0].LabelText := 'Actual Type 2 model';
+      Result[6].Fields[0].DefaultText := '0'; Result[6].Fields[0].Secret := False; Result[6].Fields[0].Choices := 'Ultralight|EV1 48|EV1 128|NTAG213|NTAG215|NTAG216';
+    end;
+    dfType4:
+    begin
+      SetLength(Result,5);
+      Result[0].Id := 'decodecc'; Result[0].LabelText := 'Offline capability-container inspection';
+      Result[0].Mutation := False; Result[0].Pcsc := False;
+      SetLength(Result[0].Fields,1);
+      Result[0].Fields[0].Name := 'hex'; Result[0].Fields[0].LabelText := 'Complete Type 4 CC (hex)';
+      Result[0].Fields[0].DefaultText := '000F20003A00340406E10401000000'; Result[0].Fields[0].Secret := False; Result[0].Fields[0].Choices := '';
+      Result[1].Id := 'capabilities'; Result[1].LabelText := 'Read full CC + file descriptors';
+      Result[1].Mutation := False; Result[1].Pcsc := True;
+      SetLength(Result[1].Fields,1);
+      Result[1].Fields[0].Name := 'version'; Result[1].Fields[0].LabelText := 'Explicit Type 4 mapping';
+      Result[1].Fields[0].DefaultText := '1'; Result[1].Fields[0].Secret := False; Result[1].Fields[0].Choices := 'Mapping 1.0|Mapping 2.0';
+      Result[2].Id := 'read'; Result[2].LabelText := 'Read public NDEF';
+      Result[2].Mutation := False; Result[2].Pcsc := True;
+      SetLength(Result[2].Fields,2);
+      Result[2].Fields[0].Name := 'version'; Result[2].Fields[0].LabelText := 'Explicit Type 4 mapping';
+      Result[2].Fields[0].DefaultText := '1'; Result[2].Fields[0].Secret := False; Result[2].Fields[0].Choices := 'Mapping 1.0|Mapping 2.0';
+      Result[2].Fields[1].Name := 'fileid'; Result[2].Fields[1].LabelText := 'Explicit NDEF file FID (decimal); 0 only if unambiguous';
+      Result[2].Fields[1].DefaultText := '0'; Result[2].Fields[1].Secret := False; Result[2].Fields[1].Choices := '';
+      Result[3].Id := 'write'; Result[3].LabelText := 'Replace public NDEF + verify';
+      Result[3].Mutation := True; Result[3].Pcsc := True;
+      SetLength(Result[3].Fields,3);
+      Result[3].Fields[0].Name := 'version'; Result[3].Fields[0].LabelText := 'Explicit Type 4 mapping';
+      Result[3].Fields[0].DefaultText := '1'; Result[3].Fields[0].Secret := False; Result[3].Fields[0].Choices := 'Mapping 1.0|Mapping 2.0';
+      Result[3].Fields[1].Name := 'fileid'; Result[3].Fields[1].LabelText := 'Explicit NDEF file FID (decimal); 0 only if unambiguous';
+      Result[3].Fields[1].DefaultText := '0'; Result[3].Fields[1].Secret := False; Result[3].Fields[1].Choices := '';
+      Result[3].Fields[2].Name := 'ndef'; Result[3].Fields[2].LabelText := 'Complete NDEF message (hex)';
+      Result[3].Fields[2].DefaultText := ''; Result[3].Fields[2].Secret := False; Result[3].Fields[2].Choices := '';
+      Result[4].Id := 'clear'; Result[4].LabelText := 'Clear public NDEF + verify';
+      Result[4].Mutation := True; Result[4].Pcsc := True;
+      SetLength(Result[4].Fields,2);
+      Result[4].Fields[0].Name := 'version'; Result[4].Fields[0].LabelText := 'Explicit Type 4 mapping';
+      Result[4].Fields[0].DefaultText := '1'; Result[4].Fields[0].Secret := False; Result[4].Fields[0].Choices := 'Mapping 1.0|Mapping 2.0';
+      Result[4].Fields[1].Name := 'fileid'; Result[4].Fields[1].LabelText := 'Explicit NDEF file FID (decimal); 0 only if unambiguous';
+      Result[4].Fields[1].DefaultText := '0'; Result[4].Fields[1].Secret := False; Result[4].Fields[1].Choices := '';
     end;
   else raise EArgumentException.Create('Unknown demo family.'); end;
 end;

@@ -49,6 +49,7 @@ uses
   ERD.Card.TLV, ERD.Card.EMV.Tags, ERD.Card.Ndef,
   ERD.Card.Memory, ERD.Card.Memory.Counter, ERD.Card.Memory.Sle4404,
   ERD.Card.SIM.Data, ERD.Card.SIM.Reader, ERD.Card.Memory.Capabilities, ERD.Card.PCSC.Reader,
+  ERD.Card.Contactless.Type2.Ndef, ERD.Card.Contactless.Type4.Ndef,
   ERD.Card.Contactless, ERD.Card.Contactless.Type2, ERD.Card.RFID.HID,
   ERD.Card.Reader.TWN4.Serial, ERD.Card.Demo.Operations;
 
@@ -206,6 +207,8 @@ end;
 procedure TFamilyOperations.Execute(const R: TCardDemoRequest; const A: TCardFamilyAction;
   const T: ICardTransport; const C: ITwn4ByteChannel; var D: TCardDemoResult);
 var M: TMemoryCardReaderWriter; S: TSleCounterCardReaderWriter; L: TSle4404CardReaderWriter;
+  Contact: TContactlessCardReader; T2: TType2NdefCardReader; T4: TType4NdefCardReader;
+  CC: TType4CapabilityContainer; T4Snapshot: TType4NdefSnapshot; T2Snapshot: TType2NdefSnapshot; UserMemory: TType2UserMemory;
   Sim: TSimCardReaderWriter; SF: TSimFileAddress; SI: TSimFileInfo; PS: TSimPinStatus;
   SR: TSimRecords; SC: TSimPhonebookEntries; SA: TSimApplications; SD: TSimApplicationInfo; SS: TSimServices; SP: TSimServiceProvider; SE: TSimPhonebookEntry; SM: TSimSmsRecord; PB: TSimPhonebookReferences;
   W: TTwn4CardReaderWriter; H: TRfidHidReportReader;
@@ -394,6 +397,69 @@ begin
           end else Fail;
         finally W.Free; end;
       end;
+      dfClassic, dfType2:
+      begin
+        Contact := TContactlessCardReader.Create(nil);
+        T2 := TType2NdefCardReader.Create(nil);
+        try
+          Contact.Transport := T; Contact.Profile := TPcscStorageProfile.Create;
+          T2.Transport := T; T2.Profile := TPcscStorageProfile.Create;
+          if A.Id = 'uid' then Output := BytesToHex(Contact.ReadUid)
+          else if FFamily = dfClassic then
+          begin
+            I := Number(R,A,'classicmodel',0,2);
+            if A.Id = 'layout' then
+            begin
+              for J := 0 to TMifareClassicLayout.BlockCount(TMifareClassicModel(I))-1 do
+                Output := Output+IntToStr(J)+' trailer '+BoolToStr(TMifareClassicLayout.IsTrailer(TMifareClassicModel(I),J),True)+sLineBreak;
+            end
+            else
+            begin
+              Address := Number(R,A,'block',0,255); Key := Bytes(R,A,'key'); J := Number(R,A,'keytype',0,1); N := Number(R,A,'slot',0,255);
+              if A.Id = 'read' then Output := BytesToHex(Contact.ReadClassicBlock(TMifareClassicModel(I),Address,TMifareClassicKeyType(J),Key,N))
+              else if A.Id = 'write' then begin Contact.WriteClassicDataBlock(TMifareClassicModel(I),Address,TMifareClassicKeyType(J),Key,Bytes(R,A,'data'),N); Output := 'Reader write status accepted; independent read-back has not been performed.'; end
+              else Fail;
+            end;
+          end
+          else
+          begin
+            I := Number(R,A,'type2model',0,5);
+            if A.Id = 'page' then Output := BytesToHex(Contact.ReadType2Page(TType2TagModel(I),Number(R,A,'page',0,255)))
+            else if A.Id = 'memory' then begin UserMemory := Contact.ReadType2UserMemory(TType2TagModel(I)); Output := BytesToHex(UserMemory.Data); end
+            else if A.Id = 'writepage' then begin Contact.WriteType2UserPage(TType2TagModel(I),Number(R,A,'page',0,255),Bytes(R,A,'data')); Output := 'Reader write status accepted; independent read-back has not been performed.'; end
+            else if A.Id = 'readndef' then begin T2Snapshot := T2.ReadMessage(TType2TagModel(I)); Output := BytesToHex(T2Snapshot.MessageBytes); end
+            else if A.Id = 'writendef' then begin Ndef := TNdefCodec.Decode(Bytes(R,A,'ndef')); T2.WriteMessage(TType2TagModel(I),Ndef); D.WriteVerified := True; Output := 'Type 2 NDEF independently verified.'; end
+            else if A.Id = 'clearndef' then begin T2.ClearMessage(TType2TagModel(I)); D.WriteVerified := True; Output := 'Type 2 empty NDEF independently verified.'; end
+            else Fail;
+          end;
+        finally T2.Free; Contact.Free; end;
+      end;
+      dfType4:
+      begin
+        T4 := TType4NdefCardReader.Create(nil);
+        try
+          T4.Transport := T;
+          if A.Id = 'decodecc' then CC := TType4NdefCodec.DecodeCapabilities(Bytes(R,A,'hex'))
+          else
+          begin
+            T4.ApplicationVersion := TType4ApplicationVersion(Number(R,A,'version',0,1));
+            if A.Id = 'capabilities' then CC := T4.ReadCapabilities
+            else
+            begin
+              Address := Number(R,A,'fileid',0,65535);
+              if A.Id = 'read' then begin T4Snapshot := T4.ReadMessage(Address); Output := BytesToHex(T4Snapshot.MessageBytes); end
+              else if A.Id = 'write' then begin Ndef := TNdefCodec.Decode(Bytes(R,A,'ndef')); T4.WriteMessage(Ndef,Address); D.WriteVerified := True; Output := 'Type 4 NDEF independently verified.'; end
+              else if A.Id = 'clear' then begin T4.ClearMessage(Address); D.WriteVerified := True; Output := 'Type 4 empty NDEF independently verified.'; end
+              else Fail;
+            end;
+          end;
+          if (A.Id = 'decodecc') or (A.Id = 'capabilities') then
+          begin
+            Output := 'Mapping '+IntToHex(CC.MappingVersion,2)+' MLe '+IntToStr(CC.MLe)+' MLc '+IntToStr(CC.MLc)+sLineBreak+BytesToHex(CC.RawBytes)+sLineBreak;
+            for I := 0 to High(CC.Files) do Output := Output+'FID '+IntToHex(CC.Files[I].FileId,4)+' capacity '+IntToStr(CC.Files[I].MaxFileBytes)+' read '+IntToHex(CC.Files[I].ReadAccess,2)+' write '+IntToHex(CC.Files[I].WriteAccess,2)+sLineBreak;
+          end;
+        finally T4.Free; end;
+      end;
       dfSim:
       begin
         if A.Id = 'encodealpha' then Output := BytesToHex(TSimCodec.EncodeAlpha(Text(R,A,'name'),Number(R,A,'width',0,255)))
@@ -518,6 +584,7 @@ begin
       try Execute(ARequest,A,T,C,AResult);
       except
         on E: EMemoryCardWriteUncertain do begin AResult.WriteUncertain := True; AResult.WriteVerified := E.Verified; raise; end;
+        on E: EContactlessWriteUncertain do begin AResult.WriteUncertain := True; raise; end;
         on E: ESimCardWriteUncertain do begin AResult.WriteUncertain := True; AResult.WriteVerified := E.VerifiedReadBack; raise; end;
         on E: ETwn4WriteUncertain do begin AResult.WriteUncertain := True; AResult.WriteVerified := E.VerifiedReadBack; raise; end;
       end;
