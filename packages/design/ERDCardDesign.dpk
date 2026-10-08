@@ -26,19 +26,11 @@
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
 {$IMPLICITBUILD ON}
-{$DESIGNONLY}
-{$DESCRIPTION 'ERD Card component palette'}
 
 requires
   rtl,
   vcl,
-  designide,
-  ERDCardCore,
-  ERDCardPCSC,
-  ERDCardEID,
-  ERDCardEMV,
-  ERDCardMagStripe,
-  ERDCardContactless;
+  designide;
 
 contains
   ERD.Card.Design.Register in '..\..\src\design\ERD.Card.Design.Register.pas';
