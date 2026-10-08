@@ -1,5 +1,9 @@
 # VCL read/write demos
 
+These two applications demonstrate a subset of the implemented APIs. Separate
+family demos with shared infrastructure are planned; the complete current/missing
+coverage is recorded in [VCL_COVERAGE.md](VCL_COVERAGE.md).
+
 Open `examples/vcl/CardDemos.groupproj` or either application's `.dproj` in RAD
 Studio. They link source directly, so installing the component palette is optional.
 From a RAD Studio command prompt:

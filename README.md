@@ -52,6 +52,7 @@ Lezerondersteuning en kaartondersteuning zijn afzonderlijk: het juiste protocolp
 - **SmartCardDemo:** offline NDEF, UID, Belgische eID/foto, ICAO/foto, EMV-applicatiedetectie, DESFire-versie, Type 2/4 NDEF-vervanging en een contact-memorypagina met PIN, geverifieerde writes, counter/SLE4404-reads, expliciete ACS-profielcapabilities en een RFID-keyboardinvoertab.
 - **MagStripeDemo:** offline trackcontrole, swipes lezen en geverifieerd schrijven via MSR206-7HL.
 - **Consolevoorbeelden** voor de afzonderlijke componenten en uitgebreidere beheeroperaties.
+- **VCL-dekking:** de huidige demo’s tonen nog niet alle API-functies. Losse demo’s per kaartfamilie met gedeelde basiscode zijn de volgende uitbreiding; zie [de concrete checklist](docs/VCL_COVERAGE.md).
 
 De VCL-demo’s voeren kaartoperaties op een achtergrondthread uit en linken de source
 rechtstreeks. Palette-installatie is daarvoor niet nodig. Interfaces zoals transport,

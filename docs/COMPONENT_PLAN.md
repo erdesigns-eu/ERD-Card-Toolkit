@@ -115,6 +115,10 @@ are not compatibility requirements.
    dependencies are supplied at runtime. Actual package installation, designer/Help
    Insight, Windows/DPI and hardware checks remain outstanding.
 
+The next VCL expansion uses separate family demos with shared infrastructure,
+covering the remaining read/write/authentication/administration/tool APIs; see
+[the explicit coverage checklist](VCL_COVERAGE.md).
+
 Magstripe codecs and input adapters now provide a base for concrete native reader/writer integrations.
 
 Payments are deferred until the card read/write library has stabilized; see
