@@ -83,8 +83,14 @@ are not compatibility requirements.
    initialized public Type 5 NDEF reads/verified length-last updates are implemented
    through an explicit ACR1552U-M/ACM1552U-Y/Z session adapter; see
    [ISO 15693/Type 5](ISO15693_TYPE5.md). Additional NDEF tag-type access, further UID
-   generations, other Type 2 authentication, DESFire/secure messaging, Plus and
+   generations, other Type 2 authentication, additional DESFire security, Plus and
    broader reader backends remain separate profiles; see [the contactless guide](CONTACTLESS.md).
+   `TDesfireCardReader` now implements native ordinary-file discovery, data/value/record
+   reads and verified standard-data writes. An explicit EV2 AES profile provides mutual
+   authentication and Plain/MACed/Full messaging through maintained Windows CNG or
+   optional Linux OpenSSL; settings are MACed after authentication. See
+   [native DESFire](DESFIRE.md). D40/EV1 security, LRP, transaction ownership and
+   backup/value/record writes, administration and physical validation remain pending.
    **TMemoryCardReaderWriter** remains planned for contact memory-card families and
    matching readers. Non-Java chips do not share one universal protocol.
 8. **Distribution.** Runtime/design-time packages, Delphi/Windows validation matrix,
@@ -112,8 +118,11 @@ documentation. Use the same complete scope for upcoming batches:
    and native MagTek capture,
    then YL160/MSR DLL bindings with verified SDK headers and buffer lengths.
    Physical/firmware coverage and status-versus-read-back evidence stay explicit.
-2. **Additional chip families:** DESFire through a maintained authenticated crypto
-   provider, Plus profiles, additional ISO 15693 authentication/reader backends,
+2. **DESFire expansion and additional chip families:** D40/EV1 AES/3DES security,
+   EV2 NonFirst/key sets, LRP and owned backup/value/record transactions, followed by
+   administration/originality and physical card profiles. Initial EV2 AES secure
+   file access through maintained providers is implemented. Then Plus profiles,
+   additional ISO 15693 authentication/reader backends,
    then contact memory chips. Public ISO 15693/Type 5 access is already implemented.
 3. **European eID access:** BAC/PACE and secure-messaging integration for the existing
    MRZ/DG codecs, with concrete Netherlands/Luxembourg/Germany card profiles.
@@ -134,6 +143,9 @@ read/write claim from the transport.
 - Vendor DLLs, large external data catalogs and optional providers stay out of the
   base runtime package. The small curated ATR hint catalog is an optional core unit;
   EMV metadata stays in the EMV package.
+- Cryptographic primitives use a maintained system library. Core contains the
+  provider contract/CMAC composition; Windows CNG has a separate runtime package.
+  Security modes and administrative/transactional commands need explicit profiles.
 - Do not activate readers in constructors or in the IDE designer.
 
 ## Completion criteria

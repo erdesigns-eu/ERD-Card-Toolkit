@@ -25,7 +25,8 @@ hardware. Assign both a connected `ICardTransport` and an explicitly matching
 | Public Type 4 NDEF files | `TType4NdefCardReader`: explicit mapping 1.0/2.0 ISO 7816 applications, CC/file descriptors, MLe/MLc-bounded reads and verified NLEN-last updates |
 | Addressed ISO 15693 memory | `TIso15693CardReader`, explicit 8/16-bit geometry, single-block security and guarded writes; ACR1552U-M/ACM1552U-Y/Z FF FB adapter |
 | Public Type 5 NDEF memory | `TType5NdefCardReader`: initialized E1/E2 CC/TLV mapping, lock preflight and verified length-last updates |
-| Native DESFire, Plus, Type 1/3 NDEF, other programmable UID families | Separate family/access implementations still pending |
+| Native DESFire files | `TDesfireCardReader`: discovery, ordinary data/value/record reads and verified standard-data writes; explicit EV2 AES authentication and Plain/MACed/Full secure messaging |
+| Additional DESFire security/transactions, Plus, Type 1/3 NDEF, other programmable UID families | Separate profiles still pending |
 
 The Mini model supplies the original memory layout, not a tested Mini/reader
 compatibility claim. This release has synthetic command tests and no physical reader
@@ -207,10 +208,11 @@ on top of a specific NFC tag type and access layer. LF 125 kHz and UHF RFID requ
 suitable hardware/backends and are not implicitly supported by an NFC PC/SC reader.
 
 Public Type 4 NDEF access is implemented separately in [TYPE4_NDEF.md](TYPE4_NDEF.md),
-including already formatted public DESFire NDEF files; this does not implement native
-DESFire authentication or management. Further families include other Type 2
+including already formatted public DESFire NDEF files. Native DESFire access is a
+separate [component and EV2 AES profile](DESFIRE.md), with maintained crypto backends.
+Further families include other Type 2
 security variants, authenticated ISO 15693 access, further programmable UID profiles and native
-DESFire with a maintained crypto/secure-messaging provider.
+DESFire D40/EV1/LRP, backup/value/record transaction writes and administration.
 Public ISO 15693/Type 5 access is available through the separate components described
 in [ISO15693_TYPE5.md](ISO15693_TYPE5.md).
 Additional profiles are planned, not advertised

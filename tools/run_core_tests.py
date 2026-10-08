@@ -28,7 +28,7 @@ def main():
     build = REPO / 'dist/core/fpc'
     build.mkdir(parents=True, exist_ok=True)
     command = [compiler, '-B', '-Mdelphi', '-Cr', '-Co', '-gl', '-gh', '-vewn',
-               '-Fu' + str(REPO / 'src/core'), '-Fu' + str(REPO / 'src/pcsc'),
+               '-Fu' + str(REPO / 'src/core'), '-Fu' + str(REPO / 'src/crypto'), '-Fu' + str(REPO / 'src/pcsc'),
                '-Fu' + str(REPO / 'src/eid'),
                '-Fu' + str(REPO / 'src/emv'),
                '-Fu' + str(REPO / 'src/magstripe'),
@@ -46,6 +46,7 @@ def main():
                 command.append('-Fl' + str(crt_path.parent))
     for project in ('tests/core/CardCore.Tests.dpr', 'tests/core/ProtocolCore.Tests.dpr',
                     'tests/core/CardCatalogs.Tests.dpr',
+                    'tests/crypto/CardCrypto.Tests.dpr', 'tests/contactless/Desfire.Tests.dpr',
                     'tests/transport/CardTransport.Tests.dpr', 'tests/eid/BelgianEid.Tests.dpr',
                     'tests/eid/Icao.Tests.dpr',
                     'tests/emv/Emv.Tests.dpr',
@@ -64,12 +65,13 @@ def main():
                     'examples/contactless/InspectNdef.dpr',
                     'examples/contactless/InspectType4Ndef.dpr',
                     'examples/contactless/InspectType5Ndef.dpr',
+                    'examples/contactless/InspectDesfire.dpr',
                     'examples/core/InspectCardTools.dpr',
                     'examples/magstripe/InspectMagStripe.dpr',
                     'examples/magstripe/InspectMsr206.dpr'):
         subprocess.run(command + [project], cwd=REPO, check=True)
     suffix = '.exe' if os.name == 'nt' else ''
-    for project in ('CardCore.Tests', 'ProtocolCore.Tests', 'CardCatalogs.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'Iso15693Type5.Tests', 'MagStripe.Tests', 'Msr206.Tests', 'Msr2067HL.Tests'):
+    for project in ('CardCore.Tests', 'ProtocolCore.Tests', 'CardCatalogs.Tests', 'CardCrypto.Tests', 'Desfire.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'Iso15693Type5.Tests', 'MagStripe.Tests', 'Msr206.Tests', 'Msr2067HL.Tests'):
         result = subprocess.run([str(build / (project + suffix))], cwd=REPO,
                                 capture_output=True, text=True)
         print(result.stdout, end='', flush=True)
@@ -122,6 +124,29 @@ def main():
         serial_result.check_returncode()
         if re.search(r'\b[1-9][0-9]* unfreed memory blocks', serial_result.stderr):
             raise RuntimeError('Native serial shim test leaked memory')
+        # Exercise actual Windows CNG imports against an OpenSSL-backed Linux ABI shim.
+        # This checks native buffers/ownership, not Windows calling conventions or OS policy.
+        crypto_build = REPO / 'dist/core/crypto-native'
+        crypto_build.mkdir(parents=True, exist_ok=True)
+        subprocess.run([gcc, '-std=c11', '-Wall', '-Wextra', '-Werror', '-shared', '-fPIC',
+                        'tests/crypto/native/bcrypt_stub.c', '-lcrypto', '-o',
+                        str(crypto_build / 'libbcrypt.dll.so')], cwd=REPO, check=True)
+        crypto_command = [arg for arg in command if not arg.startswith(('-FU', '-FE'))]
+        crypto_command.extend(['-dMSWINDOWS', '-Fl' + str(crypto_build),
+                               '-FU' + str(crypto_build), '-FE' + str(crypto_build)])
+        crypto_env = os.environ.copy()
+        crypto_env['LD_LIBRARY_PATH'] = str(crypto_build) + os.pathsep + crypto_env.get('LD_LIBRARY_PATH', '')
+        for project in ('tests/crypto/NativeCrypto.Tests.dpr', 'tests/crypto/CardCrypto.Tests.dpr',
+                        'tests/contactless/Desfire.Tests.dpr'):
+            subprocess.run(crypto_command + [project], cwd=REPO, check=True)
+            native = subprocess.run([str(crypto_build / Path(project).stem)], cwd=REPO,
+                                    env=crypto_env, capture_output=True, text=True)
+            print(native.stdout, end='', flush=True)
+            if native.stderr:
+                print(native.stderr, file=sys.stderr, end='')
+            native.check_returncode()
+            if re.search(r'\b[1-9][0-9]* unfreed memory blocks', native.stderr):
+                raise RuntimeError('Native CNG test leaked memory')
     else:
         print('SKIP: native PC/SC and serial ABI shims requires Linux and GCC.', flush=True)
     example = str(build / ('InspectApdu' + suffix))
@@ -233,6 +258,20 @@ def main():
     if checked.returncode != 1 or 'EAtrFormatError' not in checked.stdout:
         raise RuntimeError('Catalog example accepted invalid ATR TCK')
     print('PASS: Type 5 CC bounds and source-attributed ATR/EMV catalog console cases.', flush=True)
+    desfire = str(build / ('InspectDesfire' + suffix))
+    inspected = subprocess.run([desfire, '--help'], capture_output=True, text=True, check=True)
+    if 'Usage: InspectDesfire' not in inspected.stdout:
+        raise RuntimeError('DESFire example did not show hardware-free help')
+    inspected = subprocess.run([desfire, '--settings-hex', '00031234332211', '--file', '0'],
+                               capture_output=True, text=True, check=True)
+    if 'Data bytes: 1122867' not in inspected.stdout or 'communication: 2' not in inspected.stdout:
+        raise RuntimeError('DESFire example did not inspect literal settings')
+    inspected = subprocess.run([desfire, '--settings-hex', '000312343322', '--file', '0'],
+                               capture_output=True, text=True)
+    if inspected.returncode != 1 or 'EDesfireError' not in inspected.stdout:
+        raise RuntimeError('DESFire example accepted truncated settings')
+    print('PASS: DESFire console help and exact/truncated settings cases.', flush=True)
+
     subprocess.run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests/tools', '-v'],
                    cwd=REPO, check=True)
     subprocess.run([sys.executable, 'tools/pascalcheck/run.py', '--profile', 'core',

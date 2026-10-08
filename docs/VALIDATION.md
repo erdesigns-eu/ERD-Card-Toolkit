@@ -7,6 +7,8 @@ Validated in the Linux cloud environment on 2026-10-08 after the legacy cleanup.
 | Actual Pascal bytes/APDU tests | 521 assertions in seven groups passed |
 | Actual Pascal ATR/TLV tests | 1826 assertions in seven groups passed |
 | ATR hint and EMV tag catalogs | 65812 assertions in two groups passed: exact/masked overlaps, ambiguous models, every bad TCK, copied catalog buffers, invalid definitions and all two-byte tag identifiers |
+| AES-CBC/CMAC and EV2 secure-message codecs | 734 assertions in two groups passed through OpenSSL and again through the actual CNG adapter/Linux shim: NIST/NXP vectors, every encrypted-response bit, counters and exact padding/lengths |
+| Native DESFire component | 9209 assertions in five groups passed through OpenSSL and again through CNG/Linux shim: public/Plain/MACed/Full chains, 17 independent transcripts, verified writes, all I/O/protected-response bits, access/nonce/release failures |
 | Injected PC/SC transport tests | 86 assertions in seven groups passed, including real thread execution and transport transaction capability |
 | Belgian eID decoders and reader | 1821 assertions in seven groups passed using synthetic exact APDU transcripts |
 | ICAO MRZ and DG1/DG2 data codecs | 297 assertions passed: published MRZ examples, synthetic FAC/CBEFF records and malformed inputs |
@@ -22,11 +24,12 @@ Validated in the Linux cloud environment on 2026-10-08 after the legacy cleanup.
 | MSR206-7HL USI1 and same-swipe verified writing | 28393 assertions in five groups passed: all seven combinations, literal BCC/commands, complete read/write chains, every I/O failure/response corruption, independent mismatches, streaming bounds and inter-character timing |
 | Native Windows serial branches | 48 assertions passed against a Linux C ABI shim, including complete 8N1 status programming and 7O1 acquired verified-writing component/adapter/COM transcripts |
 | Native Windows adapter branches | 38 assertions passed against an isolated Linux C ABI shim |
-| Console examples | All eleven built; hardware-free help/inspection checks passed, including APDU/NDEF/Type 4/Type 5 valid/invalid cases, ATR known/unknown/bad-TCK and EMV known/private tags, magstripe parity and MSR206 frame/status cases |
+| Native Windows CNG branches | 51 assertions passed: native argument/length/IV handling, every encrypt/decrypt call failure, handle cleanup and system RNG failure without fallback |
+| Console examples | All twelve built; hardware-free help/inspection checks passed, including APDU/NDEF/Type 4/Type 5/DESFire valid/invalid cases, ATR known/unknown/bad-TCK and EMV known/private tags, magstripe parity and MSR206 frame/status cases |
 | FPC range/overflow/heap checks | Passed; no unfreed allocations in passing test programs |
 | Python checker regression tests | All 15 passed |
-| Pascalcheck core profile | All 21 readers passed on sixty-six explicitly selected source files |
-| XML documentation | 1074 visible API declarations inspected; zero findings |
+| Pascalcheck core profile | All 21 readers passed on seventy-six explicitly selected source files |
+| XML documentation | 1174 visible production API declarations inspected; zero findings; exported test-vector declarations also pass the full profile |
 | Reference integrity | All 26 retained files match the original Git bytes and manifest hashes |
 | Patch whitespace | `git diff --check` passed |
 
@@ -58,8 +61,9 @@ lengths/padding, exact AID/MF/DF/EF selection, grouped reads, optional certifica
 states, bounded 61xx/6Cxx handling, EOF probes, 15-bit offsets, partial failures,
 no transport replay and transaction-release exception precedence. Its JPEG and
 certificate payloads are synthetic protocol fixtures, not decoded image or X.509
-validation tests. A total of 549282 Pascal assertions passed across the suites,
-including both native ABI shims.
+validation tests. A total of 569219 Pascal assertions passed across 23 test-program
+runs, including all three native ABI shims and the crypto/DESFire suites repeated
+through the actual CNG adapter.
 NDEF tests exercise complete MB/ME/chunk framing, independent Text/URI vectors,
 message/record/physical-chunk bounds, Unicode errors, all URI prefixes, Smart Poster
 semantics and deep buffer ownership. Its PC/SC memory backend checks all six Type 2
@@ -91,6 +95,20 @@ model hints, all matches, construction ownership and bounded invalid definitions
 It probes all 65536 two-byte tag identifiers and independently checks selected
 EMV representation/length facts. The console examples inspect only supplied bytes
 and metadata in smoke tests; no physical ISO 15693/NFC reader was accessed.
+DESFire tests add native public/EV2 command framing, authenticated settings, all
+ordinary file types, signed/24-bit bounds and Plain/MACed/Full AES sessions. Fixed
+transcripts come from an independent optional Python cryptography generator, with
+NXP published authentication/KDF/Full-message vectors and NIST CBC/CMAC vectors as
+known-answer anchors. Tests inject every transport boundary and every protected
+response bit, covering wrong rights, minimum-mode downgrade, failed/malformed RNG,
+no-op writes, request/response AF chains, primary/release errors and post-dispatch
+uncertainty. The identical crypto/DESFire suites also exercise the Windows CNG
+adapter against a Linux OpenSSL-backed ABI shim. Native tests cover every CNG
+encrypt/decrypt call failure, native lengths/IV mutation and handle cleanup.
+OpenSSL 3 and its development headers are needed for this Linux crypto workflow;
+Python cryptography is only needed to regenerate the checked-in fixtures.
+No physical DESFire card was accessed. Windows CNG ABI/policy, Delphi, IDE and
+real EV2/EV3/Light compatibility remain separate checks; see [DESFIRE.md](DESFIRE.md).
 Magstripe tests check published MagTek bit vectors, complete character ranges,
 all supported payload sizes and every single-bit error at every size, including SS,
 ES and LRC parity. Typed financial fields retain opaque issuer suffixes. Synthetic
