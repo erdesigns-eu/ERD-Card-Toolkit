@@ -1,13 +1,14 @@
 # VCL-voorbeelden: dekking en volgende uitbreiding
 
-De volgende uitbreiding krijgt **losse demo's per kaartfamilie**, met gedeelde
-basiscode. Onderstaande projectnamen zijn gepland; alleen **SmartCardDemo** en
-**MagStripeDemo** bestaan nu. Deze lijst is de afwerkchecklist, geen claim dat alle
-knoppen of nieuwe projecten al aanwezig zijn. Betalingen blijven buiten scope.
+Er zijn nu **acht runnable projecten**: SmartCardDemo, MagStripeDemo en de zes
+familiedemo’s ReaderToolsDemo, RfidInputDemo, Twn4Demo, MemoryCardDemo,
+SleCounterDemo en Sle4404Demo. De nieuwe projecten delen formulier-, invoer- en
+workerbasis. Hun Delphi/Windows/UI- en hardwaretests staan nog open. De overige
+projectnamen hieronder zijn gepland. Betalingen blijven buiten scope.
 
 | Demo | Te demonstreren aanwezige functionaliteit | Huidige VCL-dekking |
 | --- | --- | --- |
-| ReaderToolsDemo | PC/SC-lezers, verbinding/kaartstatus, ATR/protocol; offline APDU, ATR, BER-TLV, hex/bytes en catalogs | Readerlijst, ATR/protocol en UID in SmartCardDemo; overige tools ontbreken |
+| ReaderToolsDemo | PC/SC-lezers, verbinding/kaartstatus, ATR/protocol; offline APDU, ATR, BER-TLV, hex/bytes en catalogs | Apart project aanwezig: PC/SC-lijst/status, command/response-APDU, ATR/protocol/hints, TLV-boom/roundtrip, EMV-tagmetadata en NDEF-roundtrip |
 | MagStripeDemo | Track 1–3, framing/pariteit/LRC, financiële velden, MagTek-inputprofielen; MSR206/MSR605 statuswrites en MSR206-7HL geverifieerde writes | Offline tracks en MSR206-7HL lezen/schrijven aanwezig; overige profielen/decoders ontbreken |
 | BelgianEidDemo | Identiteit, adres, foto opslaan, beschikbare certificaten en ruwe handtekeningen exporteren | Identiteit/adres/foto in SmartCardDemo; volledige bestandsexport ontbreekt |
 | IcaoDocumentDemo | BAC/PACE, MRZ/CAN, CardAccess/DG1/DG2/COM/SOD, alle foto's bekijken/opslaan en ruwe bestanden exporteren | Toegang en identiteit/eerste foto in SmartCardDemo; volledige export en alle foto's ontbreken |
@@ -18,11 +19,11 @@ knoppen of nieuwe projecten al aanwezig zijn. Betalingen blijven buiten scope.
 | Iso15693Demo | Expliciete readerbackend, systeeminformatie, UID/wire-volgorde, blokken/status lezen en schrijven, publiek Type 5 NDEF | Nog geen VCL-voorbeeld |
 | UidProgrammingDemo | Alle geïmplementeerde UID-profielen, expliciete kaart/readerkeuze, verwachte beginstaat, behoud van metadata, programmeeruitkomst en afzonderlijke RF-verificatie | Nog geen VCL-voorbeeld |
 | DesfireDemo | Publieke informatie; EV1/EV2 AES, bestanden/waarden/records, writes, backuptransacties/commit/abort, directories, applicatie/bestandbeheer en sleutel/toegangsbeheer | Alleen publieke versie in SmartCardDemo |
-| MemoryCardDemo | Alle aanwezige gewone SLE/I2C-modellen/dialecten, geheugen/protectie/retrypolicy, PIN, geverifieerde writes, ondersteunde PIN-vervanging en permanente bescherming | Snapshot/range, PIN en writes in SmartCardDemo; PIN-vervanging/bescherming ontbreken |
-| SleCounterDemo | SLE4406/4436/5536/6636 met bekende vensters, bit/carry/backup-programmering en ruwe certificaatberekening | Alleen publieke reads in SmartCardDemo |
-| Sle4404Demo | Bekende layout/counters, publiek/beveiligd lezen, user-codebewijs, bitprogrammering, scratchpad- en applicatie-erases met beide codes | Alleen publieke reads in SmartCardDemo |
-| Twn4Demo | PRS/USB-CDC reader/version/tag inspection, supplied-key Classic and public Type 2 reads/verified writes, explicit CRC mode | Console/API example available; no VCL example yet |
-| RfidInputDemo | Keyboard-invoer; 8/9-byte toetsenbordreports en vaste ASCII-velden; ASCII/hex/decimaal, framing/deadlines en expliciete byteconversie | Keyboard-invoertab in SmartCardDemo; ruwe reportprofielen/conversie ontbreken |
+| MemoryCardDemo | Alle aanwezige gewone SLE/I2C-modellen/dialecten, geheugen/protectie/retrypolicy, PIN, geverifieerde writes, ondersteunde PIN-vervanging en permanente bescherming | Apart project aanwezig: snapshot/range, retrystatus, aangeleverde PIN, geverifieerde writes, twee-wire PIN-vervanging en permanente bescherming met verwachte bytes |
+| SleCounterDemo | SLE4406/4436/5536/6636 met bekende vensters, bit/carry/backup-programmering en ruwe certificaatberekening | Apart project aanwezig: reads, alle ondersteunde programmeermodi met volledig verwacht venster, ruwe certificaten; codebuilder uitsluitend offline, credentialbytes worden niet getoond |
+| Sle4404Demo | Bekende layout/counters, publiek/beveiligd lezen, user-codebewijs, bitprogrammering, scratchpad- en applicatie-erases met beide codes | Apart project aanwezig: reads met/zonder code, codebewijs, bitprogrammering en beide erasevormen; bekende vensters/counteradressen/maskers vereist |
+| Twn4Demo | PRS/USB-CDC reader/version/tag inspection, supplied-key Classic and public Type 2 reads/verified writes, explicit CRC mode | Apart project aanwezig: versie/tag, Classic met sleutel A/B en publieke Type 2 reads/writes, expliciete port/CRC/deadline; PRS/CDC-firmware vereist |
+| RfidInputDemo | Keyboard-invoer; 8/9-byte toetsenbordreports en vaste ASCII-velden; ASCII/hex/decimaal, framing/deadlines en expliciete byteconversie | Apart project aanwezig: foreground keyboard, host-aangeleverde boot/ID/ASCII-reports, expliciete framing/encoding en offline numerieke conversie; geen native USB-opening |
 
 Naast de kaartoperaties krijgen de bijbehorende **offline encoders/decoders**
 invoer en een zichtbaar resultaat: onder andere MRZ, NDEF-records, magstripe,
@@ -36,7 +37,7 @@ De bestaande workerbasis wordt gedeeld. Elke demo krijgt eigen invoer en een kle
 kaartgerichte uitvoerlaag, zodat een ontwikkelaar het relevante voorbeeld kan
 kopiëren zonder een applicatie met alle kaartfamilies te hoeven meenemen.
 
-1. Reader/tools, RFID/TWN4 en gewone/SLE-counter/SLE4404-memorydemo's.
+1. **Code aanwezig:** reader/tools, RFID/TWN4 en gewone/SLE-counter/SLE4404-memorydemo's; native hertest nog nodig.
 2. Belgische eID, ICAO en volledige EMV-uitlezing.
 3. Classic/Type 2, Type 4 en ISO 15693/Type 5.
 4. Programmeerbare UID's en DESFire-transacties/administratie.
@@ -62,7 +63,7 @@ worden niet als werkende demofuncties opgenomen.
   gebruikt. Status-only bewijs blijft als zodanig zichtbaar.
 - Publieke Delphi XML-documentatie, validatiescripts en relevante geïnjecteerde
   uitvoertests; daarnaast echte Delphi/Windows/UI/hardware-smoketests.
-- Deze tabel wordt per afgeronde demo bijgewerkt. Alle nieuwe projectnamen blijven
-  gepland tot hun code en project daadwerkelijk in de repository staan.
+- Deze tabel onderscheidt aanwezige projecten van geplande projecten en benoemt
+  ontbrekende functies. Aanwezige source/projecten betekenen nog geen hardwarecertificatie.
 
 De bestaande demo's en hun huidige teststappen staan in [VCL_DEMOS.md](VCL_DEMOS.md).

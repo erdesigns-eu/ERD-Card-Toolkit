@@ -25,6 +25,9 @@ type
     /// <summary>Starts one request; a second concurrent job is refused.</summary>
     /// <param name="ARequest">Request whose byte buffers are copied by the worker.</param>
     procedure StartRequest(const ARequest: TCardDemoRequest);
+    /// <summary>Creates the inactive per-form executor; descendants can select their own family.</summary>
+    /// <returns>Retained operations implementation, not a running worker.</returns>
+    function CreateOperations: ICardDemoOperations; virtual;
   public
     /// <summary>Loads the descendant DFM and creates a disabled polling timer.</summary>
     /// <param name="AOwner">Standard VCL form owner.</param>
@@ -51,10 +54,13 @@ begin
   inherited Destroy;
 end;
 
+function TCardDemoForm.CreateOperations: ICardDemoOperations;
+begin Result := CreateCardDemoOperations; end;
+
 procedure TCardDemoForm.StartRequest(const ARequest: TCardDemoRequest);
 begin
   if FJob <> nil then raise EInvalidOpException.Create('An operation is already active.');
-  FJob := TCardDemoJob.Create(ARequest, CreateCardDemoOperations);
+  FJob := TCardDemoJob.Create(ARequest, CreateOperations);
   try
     SetBusy(True);
     FJob.StartWork;

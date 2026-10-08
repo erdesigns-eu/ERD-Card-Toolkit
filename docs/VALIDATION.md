@@ -2,12 +2,12 @@
 
 The complete protocol/component/example suite was rebuilt and rerun in Linux on
 2026-10-08 after adding ordinary/counter memory, SLE4404, USB-HID RFID input and TWN4 memory,
-the VCL memory/RFID pages and standalone design bundle, starting from the
-maintainer's latest IDE changes (`951ea62`). The full run passed **2,080,220 assertions
-across 36 program runs**: 1,789,463 existing protocol assertions, 65,619 RFID
+six separate VCL family projects, the memory/RFID pages and standalone design bundle, starting from the
+maintainer's latest IDE changes (`951ea62`). The full run passed **2,081,652 assertions
+across 37 program runs**: 1,789,463 existing protocol assertions, 65,619 RFID
 input/profile, 60,114 SLE4404, 34,280 counter/profile, 2,955 ordinary-memory,
-73 demo-worker, 127,696 TWN4 and 20 registration assertions. All 34 Python regression tests,
-21 Pascal readers on 119 sources and distribution checks for fourteen projects passed.
+85 demo-worker and 1,420 family-executor, 127,696 TWN4 and 20 registration assertions. All 34 Python regression tests,
+21 Pascal readers on 135 sources and distribution checks for twenty projects passed.
 
 The maintainer confirmed warning-free compilation and installation of the prior
 packages in RAD Studio 12 (Studio 23.0), Debug/Win32. Both VCL demos subsequently
@@ -51,13 +51,14 @@ Help Insight and physical memory-card compatibility remain unverified.
 | Native Windows adapter branches | 38 assertions passed against an isolated Linux C ABI shim |
 | Native Windows CNG branches | 51 assertions passed: native argument/length/IV handling, every encrypt/decrypt call failure, handle cleanup and system RNG failure without fallback |
 | Console examples | All eighteen built; hardware-free help/inspection checks passed, including TWN4 offline framing/help and SLE4404 help/window and invalid-before-hardware checks, memory-model geometry and DESFire key/access administration offline help/plan, ICAO help/CardAccess inspection, DESFire management offline help/plan and invalid arguments, APDU/NDEF/Type 4/Type 5/DESFire valid/invalid cases, ATR known/unknown/bad-TCK and EMV known/private tags, magstripe parity and MSR206 frame/status cases |
-| Demo worker and offline operations | 73 assertions passed in the VCL-start follow-up: real worker/caller separation, request ownership, single delivery, join, nil executor, sanitized errors, verified-write evidence, offline operations and hardware preflight, suspended destruction, duplicate start and completed restart |
+| Demo worker and offline operations | 85 assertions passed: nested credential deep copies/wiping, copied argument arrays, real worker/caller separation, request ownership, single delivery, join, nil executor, sanitized errors, verified-write evidence, offline operations and hardware preflight, suspended destruction, duplicate start and completed restart |
+| Family demo executors | 1420 assertions passed: offline APDU command/response, ATR, TLV, EMV metadata, NDEF and RFID conversion/report profiles; all valid device-action preflights; invalid choices, PIN lengths, expected ranges, acknowledgement and credentials in public fields refused before hardware; literal memory/counter/SLE4404 and TWN4 command chains; no replay; uncertain writes and completed proof across transaction/connection/CDC cleanup failures |
 | Palette registration / RTL streaming | 20 assertions passed: actual Register routine captures nineteen classes; inactive construction and FPC component stream round-trip for each; DesignIntf capture is not an IDE/ABI test |
-| Distribution / VCL source readers | Twelve MSBuild projects (all four Debug/Release × Win32/Win64 property combinations), two groups and two DFM forms passed: references, package ownership/order, explicit IDE package identity, native Base/configuration/platform activation, GenDll/GenPackage, named DCP dependencies, native integer-overflow/debug settings, BOM/CRLF/resources, runtime/design dependency separation, palette completeness, field/event bindings, form creation and Platform/Config output isolation; no Delphi/VCL execution |
+| Distribution / VCL source readers | Twenty MSBuild projects (all four Debug/Release × Win32/Win64 property combinations), two groups and three DFM forms passed: references, package ownership/order, explicit IDE package identity, native Base/configuration/platform activation, GenDll/GenPackage, named DCP dependencies, native integer-overflow/debug settings, BOM/CRLF/resources, runtime/design dependency separation, palette completeness, field/event bindings, form creation and Platform/Config output isolation; no Delphi/VCL execution |
 | FPC range/overflow/heap checks | Passed; no unfreed allocations in passing test programs |
 | Python checker regression tests | All 34 passed, including nineteen distribution-reader cases; coverage includes IDE package identity, native configuration inheritance, omitted empty IDE platform groups, owning-package dependencies, explicit standalone design copies without dependency-owned duplicates, group target order, named DCPs, resources, BOM/CRLF, compiler property types and bounded condition parsing |
-| Pascalcheck core profile | All 21 readers passed on 119 explicitly selected source files |
-| XML documentation | 1584 visible production API declarations inspected; zero findings; exported test-vector declarations also pass the full profile |
+| Pascalcheck core profile | All 21 readers passed on 135 explicitly selected source files |
+| XML documentation | 1584 visible production API declarations and 223 VCL example declarations inspected; zero findings; exported test-vector declarations also pass the full profile |
 | Reference integrity | All 26 retained files match the original Git bytes and manifest hashes |
 | Patch whitespace | `git diff --check` passed |
 
@@ -83,11 +84,11 @@ constructor, a platform-dependent unreachable branch in the test handle factory,
 and unused test-result variable notes. None has been suppressed. Production TWN4/RFID/SLE4404/PCSC
 and eID/EMV/contactless units compile without additional FPC warnings in the tested branches.
 
-The suite reported 2,080,220 passing assertions across 36 program runs, including
+The suite reported 2,081,652 passing assertions across 37 program runs, including
 65,619 RFID, 60,114 SLE4404, 34,280 counter/profile, 2,955 memory-card,
-73 demo-worker, 127,696 TWN4 and 20 registration assertions.
-The full 21-reader profile covers 119 Pascal sources, including the VCL units.
-Only the non-VCL worker/executor and inactive component registration/streaming
+85 demo-worker and 1,420 family-executor, 127,696 TWN4 and 20 registration assertions.
+The full 21-reader profile covers 135 Pascal sources, including the VCL units.
+Only the non-VCL workers/executors and inactive component registration/streaming
 were compiled/executed under FPC. The actual forms, MSBuild projects, package BPLs
 and batch scripts require [Delphi/Windows validation](INSTALLATION.md).
 The supplied [VCL smoke-test guide](VCL_DEMOS.md) records the remaining manual steps.
@@ -98,7 +99,7 @@ lengths/padding, exact AID/MF/DF/EF selection, grouped reads, optional certifica
 states, bounded 61xx/6Cxx handling, EOF probes, 15-bit offsets, partial failures,
 no transport replay and transaction-release exception precedence. Its JPEG and
 certificate payloads are synthetic protocol fixtures, not decoded image or X.509
-validation tests. A total of 2080220 Pascal assertions passed across 36 test-program
+validation tests. A total of 2081652 Pascal assertions passed across 37 test-program
 runs, including all three native ABI shims and the crypto/DESFire suites repeated
 through the actual CNG adapter.
 NDEF tests exercise complete MB/ME/chunk framing, independent Text/URI vectors,
@@ -369,3 +370,23 @@ zero-to-one transitions at the programmed address. Carry arithmetic, personalisa
 code proof and host certificate verification are not implemented. The raw code
 builder explicitly documents consumption of the presentation counter; it is never
 automatically executed by the high-level component.
+
+## Separate VCL family batch
+
+Six native projects now share `ERD.Card.Demo.FamilyForm`, the family input catalog,
+family executors and the existing post-construction worker lifecycle. The two older
+VCL projects retain their forms. The shared DFM/aliases and all twenty MSBuild
+projects pass the bounded distribution readers with the native BOM/CRLF conventions.
+This does not execute Delphi's resource loader, IDE form designer or VCL controls.
+
+The family executor uses the actual component validation against a rejecting
+acquisition boundary, then opens only the explicitly selected native adapter.
+Scripted tests verify complete command chains and malformed arguments without
+using invented successful preflight card responses. Deep-copied credential arrays
+are wiped on worker success/failure; caller buffers survive. Known write proof and
+uncertainty remain separate when later cleanup fails. RFID raw-report examples are
+host-fed decoding; no native USB enumeration/read/write backend was added.
+
+[The family smoke tests](VCL_DEMOS.md#family-smoke-tests-on-delphiwindows) remain
+pending on Delphi/Windows and real hardware. No payments or additional physical
+card support are claimed by this demo batch.

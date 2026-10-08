@@ -252,5 +252,9 @@ if errorlevel 1 exit /b %errorlevel%
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\DemoJob.Tests.exe"
 if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\crypto;src\pcsc;src\eid;src\emv;src\contactless;src\magstripe;src\memory;src\input;src\readers;examples\vcl\shared" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\demos\FamilyOperations.Tests.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\FamilyOperations.Tests.exe"
+if errorlevel 1 exit /b %errorlevel%
 call tools\build-packages.cmd %CARD_COMPILER%
 exit /b %errorlevel%

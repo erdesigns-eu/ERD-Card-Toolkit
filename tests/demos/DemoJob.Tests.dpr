@@ -31,6 +31,7 @@ type
     procedure Lock;
     procedure Unlock;
   public
+    SeenCredential: TBytes;
     constructor Create(const AFailure, AVerified: Boolean);
     destructor Destroy; override;
     procedure Release;
@@ -113,6 +114,13 @@ begin
     raise Exception.Create('Request copy was aliased.');
   if (Length(R.MemoryBytes) > 0) and (R.MemoryBytes[0] <> $A1) then
     raise Exception.Create('Memory write request was aliased.');
+  if Length(R.Credentials) > 0 then
+  begin
+    Check((Length(R.Credentials) = 2) and (Length(R.Credentials[0]) = 2) and
+      (R.Credentials[0][0] = $10) and (R.Credentials[0][1] = $11), 'Credential buffers were aliased.');
+    Check((Length(R.Arguments) = 2) and (R.Arguments[0] = 'original'), 'Argument array was aliased.');
+    SeenCredential := R.Credentials[0];
+  end;
   D.Memory.Data := HexToBytes('DEADBEEF'); D.CounterBytes := HexToBytes('AB');
   D.Tracks := R.Tracks;
   D.Photo := HexToBytes('010203'); D.NdefBytes := HexToBytes('AABB');
@@ -139,6 +147,8 @@ begin
   R := Default(TCardDemoRequest); D := Default(TCardDemoResult);
   R.Password := HexToBytes('3132'); R.NdefBytes := HexToBytes('D101');
   R.Tracks[mstTrack1] := 'ABC'; R.MemoryBytes := HexToBytes('A1B2');
+  SetLength(R.Credentials,2); R.Credentials[0] := HexToBytes('1011');
+  SetLength(R.Arguments,2); R.Arguments[0] := 'original';
   Backend := TTestOperations.Create(Fail, Verified); Executor := Backend;
   CallerId := TThread.CurrentThread.ThreadID;
   Job := TCardDemoJob.Create(R, Executor);
@@ -146,10 +156,13 @@ begin
   try
     Check(not Job.TryTakeResult(D), 'Running work published early.');
     R.Password[0] := 0; R.NdefBytes[0] := 0; R.Tracks[mstTrack1] := 'CHANGED'; R.MemoryBytes[0] := 0;
+    R.Credentials[0][0] := $FF; R.Arguments[0] := 'changed';
     Backend.Release;
     AwaitResult(Job, D);
     Job.WaitFor;
     Check(Backend.Calls = 1, 'Operation was retried.');
+    Check(BytesToHex(Backend.SeenCredential) = '0000', 'Worker credentials not wiped on completion/failure.');
+    Check(BytesToHex(R.Credentials[0]) = 'FF11', 'Worker wiped caller-owned credentials.');
     Check(Backend.Worker <> CallerId, 'Hardware executor ran on caller thread.');
     Again := Default(TCardDemoResult); Again.Text := 'unchanged';
     Check(not Job.TryTakeResult(Again), 'Completion delivered twice.');

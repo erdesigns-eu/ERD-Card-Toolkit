@@ -15,6 +15,19 @@ if errorlevel 1 exit /b %errorlevel%
 call :build_demo smartcard SmartCardDemo
 if errorlevel 1 exit /b %errorlevel%
 call :build_demo magstripe MagStripeDemo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo readertools ReaderToolsDemo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo memorycard MemoryCardDemo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo slecounter SleCounterDemo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo sle4404 Sle4404Demo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo twn4 Twn4Demo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo rfidinput RfidInputDemo
+if errorlevel 1 exit /b %errorlevel%
 exit /b %errorlevel%
 :build_demo
 rem Use the same resource generation and configuration as the IDE projects.

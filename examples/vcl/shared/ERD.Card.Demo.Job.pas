@@ -71,12 +71,28 @@ type
     /// <summary>Read a caller-declared public counter-chip range through ACR38x CCID.</summary>
     cdoCounterRead,
     /// <summary>Read an explicit public SLE4404 range through ACR38x CCID.</summary>
-    cdoSle4404Read
+    cdoSle4404Read,
+    /// <summary>Execute one explicit operation in the separately selected family demo.</summary>
+    cdoFamily
   );
+  /// <summary>Non-secret named-form values in catalog field order; strings use copy-on-write.</summary>
+  TCardDemoArguments = array of UnicodeString;
+  /// <summary>Credential buffers aligned with form fields; each worker copy is independently owned and wiped.</summary>
+  TCardDemoCredentials = array of TBytes;
   /// <summary>One explicit request copied by the job before its worker starts.</summary>
   TCardDemoRequest = record
     /// <summary>Single operation, executed once.</summary>
     Operation: TCardDemoOperation;
+    /// <summary>Exact family catalog name; validated against the injected executor.</summary>
+    FamilyName: string;
+    /// <summary>Explicit zero-based catalog operation; no implicit action.</summary>
+    FamilyAction: Integer;
+    /// <summary>Non-secret input values aligned with the selected action's field definitions.</summary>
+    Arguments: TCardDemoArguments;
+    /// <summary>Secret decoded bytes aligned with fields; matching Arguments entries must be empty.</summary>
+    Credentials: TCardDemoCredentials;
+    /// <summary>Explicit per-action acknowledgement of writes, code attempts, erases or permanent changes.</summary>
+    MutationAcknowledged: Boolean;
     /// <summary>Exact PC/SC reader name; no default selection.</summary>
     ReaderName: UnicodeString;
     /// <summary>Complete NDEF message bytes, copied at the thread boundary.</summary>
@@ -130,6 +146,8 @@ type
     Success: Boolean;
     /// <summary>True after component write verification, even if later disconnect fails.</summary>
     WriteVerified: Boolean;
+    /// <summary>A dispatched write has an uncertain outcome or cleanup; never retry automatically.</summary>
+    WriteUncertain: Boolean;
     /// <summary>Exception class only; credential-bearing exception messages are not copied.</summary>
     ErrorClass: string;
     /// <summary>Display text; may contain identity or UID data from the selected operation.</summary>
@@ -196,6 +214,7 @@ uses ERD.Card.Crypto;
 
 constructor TCardDemoJob.Create(const ARequest: TCardDemoRequest;
   const AOperations: ICardDemoOperations);
+var I: Integer;
 begin
   inherited Create(True);
   FreeOnTerminate := False;
@@ -208,6 +227,10 @@ begin
   if AOperations = nil then raise EArgumentException.Create('Worker executor is required.');
   FRequest := ARequest;
   FRequest.Password := nil; FRequest.NdefBytes := nil; FRequest.MemoryBytes := nil;
+  FRequest.Arguments := nil; FRequest.Credentials := nil;
+  FRequest.Arguments := Copy(ARequest.Arguments,0,Length(ARequest.Arguments));
+  SetLength(FRequest.Credentials,Length(ARequest.Credentials));
+  for I := 0 to High(ARequest.Credentials) do FRequest.Credentials[I] := CopyBytes(ARequest.Credentials[I]);
   FRequest.Password := Copy(ARequest.Password, 0, Length(ARequest.Password));
   FRequest.NdefBytes := Copy(ARequest.NdefBytes, 0, Length(ARequest.NdefBytes));
   FRequest.MemoryBytes := Copy(ARequest.MemoryBytes, 0, Length(ARequest.MemoryBytes));
@@ -222,10 +245,12 @@ begin
 end;
 
 destructor TCardDemoJob.Destroy;
+var I: Integer;
 begin
   if FStarted then WaitFor;
   inherited Destroy;
   TCardCrypto.Clear(FRequest.Password);
+  for I := 0 to High(FRequest.Credentials) do TCardCrypto.Clear(FRequest.Credentials[I]);
   if FLockReady then
 {$IFDEF FPC}
     DoneCriticalSection(FLock);
@@ -253,7 +278,7 @@ begin
 end;
 
 procedure TCardDemoJob.Execute;
-var Completed: TCardDemoResult;
+var Completed: TCardDemoResult; I: Integer;
 begin
   if not FStarted then Exit;
   Completed := Default(TCardDemoResult);
@@ -276,6 +301,7 @@ begin
     end;
   end;
   TCardCrypto.Clear(FRequest.Password);
+  for I := 0 to High(FRequest.Credentials) do TCardCrypto.Clear(FRequest.Credentials[I]);
   FRequest := Default(TCardDemoRequest);
   FOperations := nil;
   Lock;

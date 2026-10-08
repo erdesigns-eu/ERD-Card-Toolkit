@@ -9,6 +9,24 @@
         <Projects Include="smartcard\SmartCardDemo.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="readertools\ReaderToolsDemo.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="memorycard\MemoryCardDemo.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="slecounter\SleCounterDemo.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="sle4404\Sle4404Demo.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="twn4\Twn4Demo.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="rfidinput\RfidInputDemo.dproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -35,14 +53,68 @@
     <Target Name="SmartCardDemo:Make">
         <MSBuild Projects="smartcard\SmartCardDemo.dproj" Targets="Make"/>
     </Target>
+    <Target Name="ReaderToolsDemo">
+        <MSBuild Projects="readertools\ReaderToolsDemo.dproj"/>
+    </Target>
+    <Target Name="ReaderToolsDemo:Clean">
+        <MSBuild Projects="readertools\ReaderToolsDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ReaderToolsDemo:Make">
+        <MSBuild Projects="readertools\ReaderToolsDemo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MemoryCardDemo">
+        <MSBuild Projects="memorycard\MemoryCardDemo.dproj"/>
+    </Target>
+    <Target Name="MemoryCardDemo:Clean">
+        <MSBuild Projects="memorycard\MemoryCardDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MemoryCardDemo:Make">
+        <MSBuild Projects="memorycard\MemoryCardDemo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="SleCounterDemo">
+        <MSBuild Projects="slecounter\SleCounterDemo.dproj"/>
+    </Target>
+    <Target Name="SleCounterDemo:Clean">
+        <MSBuild Projects="slecounter\SleCounterDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="SleCounterDemo:Make">
+        <MSBuild Projects="slecounter\SleCounterDemo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Sle4404Demo">
+        <MSBuild Projects="sle4404\Sle4404Demo.dproj"/>
+    </Target>
+    <Target Name="Sle4404Demo:Clean">
+        <MSBuild Projects="sle4404\Sle4404Demo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Sle4404Demo:Make">
+        <MSBuild Projects="sle4404\Sle4404Demo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Twn4Demo">
+        <MSBuild Projects="twn4\Twn4Demo.dproj"/>
+    </Target>
+    <Target Name="Twn4Demo:Clean">
+        <MSBuild Projects="twn4\Twn4Demo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Twn4Demo:Make">
+        <MSBuild Projects="twn4\Twn4Demo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="RfidInputDemo">
+        <MSBuild Projects="rfidinput\RfidInputDemo.dproj"/>
+    </Target>
+    <Target Name="RfidInputDemo:Clean">
+        <MSBuild Projects="rfidinput\RfidInputDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="RfidInputDemo:Make">
+        <MSBuild Projects="rfidinput\RfidInputDemo.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="MagStripeDemo;SmartCardDemo"/>
+        <CallTarget Targets="MagStripeDemo;SmartCardDemo;ReaderToolsDemo;MemoryCardDemo;SleCounterDemo;Sle4404Demo;Twn4Demo;RfidInputDemo"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="MagStripeDemo:Clean;SmartCardDemo:Clean"/>
+        <CallTarget Targets="MagStripeDemo:Clean;SmartCardDemo:Clean;ReaderToolsDemo:Clean;MemoryCardDemo:Clean;SleCounterDemo:Clean;Sle4404Demo:Clean;Twn4Demo:Clean;RfidInputDemo:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="MagStripeDemo:Make;SmartCardDemo:Make"/>
+        <CallTarget Targets="MagStripeDemo:Make;SmartCardDemo:Make;ReaderToolsDemo:Make;MemoryCardDemo:Make;SleCounterDemo:Make;Sle4404Demo:Make;Twn4Demo:Make;RfidInputDemo:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

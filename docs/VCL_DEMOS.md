@@ -1,10 +1,10 @@
 # VCL read/write demos
 
-These two applications demonstrate a subset of the implemented APIs. Separate
-family demos with shared infrastructure are planned; the complete current/missing
-coverage is recorded in [VCL_COVERAGE.md](VCL_COVERAGE.md).
+Eight applications demonstrate implemented APIs: the original SmartCardDemo and
+MagStripeDemo plus six separate family projects sharing a form/input/worker base.
+The complete current/missing coverage is recorded in [VCL_COVERAGE.md](VCL_COVERAGE.md).
 
-Open `examples/vcl/CardDemos.groupproj` or either application's `.dproj` in RAD
+Open `examples/vcl/CardDemos.groupproj` or any application's `.dproj` in RAD
 Studio. They link source directly, so installing the component palette is optional.
 From a RAD Studio command prompt:
 
@@ -20,6 +20,89 @@ IDE/MSBuild Release builds go to the corresponding Release directory. These are
 Windows VCL applications; they have not been built or rendered in the Linux cloud
 environment. The provided scripts are an executable validation path for a Delphi
 host, not evidence that those builds already pass.
+
+## Separate family projects
+
+All six projects open without accessing hardware. Choose one action; its named
+fields appear below. Enum choices have no default card/reader profile. Public
+bytes use hexadecimal text; numeric addresses/counts use decimal unless the label
+says hexadecimal. Credentials are masked, decoded into separate byte buffers,
+copied at the worker boundary, cleared from input controls after submission and
+wiped from owned buffers after execution. Strings/OS/backend copies are outside
+that byte-buffer wiping guarantee. Errors display their class, never backend text.
+
+| Project | Actual actions |
+| --- | --- |
+| `readertools/ReaderToolsDemo.dproj` | Offline command/response APDU decode/encode, validated ATR/protocol/catalog hints, decoded BER-TLV tree/roundtrip, EMV tag metadata, NDEF roundtrip; PC/SC reader list and connected ATR/protocol |
+| `rfidinput/RfidInputDemo.dproj` | Offline ASCII/hex/decimal identifier inspection and explicit width/order conversion; live foreground keyboard capture; decoding host-provided boot 8-byte, report-ID 9-byte and fixed ASCII reports |
+| `twn4/Twn4Demo.dproj` | Explicit PRS/USB-CDC port, CRC and deadline; version/tag identity, supplied-key Classic block reads/data writes, public Type 2 user-page reads/writes; ID/expected-state/read-back checks |
+| `memorycard/MemoryCardDemo.dproj` | ACS capabilities, all implemented SLE/I2C snapshots/ranges, supplied PIN proof, verified writes with physical I2C page size, supported two-wire PIN replacement, irreversible compare-and-protect |
+| `slecounter/SleCounterDemo.dproj` | Explicit SLE4406/4436/5536/6636/window, public range reads, program/carry/backup modes with expected complete before/after windows, raw certificates; credential-bearing code command validation offline only |
+| `sle4404/Sle4404Demo.dproj` | Known window/layout/retry budgets, reads with optional supplied user code, user-code proof, one-to-zero programming, scratchpad erase and application erase with both supplied codes |
+
+For PC/SC operations enter the **exact reader name** returned by ReaderToolsDemo.
+An ACS dialect is a known protocol configuration, not a guess from the name/ATR.
+TWN4 uses its own COM field and suitable Simple Protocol firmware; it does not
+send memory commands to keyboard-only HID readers. Firmware changes are not made
+by the demo. See [TWN4.md](TWN4.md) and [memory profiles](MEMORY_CARDS.md).
+
+State-changing/code-attempt actions require per-submission acknowledgement. This
+is cleared after each request. Permanent protection, code consumption and erase
+are explicitly named actions, with no automatic retries. Expected-before fields
+must contain the actual bytes from the selected card/window. A counter-mode write
+requires the full expected-after window; the demo does not calculate carry rules.
+An application erase requires known user/memory-counter locations and a non-erased
+expected application area so the component can prove the supplied memory code.
+
+Worker preflight runs the actual component's argument validation against an
+acquisition-only rejecting transport/channel. It stops before BeginTransaction or
+Open acquires hardware, then repeats the validated action against the selected
+real adapter once. No simulated successful card response is supplied. Card-state
+checks necessarily happen after connection, under the component's transaction.
+Uncertain writes preserve any independently completed verification; a later
+cleanup failure does not turn them into a clean success.
+
+RFID live capture runs on the UI thread and requires focus in its dedicated memo.
+It receives ordinary foreground keyboard events, without device identity/filtering,
+USB enumeration or a global hook. Start freezes configuration until Stop. Enter
+provides CR; boot-report profiles support CR/Tab. The fixed ASCII report profile
+uses each report as a complete field and applies the explicitly configured framing.
+Raw reports must be supplied by a host or pasted for inspection: this is not a
+native USB reader driver.
+
+### Family smoke tests on Delphi/Windows
+
+1. Build Debug/Release in Win32 and Win64 and open all six projects. ReaderTools'
+   first APDU action and RFID's first text action work without a reader. Other
+   demos must refuse incomplete reader/profile/window/port inputs without I/O.
+2. ReaderTools: confirm `00A4040000`, response `01029000`, ATR `3B00`, TLV
+   `5A021234` and NDEF `D101055402656E4869` round-trip. A corrupt ATR/TLV/NDEF is
+   rejected; known `5A` shows catalog metadata without sending an EMV command.
+3. RFID text: Decimal `001234`, width 4, big endian produces `000004D2`. For boot
+   reports use CR framing and paste `00001E0000000000;0000000000000000;0000280000000000`;
+   exactly one identifier `1` completes. For fixed ASCII choose four report/field
+   bytes, offset zero, no report ID and NUL padding; `30303100` produces `001`.
+4. Live RFID: start CR capture, focus the memo, scan/type a complete identifier.
+   Partial input, malformed input and timeout tails must not emit identifiers.
+   Configuration stays frozen; Stop/close releases capture without a worker thread.
+5. With confirmed ACS hardware, start with public reads and independently compare
+   them to known card bytes. Then use expendable cards and known supplied codes for
+   supported writes/PIN changes/protection/erases. Confirm retry budgets, exact
+   expected windows and independent proof; locked/incorrect states must be refused.
+6. With confirmed TWN4 PRS/CDC firmware, explicitly select port/CRC, inspect version
+   and tag ID, then test the supported memory operations on expendable tags. An
+   incorrect expected ID/prestate must not dispatch a write. Trailer/manufacturer/
+   configuration writes remain refused by the component.
+7. While a hardware worker is active, request another action/close. The form must
+   freeze inputs, refuse concurrent work and wait for completion on close. Exercise
+   disconnect/cleanup errors: uncertainty and completed proof must remain distinct,
+   with no automatic retry or credential-bearing exception text.
+
+The synthetic family executor tests cover offline codecs, valid-action preflight,
+choice/PIN/acknowledgement rejection before hardware, literal memory/counter/SLE4404
+and TWN4 transcripts, uncertain writes and evidence after cleanup failure. Worker
+tests additionally verify nested credential copies/wiping and argument-array
+ownership. They do not compile/render VCL or validate physical cards.
 
 ## SmartCardDemo
 

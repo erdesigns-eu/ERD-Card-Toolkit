@@ -1,0 +1,531 @@
+unit ERD.Card.Demo.Families;
+
+{$IFDEF FPC}
+  {$MODE DELPHI}
+{$ENDIF}
+
+interface
+
+type
+  /// <summary>Separate runnable family demos; explicit selection before form creation.</summary>
+  TCardDemoFamily = (
+    /// <summary>Tools family demonstration.</summary>
+    dfTools,
+    /// <summary>Memory family demonstration.</summary>
+    dfMemory,
+    /// <summary>Counter family demonstration.</summary>
+    dfCounter,
+    /// <summary>Sle4404 family demonstration.</summary>
+    dfSle4404,
+    /// <summary>Twn4 family demonstration.</summary>
+    dfTwn4,
+    /// <summary>Rfid family demonstration.</summary>
+    dfRfid
+  );
+  /// <summary>One named form input; secrets are decoded to owned buffers, never stored as public arguments.</summary>
+  TCardFamilyField = record
+    /// <summary>Stable unique parameter identifier within an action.</summary>
+    Name: string;
+    /// <summary>Visible field explanation and unit/encoding.</summary>
+    LabelText: string;
+    /// <summary>Explicit benign initial text; no default key or reader.</summary>
+    DefaultText: UnicodeString;
+    /// <summary>Pipe-separated scalar choices; an empty default requires explicit selection.</summary>
+    Choices: string;
+    /// <summary>Whether input must be hex-decoded into a secret credential buffer.</summary>
+    Secret: Boolean;
+  end;
+  /// <summary>Owned field-definition array.</summary>
+  TCardFamilyFields = array of TCardFamilyField;
+  /// <summary>One exact executable action with declared input and acknowledgement scope.</summary>
+  TCardFamilyAction = record
+    /// <summary>Stable operation identifier.</summary>
+    Id: string;
+    /// <summary>Visible action label.</summary>
+    LabelText: string;
+    /// <summary>Fields in exact argument/credential order.</summary>
+    Fields: TCardFamilyFields;
+    /// <summary>Requires explicit acknowledgement for write, code-attempt or other state-changing behavior.</summary>
+    Mutation: Boolean;
+    /// <summary>Requires an exact PC/SC reader name; TWN4 instead declares its port field.</summary>
+    Pcsc: Boolean;
+  end;
+  /// <summary>Owned action catalog for one family.</summary>
+  TCardFamilyActions = array of TCardFamilyAction;
+
+/// <summary>Returns the exact runnable project name for an explicit family.</summary>
+/// <param name="AFamily">Supported demo family.</param>
+/// <returns>Stable project/catalog name.</returns>
+function CardFamilyName(const AFamily: TCardDemoFamily): string;
+
+/// <summary>Creates independent input/action definitions; opens no device.</summary>
+/// <param name="AFamily">Explicit family.</param>
+/// <returns>Complete implemented action list for that family demo.</returns>
+function CardFamilyActions(const AFamily: TCardDemoFamily): TCardFamilyActions;
+
+implementation
+
+uses
+{$IFDEF FPC}
+  SysUtils;
+{$ELSE}
+  System.SysUtils;
+{$ENDIF}
+
+function CardFamilyName(const AFamily: TCardDemoFamily): string;
+begin
+  case AFamily of
+    dfTools: Result := 'ReaderToolsDemo';
+    dfMemory: Result := 'MemoryCardDemo';
+    dfCounter: Result := 'SleCounterDemo';
+    dfSle4404: Result := 'Sle4404Demo';
+    dfTwn4: Result := 'Twn4Demo';
+    dfRfid: Result := 'RfidInputDemo';
+  else raise EArgumentException.Create('Unknown demo family.'); end;
+end;
+
+function CardFamilyActions(const AFamily: TCardDemoFamily): TCardFamilyActions;
+begin
+  Result := nil;
+  case AFamily of
+    dfTools:
+    begin
+      SetLength(Result,8);
+      Result[0].Id := 'apdu'; Result[0].LabelText := 'Offline APDU decode + encode';
+      Result[0].Mutation := False; Result[0].Pcsc := False;
+      SetLength(Result[0].Fields,1);
+      Result[0].Fields[0].Name := 'hex'; Result[0].Fields[0].LabelText := 'Command APDU (hex)';
+      Result[0].Fields[0].DefaultText := '00A4040000'; Result[0].Fields[0].Secret := False; Result[0].Fields[0].Choices := '';
+      Result[1].Id := 'response'; Result[1].LabelText := 'Offline APDU response decode + encode';
+      Result[1].Mutation := False; Result[1].Pcsc := False;
+      SetLength(Result[1].Fields,1);
+      Result[1].Fields[0].Name := 'hex'; Result[1].Fields[0].LabelText := 'Complete APDU response (hex)';
+      Result[1].Fields[0].DefaultText := '01029000'; Result[1].Fields[0].Secret := False; Result[1].Fields[0].Choices := '';
+      Result[2].Id := 'atr'; Result[2].LabelText := 'Offline ATR decode + hints';
+      Result[2].Mutation := False; Result[2].Pcsc := False;
+      SetLength(Result[2].Fields,1);
+      Result[2].Fields[0].Name := 'hex'; Result[2].Fields[0].LabelText := 'Complete ATR (hex)';
+      Result[2].Fields[0].DefaultText := '3B00'; Result[2].Fields[0].Secret := False; Result[2].Fields[0].Choices := '';
+      Result[3].Id := 'tlv'; Result[3].LabelText := 'Offline BER-TLV decode + encode';
+      Result[3].Mutation := False; Result[3].Pcsc := False;
+      SetLength(Result[3].Fields,1);
+      Result[3].Fields[0].Name := 'hex'; Result[3].Fields[0].LabelText := 'Complete BER-TLV (hex)';
+      Result[3].Fields[0].DefaultText := '5A021234'; Result[3].Fields[0].Secret := False; Result[3].Fields[0].Choices := '';
+      Result[4].Id := 'tag'; Result[4].LabelText := 'Offline EMV tag catalog';
+      Result[4].Mutation := False; Result[4].Pcsc := False;
+      SetLength(Result[4].Fields,1);
+      Result[4].Fields[0].Name := 'hex'; Result[4].Fields[0].LabelText := 'EMV tag identifier (hex)';
+      Result[4].Fields[0].DefaultText := '5A'; Result[4].Fields[0].Secret := False; Result[4].Fields[0].Choices := '';
+      Result[5].Id := 'ndef'; Result[5].LabelText := 'Offline NDEF decode + encode';
+      Result[5].Mutation := False; Result[5].Pcsc := False;
+      SetLength(Result[5].Fields,1);
+      Result[5].Fields[0].Name := 'hex'; Result[5].Fields[0].LabelText := 'Complete NDEF message (hex)';
+      Result[5].Fields[0].DefaultText := 'D101055402656E4869'; Result[5].Fields[0].Secret := False; Result[5].Fields[0].Choices := '';
+      Result[6].Id := 'readers'; Result[6].LabelText := 'List PC/SC readers';
+      Result[6].Mutation := False; Result[6].Pcsc := False;
+      SetLength(Result[6].Fields,0);
+      Result[7].Id := 'status'; Result[7].LabelText := 'Read connected ATR / protocol';
+      Result[7].Mutation := False; Result[7].Pcsc := True;
+      SetLength(Result[7].Fields,0);
+    end;
+    dfMemory:
+    begin
+      SetLength(Result,7);
+      Result[0].Id := 'capabilities'; Result[0].LabelText := 'Offline reader-profile capabilities';
+      Result[0].Mutation := False; Result[0].Pcsc := False;
+      SetLength(Result[0].Fields,1);
+      Result[0].Fields[0].Name := 'dialect'; Result[0].Fields[0].LabelText := 'Actual reader dialect';
+      Result[0].Fields[0].DefaultText := ''; Result[0].Fields[0].Secret := False; Result[0].Fields[0].Choices := 'ACR38x CCID|ACR39';
+      Result[1].Id := 'snapshot'; Result[1].LabelText := 'Read snapshot / protection / retry status';
+      Result[1].Mutation := False; Result[1].Pcsc := True;
+      SetLength(Result[1].Fields,2);
+      Result[1].Fields[0].Name := 'model'; Result[1].Fields[0].LabelText := 'Actual SLE / I2C model';
+      Result[1].Fields[0].DefaultText := ''; Result[1].Fields[0].Secret := False; Result[1].Fields[0].Choices := 'SLE4432|SLE4442|SLE5532|SLE5542|SLE4418|SLE4428|SLE5518|SLE5528|I2C1Kbit|I2C2Kbit|I2C4Kbit|I2C8Kbit|I2C16Kbit|I2C32Kbit|I2C64Kbit|I2C128Kbit|I2C256Kbit|I2C512Kbit|I2C1024Kbit';
+      Result[1].Fields[1].Name := 'dialect'; Result[1].Fields[1].LabelText := 'Actual reader dialect';
+      Result[1].Fields[1].DefaultText := ''; Result[1].Fields[1].Secret := False; Result[1].Fields[1].Choices := 'ACR38x CCID|ACR39';
+      Result[2].Id := 'read'; Result[2].LabelText := 'Read memory range';
+      Result[2].Mutation := False; Result[2].Pcsc := True;
+      SetLength(Result[2].Fields,4);
+      Result[2].Fields[0].Name := 'model'; Result[2].Fields[0].LabelText := 'Actual SLE / I2C model';
+      Result[2].Fields[0].DefaultText := ''; Result[2].Fields[0].Secret := False; Result[2].Fields[0].Choices := 'SLE4432|SLE4442|SLE5532|SLE5542|SLE4418|SLE4428|SLE5518|SLE5528|I2C1Kbit|I2C2Kbit|I2C4Kbit|I2C8Kbit|I2C16Kbit|I2C32Kbit|I2C64Kbit|I2C128Kbit|I2C256Kbit|I2C512Kbit|I2C1024Kbit';
+      Result[2].Fields[1].Name := 'dialect'; Result[2].Fields[1].LabelText := 'Actual reader dialect';
+      Result[2].Fields[1].DefaultText := ''; Result[2].Fields[1].Secret := False; Result[2].Fields[1].Choices := 'ACR38x CCID|ACR39';
+      Result[2].Fields[2].Name := 'address'; Result[2].Fields[2].LabelText := 'Start byte / page / block (decimal)';
+      Result[2].Fields[2].DefaultText := '0'; Result[2].Fields[2].Secret := False; Result[2].Fields[2].Choices := '';
+      Result[2].Fields[3].Name := 'count'; Result[2].Fields[3].LabelText := 'Read byte count (decimal)';
+      Result[2].Fields[3].DefaultText := '16'; Result[2].Fields[3].Secret := False; Result[2].Fields[3].Choices := '';
+      Result[3].Id := 'verify'; Result[3].LabelText := 'Verify supplied PIN once';
+      Result[3].Mutation := True; Result[3].Pcsc := True;
+      SetLength(Result[3].Fields,4);
+      Result[3].Fields[0].Name := 'model'; Result[3].Fields[0].LabelText := 'Actual SLE / I2C model';
+      Result[3].Fields[0].DefaultText := ''; Result[3].Fields[0].Secret := False; Result[3].Fields[0].Choices := 'SLE4432|SLE4442|SLE5532|SLE5542|SLE4418|SLE4428|SLE5518|SLE5528|I2C1Kbit|I2C2Kbit|I2C4Kbit|I2C8Kbit|I2C16Kbit|I2C32Kbit|I2C64Kbit|I2C128Kbit|I2C256Kbit|I2C512Kbit|I2C1024Kbit';
+      Result[3].Fields[1].Name := 'dialect'; Result[3].Fields[1].LabelText := 'Actual reader dialect';
+      Result[3].Fields[1].DefaultText := ''; Result[3].Fields[1].Secret := False; Result[3].Fields[1].Choices := 'ACR38x CCID|ACR39';
+      Result[3].Fields[2].Name := 'pin'; Result[3].Fields[2].LabelText := 'Supplied PIN / user code (hex)';
+      Result[3].Fields[2].DefaultText := ''; Result[3].Fields[2].Secret := True; Result[3].Fields[2].Choices := '';
+      Result[3].Fields[3].Name := 'attempts'; Result[3].Fields[3].LabelText := 'Minimum remaining PIN attempts';
+      Result[3].Fields[3].DefaultText := '1'; Result[3].Fields[3].Secret := False; Result[3].Fields[3].Choices := '';
+      Result[4].Id := 'write'; Result[4].LabelText := 'Write range + verify';
+      Result[4].Mutation := True; Result[4].Pcsc := True;
+      SetLength(Result[4].Fields,7);
+      Result[4].Fields[0].Name := 'model'; Result[4].Fields[0].LabelText := 'Actual SLE / I2C model';
+      Result[4].Fields[0].DefaultText := ''; Result[4].Fields[0].Secret := False; Result[4].Fields[0].Choices := 'SLE4432|SLE4442|SLE5532|SLE5542|SLE4418|SLE4428|SLE5518|SLE5528|I2C1Kbit|I2C2Kbit|I2C4Kbit|I2C8Kbit|I2C16Kbit|I2C32Kbit|I2C64Kbit|I2C128Kbit|I2C256Kbit|I2C512Kbit|I2C1024Kbit';
+      Result[4].Fields[1].Name := 'dialect'; Result[4].Fields[1].LabelText := 'Actual reader dialect';
+      Result[4].Fields[1].DefaultText := ''; Result[4].Fields[1].Secret := False; Result[4].Fields[1].Choices := 'ACR38x CCID|ACR39';
+      Result[4].Fields[2].Name := 'address'; Result[4].Fields[2].LabelText := 'Start byte / page / block (decimal)';
+      Result[4].Fields[2].DefaultText := '0'; Result[4].Fields[2].Secret := False; Result[4].Fields[2].Choices := '';
+      Result[4].Fields[3].Name := 'data'; Result[4].Fields[3].LabelText := 'Replacement bytes (hex)';
+      Result[4].Fields[3].DefaultText := ''; Result[4].Fields[3].Secret := False; Result[4].Fields[3].Choices := '';
+      Result[4].Fields[4].Name := 'pin'; Result[4].Fields[4].LabelText := 'Supplied PIN / user code (hex)';
+      Result[4].Fields[4].DefaultText := ''; Result[4].Fields[4].Secret := True; Result[4].Fields[4].Choices := '';
+      Result[4].Fields[5].Name := 'page'; Result[4].Fields[5].LabelText := 'Actual I2C write-page size';
+      Result[4].Fields[5].DefaultText := ''; Result[4].Fields[5].Secret := False; Result[4].Fields[5].Choices := '8 bytes|16 bytes|32 bytes|64 bytes|128 bytes';
+      Result[4].Fields[6].Name := 'attempts'; Result[4].Fields[6].LabelText := 'Minimum remaining PIN attempts';
+      Result[4].Fields[6].DefaultText := '1'; Result[4].Fields[6].Secret := False; Result[4].Fields[6].Choices := '';
+      Result[5].Id := 'changepin'; Result[5].LabelText := 'Replace two-wire PIN + prove new PIN';
+      Result[5].Mutation := True; Result[5].Pcsc := True;
+      SetLength(Result[5].Fields,5);
+      Result[5].Fields[0].Name := 'model'; Result[5].Fields[0].LabelText := 'Actual SLE / I2C model';
+      Result[5].Fields[0].DefaultText := ''; Result[5].Fields[0].Secret := False; Result[5].Fields[0].Choices := 'SLE4432|SLE4442|SLE5532|SLE5542|SLE4418|SLE4428|SLE5518|SLE5528|I2C1Kbit|I2C2Kbit|I2C4Kbit|I2C8Kbit|I2C16Kbit|I2C32Kbit|I2C64Kbit|I2C128Kbit|I2C256Kbit|I2C512Kbit|I2C1024Kbit';
+      Result[5].Fields[1].Name := 'dialect'; Result[5].Fields[1].LabelText := 'Actual reader dialect';
+      Result[5].Fields[1].DefaultText := ''; Result[5].Fields[1].Secret := False; Result[5].Fields[1].Choices := 'ACR38x CCID|ACR39';
+      Result[5].Fields[2].Name := 'pin'; Result[5].Fields[2].LabelText := 'Supplied PIN / user code (hex)';
+      Result[5].Fields[2].DefaultText := ''; Result[5].Fields[2].Secret := True; Result[5].Fields[2].Choices := '';
+      Result[5].Fields[3].Name := 'newpin'; Result[5].Fields[3].LabelText := 'New PIN (hex)';
+      Result[5].Fields[3].DefaultText := ''; Result[5].Fields[3].Secret := True; Result[5].Fields[3].Choices := '';
+      Result[5].Fields[4].Name := 'attempts'; Result[5].Fields[4].LabelText := 'Minimum remaining PIN attempts';
+      Result[5].Fields[4].DefaultText := '1'; Result[5].Fields[4].Secret := False; Result[5].Fields[4].Choices := '';
+      Result[6].Id := 'protect'; Result[6].LabelText := 'Permanently protect selected SLE bytes';
+      Result[6].Mutation := True; Result[6].Pcsc := True;
+      SetLength(Result[6].Fields,6);
+      Result[6].Fields[0].Name := 'model'; Result[6].Fields[0].LabelText := 'Actual SLE / I2C model';
+      Result[6].Fields[0].DefaultText := ''; Result[6].Fields[0].Secret := False; Result[6].Fields[0].Choices := 'SLE4432|SLE4442|SLE5532|SLE5542|SLE4418|SLE4428|SLE5518|SLE5528|I2C1Kbit|I2C2Kbit|I2C4Kbit|I2C8Kbit|I2C16Kbit|I2C32Kbit|I2C64Kbit|I2C128Kbit|I2C256Kbit|I2C512Kbit|I2C1024Kbit';
+      Result[6].Fields[1].Name := 'dialect'; Result[6].Fields[1].LabelText := 'Actual reader dialect';
+      Result[6].Fields[1].DefaultText := ''; Result[6].Fields[1].Secret := False; Result[6].Fields[1].Choices := 'ACR38x CCID|ACR39';
+      Result[6].Fields[2].Name := 'pin'; Result[6].Fields[2].LabelText := 'Supplied PIN / user code (hex)';
+      Result[6].Fields[2].DefaultText := ''; Result[6].Fields[2].Secret := True; Result[6].Fields[2].Choices := '';
+      Result[6].Fields[3].Name := 'address'; Result[6].Fields[3].LabelText := 'Start byte / page / block (decimal)';
+      Result[6].Fields[3].DefaultText := '0'; Result[6].Fields[3].Secret := False; Result[6].Fields[3].Choices := '';
+      Result[6].Fields[4].Name := 'before'; Result[6].Fields[4].LabelText := 'Expected current bytes (hex)';
+      Result[6].Fields[4].DefaultText := ''; Result[6].Fields[4].Secret := False; Result[6].Fields[4].Choices := '';
+      Result[6].Fields[5].Name := 'attempts'; Result[6].Fields[5].LabelText := 'Minimum remaining PIN attempts';
+      Result[6].Fields[5].DefaultText := '1'; Result[6].Fields[5].Secret := False; Result[6].Fields[5].Choices := '';
+    end;
+    dfCounter:
+    begin
+      SetLength(Result,4);
+      Result[0].Id := 'read'; Result[0].LabelText := 'Read explicit public window';
+      Result[0].Mutation := False; Result[0].Pcsc := True;
+      SetLength(Result[0].Fields,4);
+      Result[0].Fields[0].Name := 'countermodel'; Result[0].Fields[0].LabelText := 'Actual counter chip';
+      Result[0].Fields[0].DefaultText := ''; Result[0].Fields[0].Secret := False; Result[0].Fields[0].Choices := 'SLE4406|SLE4436|SLE5536|SLE6636';
+      Result[0].Fields[1].Name := 'window'; Result[0].Fields[1].LabelText := 'Known accessible window (bytes, decimal)';
+      Result[0].Fields[1].DefaultText := ''; Result[0].Fields[1].Secret := False; Result[0].Fields[1].Choices := '';
+      Result[0].Fields[2].Name := 'address'; Result[0].Fields[2].LabelText := 'Start byte / page / block (decimal)';
+      Result[0].Fields[2].DefaultText := '0'; Result[0].Fields[2].Secret := False; Result[0].Fields[2].Choices := '';
+      Result[0].Fields[3].Name := 'count'; Result[0].Fields[3].LabelText := 'Read byte count (decimal)';
+      Result[0].Fields[3].DefaultText := '16'; Result[0].Fields[3].Secret := False; Result[0].Fields[3].Choices := '';
+      Result[1].Id := 'write'; Result[1].LabelText := 'Bit / carry / backup programming + verify';
+      Result[1].Mutation := True; Result[1].Pcsc := True;
+      SetLength(Result[1].Fields,7);
+      Result[1].Fields[0].Name := 'countermodel'; Result[1].Fields[0].LabelText := 'Actual counter chip';
+      Result[1].Fields[0].DefaultText := ''; Result[1].Fields[0].Secret := False; Result[1].Fields[0].Choices := 'SLE4406|SLE4436|SLE5536|SLE6636';
+      Result[1].Fields[1].Name := 'window'; Result[1].Fields[1].LabelText := 'Known accessible window (bytes, decimal)';
+      Result[1].Fields[1].DefaultText := ''; Result[1].Fields[1].Secret := False; Result[1].Fields[1].Choices := '';
+      Result[1].Fields[2].Name := 'address'; Result[1].Fields[2].LabelText := 'Start byte / page / block (decimal)';
+      Result[1].Fields[2].DefaultText := '0'; Result[1].Fields[2].Secret := False; Result[1].Fields[2].Choices := '';
+      Result[1].Fields[3].Name := 'value'; Result[1].Fields[3].LabelText := 'Requested programmed byte (hex)';
+      Result[1].Fields[3].DefaultText := ''; Result[1].Fields[3].Secret := False; Result[1].Fields[3].Choices := '';
+      Result[1].Fields[4].Name := 'mode'; Result[1].Fields[4].LabelText := 'Explicit programming mode';
+      Result[1].Fields[4].DefaultText := ''; Result[1].Fields[4].Secret := False; Result[1].Fields[4].Choices := 'Plain|Carry|Backup|Carry + backup';
+      Result[1].Fields[5].Name := 'before'; Result[1].Fields[5].LabelText := 'Expected current bytes (hex)';
+      Result[1].Fields[5].DefaultText := ''; Result[1].Fields[5].Secret := False; Result[1].Fields[5].Choices := '';
+      Result[1].Fields[6].Name := 'after'; Result[1].Fields[6].LabelText := 'Expected complete window after (hex)';
+      Result[1].Fields[6].DefaultText := ''; Result[1].Fields[6].Secret := False; Result[1].Fields[6].Choices := '';
+      Result[2].Id := 'certificate'; Result[2].LabelText := 'Calculate raw certificate once';
+      Result[2].Mutation := True; Result[2].Pcsc := True;
+      SetLength(Result[2].Fields,5);
+      Result[2].Fields[0].Name := 'countermodel'; Result[2].Fields[0].LabelText := 'Actual counter chip';
+      Result[2].Fields[0].DefaultText := ''; Result[2].Fields[0].Secret := False; Result[2].Fields[0].Choices := 'SLE4406|SLE4436|SLE5536|SLE6636';
+      Result[2].Fields[1].Name := 'window'; Result[2].Fields[1].LabelText := 'Known accessible window (bytes, decimal)';
+      Result[2].Fields[1].DefaultText := ''; Result[2].Fields[1].Secret := False; Result[2].Fields[1].Choices := '';
+      Result[2].Fields[2].Name := 'keyselect'; Result[2].Fields[2].LabelText := 'Explicit key / CBC byte (hex)';
+      Result[2].Fields[2].DefaultText := ''; Result[2].Fields[2].Secret := False; Result[2].Fields[2].Choices := '';
+      Result[2].Fields[3].Name := 'clocks'; Result[2].Fields[3].LabelText := 'Clock pulses per bit (hex)';
+      Result[2].Fields[3].DefaultText := ''; Result[2].Fields[3].Secret := False; Result[2].Fields[3].Choices := '';
+      Result[2].Fields[4].Name := 'challenge'; Result[2].Fields[4].LabelText := 'Six challenge bytes (hex)';
+      Result[2].Fields[4].DefaultText := ''; Result[2].Fields[4].Secret := False; Result[2].Fields[4].Choices := '';
+      Result[3].Id := 'codeframe'; Result[3].LabelText := 'Offline code-presentation command only';
+      Result[3].Mutation := False; Result[3].Pcsc := False;
+      SetLength(Result[3].Fields,1);
+      Result[3].Fields[0].Name := 'code'; Result[3].Fields[0].LabelText := 'Supplied three-byte code (hex)';
+      Result[3].Fields[0].DefaultText := ''; Result[3].Fields[0].Secret := True; Result[3].Fields[0].Choices := '';
+    end;
+    dfSle4404:
+    begin
+      SetLength(Result,5);
+      Result[0].Id := 'read'; Result[0].LabelText := 'Public / supplied-code memory read';
+      Result[0].Mutation := True; Result[0].Pcsc := True;
+      SetLength(Result[0].Fields,7);
+      Result[0].Fields[0].Name := 'window'; Result[0].Fields[0].LabelText := 'Known accessible window (bytes, decimal)';
+      Result[0].Fields[0].DefaultText := ''; Result[0].Fields[0].Secret := False; Result[0].Fields[0].Choices := '';
+      Result[0].Fields[1].Name := 'address'; Result[0].Fields[1].LabelText := 'Start byte / page / block (decimal)';
+      Result[0].Fields[1].DefaultText := '0'; Result[0].Fields[1].Secret := False; Result[0].Fields[1].Choices := '';
+      Result[0].Fields[2].Name := 'count'; Result[0].Fields[2].LabelText := 'Read byte count (decimal)';
+      Result[0].Fields[2].DefaultText := '16'; Result[0].Fields[2].Secret := False; Result[0].Fields[2].Choices := '';
+      Result[0].Fields[3].Name := 'usercounter'; Result[0].Fields[3].LabelText := 'User counter address (decimal)';
+      Result[0].Fields[3].DefaultText := ''; Result[0].Fields[3].Secret := False; Result[0].Fields[3].Choices := '';
+      Result[0].Fields[4].Name := 'usermask'; Result[0].Fields[4].LabelText := 'Four-bit user counter mask (hex)';
+      Result[0].Fields[4].DefaultText := ''; Result[0].Fields[4].Secret := False; Result[0].Fields[4].Choices := '';
+      Result[0].Fields[5].Name := 'attempts'; Result[0].Fields[5].LabelText := 'Minimum remaining PIN attempts';
+      Result[0].Fields[5].DefaultText := '1'; Result[0].Fields[5].Secret := False; Result[0].Fields[5].Choices := '';
+      Result[0].Fields[6].Name := 'pin'; Result[0].Fields[6].LabelText := 'Supplied PIN / user code (hex)';
+      Result[0].Fields[6].DefaultText := ''; Result[0].Fields[6].Secret := True; Result[0].Fields[6].Choices := '';
+      Result[1].Id := 'verify'; Result[1].LabelText := 'Verify supplied user code once';
+      Result[1].Mutation := True; Result[1].Pcsc := True;
+      SetLength(Result[1].Fields,5);
+      Result[1].Fields[0].Name := 'window'; Result[1].Fields[0].LabelText := 'Known accessible window (bytes, decimal)';
+      Result[1].Fields[0].DefaultText := ''; Result[1].Fields[0].Secret := False; Result[1].Fields[0].Choices := '';
+      Result[1].Fields[1].Name := 'usercounter'; Result[1].Fields[1].LabelText := 'User counter address (decimal)';
+      Result[1].Fields[1].DefaultText := ''; Result[1].Fields[1].Secret := False; Result[1].Fields[1].Choices := '';
+      Result[1].Fields[2].Name := 'usermask'; Result[1].Fields[2].LabelText := 'Four-bit user counter mask (hex)';
+      Result[1].Fields[2].DefaultText := ''; Result[1].Fields[2].Secret := False; Result[1].Fields[2].Choices := '';
+      Result[1].Fields[3].Name := 'attempts'; Result[1].Fields[3].LabelText := 'Minimum remaining PIN attempts';
+      Result[1].Fields[3].DefaultText := '1'; Result[1].Fields[3].Secret := False; Result[1].Fields[3].Choices := '';
+      Result[1].Fields[4].Name := 'pin'; Result[1].Fields[4].LabelText := 'Supplied PIN / user code (hex)';
+      Result[1].Fields[4].DefaultText := ''; Result[1].Fields[4].Secret := True; Result[1].Fields[4].Choices := '';
+      Result[2].Id := 'program'; Result[2].LabelText := 'One-to-zero programming + verify';
+      Result[2].Mutation := True; Result[2].Pcsc := True;
+      SetLength(Result[2].Fields,8);
+      Result[2].Fields[0].Name := 'window'; Result[2].Fields[0].LabelText := 'Known accessible window (bytes, decimal)';
+      Result[2].Fields[0].DefaultText := ''; Result[2].Fields[0].Secret := False; Result[2].Fields[0].Choices := '';
+      Result[2].Fields[1].Name := 'address'; Result[2].Fields[1].LabelText := 'Start byte / page / block (decimal)';
+      Result[2].Fields[1].DefaultText := '0'; Result[2].Fields[1].Secret := False; Result[2].Fields[1].Choices := '';
+      Result[2].Fields[2].Name := 'before'; Result[2].Fields[2].LabelText := 'Expected current bytes (hex)';
+      Result[2].Fields[2].DefaultText := ''; Result[2].Fields[2].Secret := False; Result[2].Fields[2].Choices := '';
+      Result[2].Fields[3].Name := 'data'; Result[2].Fields[3].LabelText := 'Replacement bytes (hex)';
+      Result[2].Fields[3].DefaultText := ''; Result[2].Fields[3].Secret := False; Result[2].Fields[3].Choices := '';
+      Result[2].Fields[4].Name := 'usercounter'; Result[2].Fields[4].LabelText := 'User counter address (decimal)';
+      Result[2].Fields[4].DefaultText := ''; Result[2].Fields[4].Secret := False; Result[2].Fields[4].Choices := '';
+      Result[2].Fields[5].Name := 'usermask'; Result[2].Fields[5].LabelText := 'Four-bit user counter mask (hex)';
+      Result[2].Fields[5].DefaultText := ''; Result[2].Fields[5].Secret := False; Result[2].Fields[5].Choices := '';
+      Result[2].Fields[6].Name := 'attempts'; Result[2].Fields[6].LabelText := 'Minimum remaining PIN attempts';
+      Result[2].Fields[6].DefaultText := '1'; Result[2].Fields[6].Secret := False; Result[2].Fields[6].Choices := '';
+      Result[2].Fields[7].Name := 'pin'; Result[2].Fields[7].LabelText := 'Supplied PIN / user code (hex)';
+      Result[2].Fields[7].DefaultText := ''; Result[2].Fields[7].Secret := True; Result[2].Fields[7].Choices := '';
+      Result[3].Id := 'scratch'; Result[3].LabelText := 'Explicit scratchpad erase + verify';
+      Result[3].Mutation := True; Result[3].Pcsc := True;
+      SetLength(Result[3].Fields,8);
+      Result[3].Fields[0].Name := 'window'; Result[3].Fields[0].LabelText := 'Known accessible window (bytes, decimal)';
+      Result[3].Fields[0].DefaultText := ''; Result[3].Fields[0].Secret := False; Result[3].Fields[0].Choices := '';
+      Result[3].Fields[1].Name := 'scratchaddress'; Result[3].Fields[1].LabelText := 'Known scratchpad address';
+      Result[3].Fields[1].DefaultText := ''; Result[3].Fields[1].Secret := False; Result[3].Fields[1].Choices := '';
+      Result[3].Fields[2].Name := 'scratchbytes'; Result[3].Fields[2].LabelText := 'Known scratchpad bytes';
+      Result[3].Fields[2].DefaultText := ''; Result[3].Fields[2].Secret := False; Result[3].Fields[2].Choices := '';
+      Result[3].Fields[3].Name := 'before'; Result[3].Fields[3].LabelText := 'Expected current bytes (hex)';
+      Result[3].Fields[3].DefaultText := ''; Result[3].Fields[3].Secret := False; Result[3].Fields[3].Choices := '';
+      Result[3].Fields[4].Name := 'usercounter'; Result[3].Fields[4].LabelText := 'User counter address (decimal)';
+      Result[3].Fields[4].DefaultText := ''; Result[3].Fields[4].Secret := False; Result[3].Fields[4].Choices := '';
+      Result[3].Fields[5].Name := 'usermask'; Result[3].Fields[5].LabelText := 'Four-bit user counter mask (hex)';
+      Result[3].Fields[5].DefaultText := ''; Result[3].Fields[5].Secret := False; Result[3].Fields[5].Choices := '';
+      Result[3].Fields[6].Name := 'attempts'; Result[3].Fields[6].LabelText := 'Minimum remaining PIN attempts';
+      Result[3].Fields[6].DefaultText := '1'; Result[3].Fields[6].Secret := False; Result[3].Fields[6].Choices := '';
+      Result[3].Fields[7].Name := 'pin'; Result[3].Fields[7].LabelText := 'Supplied PIN / user code (hex)';
+      Result[3].Fields[7].DefaultText := ''; Result[3].Fields[7].Secret := True; Result[3].Fields[7].Choices := '';
+      Result[4].Id := 'application'; Result[4].LabelText := 'Explicit application erase using both codes';
+      Result[4].Mutation := True; Result[4].Pcsc := True;
+      SetLength(Result[4].Fields,11);
+      Result[4].Fields[0].Name := 'window'; Result[4].Fields[0].LabelText := 'Known accessible window (bytes, decimal)';
+      Result[4].Fields[0].DefaultText := ''; Result[4].Fields[0].Secret := False; Result[4].Fields[0].Choices := '';
+      Result[4].Fields[1].Name := 'applicationaddress'; Result[4].Fields[1].LabelText := 'Known application area address';
+      Result[4].Fields[1].DefaultText := ''; Result[4].Fields[1].Secret := False; Result[4].Fields[1].Choices := '';
+      Result[4].Fields[2].Name := 'applicationbytes'; Result[4].Fields[2].LabelText := 'Known application area bytes';
+      Result[4].Fields[2].DefaultText := ''; Result[4].Fields[2].Secret := False; Result[4].Fields[2].Choices := '';
+      Result[4].Fields[3].Name := 'before'; Result[4].Fields[3].LabelText := 'Expected current bytes (hex)';
+      Result[4].Fields[3].DefaultText := ''; Result[4].Fields[3].Secret := False; Result[4].Fields[3].Choices := '';
+      Result[4].Fields[4].Name := 'usercounter'; Result[4].Fields[4].LabelText := 'User counter address (decimal)';
+      Result[4].Fields[4].DefaultText := ''; Result[4].Fields[4].Secret := False; Result[4].Fields[4].Choices := '';
+      Result[4].Fields[5].Name := 'usermask'; Result[4].Fields[5].LabelText := 'Four-bit user counter mask (hex)';
+      Result[4].Fields[5].DefaultText := ''; Result[4].Fields[5].Secret := False; Result[4].Fields[5].Choices := '';
+      Result[4].Fields[6].Name := 'attempts'; Result[4].Fields[6].LabelText := 'Minimum remaining PIN attempts';
+      Result[4].Fields[6].DefaultText := '1'; Result[4].Fields[6].Secret := False; Result[4].Fields[6].Choices := '';
+      Result[4].Fields[7].Name := 'pin'; Result[4].Fields[7].LabelText := 'Supplied PIN / user code (hex)';
+      Result[4].Fields[7].DefaultText := ''; Result[4].Fields[7].Secret := True; Result[4].Fields[7].Choices := '';
+      Result[4].Fields[8].Name := 'memorycounter'; Result[4].Fields[8].LabelText := 'Memory counter first-byte address';
+      Result[4].Fields[8].DefaultText := ''; Result[4].Fields[8].Secret := False; Result[4].Fields[8].Choices := '';
+      Result[4].Fields[9].Name := 'memoryattempts'; Result[4].Fields[9].LabelText := 'Minimum remaining memory-code attempts';
+      Result[4].Fields[9].DefaultText := '1'; Result[4].Fields[9].Secret := False; Result[4].Fields[9].Choices := '';
+      Result[4].Fields[10].Name := 'memorycode'; Result[4].Fields[10].LabelText := 'Supplied four-byte memory code (hex)';
+      Result[4].Fields[10].DefaultText := ''; Result[4].Fields[10].Secret := True; Result[4].Fields[10].Choices := '';
+    end;
+    dfTwn4:
+    begin
+      SetLength(Result,6);
+      Result[0].Id := 'version'; Result[0].LabelText := 'Read PRS version';
+      Result[0].Mutation := False; Result[0].Pcsc := False;
+      SetLength(Result[0].Fields,3);
+      Result[0].Fields[0].Name := 'port'; Result[0].Fields[0].LabelText := 'Exact PRS / CDC COM port';
+      Result[0].Fields[0].DefaultText := ''; Result[0].Fields[0].Secret := False; Result[0].Fields[0].Choices := '';
+      Result[0].Fields[1].Name := 'crc'; Result[0].Fields[1].LabelText := 'Actual firmware CRC mode';
+      Result[0].Fields[1].DefaultText := ''; Result[0].Fields[1].Secret := False; Result[0].Fields[1].Choices := 'Disabled|Enabled';
+      Result[0].Fields[2].Name := 'timeout'; Result[0].Fields[2].LabelText := 'Shared command deadline (ms)';
+      Result[0].Fields[2].DefaultText := '3000'; Result[0].Fields[2].Secret := False; Result[0].Fields[2].Choices := '';
+      Result[1].Id := 'tag'; Result[1].LabelText := 'Read selected tag identity';
+      Result[1].Mutation := False; Result[1].Pcsc := False;
+      SetLength(Result[1].Fields,3);
+      Result[1].Fields[0].Name := 'port'; Result[1].Fields[0].LabelText := 'Exact PRS / CDC COM port';
+      Result[1].Fields[0].DefaultText := ''; Result[1].Fields[0].Secret := False; Result[1].Fields[0].Choices := '';
+      Result[1].Fields[1].Name := 'crc'; Result[1].Fields[1].LabelText := 'Actual firmware CRC mode';
+      Result[1].Fields[1].DefaultText := ''; Result[1].Fields[1].Secret := False; Result[1].Fields[1].Choices := 'Disabled|Enabled';
+      Result[1].Fields[2].Name := 'timeout'; Result[1].Fields[2].LabelText := 'Shared command deadline (ms)';
+      Result[1].Fields[2].DefaultText := '3000'; Result[1].Fields[2].Secret := False; Result[1].Fields[2].Choices := '';
+      Result[2].Id := 'classicread'; Result[2].LabelText := 'Read authenticated Classic block';
+      Result[2].Mutation := True; Result[2].Pcsc := False;
+      SetLength(Result[2].Fields,9);
+      Result[2].Fields[0].Name := 'port'; Result[2].Fields[0].LabelText := 'Exact PRS / CDC COM port';
+      Result[2].Fields[0].DefaultText := ''; Result[2].Fields[0].Secret := False; Result[2].Fields[0].Choices := '';
+      Result[2].Fields[1].Name := 'crc'; Result[2].Fields[1].LabelText := 'Actual firmware CRC mode';
+      Result[2].Fields[1].DefaultText := ''; Result[2].Fields[1].Secret := False; Result[2].Fields[1].Choices := 'Disabled|Enabled';
+      Result[2].Fields[2].Name := 'timeout'; Result[2].Fields[2].LabelText := 'Shared command deadline (ms)';
+      Result[2].Fields[2].DefaultText := '3000'; Result[2].Fields[2].Secret := False; Result[2].Fields[2].Choices := '';
+      Result[2].Fields[3].Name := 'classicmodel'; Result[2].Fields[3].LabelText := 'Actual Classic model';
+      Result[2].Fields[3].DefaultText := ''; Result[2].Fields[3].Secret := False; Result[2].Fields[3].Choices := 'Mini|1K|4K';
+      Result[2].Fields[4].Name := 'block'; Result[2].Fields[4].LabelText := 'Physical block (decimal)';
+      Result[2].Fields[4].DefaultText := ''; Result[2].Fields[4].Secret := False; Result[2].Fields[4].Choices := '';
+      Result[2].Fields[5].Name := 'sector'; Result[2].Fields[5].LabelText := 'Explicit TWN4 reader-sector byte (decimal)';
+      Result[2].Fields[5].DefaultText := ''; Result[2].Fields[5].Secret := False; Result[2].Fields[5].Choices := '';
+      Result[2].Fields[6].Name := 'keytype'; Result[2].Fields[6].LabelText := 'Key type';
+      Result[2].Fields[6].DefaultText := ''; Result[2].Fields[6].Secret := False; Result[2].Fields[6].Choices := 'A|B';
+      Result[2].Fields[7].Name := 'key'; Result[2].Fields[7].LabelText := 'Supplied six-byte key (hex)';
+      Result[2].Fields[7].DefaultText := ''; Result[2].Fields[7].Secret := True; Result[2].Fields[7].Choices := '';
+      Result[2].Fields[8].Name := 'id'; Result[2].Fields[8].LabelText := 'Expected reader-order tag ID (hex)';
+      Result[2].Fields[8].DefaultText := ''; Result[2].Fields[8].Secret := False; Result[2].Fields[8].Choices := '';
+      Result[3].Id := 'classicwrite'; Result[3].LabelText := 'Write Classic data block + verify';
+      Result[3].Mutation := True; Result[3].Pcsc := False;
+      SetLength(Result[3].Fields,11);
+      Result[3].Fields[0].Name := 'port'; Result[3].Fields[0].LabelText := 'Exact PRS / CDC COM port';
+      Result[3].Fields[0].DefaultText := ''; Result[3].Fields[0].Secret := False; Result[3].Fields[0].Choices := '';
+      Result[3].Fields[1].Name := 'crc'; Result[3].Fields[1].LabelText := 'Actual firmware CRC mode';
+      Result[3].Fields[1].DefaultText := ''; Result[3].Fields[1].Secret := False; Result[3].Fields[1].Choices := 'Disabled|Enabled';
+      Result[3].Fields[2].Name := 'timeout'; Result[3].Fields[2].LabelText := 'Shared command deadline (ms)';
+      Result[3].Fields[2].DefaultText := '3000'; Result[3].Fields[2].Secret := False; Result[3].Fields[2].Choices := '';
+      Result[3].Fields[3].Name := 'classicmodel'; Result[3].Fields[3].LabelText := 'Actual Classic model';
+      Result[3].Fields[3].DefaultText := ''; Result[3].Fields[3].Secret := False; Result[3].Fields[3].Choices := 'Mini|1K|4K';
+      Result[3].Fields[4].Name := 'block'; Result[3].Fields[4].LabelText := 'Physical block (decimal)';
+      Result[3].Fields[4].DefaultText := ''; Result[3].Fields[4].Secret := False; Result[3].Fields[4].Choices := '';
+      Result[3].Fields[5].Name := 'sector'; Result[3].Fields[5].LabelText := 'Explicit TWN4 reader-sector byte (decimal)';
+      Result[3].Fields[5].DefaultText := ''; Result[3].Fields[5].Secret := False; Result[3].Fields[5].Choices := '';
+      Result[3].Fields[6].Name := 'keytype'; Result[3].Fields[6].LabelText := 'Key type';
+      Result[3].Fields[6].DefaultText := ''; Result[3].Fields[6].Secret := False; Result[3].Fields[6].Choices := 'A|B';
+      Result[3].Fields[7].Name := 'key'; Result[3].Fields[7].LabelText := 'Supplied six-byte key (hex)';
+      Result[3].Fields[7].DefaultText := ''; Result[3].Fields[7].Secret := True; Result[3].Fields[7].Choices := '';
+      Result[3].Fields[8].Name := 'id'; Result[3].Fields[8].LabelText := 'Expected reader-order tag ID (hex)';
+      Result[3].Fields[8].DefaultText := ''; Result[3].Fields[8].Secret := False; Result[3].Fields[8].Choices := '';
+      Result[3].Fields[9].Name := 'before'; Result[3].Fields[9].LabelText := 'Expected current bytes (hex)';
+      Result[3].Fields[9].DefaultText := ''; Result[3].Fields[9].Secret := False; Result[3].Fields[9].Choices := '';
+      Result[3].Fields[10].Name := 'data'; Result[3].Fields[10].LabelText := 'Replacement bytes (hex)';
+      Result[3].Fields[10].DefaultText := ''; Result[3].Fields[10].Secret := False; Result[3].Fields[10].Choices := '';
+      Result[4].Id := 'type2read'; Result[4].LabelText := 'Read public Type 2 user page';
+      Result[4].Mutation := False; Result[4].Pcsc := False;
+      SetLength(Result[4].Fields,6);
+      Result[4].Fields[0].Name := 'port'; Result[4].Fields[0].LabelText := 'Exact PRS / CDC COM port';
+      Result[4].Fields[0].DefaultText := ''; Result[4].Fields[0].Secret := False; Result[4].Fields[0].Choices := '';
+      Result[4].Fields[1].Name := 'crc'; Result[4].Fields[1].LabelText := 'Actual firmware CRC mode';
+      Result[4].Fields[1].DefaultText := ''; Result[4].Fields[1].Secret := False; Result[4].Fields[1].Choices := 'Disabled|Enabled';
+      Result[4].Fields[2].Name := 'timeout'; Result[4].Fields[2].LabelText := 'Shared command deadline (ms)';
+      Result[4].Fields[2].DefaultText := '3000'; Result[4].Fields[2].Secret := False; Result[4].Fields[2].Choices := '';
+      Result[4].Fields[3].Name := 'type2model'; Result[4].Fields[3].LabelText := 'Actual Type 2 model';
+      Result[4].Fields[3].DefaultText := ''; Result[4].Fields[3].Secret := False; Result[4].Fields[3].Choices := 'Ultralight|EV1 48|EV1 128|NTAG213|NTAG215|NTAG216';
+      Result[4].Fields[4].Name := 'page'; Result[4].Fields[4].LabelText := 'Physical user page (decimal)';
+      Result[4].Fields[4].DefaultText := ''; Result[4].Fields[4].Secret := False; Result[4].Fields[4].Choices := '';
+      Result[4].Fields[5].Name := 'id'; Result[4].Fields[5].LabelText := 'Expected seven-byte tag ID (hex)';
+      Result[4].Fields[5].DefaultText := ''; Result[4].Fields[5].Secret := False; Result[4].Fields[5].Choices := '';
+      Result[5].Id := 'type2write'; Result[5].LabelText := 'Write public Type 2 user page + verify';
+      Result[5].Mutation := True; Result[5].Pcsc := False;
+      SetLength(Result[5].Fields,8);
+      Result[5].Fields[0].Name := 'port'; Result[5].Fields[0].LabelText := 'Exact PRS / CDC COM port';
+      Result[5].Fields[0].DefaultText := ''; Result[5].Fields[0].Secret := False; Result[5].Fields[0].Choices := '';
+      Result[5].Fields[1].Name := 'crc'; Result[5].Fields[1].LabelText := 'Actual firmware CRC mode';
+      Result[5].Fields[1].DefaultText := ''; Result[5].Fields[1].Secret := False; Result[5].Fields[1].Choices := 'Disabled|Enabled';
+      Result[5].Fields[2].Name := 'timeout'; Result[5].Fields[2].LabelText := 'Shared command deadline (ms)';
+      Result[5].Fields[2].DefaultText := '3000'; Result[5].Fields[2].Secret := False; Result[5].Fields[2].Choices := '';
+      Result[5].Fields[3].Name := 'type2model'; Result[5].Fields[3].LabelText := 'Actual Type 2 model';
+      Result[5].Fields[3].DefaultText := ''; Result[5].Fields[3].Secret := False; Result[5].Fields[3].Choices := 'Ultralight|EV1 48|EV1 128|NTAG213|NTAG215|NTAG216';
+      Result[5].Fields[4].Name := 'page'; Result[5].Fields[4].LabelText := 'Physical user page (decimal)';
+      Result[5].Fields[4].DefaultText := ''; Result[5].Fields[4].Secret := False; Result[5].Fields[4].Choices := '';
+      Result[5].Fields[5].Name := 'id'; Result[5].Fields[5].LabelText := 'Expected seven-byte tag ID (hex)';
+      Result[5].Fields[5].DefaultText := ''; Result[5].Fields[5].Secret := False; Result[5].Fields[5].Choices := '';
+      Result[5].Fields[6].Name := 'before'; Result[5].Fields[6].LabelText := 'Expected current bytes (hex)';
+      Result[5].Fields[6].DefaultText := ''; Result[5].Fields[6].Secret := False; Result[5].Fields[6].Choices := '';
+      Result[5].Fields[7].Name := 'data'; Result[5].Fields[7].LabelText := 'Replacement bytes (hex)';
+      Result[5].Fields[7].DefaultText := ''; Result[5].Fields[7].Secret := False; Result[5].Fields[7].Choices := '';
+    end;
+    dfRfid:
+    begin
+      SetLength(Result,3);
+      Result[0].Id := 'text'; Result[0].LabelText := 'Decode presented text';
+      Result[0].Mutation := False; Result[0].Pcsc := False;
+      SetLength(Result[0].Fields,5);
+      Result[0].Fields[0].Name := 'text'; Result[0].Fields[0].LabelText := 'Reader-presented identifier';
+      Result[0].Fields[0].DefaultText := '001234'; Result[0].Fields[0].Secret := False; Result[0].Fields[0].Choices := '';
+      Result[0].Fields[1].Name := 'encoding'; Result[0].Fields[1].LabelText := 'Actual output encoding';
+      Result[0].Fields[1].DefaultText := '0'; Result[0].Fields[1].Secret := False; Result[0].Fields[1].Choices := 'ASCII|Hexadecimal|Decimal';
+      Result[0].Fields[2].Name := 'expected'; Result[0].Fields[2].LabelText := 'Exact identifier characters; 0 = variable';
+      Result[0].Fields[2].DefaultText := '0'; Result[0].Fields[2].Secret := False; Result[0].Fields[2].Choices := '';
+      Result[0].Fields[3].Name := 'width'; Result[0].Fields[3].LabelText := 'Explicit numeric byte width; 0 = no conversion';
+      Result[0].Fields[3].DefaultText := '0'; Result[0].Fields[3].Secret := False; Result[0].Fields[3].Choices := '';
+      Result[0].Fields[4].Name := 'order'; Result[0].Fields[4].LabelText := 'Explicit numeric byte order';
+      Result[0].Fields[4].DefaultText := '0'; Result[0].Fields[4].Secret := False; Result[0].Fields[4].Choices := 'Big endian|Little endian';
+      Result[1].Id := 'keyboard'; Result[1].LabelText := 'Live foreground keyboard capture';
+      Result[1].Mutation := False; Result[1].Pcsc := False;
+      SetLength(Result[1].Fields,6);
+      Result[1].Fields[0].Name := 'encoding'; Result[1].Fields[0].LabelText := 'Actual output encoding';
+      Result[1].Fields[0].DefaultText := '0'; Result[1].Fields[0].Secret := False; Result[1].Fields[0].Choices := 'ASCII|Hexadecimal|Decimal';
+      Result[1].Fields[1].Name := 'terminator'; Result[1].Fields[1].LabelText := 'Actual delimiter';
+      Result[1].Fields[1].DefaultText := '0'; Result[1].Fields[1].Secret := False; Result[1].Fields[1].Choices := 'CR|CRLF|LF|Tab';
+      Result[1].Fields[2].Name := 'expected'; Result[1].Fields[2].LabelText := 'Exact identifier characters; 0 = variable';
+      Result[1].Fields[2].DefaultText := '0'; Result[1].Fields[2].Secret := False; Result[1].Fields[2].Choices := '';
+      Result[1].Fields[3].Name := 'gap'; Result[1].Fields[3].LabelText := 'Inter-character gap budget (ms)';
+      Result[1].Fields[3].DefaultText := '500'; Result[1].Fields[3].Secret := False; Result[1].Fields[3].Choices := '';
+      Result[1].Fields[4].Name := 'prefix'; Result[1].Fields[4].LabelText := 'Exact prefix';
+      Result[1].Fields[4].DefaultText := ''; Result[1].Fields[4].Secret := False; Result[1].Fields[4].Choices := '';
+      Result[1].Fields[5].Name := 'suffix'; Result[1].Fields[5].LabelText := 'Exact suffix';
+      Result[1].Fields[5].DefaultText := ''; Result[1].Fields[5].Secret := False; Result[1].Fields[5].Choices := '';
+      Result[2].Id := 'reports'; Result[2].LabelText := 'Decode host-provided HID reports';
+      Result[2].Mutation := False; Result[2].Pcsc := False;
+      SetLength(Result[2].Fields,15);
+      Result[2].Fields[0].Name := 'encoding'; Result[2].Fields[0].LabelText := 'Actual output encoding';
+      Result[2].Fields[0].DefaultText := '0'; Result[2].Fields[0].Secret := False; Result[2].Fields[0].Choices := 'ASCII|Hexadecimal|Decimal';
+      Result[2].Fields[1].Name := 'terminator'; Result[2].Fields[1].LabelText := 'Actual delimiter';
+      Result[2].Fields[1].DefaultText := '0'; Result[2].Fields[1].Secret := False; Result[2].Fields[1].Choices := 'CR|CRLF|LF|Tab';
+      Result[2].Fields[2].Name := 'expected'; Result[2].Fields[2].LabelText := 'Exact identifier characters; 0 = variable';
+      Result[2].Fields[2].DefaultText := '0'; Result[2].Fields[2].Secret := False; Result[2].Fields[2].Choices := '';
+      Result[2].Fields[3].Name := 'gap'; Result[2].Fields[3].LabelText := 'Inter-character gap budget (ms)';
+      Result[2].Fields[3].DefaultText := '500'; Result[2].Fields[3].Secret := False; Result[2].Fields[3].Choices := '';
+      Result[2].Fields[4].Name := 'prefix'; Result[2].Fields[4].LabelText := 'Exact prefix';
+      Result[2].Fields[4].DefaultText := ''; Result[2].Fields[4].Secret := False; Result[2].Fields[4].Choices := '';
+      Result[2].Fields[5].Name := 'suffix'; Result[2].Fields[5].LabelText := 'Exact suffix';
+      Result[2].Fields[5].DefaultText := ''; Result[2].Fields[5].Secret := False; Result[2].Fields[5].Choices := '';
+      Result[2].Fields[6].Name := 'kind'; Result[2].Fields[6].LabelText := 'Actual report format';
+      Result[2].Fields[6].DefaultText := ''; Result[2].Fields[6].Secret := False; Result[2].Fields[6].Choices := 'Boot 8 bytes|Boot + report ID|Fixed ASCII field';
+      Result[2].Fields[7].Name := 'reportid'; Result[2].Fields[7].LabelText := 'Explicit report ID (decimal)';
+      Result[2].Fields[7].DefaultText := '0'; Result[2].Fields[7].Secret := False; Result[2].Fields[7].Choices := '';
+      Result[2].Fields[8].Name := 'caps'; Result[2].Fields[8].LabelText := 'Initial codec caps lock';
+      Result[2].Fields[8].DefaultText := '0'; Result[2].Fields[8].Secret := False; Result[2].Fields[8].Choices := 'Off|On';
+      Result[2].Fields[9].Name := 'reportbytes'; Result[2].Fields[9].LabelText := 'Exact fixed-field report bytes';
+      Result[2].Fields[9].DefaultText := '0'; Result[2].Fields[9].Secret := False; Result[2].Fields[9].Choices := '';
+      Result[2].Fields[10].Name := 'offset'; Result[2].Fields[10].LabelText := 'Fixed-field zero-based offset';
+      Result[2].Fields[10].DefaultText := '0'; Result[2].Fields[10].Secret := False; Result[2].Fields[10].Choices := '';
+      Result[2].Fields[11].Name := 'fieldbytes'; Result[2].Fields[11].LabelText := 'Fixed-field width';
+      Result[2].Fields[11].DefaultText := '0'; Result[2].Fields[11].Secret := False; Result[2].Fields[11].Choices := '';
+      Result[2].Fields[12].Name := 'hasid'; Result[2].Fields[12].LabelText := 'Fixed-field report ID present';
+      Result[2].Fields[12].DefaultText := '0'; Result[2].Fields[12].Secret := False; Result[2].Fields[12].Choices := 'No|Yes';
+      Result[2].Fields[13].Name := 'padding'; Result[2].Fields[13].LabelText := 'Fixed-field trailing padding';
+      Result[2].Fields[13].DefaultText := '0'; Result[2].Fields[13].Secret := False; Result[2].Fields[13].Choices := 'NUL|Space';
+      Result[2].Fields[14].Name := 'reports'; Result[2].Fields[14].LabelText := 'Complete reports (hex), separated by semicolon';
+      Result[2].Fields[14].DefaultText := ''; Result[2].Fields[14].Secret := False; Result[2].Fields[14].Choices := '';
+    end;
+  else raise EArgumentException.Create('Unknown demo family.'); end;
+end;
+
+end.

@@ -49,7 +49,7 @@ var T: TMagStripeTrack; Message: TNdefMessage; L: TMemoryCardLayout;
   Capabilities: TAcsMemoryCapabilities; CounterWire: TBytes;
 begin
   if (Ord(R.Operation) < Ord(Low(TCardDemoOperation))) or
-    (Ord(R.Operation) > Ord(High(TCardDemoOperation))) then
+    (Ord(R.Operation) > Ord(High(TCardDemoOperation))) or (R.Operation = cdoFamily) then
     raise EArgumentException.Create('Unknown demo operation.');
   if R.Operation in [cdoUid, cdoBelgianEid, cdoIcao, cdoEmvPse, cdoEmvPpse,
     cdoDesfireVersion, cdoType2Read, cdoType4Read, cdoType2Write, cdoType4Write,
