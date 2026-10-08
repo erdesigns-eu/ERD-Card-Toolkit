@@ -281,6 +281,7 @@ var
   Data, Output: TMagStripeTracks;
   I: Integer;
   Raised, Uncertain: Boolean;
+  Receipt:TMagStripeProgrammingReceipt;
 begin
   for I := 0 to 14 do
   begin
@@ -349,6 +350,13 @@ begin
         Check(Obj.FData[mstTrack1] = 'UNCHANGED', 'Unselected Track 1 preserved');
         Check(Obj.FData[mstTrack3] = '123', 'Unselected Track 3 preserved');
         Check(Obj.FWritten[mstTrack2] = Data[mstTrack2], 'Exact unframed input');
+        if I=0 then
+        begin
+          Raised:=False;
+          try Receipt:=C.ProgramTracks([mstTrack2],Data);
+          except on E: EMagStripeError do Raised:=True; end;
+          Check(Raised and (Obj.FAcquires=1), 'Existing backend without optional status writer stays unchanged');
+        end;
       end;
       if (I >= 7) and (I <= 13) then
         Check((Obj.FAcquires = 0) and (Obj.FWrites = 0) and (Obj.FReleases = 0), 'Preflight before all device I/O')

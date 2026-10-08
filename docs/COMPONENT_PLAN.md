@@ -43,9 +43,11 @@ are not compatibility requirements.
    financial Track 1 format B/Track 2 fields and exclusive capability-checked
    reader/writer sessions. MagTek unencrypted ISO fixed HID/default keyboard read
    adapters use bounded host sources. Runtime package, console example and injected
-   tests supplied. Native host capture, physical writer backends and verified YL160/MSR
-   SDK/ABI bindings remain pending; no physical writer is claimed.
-   See [the magstripe guide](MAGSTRIPE.md).
+   tests supplied. MSR206/MSR605 ISO profiles add native Windows COM reads and
+   all-three nonempty programming with explicit high/low coercivity and status-only
+   receipts; see [the serial guide](MSR206.md). Native MagTek capture, additional
+   writer profiles, physical validation and verified YL160/MSR DLL/ABI bindings
+   remain pending. See [the magstripe guide](MAGSTRIPE.md).
 7. **TContactlessCardReader — storage profiles implemented; Delphi/hardware validation pending.**
    Explicit injectable PC/SC storage command profile, UID retrieval and supplied-key
    Classic Mini/1K/4K layout/block operations. Authenticated data writes exclude
@@ -100,9 +102,10 @@ The Type 2 and Type 4 NDEF increments combine pure codecs, record/descriptor
 handling, verified card components, examples, protocol failure tests and API
 documentation. Use the same complete scope for upcoming batches:
 
-1. **Native magstripe integrations:** host HID/keyboard sources and concrete
-   writer backends, then YL160/MSR bindings with verified SDK headers, buffer lengths,
-   status semantics, bitness and calling conventions. Physical coverage stays explicit.
+1. **Further magstripe profiles:** MSR206-7HL's separate protocol and acquired
+   read-back access, additional physical track combinations, native MagTek capture,
+   then YL160/MSR DLL bindings with verified SDK headers and buffer lengths.
+   Physical/firmware coverage and status-versus-read-back evidence stay explicit.
 2. **Additional chip families:** DESFire through a maintained authenticated crypto
    provider, ISO 15693/Type 5 through capable reader backends, then contact memory chips.
 3. **European eID access:** BAC/PACE and secure-messaging integration for the existing
