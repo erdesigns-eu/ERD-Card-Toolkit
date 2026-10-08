@@ -230,3 +230,18 @@ keyboard can also type into it and the source device is not authenticated. Reade
 keyboard layout must match Windows. This page does not open raw USB, configure
 reader firmware or write cards. Raw-report applications can use the distinct
 [host-fed HID profiles](RFID_HID.md). Native Delphi/UI/device checks remain pending.
+
+## SimCardDemo
+
+Gebruik een contact-PC/SC-lezer met SIM-adapter. Kies eerst het exacte klassieke
+SIM- of UICC-profiel; lees ICCID en bij UICC EF.DIR voordat je een volledige AID
+invult. De demo kiest geen applicatie automatisch. Zie [SIM.md](SIM.md) voor paths.
+PIN-input is ASCII-hex (`31323334` voor `1234`), geen BCD.
+
+Test eerst offline ICCID `981032547698103254F6` → `8901234567890123456` en
+alpha `414C494345FF` → `ALICE`. Controleer daarna reader/ICCID, metadata en
+read-only records. Test writes alleen met een test-SIM en exact uitgelezen beforebytes.
+De terugleesstatus en eventuele cleanup-onzekerheid moeten zichtbaar blijven.
+Standalone contacten met CCP/EXT-links worden expliciet geweigerd. Ruwe SMS-records
+blijven volledig behouden; er is geen SMS-verzendactie. Compileer alle negen demos
+Win32/Win64: de gedeelde executors gebruiken nu ook `src/sim`.

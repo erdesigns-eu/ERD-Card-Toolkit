@@ -27,7 +27,10 @@
         <Projects Include="rfidinput\RfidInputDemo.dproj">
             <Dependencies/>
         </Projects>
-    </ItemGroup>
+      <Projects Include="simcard\SimCardDemo.dproj">
+            <Dependencies/>
+        </Projects>
+  </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
         <Borland.ProjectType/>
@@ -107,14 +110,23 @@
     <Target Name="RfidInputDemo:Make">
         <MSBuild Projects="rfidinput\RfidInputDemo.dproj" Targets="Make"/>
     </Target>
+    <Target Name="SimCardDemo">
+        <MSBuild Projects="simcard\SimCardDemo.dproj"/>
+    </Target>
+    <Target Name="SimCardDemo:Clean">
+        <MSBuild Projects="simcard\SimCardDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="SimCardDemo:Make">
+        <MSBuild Projects="simcard\SimCardDemo.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="MagStripeDemo;SmartCardDemo;ReaderToolsDemo;MemoryCardDemo;SleCounterDemo;Sle4404Demo;Twn4Demo;RfidInputDemo"/>
+        <CallTarget Targets="MagStripeDemo;SmartCardDemo;ReaderToolsDemo;MemoryCardDemo;SleCounterDemo;Sle4404Demo;Twn4Demo;RfidInputDemo;SimCardDemo"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="MagStripeDemo:Clean;SmartCardDemo:Clean;ReaderToolsDemo:Clean;MemoryCardDemo:Clean;SleCounterDemo:Clean;Sle4404Demo:Clean;Twn4Demo:Clean;RfidInputDemo:Clean"/>
+        <CallTarget Targets="MagStripeDemo:Clean;SmartCardDemo:Clean;ReaderToolsDemo:Clean;MemoryCardDemo:Clean;SleCounterDemo:Clean;Sle4404Demo:Clean;Twn4Demo:Clean;RfidInputDemo:Clean;SimCardDemo:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="MagStripeDemo:Make;SmartCardDemo:Make;ReaderToolsDemo:Make;MemoryCardDemo:Make;SleCounterDemo:Make;Sle4404Demo:Make;Twn4Demo:Make;RfidInputDemo:Make"/>
+        <CallTarget Targets="MagStripeDemo:Make;SmartCardDemo:Make;ReaderToolsDemo:Make;MemoryCardDemo:Make;SleCounterDemo:Make;Sle4404Demo:Make;Twn4Demo:Make;RfidInputDemo:Make;SimCardDemo:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

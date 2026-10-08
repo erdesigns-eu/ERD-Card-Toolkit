@@ -48,7 +48,7 @@ uses
   ERD.Card.Bytes, ERD.Card.APDU, ERD.Card.ATR, ERD.Card.ATR.Catalog,
   ERD.Card.TLV, ERD.Card.EMV.Tags, ERD.Card.Ndef,
   ERD.Card.Memory, ERD.Card.Memory.Counter, ERD.Card.Memory.Sle4404,
-  ERD.Card.Memory.Capabilities, ERD.Card.PCSC.Reader,
+  ERD.Card.SIM.Data, ERD.Card.SIM.Reader, ERD.Card.Memory.Capabilities, ERD.Card.PCSC.Reader,
   ERD.Card.Contactless, ERD.Card.Contactless.Type2, ERD.Card.RFID.HID,
   ERD.Card.Reader.TWN4.Serial, ERD.Card.Demo.Operations;
 
@@ -206,6 +206,8 @@ end;
 procedure TFamilyOperations.Execute(const R: TCardDemoRequest; const A: TCardFamilyAction;
   const T: ICardTransport; const C: ITwn4ByteChannel; var D: TCardDemoResult);
 var M: TMemoryCardReaderWriter; S: TSleCounterCardReaderWriter; L: TSle4404CardReaderWriter;
+  Sim: TSimCardReaderWriter; SF: TSimFileAddress; SI: TSimFileInfo; PS: TSimPinStatus;
+  SR: TSimRecords; SC: TSimPhonebookEntries; SA: TSimApplications; SD: TSimApplicationInfo; SS: TSimServices; SP: TSimServiceProvider; SE: TSimPhonebookEntry; SM: TSimSmsRecord; PB: TSimPhonebookReferences;
   W: TTwn4CardReaderWriter; H: TRfidHidReportReader;
   Layout: TSle4404AccessLayout; Info: TTwn4TagInfo; Identifier: TRfidInputIdentifier;
   Field: TRfidHidAsciiField; P, NewP, Data, Key, Id, Wire: TBytes;
@@ -392,6 +394,70 @@ begin
           end else Fail;
         finally W.Free; end;
       end;
+      dfSim:
+      begin
+        if A.Id = 'encodealpha' then Output := BytesToHex(TSimCodec.EncodeAlpha(Text(R,A,'name'),Number(R,A,'width',0,255)))
+        else if A.Id = 'decode' then
+        begin
+          Data := Bytes(R,A,'hex');
+          case Number(R,A,'kind',0,7) of
+            0: Output := string(TSimCodec.DecodeIccid(Data));
+            1: Output := string(TSimCodec.DecodeImsi(Data));
+            2: Output := string(TSimCodec.DecodeAlpha(Data));
+            3: begin SP := TSimCodec.DecodeSpn(Data); Output := string(SP.Name); end;
+            4: begin SE := TSimCodec.DecodeAdn(Data); Output := string(SE.Name)+' / '+string(SE.Number)+' / raw '+BytesToHex(SE.Raw); end;
+            5: begin SM := TSimCodec.DecodeSms(Data); Output := 'Status '+IntToStr(SM.StatusByte)+'; preserved body '+BytesToHex(SM.Body); end;
+            6: begin SD := TSimCodec.DecodeDirectoryRecord(Data); Output := BytesToHex(SD.Aid)+' '+string(SD.LabelText); end;
+            7: begin PB := TSimCodec.DecodePhonebookReferences(Data); for I := 0 to High(PB) do Output := Output+'Template '+IntToStr(PB[I].TemplateIndex)+' / '+IntToHex(PB[I].TemplateTag,2)+' role '+IntToHex(PB[I].RoleTag,2)+' FID '+IntToHex(PB[I].FileId,4)+' SFI '+IntToStr(PB[I].ShortFileId)+sLineBreak; end;
+          end;
+        end
+        else
+        begin
+          Sim := TSimCardReaderWriter.Create(nil);
+          try
+            Sim.Profile := TSimCardProfile(Number(R,A,'profile',0,1)); Sim.ApplicationAid := Bytes(R,A,'aid');
+            Sim.PinReference := Number(R,A,'pinref',1,255); Sim.MinimumPinAttempts := Number(R,A,'attempts',1,15); Sim.Transport := T;
+            for I := 0 to High(A.Fields) do if A.Fields[I].Name = 'pin' then P := Bytes(R,A,'pin');
+            N := -1; for I := 0 to High(A.Fields) do if A.Fields[I].Name = 'path' then N := I;
+            if N >= 0 then
+            begin
+              Lines := TStringList.Create;
+              try
+                Lines.StrictDelimiter := True; Lines.Delimiter := '/'; Lines.DelimitedText := string(Text(R,A,'path'));
+                SetLength(SF.Path,Lines.Count); SF.Root := TSimFileRoot(Number(R,A,'root',0,1));
+                for I := 0 to Lines.Count-1 do begin Data := HexToBytes(Lines[I]); if Length(Data) <> 2 then Fail; SF.Path[I] := Word(Data[0]) shl 8 or Data[1]; end;
+                SF := TSimCodec.FileAddress(SF.Root,SF.Path);
+              finally Lines.Free; end;
+            end;
+            if A.Id = 'iccid' then Output := string(Sim.ReadIccid)
+            else if A.Id = 'applications' then begin SA := Sim.ReadApplications; for I := 0 to High(SA) do Output := Output+BytesToHex(SA[I].Aid)+' '+string(SA[I].LabelText)+sLineBreak; end
+            else if (A.Id = 'pinstatus') or (A.Id = 'verify') then
+            begin
+              if A.Id = 'verify' then PS := Sim.VerifyPin(P) else PS := Sim.GetPinStatus;
+              Output := 'Remaining attempts: '+IntToStr(PS.RemainingAttempts)+'; blocked '+BoolToStr(PS.Blocked,True)+'; disabled '+BoolToStr(PS.Disabled,True)+'; verified '+BoolToStr(PS.Verified,True);
+            end
+            else if A.Id = 'imsi' then Output := string(Sim.ReadImsi(P))
+            else if A.Id = 'spn' then begin SP := Sim.ReadSpn(P); Output := string(SP.Name)+'; display condition '+IntToStr(SP.DisplayCondition); end
+            else if A.Id = 'services' then begin SS := Sim.ReadServices(P); for I := 0 to High(SS) do Output := Output+IntToStr(SS[I].Number)+' available '+BoolToStr(SS[I].Available,True)+' active '+BoolToStr(SS[I].Active,True)+sLineBreak; end
+            else if A.Id = 'inspect' then begin SI := Sim.InspectFile(SF); Output := 'File '+IntToHex(SI.FileId,4)+'; size '+IntToStr(SI.Size)+'; record bytes '+IntToStr(SI.RecordBytes)+'; count '+IntToStr(SI.RecordCount)+sLineBreak+BytesToHex(SI.Raw); end
+            else if A.Id = 'read' then Output := BytesToHex(Sim.ReadFile(SF,P))
+            else if A.Id = 'range' then Output := BytesToHex(Sim.ReadBinaryRange(SF,Number(R,A,'address',0,32767),Number(R,A,'count',1,32768),P))
+            else if A.Id = 'record' then Output := BytesToHex(Sim.ReadRecord(SF,Number(R,A,'record',1,255),P))
+            else if A.Id = 'records' then begin SR := Sim.ReadRecords(SF,P); for I := 0 to High(SR) do Output := Output+IntToStr(I+1)+': '+BytesToHex(SR[I])+sLineBreak; end
+            else if A.Id = 'contacts' then begin SC := Sim.ReadPhonebook(SF,P); for I := 0 to High(SC) do Output := Output+IntToStr(SC[I].RecordNumber)+': '+string(SC[I].Name)+' / '+string(SC[I].Number)+' / raw '+BytesToHex(SC[I].Raw)+sLineBreak; end
+            else
+            begin
+              Data := Bytes(R,A,'before');
+              if A.Id = 'write' then Sim.WriteFile(SF,Data,Bytes(R,A,'data'),P)
+              else if A.Id = 'writerecord' then Sim.WriteRecord(SF,Number(R,A,'record',1,255),Data,Bytes(R,A,'data'),P)
+              else if A.Id = 'contact' then Sim.WritePhonebookContact(SF,Number(R,A,'record',1,255),Data,Text(R,A,'name'),Text(R,A,'number'),P)
+              else if A.Id = 'deletecontact' then Sim.DeletePhonebookContact(SF,Number(R,A,'record',1,255),Data,P)
+              else Fail;
+              D.WriteVerified := True; Output := 'SIM write independently verified.';
+            end;
+          finally Sim.Free; end;
+        end;
+      end;
       dfRfid:
       begin
         if A.Id = 'text' then
@@ -452,6 +518,7 @@ begin
       try Execute(ARequest,A,T,C,AResult);
       except
         on E: EMemoryCardWriteUncertain do begin AResult.WriteUncertain := True; AResult.WriteVerified := E.Verified; raise; end;
+        on E: ESimCardWriteUncertain do begin AResult.WriteUncertain := True; AResult.WriteVerified := E.VerifiedReadBack; raise; end;
         on E: ETwn4WriteUncertain do begin AResult.WriteUncertain := True; AResult.WriteVerified := E.VerifiedReadBack; raise; end;
       end;
     except

@@ -1,10 +1,10 @@
 # Installing the Delphi components
 
-The library supplies eleven runtime packages, one design-time palette package and
+The library supplies twelve runtime packages, one design-time palette package and
 source-linked VCL examples. The intended target is Delphi 10.4 or later on Windows,
 Win32 and Win64. The maintainer reports successful package builds and IDE
 installation in RAD Studio 12 (Studio 23.0), Debug/Win32, after the project repair.
-The maintainer subsequently confirmed warning-free builds. The new Memory/Input/TWN4
+The maintainer subsequently confirmed warning-free builds. The new Memory/Input/TWN4/SIM
 packages and standalone source bundle need a fresh Delphi rebuild; other Delphi
 versions, configurations and architectures remain unverified. Linux source readers
 and FPC execution do not establish Delphi compatibility.
@@ -12,7 +12,7 @@ and FPC execution do not establish Delphi compatibility.
 ## Use source directly
 
 Add the required `src` directories to your application's unit search path. The
-core, PC/SC, eID, EMV, magstripe, memory, RFID input and contactless units have no VCL dependency.
+core, PC/SC, eID, EMV, magstripe, memory, SIM, RFID input and contactless units have no VCL dependency.
 Cryptographic providers are optional: Windows CNG supplies DESFire AES;
 `ERD.Card.Crypto.EAC.OpenSSL` supplies ICAO BAC/PACE through an externally installed
 OpenSSL 3 library. The library is not bundled; its architecture must match the
@@ -21,7 +21,7 @@ application. Consult [EUROPEAN_EID.md](EUROPEAN_EID.md) for supported access pro
 ## Build runtime packages
 
 Open `packages/ERDCards.groupproj` in RAD Studio. It builds Core, CryptoWindows,
-CryptoOpenSSL, PCSC, EID, EMV, MagStripe, Contactless, Memory, Input and TWN4, followed by the design
+CryptoOpenSSL, PCSC, EID, EMV, MagStripe, Contactless, Memory, Input, TWN4 and SIM, followed by the design
 package. The order keeps dependencies before their consumers. Either cryptographic
 provider can be omitted when building packages individually and it is not needed.
 Each runtime unit has one runtime-package owner. The standalone design package
@@ -71,7 +71,7 @@ for projects that use installed components. Never add `tests/design` to this pat
 its `DesignIntf` unit is a headless FPC test shim.
 
 The `ERD Cards` palette contains `TSmartCardReader`, `TBelgianEIDReader`,
-`TICAODocumentReader`, `TEMVCardReader`, `TMagStripeReaderWriter`, `TMemoryCardReaderWriter`, `TSleCounterCardReaderWriter` and `TSle4404CardReaderWriter`.
+`TICAODocumentReader`, `TEMVCardReader`, `TMagStripeReaderWriter`, `TMemoryCardReaderWriter`, `TSleCounterCardReaderWriter` `TSle4404CardReaderWriter` and `TSimCardReaderWriter`.
 `ERD Input` contains `TRfidKeyboardReader`, `TRfidHidReportReader` and `TTwn4CardReaderWriter`.
 `ERD Contactless` contains `TContactlessCardReader`, `TType2NdefCardReader`,
 `TType4NdefCardReader`, `TIso15693CardReader`, `TType5NdefCardReader`,

@@ -35,6 +35,8 @@ requires
   designide;
 
 contains
+  ERD.Card.SIM.Data in '..\..\src\sim\ERD.Card.SIM.Data.pas',
+  ERD.Card.SIM.Reader in '..\..\src\sim\ERD.Card.SIM.Reader.pas',
   ERD.Card.Reader.TWN4 in '..\..\src\readers\ERD.Card.Reader.TWN4.pas',
   ERD.Card.RFID.Input in '..\..\src\input\ERD.Card.RFID.Input.pas',
   ERD.Card.RFID.HID in '..\..\src\input\ERD.Card.RFID.HID.pas',

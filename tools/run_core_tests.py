@@ -33,6 +33,7 @@ def main():
                '-Fu' + str(REPO / 'src/emv'),
                '-Fu' + str(REPO / 'src/magstripe'),
                '-Fu' + str(REPO / 'src/memory'),
+               '-Fu' + str(REPO / 'src/sim'),
                '-Fu' + str(REPO / 'src/input'),
                '-Fu' + str(REPO / 'src/readers'),
                '-Fu' + str(REPO / 'src/contactless'),
@@ -49,7 +50,7 @@ def main():
             crt_path = Path(crt.stdout.strip())
             if crt_path.is_file():
                 command.append('-Fl' + str(crt_path.parent))
-    for project in ('examples/readers/InspectTwn4.dpr', 'tests/readers/Twn4.Tests.dpr', 'tests/input/RfidInput.Tests.dpr', 'tests/memory/Sle4404.Tests.dpr', 'tests/memory/MemoryCounter.Tests.dpr', 'tests/memory/MemoryCard.Tests.dpr', 'examples/memory/InspectMemoryCard.dpr', 'examples/memory/InspectSle4404.dpr',
+    for project in ('tests/sim/SimCard.Tests.dpr', 'examples/sim/InspectSim.dpr', 'examples/readers/InspectTwn4.dpr', 'tests/readers/Twn4.Tests.dpr', 'tests/input/RfidInput.Tests.dpr', 'tests/memory/Sle4404.Tests.dpr', 'tests/memory/MemoryCounter.Tests.dpr', 'tests/memory/MemoryCard.Tests.dpr', 'examples/memory/InspectMemoryCard.dpr', 'examples/memory/InspectSle4404.dpr',
                     'tests/core/CardCore.Tests.dpr', 'tests/core/ProtocolCore.Tests.dpr',
                     'tests/core/CardCatalogs.Tests.dpr',
                     'tests/demos/DemoJob.Tests.dpr', 'tests/demos/FamilyOperations.Tests.dpr',
@@ -84,7 +85,7 @@ def main():
     subprocess.run(command + ['-Fu' + str(REPO / 'tests/design'),
                               'tests/design/Registration.Tests.dpr'], cwd=REPO, check=True)
     suffix = '.exe' if os.name == 'nt' else ''
-    for project in ('Twn4.Tests', 'RfidInput.Tests', 'Sle4404.Tests', 'MemoryCounter.Tests', 'MemoryCard.Tests', 'DemoJob.Tests', 'FamilyOperations.Tests', 'Registration.Tests', 'EacCrypto.Tests', 'IcaoDocument.Tests', 'DesfireManagement.Tests', 'CardCore.Tests', 'ProtocolCore.Tests', 'CardCatalogs.Tests', 'CardCrypto.Tests', 'Desfire.Tests', 'DesfireSession.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'Iso15693Type5.Tests', 'MagStripe.Tests', 'Msr206.Tests', 'Msr2067HL.Tests'):
+    for project in ('SimCard.Tests', 'Twn4.Tests', 'RfidInput.Tests', 'Sle4404.Tests', 'MemoryCounter.Tests', 'MemoryCard.Tests', 'DemoJob.Tests', 'FamilyOperations.Tests', 'Registration.Tests', 'EacCrypto.Tests', 'IcaoDocument.Tests', 'DesfireManagement.Tests', 'CardCore.Tests', 'ProtocolCore.Tests', 'CardCatalogs.Tests', 'CardCrypto.Tests', 'Desfire.Tests', 'DesfireSession.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'Iso15693Type5.Tests', 'MagStripe.Tests', 'Msr206.Tests', 'Msr2067HL.Tests'):
         result = subprocess.run([str(build / (project + suffix))], cwd=REPO,
                                 capture_output=True, text=True)
         print(result.stdout, end='', flush=True)
@@ -93,6 +94,18 @@ def main():
         result.check_returncode()
         if re.search(r'\b[1-9][0-9]* unfreed memory blocks', result.stderr):
             raise RuntimeError(project + ' leaked memory according to FPC heaptrc')
+    for args, expected in ((['--help'], 'Offline codecs only.'),
+                           (['--iccid', '981032547698103254F6'], '8901234567890123456'),
+                           (['--imsi', '082980102143658709'], '208011234567890'),
+                           (['--alpha', '414C494345FF'], 'ALICE')):
+        result = subprocess.run([str(build / ('InspectSim' + suffix))] + args,
+                                cwd=REPO, capture_output=True, text=True, check=True)
+        if expected not in result.stdout:
+            raise RuntimeError('SIM console literal mismatch')
+    result = subprocess.run([str(build / ('InspectSim' + suffix)), '--iccid', 'FF'],
+                            cwd=REPO, capture_output=True, text=True)
+    if result.returncode != 1:
+        raise RuntimeError('SIM console malformed input was not refused')
     # Exercise the Windows adapter's actual native-call branches against an isolated
     # C shim on Linux x86-64. This tests layout/arguments, not Windows calling conventions.
     if sys.platform.startswith('linux') and shutil.which('gcc'):

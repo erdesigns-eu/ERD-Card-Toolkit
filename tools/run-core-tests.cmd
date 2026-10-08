@@ -14,6 +14,10 @@ if errorlevel 1 exit /b %errorlevel%
 set "CARD_BUILD=dist\core\%CARD_COMPILER%"
 if not exist "%CARD_BUILD%" mkdir "%CARD_BUILD%"
 if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\sim" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\sim\SimCard.Tests.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\SimCard.Tests.exe"
+if errorlevel 1 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\readers;src\contactless;src\magstripe" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\readers\Twn4.Tests.dpr
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\Twn4.Tests.exe"
@@ -252,9 +256,15 @@ if errorlevel 1 exit /b %errorlevel%
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\DemoJob.Tests.exe"
 if errorlevel 1 exit /b %errorlevel%
-%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\crypto;src\pcsc;src\eid;src\emv;src\contactless;src\magstripe;src\memory;src\input;src\readers;examples\vcl\shared" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\demos\FamilyOperations.Tests.dpr
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\crypto;src\pcsc;src\eid;src\emv;src\contactless;src\magstripe;src\memory;src\input;src\readers;src\sim;examples\vcl\shared" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\demos\FamilyOperations.Tests.dpr
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\FamilyOperations.Tests.exe"
+if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\sim" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" examples\sim\InspectSim.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\InspectSim.exe" --help
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\InspectSim.exe" --iccid 981032547698103254F6
 if errorlevel 1 exit /b %errorlevel%
 call tools\build-packages.cmd %CARD_COMPILER%
 exit /b %errorlevel%

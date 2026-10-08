@@ -1,13 +1,14 @@
 # VCL-voorbeelden: dekking en volgende uitbreiding
 
-Er zijn nu **acht runnable projecten**: SmartCardDemo, MagStripeDemo en de zes
+Er zijn nu **negen runnable projecten**: SmartCardDemo, MagStripeDemo en de zeven
 familiedemo’s ReaderToolsDemo, RfidInputDemo, Twn4Demo, MemoryCardDemo,
-SleCounterDemo en Sle4404Demo. De nieuwe projecten delen formulier-, invoer- en
+SleCounterDemo, Sle4404Demo en SimCardDemo. De nieuwe projecten delen formulier-, invoer- en
 workerbasis. Hun Delphi/Windows/UI- en hardwaretests staan nog open. De overige
 projectnamen hieronder zijn gepland. Betalingen blijven buiten scope.
 
 | Demo | Te demonstreren aanwezige functionaliteit | Huidige VCL-dekking |
 | --- | --- | --- |
+| SimCardDemo | Klassieke SIM en UICC/USIM, identiteiten, servicebits, PIN-status/proof, expliciete bestanden/records en contactwrites | Apart project aanwezig: alle componentmethoden, volledige AID/path-keuze, verwachte bytes, PIN als ASCII-hex, onzekerheidsbewijs en offline record/name-codecs; fysieke SIM-tests open |
 | ReaderToolsDemo | PC/SC-lezers, verbinding/kaartstatus, ATR/protocol; offline APDU, ATR, BER-TLV, hex/bytes en catalogs | Apart project aanwezig: PC/SC-lijst/status, command/response-APDU, ATR/protocol/hints, TLV-boom/roundtrip, EMV-tagmetadata en NDEF-roundtrip |
 | MagStripeDemo | Track 1–3, framing/pariteit/LRC, financiële velden, MagTek-inputprofielen; MSR206/MSR605 statuswrites en MSR206-7HL geverifieerde writes | Offline tracks en MSR206-7HL lezen/schrijven aanwezig; overige profielen/decoders ontbreken |
 | BelgianEidDemo | Identiteit, adres, foto opslaan, beschikbare certificaten en ruwe handtekeningen exporteren | Identiteit/adres/foto in SmartCardDemo; volledige bestandsexport ontbreekt |

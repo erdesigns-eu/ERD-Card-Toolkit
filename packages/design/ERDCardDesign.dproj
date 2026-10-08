@@ -66,7 +66,7 @@
         <SanitizedProjectName>ERDCardDesign</SanitizedProjectName>
         <DCC_BplOutput>..\..\dist\packages\$(Platform)\$(Config)</DCC_BplOutput>
         <DCC_DcpOutput>..\..\dist\packages\$(Platform)\$(Config)</DCC_DcpOutput>
-        <DCC_UnitSearchPath>..\..\src\readers;..\..\src\input;..\..\src\memory;..\..\src\core;..\..\src\crypto;..\..\src\pcsc;..\..\src\eid;..\..\src\emv;..\..\src\magstripe;..\..\src\contactless;..\..\src\design;..\..\dist\packages\$(Platform)\$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>..\..\src\readers;..\..\src\sim;..\..\src\input;..\..\src\memory;..\..\src\core;..\..\src\crypto;..\..\src\pcsc;..\..\src\eid;..\..\src\emv;..\..\src\magstripe;..\..\src\contactless;..\..\src\design;..\..\dist\packages\$(Platform)\$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_RangeChecking>true</DCC_RangeChecking>
         <DCC_IntegerOverflowCheck>true</DCC_IntegerOverflowCheck>
         <DCC_GenerateDocumentation>true</DCC_GenerateDocumentation>
@@ -150,6 +150,8 @@
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.UID.USCUID.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Crypto.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Crypto.EAC.pas"/>
+        <DCCReference Include="..\..\src\sim\ERD.Card.SIM.Data.pas"/>
+        <DCCReference Include="..\..\src\sim\ERD.Card.SIM.Reader.pas"/>
         <DCCReference Include="..\..\src\design\ERD.Card.Design.Register.pas"/>
         <DCCReference Include="..\..\src\eid\ERD.Card.EID.Access.pas"/>
         <DCCReference Include="..\..\src\eid\ERD.Card.EID.Data.pas"/>

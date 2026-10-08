@@ -1,4 +1,4 @@
-program FamilyOperationsTests;
+﻿program FamilyOperationsTests;
 
 {$IFDEF FPC}
   {$MODE DELPHI}
@@ -328,9 +328,40 @@ begin
   else Check(D.WriteVerified and (D.WriteUncertain = FailClose),'TWN4 proof retained');
 end;
 
+procedure TestSimRoutes;
+var S: TScript; T: ICardTransport; H: THardware; Hardware: ICardFamilyHardware;
+  R: TCardDemoRequest; D: TCardDemoResult; Failed: Boolean; I: Integer;
+begin
+  R := Request(dfSim,'decode'); Put(R,dfSim,'kind','0'); Put(R,dfSim,'hex','981032547698103254F6');
+  CreateCardFamilyOperations(dfSim).Run(R,D); Check(D.Text = '8901234567890123456','Literal offline ICCID');
+  R := Request(dfSim,'encodealpha'); Put(R,dfSim,'name','ALICE'); Put(R,dfSim,'width','6');
+  CreateCardFamilyOperations(dfSim).Run(R,D); Check(D.Text = '414C494345FF','Literal offline alpha');
+  for I := 0 to 2 do
+  begin
+    S := TScript.Create; T := S; H := THardware.Create; Hardware := H; H.Transport := T;
+    R := Request(dfSim,'iccid');
+    if I = 1 then begin R := Request(dfSim,'record'); Put(R,dfSim,'path','7F10/6F3A'); Put(R,dfSim,'pin',''); end;
+    if I = 2 then begin R := Request(dfSim,'read'); Put(R,dfSim,'path','3F00/2FE2'); Put(R,dfSim,'pin',''); end;
+    if I < 2 then
+    begin
+      S.Add('A0A40000023F00','000000003F00010000000000090000000200838A838A9000');
+      if I = 0 then begin S.Add('A0A40000022FE2','0000000A2FE20400000000010200009000'); S.Add('A0B000000A','981032547698103254F69000'); end
+      else begin S.Add('A0A40000027F10','000000007F10020000000000090000000200838A838A9000'); S.Add('A0A40000026F3A','000000146F3A0400000000010201149000'); S.Add('A0B2010414','414C494345FF04912143F5FFFFFFFFFFFFFFFFFF9000'); end;
+    end;
+    Failed := False;
+    try CreateCardFamilyOperations(dfSim,Hardware).Run(R,D); except on E: Exception do Failed := True; end;
+    Check(Failed = (I = 2),'SIM route preflight / success');
+    if I = 2 then Check(H.Acquires = 0,'Bad SIM path before hardware')
+    else begin Check((S.Position = Length(S.Steps)) and (H.Acquires = 1) and (H.Releases = 1),'SIM complete transcript');
+      if I = 0 then Check(D.Text = '8901234567890123456','Live ICCID')
+      else Check(D.Text = '414C494345FF04912143F5FFFFFFFFFFFFFFFFFF','Live complete ADN record'); end;
+    Hardware := nil; T := nil;
+  end;
+end;
+
 begin
   try
-    TestOffline; TestPreflight; TestCounterAndSleRoutes;
+    TestSimRoutes; TestOffline; TestPreflight; TestCounterAndSleRoutes;
     TestTwnRoutes(0,False); TestTwnRoutes(1,False); TestTwnRoutes(2,False); TestTwnRoutes(3,False); TestTwnRoutes(3,True);
     TestMemoryWrite(-1,False,False); TestMemoryWrite(6,False,False);
     TestMemoryWrite(7,False,False); TestMemoryWrite(-1,True,False); TestMemoryWrite(-1,False,True);

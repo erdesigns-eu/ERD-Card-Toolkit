@@ -28,6 +28,8 @@ call :build_demo twn4 Twn4Demo
 if errorlevel 1 exit /b %errorlevel%
 call :build_demo rfidinput RfidInputDemo
 if errorlevel 1 exit /b %errorlevel%
+call :build_demo simcard SimCardDemo
+if errorlevel 1 exit /b %errorlevel%
 exit /b %errorlevel%
 :build_demo
 rem Use the same resource generation and configuration as the IDE projects.
