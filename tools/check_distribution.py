@@ -277,25 +277,36 @@ def check_program(path):
 
 
 def check_packages(root):
-    errors, owners, deps, contained_sources = [], {}, {}, {}
-    for path in sorted((root / 'packages').rglob('*.dpk')):
+    errors, owners, deps, contained_sources, contained_units = [], {}, {}, {}, {}
+    # Runtime ownership is unique. A standalone design source bundle may contain
+    # its own explicit copies, because it intentionally loads no runtime BPLs.
+    paths = sorted((root / 'packages').rglob('*.dpk'),
+                   key=lambda path: (path.parent.name == 'design', str(path)))
+    for path in paths:
         source = path.read_text(encoding='utf-8-sig')
         errors.extend(check_delphi_text(path))
         requires = re.search(r'\brequires\s+(.+?);', source, re.I | re.S)
         deps[path.stem] = re.findall(r'\b\w+\b', requires.group(1)) if requires else []
         contained_sources[path.stem] = []
+        contained_units[path.stem] = set()
         design = path.parent.name == 'design'
         if ('{$DESIGNONLY}' if design else '{$RUNONLY}') not in source:
             errors.append(f'{path.name}: package role directive missing')
         if not design and any(d.lower() in ('vcl', 'designide', 'erdcarddesign') for d in deps[path.stem]):
             errors.append(f'{path.name}: runtime depends on VCL/design-time code')
         for unit, ref in re.findall(r"(ERD\.[\w.]+)\s+in\s+'([^']+)'", source):
+            if unit.lower() in contained_units[path.stem]:
+                errors.append(f'{path.name}: duplicate contained unit {unit}')
+            contained_units[path.stem].add(unit.lower())
             contained_sources[path.stem].append(local_path(path.parent, ref))
             if not local_path(path.parent, ref).is_file():
                 errors.append(f'{path.name}: missing contained source {ref}')
-            if unit.lower() in owners:
+            if not design and unit.lower() in owners:
                 errors.append(f'{path.name}: unit {unit} already belongs to {owners[unit.lower()]}')
-            owners[unit.lower()] = path.stem
+            if not design:
+                owners[unit.lower()] = path.stem
+            elif owners.get(unit.lower()) in deps[path.stem]:
+                errors.append(f'{path.name}: source bundle includes dependency-owned unit {unit}')
     known = set(deps) | {'rtl', 'vcl', 'designide'}
     for name, references in deps.items():
         for ref in references:
@@ -310,7 +321,8 @@ def check_packages(root):
             for uses in re.findall(r'\buses\s+(.+?);', source, re.I | re.S):
                 for unit in re.findall(r'\bERD\.[\w.]+', uses):
                     owner = owners.get(unit.lower())
-                    if owner and owner != name and owner not in references:
+                    if (owner and owner != name and owner not in references
+                            and unit.lower() not in contained_units[name]):
                         errors.append(f'{name}: unit {unit} requires owning package {owner}')
     group = root / 'packages/ERDCards.groupproj'
     if group.is_file():

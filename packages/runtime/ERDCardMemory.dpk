@@ -1,0 +1,15 @@
+﻿package ERDCardMemory;
+
+{$R *.res}
+{$IMPLICITBUILD ON}
+{$DESCRIPTION 'ERD Card contact memory: SLE two/three-wire and I2C through explicit ACS profiles'}
+{$RUNONLY}
+
+requires
+  rtl,
+  ERDCardCore;
+
+contains
+  ERD.Card.Memory in '..\..\src\memory\ERD.Card.Memory.pas';
+
+end.

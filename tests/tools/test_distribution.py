@@ -157,9 +157,23 @@ class DistributionTests(unittest.TestCase):
             shutil.copytree(distribution.REPO / 'packages', root / 'packages')
             shutil.copytree(distribution.REPO / 'src', root / 'src')
             path = root / 'packages/design/ERDCardDesign.dpk'
-            path.write_bytes(path.read_bytes().replace(b'  ERDCardPCSC,\r\n', b''))
+            data = path.read_bytes()
+            data = b'\r\n'.join(line for line in data.split(b'\r\n')
+                                if not line.startswith(b'  ERD.Card.PCSC.Reader in '))
+            path.write_bytes(data)
             errors = distribution.check_packages(root)
             self.assertTrue(any('requires owning package ERDCardPCSC' in e for e in errors))
+
+    def test_design_bundle_cannot_also_load_runtime_owners(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            shutil.copytree(distribution.REPO / 'packages', root / 'packages')
+            shutil.copytree(distribution.REPO / 'src', root / 'src')
+            path = root / 'packages/design/ERDCardDesign.dpk'
+            path.write_bytes(path.read_bytes().replace(b'  designide;',
+                                                       b'  designide, ERDCardCore;'))
+            self.assertTrue(any('source bundle includes dependency-owned unit' in e
+                                for e in distribution.check_packages(root)))
 
     def test_group_call_targets_follow_dependency_order(self):
         with tempfile.TemporaryDirectory() as directory:

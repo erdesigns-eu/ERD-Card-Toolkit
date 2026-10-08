@@ -1,6 +1,6 @@
 # Installing the Delphi components
 
-The library supplies eight runtime packages, one design-time palette package and
+The library supplies nine runtime packages, one design-time palette package and
 source-linked VCL examples. The intended target is Delphi 10.4 or later on Windows,
 Win32 and Win64. The maintainer reports successful package builds and IDE
 installation in RAD Studio 12 (Studio 23.0), Debug/Win32, after the project repair.
@@ -20,10 +20,11 @@ application. Consult [EUROPEAN_EID.md](EUROPEAN_EID.md) for supported access pro
 ## Build runtime packages
 
 Open `packages/ERDCards.groupproj` in RAD Studio. It builds Core, CryptoWindows,
-CryptoOpenSSL, PCSC, EID, EMV, MagStripe and Contactless, followed by the design
+CryptoOpenSSL, PCSC, EID, EMV, MagStripe, Contactless and Memory, followed by the design
 package. The order keeps dependencies before their consumers. Either cryptographic
 provider can be omitted when building packages individually and it is not needed.
-Each package owns its units exactly once.
+Each runtime unit has one runtime-package owner. The standalone design package
+explicitly contains its own copies of the units needed for palette registration.
 No runtime package requires `vcl`, `designide` or the registration package.
 
 Alternatively, from the matching RAD Studio command prompt:
@@ -61,15 +62,15 @@ tools\build-packages.cmd dcc32 design
 
 Use `dcc64 design` only when your installed IDE uses matching Win64 design-time
 packages. The script compiles; it does not install anything automatically.
-Make the six required runtime BPLs available to the IDE's DLL loader, for example
-by adding their output directory to PATH before launching RAD Studio. Then use
-**Component > Install Packages > Add** to select `ERDCardDesign.bpl`.
+The new design package requires only matching SDK packages (`rtl`, `vcl`,
+`designide`), not separate ERD runtime BPLs. Use **Component > Install Packages >
+Add** to select `ERDCardDesign.bpl`. Its Delphi installation retest remains pending.
 Add the matching DCP/DCU directories or source directories to the IDE library path
 for projects that use installed components. Never add `tests/design` to this path:
 its `DesignIntf` unit is a headless FPC test shim.
 
 The `ERD Cards` palette contains `TSmartCardReader`, `TBelgianEIDReader`,
-`TICAODocumentReader`, `TEMVCardReader` and `TMagStripeReaderWriter`.
+`TICAODocumentReader`, `TEMVCardReader`, `TMagStripeReaderWriter` and `TMemoryCardReaderWriter`.
 `ERD Contactless` contains `TContactlessCardReader`, `TType2NdefCardReader`,
 `TType4NdefCardReader`, `TIso15693CardReader`, `TType5NdefCardReader`,
 `TDesfireCardReader`, `TType2PasswordCardReader` and `TRawUidProgrammer`.
@@ -77,12 +78,15 @@ Default IDE component icons are used. The optional cryptographic backends are
 interface providers rather than palette components, so the design package does
 not depend on or load them.
 
-The design package must retain its six `ERDCard*` entries in `requires` and the
-matching DCP references in the IDE project. Removing them causes Delphi W1033
-implicit imports and recompiles runtime component classes into the design BPL.
-After changing these dependencies, close the IDE, rebuild the complete set for
-its architecture/configuration, and load the rebuilt design BPL. Avoid mixing
-older copies with the rebuilt packages.
+The maintainer intentionally removed the former runtime dependencies because
+installation with them failed. The design package now follows that standalone
+choice consistently: every required unit is explicitly contained, preventing W1033
+implicit imports. Do not add ERD runtime packages to its `requires` while also
+containing their units, or load those runtime BPLs into the same IDE process.
+Applications can still use the separate runtime packages in their own processes.
+Close the IDE before replacing the old design BPL, rebuild for its architecture
+and configuration, and install the rebuilt standalone package. The actual IDE
+must confirm that this resolves the installation issue.
 
 Constructors, registration and streaming do not connect to cards. Published scalar
 configuration is persisted in DFM files. Interface properties such as `Transport`,

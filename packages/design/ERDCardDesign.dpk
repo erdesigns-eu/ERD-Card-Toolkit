@@ -26,6 +26,8 @@
 {$DEFINE DEBUG}
 {$ENDIF IMPLICITBUILDING}
 {$IMPLICITBUILD ON}
+{$DESIGNONLY}
+{$DESCRIPTION 'ERD Card standalone component palette source bundle'}
 
 requires
   rtl,
@@ -33,6 +35,43 @@ requires
   designide;
 
 contains
-  ERD.Card.Design.Register in '..\..\src\design\ERD.Card.Design.Register.pas';
+  ERD.Card.APDU in '..\..\src\core\ERD.Card.APDU.pas',
+  ERD.Card.Bytes in '..\..\src\core\ERD.Card.Bytes.pas',
+  ERD.Card.Contactless in '..\..\src\contactless\ERD.Card.Contactless.pas',
+  ERD.Card.Contactless.DESFire in '..\..\src\contactless\ERD.Card.Contactless.DESFire.pas',
+  ERD.Card.Contactless.DESFire.EV1 in '..\..\src\contactless\ERD.Card.Contactless.DESFire.EV1.pas',
+  ERD.Card.Contactless.DESFire.EV2 in '..\..\src\contactless\ERD.Card.Contactless.DESFire.EV2.pas',
+  ERD.Card.Contactless.ISO15693 in '..\..\src\contactless\ERD.Card.Contactless.ISO15693.pas',
+  ERD.Card.Contactless.Raw in '..\..\src\contactless\ERD.Card.Contactless.Raw.pas',
+  ERD.Card.Contactless.Type2 in '..\..\src\contactless\ERD.Card.Contactless.Type2.pas',
+  ERD.Card.Contactless.Type2.Ndef in '..\..\src\contactless\ERD.Card.Contactless.Type2.Ndef.pas',
+  ERD.Card.Contactless.Type2.Password in '..\..\src\contactless\ERD.Card.Contactless.Type2.Password.pas',
+  ERD.Card.Contactless.Type4.Ndef in '..\..\src\contactless\ERD.Card.Contactless.Type4.Ndef.pas',
+  ERD.Card.Contactless.Type5.Ndef in '..\..\src\contactless\ERD.Card.Contactless.Type5.Ndef.pas',
+  ERD.Card.Contactless.UID in '..\..\src\contactless\ERD.Card.Contactless.UID.pas',
+  ERD.Card.Contactless.UID.Partial in '..\..\src\contactless\ERD.Card.Contactless.UID.Partial.pas',
+  ERD.Card.Contactless.UID.Profiles in '..\..\src\contactless\ERD.Card.Contactless.UID.Profiles.pas',
+  ERD.Card.Contactless.UID.USCUID in '..\..\src\contactless\ERD.Card.Contactless.UID.USCUID.pas',
+  ERD.Card.Crypto in '..\..\src\core\ERD.Card.Crypto.pas',
+  ERD.Card.Crypto.EAC in '..\..\src\core\ERD.Card.Crypto.EAC.pas',
+  ERD.Card.Design.Register in '..\..\src\design\ERD.Card.Design.Register.pas',
+  ERD.Card.EID.Access in '..\..\src\eid\ERD.Card.EID.Access.pas',
+  ERD.Card.EID.Data in '..\..\src\eid\ERD.Card.EID.Data.pas',
+  ERD.Card.EID.DocumentReader in '..\..\src\eid\ERD.Card.EID.DocumentReader.pas',
+  ERD.Card.EID.ICAO in '..\..\src\eid\ERD.Card.EID.ICAO.pas',
+  ERD.Card.EID.MRZ in '..\..\src\eid\ERD.Card.EID.MRZ.pas',
+  ERD.Card.EID.Reader in '..\..\src\eid\ERD.Card.EID.Reader.pas',
+  ERD.Card.EID.SecureMessaging in '..\..\src\eid\ERD.Card.EID.SecureMessaging.pas',
+  ERD.Card.EMV.Data in '..\..\src\emv\ERD.Card.EMV.Data.pas',
+  ERD.Card.EMV.Reader in '..\..\src\emv\ERD.Card.EMV.Reader.pas',
+  ERD.Card.MagStripe in '..\..\src\magstripe\ERD.Card.MagStripe.pas',
+  ERD.Card.MagStripe.Tracks in '..\..\src\magstripe\ERD.Card.MagStripe.Tracks.pas',
+  ERD.Card.Memory in '..\..\src\memory\ERD.Card.Memory.pas',
+  ERD.Card.Ndef in '..\..\src\contactless\ERD.Card.Ndef.pas',
+  ERD.Card.PCSC.Api in '..\..\src\pcsc\ERD.Card.PCSC.Api.pas',
+  ERD.Card.PCSC.Reader in '..\..\src\pcsc\ERD.Card.PCSC.Reader.pas',
+  ERD.Card.PCSC.Windows in '..\..\src\pcsc\ERD.Card.PCSC.Windows.pas',
+  ERD.Card.TLV in '..\..\src\core\ERD.Card.TLV.pas',
+  ERD.Card.Transport in '..\..\src\core\ERD.Card.Transport.pas';
 
 end.

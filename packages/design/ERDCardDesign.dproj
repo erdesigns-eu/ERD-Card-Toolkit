@@ -66,7 +66,7 @@
         <SanitizedProjectName>ERDCardDesign</SanitizedProjectName>
         <DCC_BplOutput>..\..\dist\packages\$(Platform)\$(Config)</DCC_BplOutput>
         <DCC_DcpOutput>..\..\dist\packages\$(Platform)\$(Config)</DCC_DcpOutput>
-        <DCC_UnitSearchPath>..\..\src\core;..\..\src\crypto;..\..\src\pcsc;..\..\src\eid;..\..\src\emv;..\..\src\magstripe;..\..\src\contactless;..\..\src\design;..\..\dist\packages\$(Platform)\$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>..\..\src\memory;..\..\src\core;..\..\src\crypto;..\..\src\pcsc;..\..\src\eid;..\..\src\emv;..\..\src\magstripe;..\..\src\contactless;..\..\src\design;..\..\dist\packages\$(Platform)\$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_RangeChecking>true</DCC_RangeChecking>
         <DCC_IntegerOverflowCheck>true</DCC_IntegerOverflowCheck>
         <DCC_GenerateDocumentation>true</DCC_GenerateDocumentation>
@@ -126,7 +126,44 @@
         <DCCReference Include="rtl.dcp"/>
         <DCCReference Include="vcl.dcp"/>
         <DCCReference Include="designide.dcp"/>
+        <DCCReference Include="..\..\src\core\ERD.Card.APDU.pas"/>
+        <DCCReference Include="..\..\src\core\ERD.Card.Bytes.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.DESFire.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.DESFire.EV1.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.DESFire.EV2.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.ISO15693.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Raw.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Type2.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Type2.Ndef.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Type2.Password.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Type4.Ndef.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Type5.Ndef.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.UID.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.UID.Partial.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.UID.Profiles.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.UID.USCUID.pas"/>
+        <DCCReference Include="..\..\src\core\ERD.Card.Crypto.pas"/>
+        <DCCReference Include="..\..\src\core\ERD.Card.Crypto.EAC.pas"/>
         <DCCReference Include="..\..\src\design\ERD.Card.Design.Register.pas"/>
+        <DCCReference Include="..\..\src\eid\ERD.Card.EID.Access.pas"/>
+        <DCCReference Include="..\..\src\eid\ERD.Card.EID.Data.pas"/>
+        <DCCReference Include="..\..\src\eid\ERD.Card.EID.DocumentReader.pas"/>
+        <DCCReference Include="..\..\src\eid\ERD.Card.EID.ICAO.pas"/>
+        <DCCReference Include="..\..\src\eid\ERD.Card.EID.MRZ.pas"/>
+        <DCCReference Include="..\..\src\eid\ERD.Card.EID.Reader.pas"/>
+        <DCCReference Include="..\..\src\eid\ERD.Card.EID.SecureMessaging.pas"/>
+        <DCCReference Include="..\..\src\emv\ERD.Card.EMV.Data.pas"/>
+        <DCCReference Include="..\..\src\emv\ERD.Card.EMV.Reader.pas"/>
+        <DCCReference Include="..\..\src\magstripe\ERD.Card.MagStripe.pas"/>
+        <DCCReference Include="..\..\src\magstripe\ERD.Card.MagStripe.Tracks.pas"/>
+        <DCCReference Include="..\..\src\memory\ERD.Card.Memory.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Ndef.pas"/>
+        <DCCReference Include="..\..\src\pcsc\ERD.Card.PCSC.Api.pas"/>
+        <DCCReference Include="..\..\src\pcsc\ERD.Card.PCSC.Reader.pas"/>
+        <DCCReference Include="..\..\src\pcsc\ERD.Card.PCSC.Windows.pas"/>
+        <DCCReference Include="..\..\src\core\ERD.Card.TLV.pas"/>
+        <DCCReference Include="..\..\src\core\ERD.Card.Transport.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

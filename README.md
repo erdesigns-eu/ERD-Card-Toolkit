@@ -4,8 +4,9 @@ Interne Delphi-componentbibliotheek voor het **lezen en schrijven van kaarten**.
 De oude CardStudio-applicatie is vervangen door losse componenten, tools en voorbeelden.
 Betalingen vallen buiten de huidige scope.
 
-**Status:** implementaties en protocoltests zijn aanwezig. Builds in Delphi, installatie
-in de IDE en tests met echte lezers/kaarten moeten nog worden afgerond.
+**Status:** bestaande packages bouwen en installeren volgens de Delphi-hertest van
+de gebruiker zonder warnings. De nieuwe memoryprofielen en het zelfstandige
+designpackage moeten nog in Delphi en met echte lezers/kaarten worden getest.
 Beoogd platform: **Delphi 10.4+, Windows Win32/Win64**.
 
 ## Wat zit erin?
@@ -22,6 +23,7 @@ Beoogd platform: **Delphi 10.4+, Windows Win32/Win64**.
 | DESFire | `TDesfireCardReader` | Bestanden lezen/schrijven, EV1/EV2 AES, transacties en applicatie/bestand/sleutel/toegangsbeheer. |
 | NDEF | `TType2NdefCardReader`, `TType4NdefCardReader`, `TType5NdefCardReader` | Publieke NDEF lezen en vervangen met terugleescontrole, binnen het gekozen kaartprofiel. |
 | ISO 15693 | `TIso15693CardReader` | Systeeminformatie en geadresseerde geheugenblokken lezen/schrijven. |
+| Contact-memorychips | `TMemoryCardReaderWriter` | SLE4432/4442/5532/5542, SLE4418/4428/5518/5528 en I²C 1–1024 kilobit via expliciete ACS-profielen; PINs, geverifieerde writes en SLE-bescherming. |
 | Tools | Losse codecs en catalogs | APDU, ATR, BER-TLV, hex/bytes, MRZ, NDEF, magstripe-pariteit/LRC en ATR/EMV-metadata. |
 
 **Schrijfcontrole:** MSR206/MSR605-programmering levert apparaatstatus; MSR206-7HL
@@ -34,7 +36,7 @@ Lezerondersteuning en kaartondersteuning zijn afzonderlijk: het juiste protocolp
 ## Wat zit er nog niet in?
 
 - **Betalingen:** geen terminal/providerintegratie, betaaltransacties of directe NFC-betaalkernel.
-- **Algemene contact-memorychips:** `TMemoryCardReaderWriter` is gepland, maar bestaat nog niet.
+- **Overige contact-memorychips:** onder andere SLE4406/4436/5536/6636-counterkaarten, SLE4404 en andere readerdialecten ontbreken nog.
 - **Volledige Europese eID-ondersteuning:** Nederlandse, Luxemburgse en Duitse kaartgeneraties/nationale diensten zijn nog niet gevalideerd; aanvullende PACE/EAC-profielen ontbreken.
 - **Cryptografische documentauthenticiteit:** certificaten, handtekeningen en SOD kunnen worden gelezen, maar issuer/SOD-verificatie en chipauthenticatie ontbreken nog.
 - **Alle MIFARE/DESFire-varianten:** onder andere MIFARE Plus, DESFire D40/3DES, LRP, TMAC en uitgebreid sleutelset/configuratiebeheer ontbreken.
@@ -42,7 +44,7 @@ Lezerondersteuning en kaartondersteuning zijn afzonderlijk: het juiste protocolp
 
 ## Packages en voorbeelden
 
-- **8 runtime packages** en **1 design-time package** met **13 palette-componenten**. Runtimecomponenten hebben geen VCL/design-time-afhankelijkheid.
+- **9 runtime packages** en **1 zelfstandig design-time package** met **14 palette-componenten**. Runtimecomponenten hebben geen VCL/design-time-afhankelijkheid; het palette bevat zijn benodigde sources expliciet en vereist geen ERD-runtime-BPL's.
 - **SmartCardDemo:** offline NDEF, UID, Belgische eID/foto, ICAO/foto, EMV-applicatiedetectie, DESFire-versie en Type 2/4 NDEF-vervanging.
 - **MagStripeDemo:** offline trackcontrole, swipes lezen en geverifieerd schrijven via MSR206-7HL.
 - **Consolevoorbeelden** voor de afzonderlijke componenten en uitgebreidere beheeroperaties.
@@ -72,6 +74,7 @@ waarbij de compilerarchitectuur moet overeenkomen met de **IDE**, niet noodzakel
 - [Installatie en packages](docs/INSTALLATION.md) · [VCL-demo’s en teststappen](docs/VCL_DEMOS.md)
 - [Magstripe](docs/MAGSTRIPE.md) · [Belgische eID](docs/BELGIAN_EID.md) · [Europese eID/ICAO](docs/EUROPEAN_EID.md) · [EMV](docs/EMV_READER.md)
 - [Contactless/MIFARE](docs/CONTACTLESS.md) · [DESFire](docs/DESFIRE.md) · [UID-profielen](docs/PROGRAMMABLE_UID.md) · [ISO 15693/Type 5](docs/ISO15693_TYPE5.md)
+- [Contact-memorykaarten](docs/MEMORY_CARDS.md) · [Delphi-overdracht voor een andere agent](docs/DELPHI_AGENT_HANDOFF.md)
 - [Planning](docs/COMPONENT_PLAN.md) · [Validatieresultaten](docs/VALIDATION.md) · [API-documentatiestandaard](docs/API_DOCUMENTATION.md)
 
 Alle publieke API’s hebben Delphi XML-documentatie voor Help Insight.

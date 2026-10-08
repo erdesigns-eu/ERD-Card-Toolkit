@@ -14,7 +14,7 @@ uses
 {$ELSE}
   System.Classes,
 {$ENDIF}
-  DesignIntf, ERD.Card.PCSC.Reader, ERD.Card.EID.Reader,
+  DesignIntf, ERD.Card.Memory, ERD.Card.PCSC.Reader, ERD.Card.EID.Reader,
   ERD.Card.EID.DocumentReader, ERD.Card.EMV.Reader, ERD.Card.MagStripe,
   ERD.Card.Contactless, ERD.Card.Contactless.Type2.Ndef,
   ERD.Card.Contactless.Type4.Ndef, ERD.Card.Contactless.Type5.Ndef,
@@ -24,7 +24,7 @@ uses
 procedure Register;
 begin
   RegisterComponents('ERD Cards', [TSmartCardReader, TBelgianEIDReader,
-    TICAODocumentReader, TEMVCardReader, TMagStripeReaderWriter]);
+    TICAODocumentReader, TEMVCardReader, TMagStripeReaderWriter, TMemoryCardReaderWriter]);
   RegisterComponents('ERD Contactless', [TContactlessCardReader,
     TType2NdefCardReader, TType4NdefCardReader, TIso15693CardReader,
     TType5NdefCardReader, TDesfireCardReader, TType2PasswordCardReader,

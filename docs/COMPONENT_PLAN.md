@@ -99,10 +99,14 @@ are not compatibility requirements.
    access; rotation proves the new key through fresh authentication/version reads.
    See [native DESFire](DESFIRE.md). D40/3DES, LRP, TMAC receipts, key sets/extended
    configuration, originality and physical validation remain pending.
-   **TMemoryCardReaderWriter** remains planned for contact memory-card families and
-   matching readers. Non-Java chips do not share one universal protocol.
+   **TMemoryCardReaderWriter** implements the eight SLE4432/4442/5532/5542 and
+   SLE4418/4428/5518/5528 models plus I2C 1–1024-kilobit geometries through explicit
+   ACR38 CCID/ACR39 profiles. It reads snapshots/retry/protection state, verifies
+   supplied PINs, performs read-back-verified writes, changes two-wire PINs and
+   explicitly locks SLE protection bits. See [memory profiles](MEMORY_CARDS.md).
+   Further contact memory-card families and matching readers remain planned. Non-Java chips do not share one universal protocol.
 8. **Distribution — source/projects available; Delphi/IDE validation pending.**
-   Eight runtime packages, thirteen-component palette registration, isolated Win32/Win64
+   Nine runtime packages, fourteen-component standalone palette registration, isolated Win32/Win64
    Debug/Release build projects, console examples and two worker-based VCL read/write
    demos are supplied. See [installation](INSTALLATION.md), [demos](VCL_DEMOS.md) and
    [validation](VALIDATION.md). Published scalar configuration is streamed; interface
@@ -143,7 +147,9 @@ documentation. Use the same complete scope for upcoming batches:
    management and verified AES key/policy/access administration are implemented. EV1/EV2 AES secure
    file access and EV2 NonFirst through maintained providers are implemented. Then Plus profiles,
    additional ISO 15693 authentication/reader backends,
-   then contact memory chips. Public ISO 15693/Type 5 access is already implemented.
+   then additional contact memory families such as SLE4406/4436/5536/6636 counter
+   cards and SLE4404. The initial SLE/I2C memory and public ISO 15693/Type 5 access
+   profiles are implemented.
 4. **European eID:** BAC and PACE ECDH-GM/AES-128 secure access with complete
    DG1/DG2/COM/SOD reads are implemented. Next: passive/SOD verification, chip/EAC
    authentication, more PACE profiles and concrete Netherlands/Luxembourg/Germany
