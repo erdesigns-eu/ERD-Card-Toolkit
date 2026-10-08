@@ -1,0 +1,11 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
+  <PropertyGroup><ProjectGuid>{77C5B8B7-6C11-5DEF-951A-8E5ED5AFA3B4}</ProjectGuid><ProjectVersion>12.0</ProjectVersion></PropertyGroup>
+  <ItemGroup>
+    <Projects Include="smartcard\SmartCardDemo.dproj"><Dependencies/></Projects>
+    <Projects Include="magstripe\MagStripeDemo.dproj"><Dependencies/></Projects>
+  </ItemGroup>
+  <Target Name="Build"><MSBuild Projects="@(Projects)" Targets="Build" BuildInParallel="false"/></Target>
+  <Target Name="Clean"><MSBuild Projects="@(Projects)" Targets="Clean" BuildInParallel="false"/></Target>
+  <Target Name="Make"><MSBuild Projects="@(Projects)" Targets="Make" BuildInParallel="false"/></Target>
+  <ProjectExtensions><Borland.Personality>Default.Personality</Borland.Personality><Borland.ProjectType/><BorlandProject><Default.Personality/></BorlandProject></ProjectExtensions>
+</Project>

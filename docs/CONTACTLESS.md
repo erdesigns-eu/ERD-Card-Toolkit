@@ -256,7 +256,8 @@ Protocol facts were reviewed on 2026-10-07 against:
   section 8.5; SHA-256 `8c2a81e144d1123ee0a9c3ddd4876144fd11e299893032315c4a34fbbc6b2ed1`.
 
 The implementation is independently written; no external implementation or standards
-PDF is bundled. See [the payment architecture](PAYMENTS.md) for both payment routes.
+PDF is bundled. [Payments are deferred](PAYMENTS.md); the active scope is card
+reading/writing, distribution examples and validation.
 
 Factory FUID programming uses a separate optional `IFuidUidReaderProfile` and
 `ProgramFuidUidOnce`, preserving existing Gen2/Classic profile contracts. USCUID/GDM

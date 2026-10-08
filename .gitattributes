@@ -2,6 +2,9 @@
 *.pas text eol=crlf whitespace=cr-at-eol
 *.dpr text eol=crlf whitespace=cr-at-eol
 *.dpk text eol=crlf whitespace=cr-at-eol
+*.dfm text eol=crlf whitespace=cr-at-eol
+*.dproj text eol=crlf whitespace=cr-at-eol
+*.groupproj text eol=crlf whitespace=cr-at-eol
 *.cmd text eol=crlf whitespace=cr-at-eol
 *.py text eol=lf
 *.md text eol=lf

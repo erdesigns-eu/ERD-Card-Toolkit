@@ -167,7 +167,10 @@ remain unvalidated.
    service-provider authorization contracts. No country wrapper should imply access
    rights absent from the actual application.
 
-Payments follows the current combined DESFire/eID batch; see [PAYMENTS.md](PAYMENTS.md).
+The next distribution step supplies [packages](INSTALLATION.md) and
+[VCL read/write demos](VCL_DEMOS.md). Payments are deferred; further eID work
+prioritizes SOD/passive verification, chip/EAC authentication, additional PACE
+profiles and concrete national-card/reader validation.
 
 ## References reviewed on 2026-10-07 and 2026-10-08
 

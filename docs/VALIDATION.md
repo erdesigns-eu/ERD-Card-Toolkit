@@ -1,6 +1,6 @@
 # Library validation record
 
-Validated in the Linux cloud environment on 2026-10-08 for the combined DESFire AES administration and European ICAO access batch.
+Validated in the Linux cloud environment on 2026-10-08 for the component distribution/VCL demo batch, including the existing DESFire AES administration and European ICAO access suite.
 
 | Check | Result |
 | --- | --- |
@@ -30,10 +30,13 @@ Validated in the Linux cloud environment on 2026-10-08 for the combined DESFire 
 | Native Windows adapter branches | 38 assertions passed against an isolated Linux C ABI shim |
 | Native Windows CNG branches | 51 assertions passed: native argument/length/IV handling, every encrypt/decrypt call failure, handle cleanup and system RNG failure without fallback |
 | Console examples | All fifteen built; hardware-free help/inspection checks passed, including DESFire key/access administration offline help/plan, ICAO help/CardAccess inspection, DESFire management offline help/plan and invalid arguments, APDU/NDEF/Type 4/Type 5/DESFire valid/invalid cases, ATR known/unknown/bad-TCK and EMV known/private tags, magstripe parity and MSR206 frame/status cases |
+| Demo worker and offline operations | 39 assertions passed: real worker/caller separation, request byte/string ownership, single delivery, join on destruction, nil executor, sanitized errors, verified write evidence after cleanup failure, offline NDEF/track inspection and hardware preflight refusals |
+| Palette registration / RTL streaming | 14 assertions passed: actual Register routine captures thirteen classes; inactive construction and FPC component stream round-trip for each; DesignIntf capture is not an IDE/ABI test |
+| Distribution / VCL source readers | Eleven MSBuild projects, two groups and two DFM forms passed: references, package ownership/order, runtime/design dependency separation, palette completeness, field/event bindings, form creation and Platform/Config output isolation; no Delphi/VCL execution |
 | FPC range/overflow/heap checks | Passed; no unfreed allocations in passing test programs |
-| Python checker regression tests | All 15 passed |
-| Pascalcheck core profile | All 21 readers passed on 92 explicitly selected source files |
-| XML documentation | 1331 visible production API declarations inspected; zero findings; exported test-vector declarations also pass the full profile |
+| Python checker regression tests | All 21 passed, including six distribution-reader positive/negative cases |
+| Pascalcheck core profile | All 21 readers passed on 103 explicitly selected source files |
+| XML documentation | 1332 visible production API declarations inspected; zero findings; exported test-vector declarations also pass the full profile |
 | Reference integrity | All 26 retained files match the original Git bytes and manifest hashes |
 | Patch whitespace | `git diff --check` passed |
 
@@ -58,6 +61,15 @@ FPC reports an intentional private-constructor warning for the internal TLV
 constructor, a platform-dependent unreachable branch in the test handle factory,
 and unused test-result variable notes. None has been suppressed. Production PC/SC
 and eID/EMV/contactless units compile without additional FPC warnings in the tested branches.
+
+The existing protocol suite passed 1,789,463 assertions across 29 program runs.
+The new demo worker and registration tests add 53 assertions in two programs;
+the worker was rebuilt and rerun after the final request-ownership edits.
+The full 21-reader profile covers 103 Pascal sources, including the VCL units.
+Only the non-VCL worker/executor and inactive component registration/streaming
+were compiled/executed under FPC. The actual forms, MSBuild projects, package BPLs
+and batch scripts require [Delphi/Windows validation](INSTALLATION.md).
+The supplied [VCL smoke-test guide](VCL_DEMOS.md) records the remaining manual steps.
 
 The eID suite checks independent buffers, unknown and empty fields, additive FF
 length boundaries, malformed and supplementary Unicode, certificate DER envelope
@@ -229,7 +241,9 @@ transcript verifies retained authentication and cleanup.
 Real payment-card behavior, contact/contactless schemes and Delphi package/IDE
 integration remain pending; no payment kernel or scheme certification is claimed.
 
-Pending: Delphi dcc32/dcc64 builds, all eight runtime package builds, Windows
+Pending: Delphi dcc32/dcc64 builds, all eight runtime package builds, the design-time
+BPL in the matching IDE architecture, both VCL applications, designer/DFM loading,
+DPI/layout and Help Insight checks, Windows
 OpenSSL loader/deployment/ABI checks, generated XML/Help
 Insight inspection in RAD Studio, and real Belpic 1.7/1.8 contact-card checks for
 T=0/T=1, padded files, photographs, issued/unissued certificates and card removal.

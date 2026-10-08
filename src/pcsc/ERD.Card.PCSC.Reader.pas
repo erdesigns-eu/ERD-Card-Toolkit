@@ -31,7 +31,7 @@ type
   /// context and publishes only the latest state; PollChanges dispatches events on
   /// its caller's thread. No queued callbacks, automatic reconnects or command retries
   /// occur. Native transmit/transaction calls may block; stop monitoring does not
-  /// cancel card commands. There is no design-time registration yet.
+  /// cancel card commands. The optional ERDCardDesign package registers this inactive component.
   /// </remarks>
   TSmartCardReader = class(TComponent)
   private

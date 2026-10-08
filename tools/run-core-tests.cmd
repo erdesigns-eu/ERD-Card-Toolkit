@@ -210,19 +210,9 @@ if errorlevel 1 exit /b %errorlevel%
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\ReadIcaoDocument.exe" --cardaccess 31143012060A04007F0007020204020202010202010D
 if errorlevel 1 exit /b %errorlevel%
-%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -Usrc\magstripe -N0"%CARD_BUILD%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" packages\runtime\ERDCardMagStripe.dpk
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\crypto;src\pcsc;src\eid;src\emv;src\contactless;src\magstripe;examples\vcl\shared" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\demos\DemoJob.Tests.dpr
 if errorlevel 1 exit /b %errorlevel%
-%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -Usrc\core -N0"%CARD_BUILD%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" packages\runtime\ERDCardCore.dpk
+"%CARD_BUILD%\DemoJob.Tests.exe"
 if errorlevel 1 exit /b %errorlevel%
-%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\crypto;%CARD_BUILD%" -N0"%CARD_BUILD%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" packages\runtime\ERDCardCryptoWindows.dpk
-if errorlevel 1 exit /b %errorlevel%
-%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\crypto;%CARD_BUILD%" -N0"%CARD_BUILD%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" packages\runtime\ERDCardCryptoOpenSSL.dpk
-if errorlevel 1 exit /b %errorlevel%
-%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\pcsc;%CARD_BUILD%" -N0"%CARD_BUILD%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" packages\runtime\ERDCardPCSC.dpk
-if errorlevel 1 exit /b %errorlevel%
-%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\eid;%CARD_BUILD%" -N0"%CARD_BUILD%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" packages\runtime\ERDCardEID.dpk
-if errorlevel 1 exit /b %errorlevel%
-%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\emv;%CARD_BUILD%" -N0"%CARD_BUILD%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" packages\runtime\ERDCardEMV.dpk
-if errorlevel 1 exit /b %errorlevel%
-%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\contactless;%CARD_BUILD%" -N0"%CARD_BUILD%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" packages\runtime\ERDCardContactless.dpk
+call tools\build-packages.cmd %CARD_COMPILER%
 exit /b %errorlevel%
