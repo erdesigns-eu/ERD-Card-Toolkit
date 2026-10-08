@@ -354,9 +354,18 @@ def check_registration(root):
     path = root / 'src/design/ERD.Card.Design.Register.pas'
     if not path.is_file():
         return ['palette registration source missing']
-    expected = set()
+    ancestry = {}
     for unit in (root / 'src').rglob('*.pas'):
-        expected.update(re.findall(r'\b(T\w+)\s*=\s*class\(TComponent\)', unit.read_text(), re.I))
+        for name, base in re.findall(r'\b(T\w+)\s*=\s*class\((T\w+)\)', unit.read_text(), re.I):
+            ancestry[name] = base.casefold()
+    expected = set()
+    known = {'tcomponent'}
+    while True:
+        discovered = {name for name, base in ancestry.items() if base in known} - expected
+        if not discovered:
+            break
+        expected.update(discovered)
+        known.update(name.casefold() for name in discovered)
     declared = []
     for names in re.findall(r"RegisterComponents\('[^']+',\s*\[([^]]+)\]\)", path.read_text(), re.S):
         declared.extend(re.findall(r'\bT\w+\b', names))

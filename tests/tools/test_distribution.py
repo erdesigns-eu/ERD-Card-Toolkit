@@ -90,6 +90,17 @@ class DistributionTests(unittest.TestCase):
             self.assertTrue(any('already belongs' in e for e in errors))
             self.assertTrue(any('runtime depends' in e for e in errors))
 
+    def test_palette_component_descendants(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'src/design').mkdir(parents=True)
+            (root / 'src/Components.pas').write_text('TBase = class(TComponent) end; TChild = class(TBase) end; TGrandChild = class(TChild) end; TCycle = class(TCycle) end;')
+            registration = root / 'src/design/ERD.Card.Design.Register.pas'
+            registration.write_text("RegisterComponents('Cards', [TBase, TChild, TGrandChild]);")
+            self.assertEqual(distribution.check_registration(root), [])
+            registration.write_text("RegisterComponents('Cards', [TBase, TChild]);")
+            self.assertTrue(any('unregistered component TGrandChild' in e for e in distribution.check_registration(root)))
+
     def test_palette_missing_unknown_and_duplicate(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

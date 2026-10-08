@@ -273,7 +273,7 @@ object SmartCardDemoForm: TSmartCardDemoForm
           Top = 76
           Width = 330
           Height = 23
-          Caption = 'Address / count / counter readable bytes'
+          Caption = 'Address / count / special-chip readable bytes'
         end
         object MemoryAddressEdit: TEdit
           Left = 352
@@ -370,7 +370,7 @@ object SmartCardDemoForm: TSmartCardDemoForm
           Top = 220
           Width = 944
           Height = 23
-          Caption = 'Select the actual chip and reader profile. Counter window comes from the chip layout. No automatic retry.'
+          Caption = 'Select the actual chip and reader profile. Special-chip window comes from the chip layout. No automatic retry.'
         end
       end
     end

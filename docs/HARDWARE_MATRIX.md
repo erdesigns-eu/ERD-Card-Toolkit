@@ -16,8 +16,16 @@ not evidence that programming works.
 | ACR38x CCID | SLE4406 | Pending with known readable window | Pending | Carry pending; backup/certificate unavailable |
 | ACR38x CCID | SLE4436 | Pending with known readable window | Pending | Carry/backup/non-CBC certificate pending |
 | ACR38x CCID | SLE5536/6636 | Pending with known readable window | Pending | Carry/backup/CBC/non-CBC certificate pending |
+| ACR38x CCID | SLE4404 | Pending with known window | Bit-program/scratchpad/application erase pending | Both code budgets and success proof pending |
+| ACR39 | SLE4404 | Not implemented | Not implemented | Not implemented |
 | ACR39 | SLE4406/4436/5536/6636 | Not implemented | Not implemented | Not implemented |
 
 For completed checks retain a redacted before/after result and describe intentional
 failure/removal cases separately. Never record PINs or keys in this matrix or traces.
 See [memory API scope](MEMORY_CARDS.md) and [VCL operations](VCL_DEMOS.md).
+
+USB-HID RFID checks are also pending: reader model/firmware, keyboard layout, actual
+terminator/prefix/length and presented encoding; for raw reports record descriptor,
+report-ID framing and known fixed-field/status protocol. Keyboard input, 8/9-byte
+boot reports and declared ASCII fields are separate profiles. No AliExpress model
+or generic HID card-memory/UID writing has been certified. See [RFID input](RFID_HID.md).

@@ -270,8 +270,9 @@ begin
     try AwaitResult(Job, D); finally Job.Free; end;
     Check(D.Success and (Pos('SLE4442', string(D.Text)) > 0), 'Offline memory capabilities failed.');
     Check((Pos('SLE6636', string(D.Text)) > 0) = (I = 0), 'ACR39 counter capabilities incorrectly claimed.');
+    Check((Pos('SLE4404', string(D.Text)) > 0) = (I = 0), 'ACR39 SLE4404 capabilities incorrectly claimed.');
   end;
-  for I := 0 to 7 do
+  for I := 0 to 9 do
   begin
     R := Default(TCardDemoRequest); D := Default(TCardDemoResult);
     R.ReaderName := 'must not connect'; R.MemoryModel := mcmSle4442;
@@ -286,6 +287,8 @@ begin
       5: begin R.Operation := cdoMemoryRead; R.MemoryCount := 1; R.MinimumPinAttempts := 0; end;
       6: begin R.Operation := cdoReaderStatus; R.ReaderName := ''; end;
       7: begin R.Operation := cdoMemoryWrite; R.Password := HexToBytes('123456'); R.MemoryBytes := nil; end;
+      8: begin R.Operation := cdoSle4404Read; R.MemoryDialect := amdAcr39; R.CounterReadableBytes := 52; R.MemoryCount := 4; end;
+      9: begin R.Operation := cdoSle4404Read; R.CounterReadableBytes := 0; R.MemoryCount := 4; end;
     end;
     Job := TCardDemoJob.Create(R, CreateCardDemoOperations); Job.StartWork;
     try AwaitResult(Job, D); finally Job.Free; end;

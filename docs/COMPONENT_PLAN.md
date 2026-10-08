@@ -104,9 +104,11 @@ are not compatibility requirements.
    ACR38 CCID/ACR39 profiles. It reads snapshots/retry/protection state, verifies
    supplied PINs, performs read-back-verified writes, changes two-wire PINs and
    explicitly locks SLE protection bits. See [memory profiles](MEMORY_CARDS.md).
-   Further contact memory-card families and matching readers remain planned. Non-Java chips do not share one universal protocol.
+   [SLE4404](SLE4404.md) adds distinct guarded code access, bit programming and
+   explicit verified erases. Generic RFID keyboard and host-fed HID report adapters
+   are supplied separately through ERDCardInput. Further chip families/readers remain planned. Non-Java chips do not share one universal protocol.
 8. **Distribution — source/projects available; Delphi/IDE validation pending.**
-   Nine runtime packages, fifteen-component standalone palette registration, isolated Win32/Win64
+   Ten runtime packages, eighteen-component standalone palette registration, isolated Win32/Win64
    Debug/Release build projects, console examples and two worker-based VCL read/write
    demos are supplied. See [installation](INSTALLATION.md), [demos](VCL_DEMOS.md) and
    [validation](VALIDATION.md). Published scalar configuration is streamed; interface
@@ -147,7 +149,9 @@ documentation. Use the same complete scope for upcoming batches:
    management and verified AES key/policy/access administration are implemented. EV1/EV2 AES secure
    file access and EV2 NonFirst through maintained providers are implemented. Then Plus profiles,
    additional ISO 15693 authentication/reader backends,
-   then SLE4404 and authenticated AT88SC/CryptoMemory contact-memory profiles.
+   then authenticated AT88SC/CryptoMemory and additional reader backends.
+   SLE4404 code access/programming/explicit erases are implemented through ACS38 CCID;
+   [USB-HID RFID input](RFID_HID.md) supplies keyboard and explicit host-fed report profiles.
    SLE/I2C memory, explicit SLE4406/4436/5536/6636 counter commands and public
    ISO 15693/Type 5 access are implemented. Chip-specific counter arithmetic and
    personalisation-code proof remain separate extensions.

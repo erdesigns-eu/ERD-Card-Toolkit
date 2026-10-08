@@ -215,7 +215,7 @@ own/wipe its credential-bearing command and must implement chip-specific proof.
 
 `TAcsMemoryCapabilityCatalog.ForDialect` returns offline value sets for ordinary
 reads/writes, supplied PIN, PIN replacement, permanent protection, counter profiles
-and raw certificate calculation. It **does not query reader firmware or detect
+raw certificate calculation and separate SLE4404 feature sets. It **does not query reader firmware or detect
 hardware support**. This distinction is also visible in the VCL demo: offline
 profile capabilities and connected ATR/negotiated protocol are separate operations.
 
@@ -226,5 +226,10 @@ Counter profiles offer public reads in the demo; deliberate carry/backup writes
 are available through the component API. See [VCL steps](VCL_DEMOS.md) and the
 [pending hardware matrix](HARDWARE_MATRIX.md).
 
-SLE4404, authenticated AT88SC/CryptoMemory, additional reader dialects and
+The separate [SLE4404 profile](SLE4404.md) now supplies guarded code access,
+one-to-zero programming and explicit verified scratchpad/application erases through
+ACR38x CCID, with caller-known geometry and counter locations. The VCL/console
+examples expose public reads; code/erase operations are API calls.
+
+Authenticated AT88SC/CryptoMemory, additional reader dialects and
 chip-specific counter arithmetic/personalisation proof remain future work.

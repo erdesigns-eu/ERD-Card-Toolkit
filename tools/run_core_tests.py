@@ -33,6 +33,7 @@ def main():
                '-Fu' + str(REPO / 'src/emv'),
                '-Fu' + str(REPO / 'src/magstripe'),
                '-Fu' + str(REPO / 'src/memory'),
+               '-Fu' + str(REPO / 'src/input'),
                '-Fu' + str(REPO / 'src/contactless'),
                '-Fu' + str(REPO / 'src/design'),
                '-Fu' + str(REPO / 'examples/vcl/shared'),
@@ -47,7 +48,7 @@ def main():
             crt_path = Path(crt.stdout.strip())
             if crt_path.is_file():
                 command.append('-Fl' + str(crt_path.parent))
-    for project in ('tests/memory/MemoryCounter.Tests.dpr', 'tests/memory/MemoryCard.Tests.dpr', 'examples/memory/InspectMemoryCard.dpr',
+    for project in ('tests/input/RfidInput.Tests.dpr', 'tests/memory/Sle4404.Tests.dpr', 'tests/memory/MemoryCounter.Tests.dpr', 'tests/memory/MemoryCard.Tests.dpr', 'examples/memory/InspectMemoryCard.dpr', 'examples/memory/InspectSle4404.dpr',
                     'tests/core/CardCore.Tests.dpr', 'tests/core/ProtocolCore.Tests.dpr',
                     'tests/core/CardCatalogs.Tests.dpr',
                     'tests/demos/DemoJob.Tests.dpr',
@@ -82,7 +83,7 @@ def main():
     subprocess.run(command + ['-Fu' + str(REPO / 'tests/design'),
                               'tests/design/Registration.Tests.dpr'], cwd=REPO, check=True)
     suffix = '.exe' if os.name == 'nt' else ''
-    for project in ('MemoryCounter.Tests', 'MemoryCard.Tests', 'DemoJob.Tests', 'Registration.Tests', 'EacCrypto.Tests', 'IcaoDocument.Tests', 'DesfireManagement.Tests', 'CardCore.Tests', 'ProtocolCore.Tests', 'CardCatalogs.Tests', 'CardCrypto.Tests', 'Desfire.Tests', 'DesfireSession.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'Iso15693Type5.Tests', 'MagStripe.Tests', 'Msr206.Tests', 'Msr2067HL.Tests'):
+    for project in ('RfidInput.Tests', 'Sle4404.Tests', 'MemoryCounter.Tests', 'MemoryCard.Tests', 'DemoJob.Tests', 'Registration.Tests', 'EacCrypto.Tests', 'IcaoDocument.Tests', 'DesfireManagement.Tests', 'CardCore.Tests', 'ProtocolCore.Tests', 'CardCatalogs.Tests', 'CardCrypto.Tests', 'Desfire.Tests', 'DesfireSession.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'Iso15693Type5.Tests', 'MagStripe.Tests', 'Msr206.Tests', 'Msr2067HL.Tests'):
         result = subprocess.run([str(build / (project + suffix))], cwd=REPO,
                                 capture_output=True, text=True)
         print(result.stdout, end='', flush=True)
@@ -294,7 +295,17 @@ def main():
     if inspected.returncode != 1 or 'EDesfireError' not in inspected.stdout:
         raise RuntimeError('DESFire management example did not reject invalid arguments')
     print('PASS: DESFire management offline help/plan and invalid arguments.', flush=True)
+    sle4404 = str(build / ('InspectSle4404' + suffix))
+    for bad_args in (['--window', '0'],
+                     ['--window', '52', '--reader', 'must not connect', '--dialect', 'acr39'],
+                     ['--window', '52', '--reader', 'must not connect', '--dialect', 'acr38-ccid',
+                      '--address', '51', '--count', '2']):
+        invalid = subprocess.run([sle4404] + bad_args, capture_output=True, text=True)
+        if invalid.returncode != 1 or 'EMemoryCardError' not in invalid.stdout:
+            raise RuntimeError('SLE4404 example did not reject invalid geometry/dialect before hardware')
     for project, cases in (
+        ('InspectSle4404', [(['--help'], 'InspectSle4404 --window'),
+                            (['--window', '52'], 'Caller-declared readable bytes: 52')]),
         ('InspectMemoryCard', [(['--help'], 'Usage: InspectMemoryCard'),
                                (['--model', 'sle4442'], 'Main bytes: 256 PIN bytes: 3'),
                                (['--model', 'sle4428'], 'Main bytes: 1024 PIN bytes: 2'),

@@ -65,6 +65,7 @@ The exact reader selector remains above both tabs. The new memory tab exposes:
 | Memory snapshot / range | Explicit SLE/I2C model and matching dialect; snapshot includes protection/retry status without attempting a PIN |
 | Verify supplied PIN once | Explicit PIN-equipped model, card-order hexadecimal PIN and minimum remaining attempts |
 | Write range + verify | Explicit range/payload and change acknowledgement; supplied PIN for secured SLE, empty for plain SLE/I2C; explicit physical page size for I2C |
+| SLE4404 snapshot / range | ACR38x CCID and known readable window; public reads only; guarded codes/erases are separate API calls |
 | Counter snapshot / range | SLE4406/4436/5536/6636, ACR38x CCID and application-known readable window; public reads only in this demo |
 
 No model or dialect is automatically selected. PIN and write payload arrays are
@@ -125,3 +126,20 @@ Also check missing reader/card, unsupported profile, driver failures, closing wh
 waiting for a swipe, and ambiguous write results. Verify designer DFM loading,
 Help Insight for public APIs, and layout at your target DPI. These IDE/hardware
 checks remain outstanding; see [VALIDATION.md](VALIDATION.md).
+
+## RFID keyboard page
+
+Select **RFID keyboard** in SmartCardDemo. Choose the actual output format
+(ASCII, hexadecimal or decimal) and terminator (CR is the default). The four
+settings underneath are exact identifier length (zero means variable), maximum
+inter-character gap in milliseconds, exact prefix and exact suffix. Start capture,
+then scan while the dedicated input box has focus. Stop capture before changing
+configuration or using PC/SC pages. Leading zeros/case are preserved; only explicit
+hexadecimal mode produces bytes. Repeated scans each produce an event.
+
+Test correct scans, wrong length, partial/slow scans, mismatching delimiters and
+recovery after a complete delimiter. This is foreground keyboard input: a physical
+keyboard can also type into it and the source device is not authenticated. Reader
+keyboard layout must match Windows. This page does not open raw USB, configure
+reader firmware or write cards. Raw-report applications can use the distinct
+[host-fed HID profiles](RFID_HID.md). Native Delphi/UI/device checks remain pending.

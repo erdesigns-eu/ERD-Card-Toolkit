@@ -28,7 +28,7 @@ uses
   ERD.Card.Contactless, ERD.Card.Contactless.Type2,
   ERD.Card.Contactless.Type2.Ndef, ERD.Card.Contactless.Type4.Ndef,
   ERD.Card.Contactless.DESFire, ERD.Card.Ndef, ERD.Card.MagStripe.Tracks,
-  ERD.Card.Memory, ERD.Card.Memory.Counter, ERD.Card.Memory.Capabilities,
+  ERD.Card.Memory, ERD.Card.Memory.Counter, ERD.Card.Memory.Sle4404, ERD.Card.Memory.Capabilities,
   ERD.Card.MagStripe, ERD.Card.MagStripe.Serial, ERD.Card.MagStripe.MSR2067HL;
 
 type
@@ -53,14 +53,16 @@ begin
     raise EArgumentException.Create('Unknown demo operation.');
   if R.Operation in [cdoUid, cdoBelgianEid, cdoIcao, cdoEmvPse, cdoEmvPpse,
     cdoDesfireVersion, cdoType2Read, cdoType4Read, cdoType2Write, cdoType4Write,
-    cdoReaderStatus, cdoMemorySnapshot, cdoMemoryRead, cdoMemoryVerify, cdoMemoryWrite, cdoCounterRead] then
+    cdoReaderStatus, cdoMemorySnapshot, cdoMemoryRead, cdoMemoryVerify, cdoMemoryWrite, cdoCounterRead, cdoSle4404Read] then
     if Trim(R.ReaderName) = '' then raise EArgumentException.Create('Select an exact reader name.');
   if R.Operation in [cdoMemoryCapabilities, cdoMemorySnapshot, cdoMemoryRead,
-    cdoMemoryVerify, cdoMemoryWrite, cdoCounterRead] then
+    cdoMemoryVerify, cdoMemoryWrite, cdoCounterRead, cdoSle4404Read] then
   begin
     Capabilities := TAcsMemoryCapabilityCatalog.ForDialect(R.MemoryDialect);
     if (R.Operation = cdoCounterRead) and not (R.CounterModel in Capabilities.CounterModels) then
       raise EArgumentException.Create('Counter cards require the ACR38x CCID profile.');
+    if (R.Operation = cdoSle4404Read) and not (sfPublicRead in Capabilities.Sle4404Features) then
+      raise EArgumentException.Create('SLE4404 requires the ACR38x CCID profile.');
   end;
   if R.Operation in [cdoMemorySnapshot, cdoMemoryRead, cdoMemoryVerify, cdoMemoryWrite] then
   begin
@@ -87,6 +89,11 @@ begin
         raise EArgumentException.Create('Memory write exceeds the selected chip.');
     end;
   end;
+  if R.Operation = cdoSle4404Read then
+    if (R.CounterReadableBytes < 1) or (R.CounterReadableBytes > 256) or
+      (R.MemoryAddress < 0) or (R.MemoryAddress >= R.CounterReadableBytes) or
+      (R.MemoryCount < 1) or (R.MemoryCount > R.CounterReadableBytes - R.MemoryAddress) then
+      raise EArgumentException.Create('Supply a valid SLE4404 readable window and range.');
   if R.Operation = cdoCounterRead then
   begin
     CounterWire := TSleCounterCodec.Select(R.CounterModel);
@@ -174,7 +181,18 @@ end;
 procedure TDemoOperations.RunMemory(const R: TCardDemoRequest;
   const Card: TSmartCardReader; var D: TCardDemoResult);
 var Memory: TMemoryCardReaderWriter; Counter: TSleCounterCardReaderWriter;
+  Sle4404: TSle4404CardReaderWriter;
 begin
+  if R.Operation = cdoSle4404Read then
+  begin
+    Sle4404 := TSle4404CardReaderWriter.Create(nil);
+    try
+      Sle4404.ReadableBytes := R.CounterReadableBytes; Sle4404.Transport := Card.Transport;
+      D.CounterBytes := Sle4404.ReadMemory(R.MemoryAddress, R.MemoryCount, nil);
+      D.Text := 'SLE4404 public memory read; no code presentation, programming or erasing.';
+    finally Sle4404.Free; end;
+    Exit;
+  end;
   if R.Operation = cdoCounterRead then
   begin
     Counter := TSleCounterCardReaderWriter.Create(nil);
@@ -231,7 +249,7 @@ var Contactless: TContactlessCardReader; Belgian: TBelgianEIDReader;
   Snapshot2: TType2NdefSnapshot; Snapshot4: TType4NdefSnapshot;
   Message: TNdefMessage; I: Integer;
 begin
-  if R.Operation in [cdoMemorySnapshot, cdoMemoryRead, cdoMemoryVerify, cdoMemoryWrite, cdoCounterRead] then
+  if R.Operation in [cdoMemorySnapshot, cdoMemoryRead, cdoMemoryVerify, cdoMemoryWrite, cdoCounterRead, cdoSle4404Read] then
   begin RunMemory(R, Card, D); Exit; end;
   case R.Operation of
     cdoReaderStatus:
@@ -372,6 +390,8 @@ begin
     for CounterModel := Low(TSleCounterModel) to High(TSleCounterModel) do
       if CounterModel in Capabilities.CounterModels then
         AResult.Text := AResult.Text + #13#10 + UnicodeString(TAcsMemoryCapabilityCatalog.CounterName(CounterModel)) + ': counter read / verified bit and carry write';
+    if sfPublicRead in Capabilities.Sle4404Features then
+      AResult.Text := AResult.Text + #13#10 + 'SLE4404: public/code read / verified bit programming / supplied user-code proof / explicit scratch and application erase';
     Exit;
   end;
   if ARequest.Operation in [cdoTrackInspect, cdoTrackRead, cdoTrackWrite] then

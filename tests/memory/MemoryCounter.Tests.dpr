@@ -152,6 +152,9 @@ begin
   Check(not (mcmI2c8Kbit in C.ProtectionModels), 'I2C protection not claimed');
   C := TAcsMemoryCapabilityCatalog.ForDialect(amdAcr39);
   Check((C.CounterModels = []) and (C.CertificateModels = []), 'No ACR39 counter support claimed');
+  Check(C.Sle4404Features = [], 'No ACR39 SLE4404 support claimed');
+  C := TAcsMemoryCapabilityCatalog.ForDialect(amdAcr38Ccid);
+  Check(C.Sle4404Features = [sfPublicRead..sfApplicationErase], 'ACR38 SLE4404 features missing');
 end;
 
 procedure TestReadAndWrite;

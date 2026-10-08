@@ -14,6 +14,14 @@ if errorlevel 1 exit /b %errorlevel%
 set "CARD_BUILD=dist\core\%CARD_COMPILER%"
 if not exist "%CARD_BUILD%" mkdir "%CARD_BUILD%"
 if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\input" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\input\RfidInput.Tests.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\RfidInput.Tests.exe"
+if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\memory" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\memory\Sle4404.Tests.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\Sle4404.Tests.exe"
+if errorlevel 1 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\memory" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\memory\MemoryCounter.Tests.dpr
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\MemoryCounter.Tests.exe"
@@ -21,6 +29,12 @@ if errorlevel 1 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\memory" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\memory\MemoryCard.Tests.dpr
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\MemoryCard.Tests.exe"
+if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\pcsc;src\memory" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" examples\memory\InspectSle4404.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\InspectSle4404.exe" --help
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\InspectSle4404.exe" --window 52
 if errorlevel 1 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\pcsc;src\memory" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" examples\memory\InspectMemoryCard.dpr
 if errorlevel 1 exit /b %errorlevel%

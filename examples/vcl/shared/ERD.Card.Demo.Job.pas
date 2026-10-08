@@ -69,7 +69,9 @@ type
     /// <summary>Write a selected ordinary-memory range with independent read-back.</summary>
     cdoMemoryWrite,
     /// <summary>Read a caller-declared public counter-chip range through ACR38x CCID.</summary>
-    cdoCounterRead
+    cdoCounterRead,
+    /// <summary>Read an explicit public SLE4404 range through ACR38x CCID.</summary>
+    cdoSle4404Read
   );
   /// <summary>One explicit request copied by the job before its worker starts.</summary>
   TCardDemoRequest = record
@@ -117,7 +119,7 @@ type
     MemoryBytes: TBytes;
     /// <summary>Explicit SLE counter-chip profile.</summary>
     CounterModel: TSleCounterModel;
-    /// <summary>Caller-declared counter-card readable window, one through 256 bytes.</summary>
+    /// <summary>Caller-declared counter/SLE4404 readable window, one through 256 bytes.</summary>
     CounterReadableBytes: Integer;
   end;
   /// <summary>Owned completion data moved to the UI exactly once.</summary>
@@ -144,7 +146,7 @@ type
     Tracks: TMagStripeTracks;
     /// <summary>Owned ordinary-memory data, protection and retry status; no supplied PIN copies.</summary>
     Memory: TMemoryCardSnapshot;
-    /// <summary>Owned public counter-card range; ordinary-memory geometry does not apply.</summary>
+    /// <summary>Owned public counter/SLE4404 range; ordinary-memory geometry does not apply.</summary>
     CounterBytes: TBytes;
   end;
   /// <summary>Worker-only operation executor; implementations must not access VCL controls.</summary>

@@ -13,6 +13,23 @@ type
   TMemoryCardModels = set of TMemoryCardModel;
   /// <summary>Implemented counter-chip profiles, not hardware certification.</summary>
   TSleCounterModels = set of TSleCounterModel;
+  /// <summary>Implemented SLE4404 operations; each still requires an explicit known card layout.</summary>
+  TSle4404Feature = (
+    /// <summary>Read a public accessible byte range without a code attempt.</summary>
+    sfPublicRead,
+    /// <summary>Read a range after one user-code attempt with counter proof.</summary>
+    sfUserCodeRead,
+    /// <summary>Program one-to-zero bits with expected-state and read-back checks.</summary>
+    sfProgram,
+    /// <summary>Verify one supplied user code through the restored counter.</summary>
+    sfUserCodeProof,
+    /// <summary>Explicitly erase and verify the scratchpad.</summary>
+    sfScratchErase,
+    /// <summary>Explicitly erase the application area using both supplied codes.</summary>
+    sfApplicationErase
+  );
+  /// <summary>Offline set of implemented SLE4404 operations, not detected card rights.</summary>
+  TSle4404Features = set of TSle4404Feature;
   /// <summary>Operations available in the component set for one explicitly selected ACS dialect.</summary>
   /// <remarks>This is an offline protocol catalog. It does not query firmware or infer the
   /// reader model from its name or ATR. Card configuration, credentials and locks still apply.</remarks>
@@ -33,6 +50,8 @@ type
     CounterModels: TSleCounterModels;
     /// <summary>Counter-chip profiles with raw certificate calculation, without issuer verification.</summary>
     CertificateModels: TSleCounterModels;
+    /// <summary>SLE4404 operations implemented for this reader dialect; empty for ACR39.</summary>
+    Sle4404Features: TSle4404Features;
   end;
   /// <summary>Offline catalog separating documented implemented protocols from actual hardware support.</summary>
   TAcsMemoryCapabilityCatalog = class
@@ -68,6 +87,7 @@ begin
   begin
     Result.CounterModels := [Low(TSleCounterModel)..High(TSleCounterModel)];
     Result.CertificateModels := [scmSle4436, scmSle5536, scmSle6636];
+    Result.Sle4404Features := [Low(TSle4404Feature)..High(TSle4404Feature)];
   end;
 end;
 

@@ -1,0 +1,16 @@
+﻿package ERDCardInput;
+
+{$R *.res}
+{$IMPLICITBUILD ON}
+{$DESCRIPTION 'ERD Card RFID input: keyboard framing and explicit HID report profiles'}
+{$RUNONLY}
+
+requires
+  rtl,
+  ERDCardCore;
+
+contains
+  ERD.Card.RFID.Input in '..\..\src\input\ERD.Card.RFID.Input.pas',
+  ERD.Card.RFID.HID in '..\..\src\input\ERD.Card.RFID.HID.pas';
+
+end.

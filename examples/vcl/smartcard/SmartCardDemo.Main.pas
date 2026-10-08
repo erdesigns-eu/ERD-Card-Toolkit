@@ -4,7 +4,7 @@ interface
 
 uses
   System.Classes, Vcl.Controls, Vcl.Forms, Vcl.StdCtrls, Vcl.ExtCtrls, System.SysUtils,
-  Vcl.Dialogs, Vcl.ComCtrls, ERD.Card.Bytes, ERD.Card.Demo.Job, ERD.Card.Demo.Form;
+  Vcl.Dialogs, Vcl.ComCtrls, ERD.Card.RFID.Input, ERD.Card.Bytes, ERD.Card.Demo.Job, ERD.Card.Demo.Form;
 
 type
   /// <summary>Explicit PC/SC card operations with a background worker and optional face preview.</summary>
@@ -127,8 +127,19 @@ type
     /// <param name="Sender">VCL event sender.</param>
     procedure SavePhotoClick(Sender: TObject);
   private
+    FRfid: TRfidKeyboardReader;
+    FRfidTab: TTabSheet;
+    FRfidSettings: TPanel;
+    FRfidEncoding, FRfidTerminator: TComboBox;
+    FRfidLength, FRfidTimeout, FRfidPrefix, FRfidSuffix: TEdit;
+    FRfidCapture: TMemo;
+    FRfidToggle: TButton;
     FPhoto: TBytes;
     FPhotoIsJpeg2000: Boolean;
+    procedure CreateRfidPage;
+    procedure RfidToggleClick(Sender: TObject);
+    procedure RfidKeyPress(Sender: TObject; var Key: Char);
+    procedure RfidIdentified(Sender: TObject; const AIdentifier: TRfidInputIdentifier);
   protected
     /// <summary>Disables operation inputs while hardware work is pending.</summary>
     /// <param name="AValue">True while busy.</param>
@@ -145,7 +156,7 @@ var
 implementation
 
 uses
-  Vcl.Imaging.jpeg, ERD.Card.Crypto, ERD.Card.Crypto.EAC,
+  Winapi.Windows, Vcl.Imaging.jpeg, ERD.Card.Crypto, ERD.Card.Crypto.EAC,
   ERD.Card.EID.Access, ERD.Card.Contactless.Type2, ERD.Card.Ndef,
   ERD.Card.Ndef.Records, ERD.Card.Memory, ERD.Card.Memory.Counter,
   ERD.Card.Memory.Capabilities;
@@ -173,8 +184,85 @@ begin
     MemoryModelBox.Items.Add(TAcsMemoryCapabilityCatalog.ModelName(M));
   for C := Low(TSleCounterModel) to High(TSleCounterModel) do
     MemoryModelBox.Items.Add(TAcsMemoryCapabilityCatalog.CounterName(C));
+  MemoryModelBox.Items.Add('SLE4404');
   MemoryDialectBox.Items.Text := 'ACR38x CCID (explicit)'#13#10'ACR39 (explicit)';
+  CreateRfidPage;
   MemoryPageBox.Items.Text := '8 bytes'#13#10'16 bytes'#13#10'32 bytes'#13#10'64 bytes'#13#10'128 bytes';
+end;
+
+procedure TSmartCardDemoForm.CreateRfidPage;
+var Guidance: TLabel;
+  function CreateRfidEdit(const Left: Integer; const Width: Integer; const HintText, Value: string): TEdit;
+  begin
+    Result := TEdit.Create(Self); Result.Parent := FRfidSettings;
+    Result.SetBounds(Left,48,Width,24); Result.Text := Value;
+    Result.Hint := HintText; Result.ShowHint := True;
+  end;
+begin
+  FRfid := TRfidKeyboardReader.Create(Self); FRfid.OnIdentifier := RfidIdentified;
+  FRfidTab := TTabSheet.Create(Self); FRfidTab.PageControl := OperationPages; FRfidTab.Caption := 'RFID keyboard';
+  FRfidSettings := TPanel.Create(Self); FRfidSettings.Parent := FRfidTab;
+  FRfidSettings.SetBounds(8,8,704,88); FRfidSettings.BevelOuter := bvNone;
+  FRfidEncoding := TComboBox.Create(Self); FRfidEncoding.Parent := FRfidSettings;
+  FRfidEncoding.SetBounds(0,8,216,24); FRfidEncoding.Style := csDropDownList;
+  FRfidEncoding.Items.Text := 'ASCII identifier'#13#10'Hexadecimal bytes'#13#10'Decimal number'; FRfidEncoding.ItemIndex := 0;
+  FRfidTerminator := TComboBox.Create(Self); FRfidTerminator.Parent := FRfidSettings;
+  FRfidTerminator.SetBounds(232,8,216,24); FRfidTerminator.Style := csDropDownList;
+  FRfidTerminator.Items.Text := 'CR (Enter)'#13#10'CR + LF'#13#10'LF'#13#10'Tab'; FRfidTerminator.ItemIndex := 0;
+  FRfidLength := CreateRfidEdit(0,104,'Exact identifier length; 0 = variable','0');
+  FRfidTimeout := CreateRfidEdit(120,104,'Maximum gap between characters in milliseconds','500');
+  FRfidPrefix := CreateRfidEdit(240,104,'Exact reader prefix','');
+  FRfidSuffix := CreateRfidEdit(360,104,'Exact reader suffix','');
+  FRfidToggle := TButton.Create(Self); FRfidToggle.Parent := FRfidTab;
+  FRfidToggle.SetBounds(8,104,144,28); FRfidToggle.Caption := 'Start RFID capture'; FRfidToggle.OnClick := RfidToggleClick;
+  Guidance := TLabel.Create(Self); Guidance.Parent := FRfidTab; Guidance.SetBounds(8,144,704,40);
+  Guidance.AutoSize := False; Guidance.WordWrap := True;
+  Guidance.Caption := 'Length / gap (ms) / prefix / suffix above. Scan while the box below has focus. '+
+    'Keyboard-mode readers present an identifier only; format and RF UID byte order are not detected.';
+  FRfidCapture := TMemo.Create(Self); FRfidCapture.Parent := FRfidTab;
+  FRfidCapture.SetBounds(8,192,704,40); FRfidCapture.WantTabs := True; FRfidCapture.WantReturns := True;
+  FRfidCapture.Enabled := False; FRfidCapture.OnKeyPress := RfidKeyPress;
+end;
+
+procedure TSmartCardDemoForm.RfidToggleClick(Sender: TObject);
+var N: Integer;
+begin
+  try
+    if FRfid.Active then FRfid.Stop
+    else
+    begin
+      if not TryStrToInt(FRfidLength.Text,N) then raise EArgumentException.Create('Invalid exact length.');
+      FRfid.ExpectedCharacters := N;
+      if not TryStrToInt(FRfidTimeout.Text,N) or (N < 1) or (N > 60000) then
+        raise EArgumentException.Create('Gap must be 1 through 60000 ms.');
+      FRfid.InterCharacterTimeoutMs := Cardinal(N);
+      FRfid.Encoding := TRfidInputEncoding(FRfidEncoding.ItemIndex);
+      FRfid.Terminator := TRfidInputTerminator(FRfidTerminator.ItemIndex);
+      FRfid.Prefix := FRfidPrefix.Text; FRfid.Suffix := FRfidSuffix.Text; FRfid.Start;
+      OutputMemo.Lines.Text := 'RFID capture active. This foreground input does not identify a physical USB device.';
+    end;
+    FRfidSettings.Enabled := not FRfid.Active; FRfidCapture.Enabled := FRfid.Active;
+    CardTab.Enabled := not FRfid.Active; MemoryTab.Enabled := not FRfid.Active;
+    ReaderBox.Enabled := not FRfid.Active; ReadersButton.Enabled := not FRfid.Active;
+    if FRfid.Active then
+    begin FRfidToggle.Caption := 'Stop RFID capture'; FRfidCapture.Clear; FRfidCapture.SetFocus; end
+    else FRfidToggle.Caption := 'Start RFID capture';
+  except on E: Exception do OutputMemo.Lines.Text := E.ClassName + ': ' + E.Message; end;
+end;
+
+procedure TSmartCardDemoForm.RfidKeyPress(Sender: TObject; var Key: Char);
+var C: Char;
+begin
+  C := Key; Key := #0;
+  try FRfid.FeedCharacter(C,GetTickCount64);
+  except on E: ERfidInputError do OutputMemo.Lines.Text := E.ClassName + ': ' + E.Message; end;
+end;
+
+procedure TSmartCardDemoForm.RfidIdentified(Sender: TObject; const AIdentifier: TRfidInputIdentifier);
+begin
+  OutputMemo.Lines.Text := 'Presented identifier: ' + AIdentifier.Text;
+  if AIdentifier.Encoding = rieHexadecimal then
+    OutputMemo.Lines.Add('Presented hex bytes: ' + BytesToHex(AIdentifier.Bytes));
 end;
 
 procedure TSmartCardDemoForm.SetBusy(const AValue: Boolean);
@@ -279,7 +367,16 @@ begin
         if R.Operation in [cdoMemoryRead, cdoMemoryWrite] then
           R.MemoryAddress := StrToInt(MemoryAddressEdit.Text);
         if R.Operation = cdoMemoryRead then R.MemoryCount := StrToInt(MemoryCountEdit.Text);
-        if CounterIndex >= 0 then
+        if CounterIndex > Ord(High(TSleCounterModel)) then
+        begin
+          if not (R.Operation in [cdoMemorySnapshot, cdoMemoryRead]) then
+            raise EArgumentException.Create('The SLE4404 demo offers public reads; use the component API for supplied codes and explicit erases.');
+          R.CounterReadableBytes := StrToInt(CounterWindowEdit.Text);
+          if R.Operation = cdoMemorySnapshot then
+          begin R.MemoryAddress := 0; R.MemoryCount := R.CounterReadableBytes; end;
+          R.Operation := cdoSle4404Read;
+        end
+        else if CounterIndex >= 0 then
         begin
           if not (R.Operation in [cdoMemorySnapshot, cdoMemoryRead]) then
             raise EArgumentException.Create('The counter demo offers public reads; use the counter component for explicit programming.');
@@ -348,7 +445,7 @@ begin
     ReaderBox.Text := SelectedReader;
   end;
   if Length(AResult.CounterBytes) > 0 then
-    OutputMemo.Lines.Add('Counter public memory hex: ' + BytesToHex(AResult.CounterBytes));
+    OutputMemo.Lines.Add('Special-chip public memory hex: ' + BytesToHex(AResult.CounterBytes));
   if Length(AResult.Memory.Data) > 0 then
     OutputMemo.Lines.Add('Memory hex: ' + BytesToHex(AResult.Memory.Data));
   if Length(AResult.Memory.Protection) > 0 then

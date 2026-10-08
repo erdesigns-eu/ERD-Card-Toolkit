@@ -30,6 +30,9 @@
         <Projects Include="runtime\ERDCardMemory.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="runtime\ERDCardInput.dproj">
+            <Dependencies/>
+        </Projects>
         <Projects Include="design\ERDCardDesign.dproj">
             <Dependencies/>
         </Projects>
@@ -131,14 +134,23 @@
     <Target Name="ERDCardMemory:Make">
         <MSBuild Projects="runtime\ERDCardMemory.dproj" Targets="Make"/>
     </Target>
+    <Target Name="ERDCardInput">
+        <MSBuild Projects="runtime\ERDCardInput.dproj"/>
+    </Target>
+    <Target Name="ERDCardInput:Clean">
+        <MSBuild Projects="runtime\ERDCardInput.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ERDCardInput:Make">
+        <MSBuild Projects="runtime\ERDCardInput.dproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="ERDCardCore;ERDCardCryptoWindows;ERDCardCryptoOpenSSL;ERDCardPCSC;ERDCardEID;ERDCardEMV;ERDCardMagStripe;ERDCardContactless;ERDCardMemory;ERDCardDesign"/>
+        <CallTarget Targets="ERDCardCore;ERDCardCryptoWindows;ERDCardCryptoOpenSSL;ERDCardPCSC;ERDCardEID;ERDCardEMV;ERDCardMagStripe;ERDCardContactless;ERDCardMemory;ERDCardInput;ERDCardDesign"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="ERDCardCore:Clean;ERDCardCryptoWindows:Clean;ERDCardCryptoOpenSSL:Clean;ERDCardPCSC:Clean;ERDCardEID:Clean;ERDCardEMV:Clean;ERDCardMagStripe:Clean;ERDCardContactless:Clean;ERDCardMemory:Clean;ERDCardDesign:Clean"/>
+        <CallTarget Targets="ERDCardCore:Clean;ERDCardCryptoWindows:Clean;ERDCardCryptoOpenSSL:Clean;ERDCardPCSC:Clean;ERDCardEID:Clean;ERDCardEMV:Clean;ERDCardMagStripe:Clean;ERDCardContactless:Clean;ERDCardMemory:Clean;ERDCardInput:Clean;ERDCardDesign:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="ERDCardCore:Make;ERDCardCryptoWindows:Make;ERDCardCryptoOpenSSL:Make;ERDCardPCSC:Make;ERDCardEID:Make;ERDCardEMV:Make;ERDCardMagStripe:Make;ERDCardContactless:Make;ERDCardMemory:Make;ERDCardDesign:Make"/>
+        <CallTarget Targets="ERDCardCore:Make;ERDCardCryptoWindows:Make;ERDCardCryptoOpenSSL:Make;ERDCardPCSC:Make;ERDCardEID:Make;ERDCardEMV:Make;ERDCardMagStripe:Make;ERDCardContactless:Make;ERDCardMemory:Make;ERDCardInput:Make;ERDCardDesign:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

@@ -66,7 +66,7 @@
         <SanitizedProjectName>ERDCardDesign</SanitizedProjectName>
         <DCC_BplOutput>..\..\dist\packages\$(Platform)\$(Config)</DCC_BplOutput>
         <DCC_DcpOutput>..\..\dist\packages\$(Platform)\$(Config)</DCC_DcpOutput>
-        <DCC_UnitSearchPath>..\..\src\memory;..\..\src\core;..\..\src\crypto;..\..\src\pcsc;..\..\src\eid;..\..\src\emv;..\..\src\magstripe;..\..\src\contactless;..\..\src\design;..\..\dist\packages\$(Platform)\$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>..\..\src\input;..\..\src\memory;..\..\src\core;..\..\src\crypto;..\..\src\pcsc;..\..\src\eid;..\..\src\emv;..\..\src\magstripe;..\..\src\contactless;..\..\src\design;..\..\dist\packages\$(Platform)\$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_RangeChecking>true</DCC_RangeChecking>
         <DCC_IntegerOverflowCheck>true</DCC_IntegerOverflowCheck>
         <DCC_GenerateDocumentation>true</DCC_GenerateDocumentation>
@@ -124,6 +124,9 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="rtl.dcp"/>
+        <DCCReference Include="..\..\src\input\ERD.Card.RFID.Input.pas"/>
+        <DCCReference Include="..\..\src\input\ERD.Card.RFID.HID.pas"/>
+
         <DCCReference Include="vcl.dcp"/>
         <DCCReference Include="designide.dcp"/>
         <DCCReference Include="..\..\src\core\ERD.Card.APDU.pas"/>
@@ -157,6 +160,7 @@
         <DCCReference Include="..\..\src\emv\ERD.Card.EMV.Reader.pas"/>
         <DCCReference Include="..\..\src\magstripe\ERD.Card.MagStripe.pas"/>
         <DCCReference Include="..\..\src\magstripe\ERD.Card.MagStripe.Tracks.pas"/>
+        <DCCReference Include="..\..\src\memory\ERD.Card.Memory.Sle4404.pas" />
         <DCCReference Include="..\..\src\memory\ERD.Card.Memory.Counter.pas" />
         <DCCReference Include="..\..\src\memory\ERD.Card.Memory.Capabilities.pas" />
         <DCCReference Include="..\..\src\memory\ERD.Card.Memory.pas"/>
