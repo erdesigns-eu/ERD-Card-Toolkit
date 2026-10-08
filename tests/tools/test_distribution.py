@@ -111,7 +111,8 @@ class DistributionTests(unittest.TestCase):
                 for name in ['GenDll', 'GenPackage', 'DCC_E', 'DCC_N', 'DCC_S', 'DCC_F', 'DCC_K']:
                     self.assertEqual(actual[name], original[name])
                 self.assertEqual(actual['Base_' + platform], 'true')
-                self.assertEqual(actual[flag + '_' + platform], 'true')
+                if flag + '_' + platform in actual:
+                    self.assertEqual(actual[flag + '_' + platform], 'true')
                 self.assertNotIn('Cfg_2' if config == 'Debug' else 'Cfg_1', actual)
                 self.assertEqual(actual['DCC_IntegerOverflowCheck'], 'true')
                 self.assertIn(platform + '\\' + config, actual['DCC_DcuOutput'])
@@ -132,6 +133,49 @@ class DistributionTests(unittest.TestCase):
             errors = distribution.check_project(path)
             self.assertTrue(any('Base/Debug/Release' in e for e in errors))
             self.assertTrue(any('activation Base_Win64 missing' in e for e in errors))
+
+    def test_ide_can_omit_empty_platform_configuration_groups(self):
+        with copied_core_project() as path:
+            root = ET.parse(path).getroot()
+            # A platform without overrides inherits the common Release group.
+            for group in root.findall('m:PropertyGroup', distribution.NS):
+                if 'Cfg_2_Win' in group.get('Condition', ''):
+                    root.remove(group)
+            write_project(path, root)
+            self.assertEqual(distribution.check_project(path), [])
+            # Overrides referencing a flag require a group activating that flag.
+            group = ET.SubElement(root, '{' + distribution.NS['m'] + '}PropertyGroup',
+                                  Condition="'$(Cfg_2_Win32)'!=''")
+            ET.SubElement(group, '{' + distribution.NS['m'] + '}DCC_Optimize').text = 'true'
+            write_project(path, root)
+            self.assertTrue(any('activation Cfg_2_Win32 missing' in e
+                                for e in distribution.check_project(path)))
+
+    def test_design_units_require_runtime_owners(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            shutil.copytree(distribution.REPO / 'packages', root / 'packages')
+            shutil.copytree(distribution.REPO / 'src', root / 'src')
+            path = root / 'packages/design/ERDCardDesign.dpk'
+            path.write_bytes(path.read_bytes().replace(b'  ERDCardPCSC,\r\n', b''))
+            errors = distribution.check_packages(root)
+            self.assertTrue(any('requires owning package ERDCardPCSC' in e for e in errors))
+
+    def test_group_call_targets_follow_dependency_order(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            shutil.copytree(distribution.REPO / 'packages', root / 'packages')
+            shutil.copytree(distribution.REPO / 'src', root / 'src')
+            path = root / 'packages/ERDCards.groupproj'
+            project = ET.parse(path).getroot()
+            target = project.find("m:Target[@Name='Build']/m:CallTarget", distribution.NS)
+            names = target.get('Targets').split(';')
+            target.set('Targets', ';'.join(reversed(names)))
+            write_project(path, project)
+            self.assertTrue(any('Build target order differs' in e
+                                for e in distribution.check_packages(root)))
+            path.write_bytes(b'\xef\xbb\xbf<Project>\r\n')
+            self.assertTrue(any('invalid XML' in e for e in distribution.check_packages(root)))
 
     def test_ide_package_identity_matches_native_project(self):
         native = ET.parse(distribution.REPO / 'Delphi Packages/Core.dproj').getroot()

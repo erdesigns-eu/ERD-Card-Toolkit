@@ -126,6 +126,12 @@
         <DCCReference Include="rtl.dcp"/>
         <DCCReference Include="vcl.dcp"/>
         <DCCReference Include="designide.dcp"/>
+        <DCCReference Include="ERDCardCore.dcp"/>
+        <DCCReference Include="ERDCardPCSC.dcp"/>
+        <DCCReference Include="ERDCardEID.dcp"/>
+        <DCCReference Include="ERDCardEMV.dcp"/>
+        <DCCReference Include="ERDCardMagStripe.dcp"/>
+        <DCCReference Include="ERDCardContactless.dcp"/>
         <DCCReference Include="..\..\src\design\ERD.Card.Design.Register.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>

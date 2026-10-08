@@ -296,7 +296,7 @@ end;
 function TOpenSslPaceAgreement.Scalar(const Bytes:TBytes):Pointer;
 var Zero:Pointer; Success:Boolean;
 begin
-  Result:=nil; if Length(Bytes)<>32 then InvalidEacCrypto;
+  if Length(Bytes)<>32 then InvalidEacCrypto;
   Result:=FBackend.BnNew; Zero:=FBackend.BnNew; Success:=False;
   try
     if (Result=nil) or (Zero=nil) then InvalidEacCrypto;
@@ -320,7 +320,7 @@ end;
 function TOpenSslPaceAgreement.DecodePoint(const Bytes:TBytes):Pointer;
 var CheckPoint:Pointer; Success:Boolean;
 begin
-  Result:=nil; if (Length(Bytes)<>65) or (Bytes[0]<>4) then InvalidEacCrypto;
+  if (Length(Bytes)<>65) or (Bytes[0]<>4) then InvalidEacCrypto;
   Result:=FBackend.PointNew(FGroup); CheckPoint:=FBackend.PointNew(FGroup); Success:=False;
   try
     if (Result=nil) or (CheckPoint=nil) then InvalidEacCrypto;

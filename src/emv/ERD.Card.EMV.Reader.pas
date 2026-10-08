@@ -270,7 +270,6 @@ end;
 function TEMVCardReader.SelectApplicationFci(const AAid: TBytes; out AFci: TBytes): TTlvDocument;
 var Response: TApduResponse;
 begin
-  Result := nil;
   Response := Select(AAid);
   RequireSuccess(Response);
   AFci := Response.Data;
@@ -317,14 +316,14 @@ begin
   Document := DecodeTemplate(Response.Data, Tag);
   try Result.Value := Document.Roots[0].Value;
   finally Document.Free; end;
-  Size := Length(Result.Value);
   if AObject = edoLogFormat then
   begin
     // Validate the DOL and its total record length before accepting even an empty log.
-    Size := TEmvCodec.LogRecordSize(Result.Value);
+    TEmvCodec.LogRecordSize(Result.Value);
   end
   else
   begin
+    Size := Length(Result.Value);
     if AObject = edoPinTryCounter then
     begin
       if Size <> 1 then Fail('PIN counter size');
