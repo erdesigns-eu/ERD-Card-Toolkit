@@ -12,6 +12,15 @@ compiler log is evidence of that build, including the warnings addressed in this
 follow-up. A fresh Delphi build is still needed to confirm that these warnings and
 hints are gone; the Linux run does not establish that.
 
+The maintainer subsequently confirmed warning-free package builds. A separate
+VCL startup failure was then reported in both demos: EThread, "Cannot call Start
+on a running or suspended thread", through `TThread.AfterConstruction`. The demo
+job now remains suspended until the form calls `StartWork` after construction.
+The targeted worker suite was rebuilt and rerun with 45 passing assertions,
+including never-started destruction, duplicate-start and completed-restart
+refusal. The earlier protocol results below remain the full-run baseline;
+Delphi execution of the corrected VCL demos remains pending.
+
 | Check | Result |
 | --- | --- |
 | Actual Pascal bytes/APDU tests | 521 assertions in seven groups passed |
@@ -40,7 +49,7 @@ hints are gone; the Linux run does not establish that.
 | Native Windows adapter branches | 38 assertions passed against an isolated Linux C ABI shim |
 | Native Windows CNG branches | 51 assertions passed: native argument/length/IV handling, every encrypt/decrypt call failure, handle cleanup and system RNG failure without fallback |
 | Console examples | All fifteen built; hardware-free help/inspection checks passed, including DESFire key/access administration offline help/plan, ICAO help/CardAccess inspection, DESFire management offline help/plan and invalid arguments, APDU/NDEF/Type 4/Type 5/DESFire valid/invalid cases, ATR known/unknown/bad-TCK and EMV known/private tags, magstripe parity and MSR206 frame/status cases |
-| Demo worker and offline operations | 39 assertions passed: real worker/caller separation, request byte/string ownership, single delivery, join on destruction, nil executor, sanitized errors, verified write evidence after cleanup failure, offline NDEF/track inspection and hardware preflight refusals |
+| Demo worker and offline operations | 45 assertions passed in the VCL-start follow-up: real worker/caller separation, request ownership, single delivery, join, nil executor, sanitized errors, verified-write evidence, offline operations and hardware preflight, suspended destruction, duplicate start and completed restart |
 | Palette registration / RTL streaming | 14 assertions passed: actual Register routine captures thirteen classes; inactive construction and FPC component stream round-trip for each; DesignIntf capture is not an IDE/ABI test |
 | Distribution / VCL source readers | Eleven MSBuild projects (all four Debug/Release × Win32/Win64 property combinations), two groups and two DFM forms passed: references, package ownership/order, explicit IDE package identity, native Base/configuration/platform activation, GenDll/GenPackage, named DCP dependencies, native integer-overflow/debug settings, BOM/CRLF/resources, runtime/design dependency separation, palette completeness, field/event bindings, form creation and Platform/Config output isolation; no Delphi/VCL execution |
 | FPC range/overflow/heap checks | Passed; no unfreed allocations in passing test programs |

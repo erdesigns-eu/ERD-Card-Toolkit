@@ -55,7 +55,15 @@ procedure TCardDemoForm.StartRequest(const ARequest: TCardDemoRequest);
 begin
   if FJob <> nil then raise EInvalidOpException.Create('An operation is already active.');
   FJob := TCardDemoJob.Create(ARequest, CreateCardDemoOperations);
-  SetBusy(True); FTimer.Enabled := True;
+  try
+    SetBusy(True);
+    FJob.StartWork;
+    FTimer.Enabled := True;
+  except
+    FreeAndNil(FJob);
+    SetBusy(False);
+    raise;
+  end;
 end;
 
 procedure TCardDemoForm.Poll(Sender: TObject);

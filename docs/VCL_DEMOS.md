@@ -83,6 +83,14 @@ bound is not a PC/SC timeout. Writes are never cancelled or retried behind the U
 Access input is cleared after starting, but this is not a guarantee of erasure
 of the Windows edit control's or Delphi strings' historical allocations.
 
+The job constructor creates a suspended worker. The form calls `StartWork` only
+after construction returns, so Delphi's `TThread.AfterConstruction` finishes before
+the explicit start. Starting inside the constructor caused the reported EThread
+exception in both demos. A second start is refused; freeing a never-started job
+does not execute its request. If starting fails, the form releases the job and
+restores its controls. This follow-up has passed the headless worker tests; a
+Delphi/Windows rebuild and retest of both demos is still required.
+
 On a Delphi/Windows host, check both platforms: open both forms, inspect/encode
 NDEF and raw tracks offline, enumerate readers with no card, and close while a job
 is active. Then use known disposable test cards and the correct explicit profile

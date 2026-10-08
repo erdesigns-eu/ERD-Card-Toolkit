@@ -139,6 +139,7 @@ begin
   Backend := TTestOperations.Create(Fail, Verified); Executor := Backend;
   CallerId := TThread.CurrentThread.ThreadID;
   Job := TCardDemoJob.Create(R, Executor);
+  Job.StartWork;
   try
     Check(not Job.TryTakeResult(D), 'Running work published early.');
     R.Password[0] := 0; R.NdefBytes[0] := 0; R.Tracks[mstTrack1] := 'CHANGED';
@@ -173,6 +174,7 @@ begin
   R.NdefBytes := HexToBytes('D101');
   Backend := TTestOperations.Create(False, False); Executor := Backend;
   Job := TCardDemoJob.Create(R, Executor);
+  Job.StartWork;
   Backend.Release;
   Job.Free;
   Check(Backend.Calls = 1, 'Destroy did not join running work.');
@@ -185,32 +187,68 @@ begin
   Check(BytesToHex(R.Password) = '3132', 'Job wiped caller password.');
 end;
 
+procedure TestSuspendedAndRestart;
+var R: TCardDemoRequest; D: TCardDemoResult; Job: TCardDemoJob;
+  Executor: ICardDemoOperations; Backend: TTestOperations;
+begin
+  R := Default(TCardDemoRequest); D := Default(TCardDemoResult);
+  R.Password := HexToBytes('3132'); R.NdefBytes := HexToBytes('D101');
+  Backend := TTestOperations.Create(False, False); Executor := Backend;
+  Job := TCardDemoJob.Create(R, Executor);
+  Check(not Job.TryTakeResult(D), 'Suspended worker published a result.');
+  Job.Free;
+  Check(Backend.Calls = 0, 'Free executed a never-started request.');
+  Check(BytesToHex(R.Password) = '3132', 'Suspended destruction wiped caller bytes.');
+  Job := TCardDemoJob.Create(R, Executor);
+  try
+    Job.StartWork;
+    try
+      Job.StartWork;
+      Check(False, 'A second start was accepted.');
+    except on E: EInvalidOpException do Check(True, 'Duplicate start rejected.'); end;
+    Backend.Release;
+    AwaitResult(Job, D);
+    Job.WaitFor;
+    Check(Backend.Calls = 1, 'Duplicate start replayed work.');
+    try
+      Job.StartWork;
+      Check(False, 'Completed worker was restarted.');
+    except on E: EInvalidOpException do Check(True, 'Completed restart rejected.'); end;
+  finally Job.Free; end;
+  Executor := nil;
+end;
+
 procedure TestOffline;
 var R: TCardDemoRequest; D: TCardDemoResult; Job: TCardDemoJob;
 begin
   R := Default(TCardDemoRequest); D := Default(TCardDemoResult);
   R.Operation := cdoNdefInspect; R.NdefBytes := HexToBytes('D101055402656E4869');
   Job := TCardDemoJob.Create(R, CreateCardDemoOperations);
+  Job.StartWork;
   try AwaitResult(Job, D); finally Job.Free; end;
   Check(D.Success and (D.Text = 'NDEF records: 1'), 'Offline NDEF failed.');
   Check(BytesToHex(D.NdefBytes) = 'D101055402656E4869', 'Offline NDEF changed bytes.');
   R.Operation := cdoTrackInspect; R.TrackSelection := [mstTrack2];
   R.Tracks[mstTrack2] := '12345';
   Job := TCardDemoJob.Create(R, CreateCardDemoOperations);
+  Job.StartWork;
   try AwaitResult(Job, D); finally Job.Free; end;
   Check(D.Success and (Pos('40 bits', string(D.Text)) > 0), 'Offline track framing failed.');
   R.Operation := cdoTrackWrite; R.PortName := 'COM1'; R.TimeoutMs := 1000;
   R.Coercivity := mscHigh; R.Tracks[mstTrack2] := '';
   Job := TCardDemoJob.Create(R, CreateCardDemoOperations);
+  Job.StartWork;
   try AwaitResult(Job, D); finally Job.Free; end;
   Check((not D.Success) and (D.ErrorClass = 'EArgumentException'), 'Empty selected write touched hardware.');
   R.Operation := cdoUid; R.ReaderName := '';
   Job := TCardDemoJob.Create(R, CreateCardDemoOperations);
+  Job.StartWork;
   try AwaitResult(Job, D); finally Job.Free; end;
   Check((not D.Success) and (D.ErrorClass = 'EArgumentException'), 'Reader selection was implicit.');
   R.Operation := cdoType4Write; R.ReaderName := 'selected reader';
   R.NdefBytes := HexToBytes('D101055402');
   Job := TCardDemoJob.Create(R, CreateCardDemoOperations);
+  Job.StartWork;
   try AwaitResult(Job, D); finally Job.Free; end;
   Check((not D.Success) and (D.ErrorClass = 'ENdefError'), 'Malformed NDEF touched hardware.');
 end;
@@ -218,7 +256,7 @@ end;
 begin
   try
     TestWorker(False, False); TestWorker(True, False); TestWorker(True, True);
-    TestJoin; TestOffline;
+    TestJoin; TestSuspendedAndRestart; TestOffline;
     Writeln('PASS: ', Checks, ' demo worker assertions.');
   except on E: Exception do begin Writeln(E.ClassName, ': ', E.Message); ExitCode := 1; end; end;
 end.
