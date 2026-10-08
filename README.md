@@ -74,7 +74,7 @@ waarbij de compilerarchitectuur moet overeenkomen met de **IDE**, niet noodzakel
 - [Installatie en packages](docs/INSTALLATION.md) · [VCL-demo’s en teststappen](docs/VCL_DEMOS.md)
 - [Magstripe](docs/MAGSTRIPE.md) · [Belgische eID](docs/BELGIAN_EID.md) · [Europese eID/ICAO](docs/EUROPEAN_EID.md) · [EMV](docs/EMV_READER.md)
 - [Contactless/MIFARE](docs/CONTACTLESS.md) · [DESFire](docs/DESFIRE.md) · [UID-profielen](docs/PROGRAMMABLE_UID.md) · [ISO 15693/Type 5](docs/ISO15693_TYPE5.md)
-- [Contact-memorykaarten](docs/MEMORY_CARDS.md) · [Delphi-overdracht voor een andere agent](docs/DELPHI_AGENT_HANDOFF.md)
+- [Contact-memorykaarten](docs/MEMORY_CARDS.md) · [Delphi-problemen en oplossingen](docs/DELPHI_PROBLEMEN.md)
 - [Planning](docs/COMPONENT_PLAN.md) · [Validatieresultaten](docs/VALIDATION.md) · [API-documentatiestandaard](docs/API_DOCUMENTATION.md)
 
 Alle publieke API’s hebben Delphi XML-documentatie voor Help Insight.
