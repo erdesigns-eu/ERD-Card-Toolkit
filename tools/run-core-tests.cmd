@@ -156,9 +156,28 @@ if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\InspectType5Ndef.exe" --cc-hex E1404000 --blocks 128 --block-size 4 --address 8
 if not errorlevel 1 exit /b 1
 if errorlevel 2 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\crypto;src\contactless" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\crypto\CardCrypto.Tests.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\CardCrypto.Tests.exe"
+if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\crypto;src\contactless;tests\contactless" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\contactless\Desfire.Tests.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\Desfire.Tests.exe"
+if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\crypto;src\contactless;src\pcsc" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" examples\contactless\InspectDesfire.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\InspectDesfire.exe" --help
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\InspectDesfire.exe" --settings-hex 00031234332211 --file 0
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\InspectDesfire.exe" --settings-hex 000312343322 --file 0
+if not errorlevel 1 exit /b 1
+if errorlevel 2 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -Usrc\magstripe -N0"%CARD_BUILD%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" packages\runtime\ERDCardMagStripe.dpk
 if errorlevel 1 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -Usrc\core -N0"%CARD_BUILD%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" packages\runtime\ERDCardCore.dpk
+if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\crypto;%CARD_BUILD%" -N0"%CARD_BUILD%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" packages\runtime\ERDCardCryptoWindows.dpk
 if errorlevel 1 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\pcsc;%CARD_BUILD%" -N0"%CARD_BUILD%" -LE"%CARD_BUILD%" -LN"%CARD_BUILD%" packages\runtime\ERDCardPCSC.dpk
 if errorlevel 1 exit /b %errorlevel%

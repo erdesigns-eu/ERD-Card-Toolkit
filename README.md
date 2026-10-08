@@ -35,6 +35,7 @@ outside the library. See [the cleanup record](docs/LEGACY_CLEANUP.md).
 | `TType4NdefCardReader` | Public ISO 7816 NDEF files with bounded CC/MLe/MLc and verified NLEN updates |
 | `TIso15693CardReader` | Explicit addressed ISO 15693 system information and guarded block access |
 | `TType5NdefCardReader` | Initialized public Type 5 NDEF memory with CC/security preflight and verified length-last updates |
+| `TDesfireCardReader` | Native DESFire files, EV2 AES authentication/secure messaging and verified standard-data writes |
 
 `TMagStripeReaderWriter` in `src/magstripe` provides exclusive read sessions and
 capability-checked selected-track writes with same-card verification and explicit
@@ -92,6 +93,13 @@ and initialized public Type 5 NDEF reads/verified updates. An explicit
 caller-selected 8/16-bit addressing and response framing. Reader firmware and
 physical-card compatibility still require validation; see
 [the ISO 15693/Type 5 guide](docs/ISO15693_TYPE5.md).
+`TDesfireCardReader` adds native discovery, standard/backup data, signed values and
+linear/cyclic record reads, plus verified standard-data range writes. Its explicit
+EV2 AES profile implements mutual authentication and Plain/MACed/Full messaging
+with authenticated settings and a caller-supplied key. Windows CNG and optional
+Linux OpenSSL supply the AES/CSPRNG backends; see [the DESFire guide](docs/DESFIRE.md).
+Legacy D40/EV1 security, LRP, backup transactions and administration remain separate
+extensions; physical reader/card coverage is still pending.
 `TRawUidProgrammer` adds four-byte Gen1a/Gen1b/unsealed UFUID and seven-byte Type 2
 DirectWrite UID programming, with an opt-in ACR122U/PN532 raw-RF adapter. It preserves
 manufacturer metadata, verifies fresh RF selection and treats interrupted writes as
@@ -120,6 +128,9 @@ documents still requires a separate BAC/PACE secure-messaging provider. See
 Add `src/core` to the Delphi unit search path. Source-based use does not require
 installing a package. `packages/runtime/ERDCardCore.dpk` is an optional runtime
 package; there is no design-time dependency or registration package yet.
+`ICardAesProvider`/AES-CMAC utilities are in Core. The optional separate
+`ERDCardCryptoWindows.dpk` provides the CNG backend from `src/crypto`, without
+adding an OS cryptographic-library import to the base core package.
 
 ```pascal
 uses System.SysUtils, ERD.Card.Bytes, ERD.Card.APDU;
@@ -168,6 +179,10 @@ Type 2 writes with injected failures; see [the NDEF guide](docs/NDEF.md).
 its explicit reader mode reads initialized public tags. `InspectCardTools`
 looks up ATR hints or EMV tag metadata. Tests cover ISO 15693 adapter chains,
 Type 5 updates, interrupted writes and both catalogs.
+`InspectDesfire --settings-hex <hex> --file <number>` inspects native settings
+without hardware; explicit reader modes inspect metadata, optionally using a
+supplied raw AES key file. Crypto/DESFire tests include NIST/NXP vectors,
+independently generated transcripts and the actual CNG adapter through a Linux ABI shim.
 The tests exercise the actual Pascal units with range and overflow checks, all
 command cases, length boundaries, invalid inputs, independent buffers and responses,
 ATR checksums, TLV normalization, tree ownership and resource limits. Transport
@@ -191,7 +206,7 @@ tools\run-core-tests.cmd dcc32
 tools\run-core-tests.cmd dcc64
 ```
 
-The Windows script builds the Pascal tests, console examples and all six runtime
+The Windows script builds the Pascal tests, console examples and all seven runtime
 packages with XML documentation, range checks and overflow checks.
 It has not been executed in the Linux development environment. Verify the generated
 XML documentation and Help Insight in the target IDE as described in

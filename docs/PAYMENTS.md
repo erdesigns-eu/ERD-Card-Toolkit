@@ -116,7 +116,7 @@ Do not ship a simulated adapter as if it processed real payments.
    checks, then actual deployment validation with the provider.
 4. A selected contactless kernel integration with its supported NFC reader profiles
    and acquirer test environment; add scheme configurations as validated capabilities.
-5. In parallel, Type 2 authentication, further UID profiles, DESFire/secure messaging,
+5. In parallel, Type 2 authentication, further UID profiles, additional DESFire security/transaction profiles,
    NDEF and further
    RFID/vendor reader backends. Their storage authentication is separate from payment
    authorization. Existing magstripe and European eID access milestones remain planned.
