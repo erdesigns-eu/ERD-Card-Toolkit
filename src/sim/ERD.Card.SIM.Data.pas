@@ -220,7 +220,7 @@ type
     class function DecodeServices(const AProfile: TSimCardProfile; const AData: TBytes): TSimServices; static;
     /// <summary>Decodes a complete USIM PBR record into explicit file roles and link kinds.</summary>
     /// <param name="AData">One through 255 bytes containing A8/A9/AA templates and trailing FF padding.</param>
-    /// <returns>Owned ordered references; malformed geometry, roles and duplicate roles within one template are refused.</returns>
+    /// <returns>Owned ordered references; malformed geometry and roles are refused; repeated file roles retain their actual positions.</returns>
     class function DecodePhonebookReferences(const AData: TBytes): TSimPhonebookReferences; static;
     /// <summary>Decodes the exact seventeen-byte service-provider-name file.</summary>
     /// <param name="AData">Display condition followed by sixteen alpha bytes.</param>
@@ -650,7 +650,7 @@ begin
 end;
 
 class function TSimCodec.DecodePhonebookReferences(const AData: TBytes): TSimPhonebookReferences;
-var Position, Count, Header, Ending, I, J, N, K: Integer; Doc: TTlvDocument;
+var Position, Count, Header, Ending, I, J, N: Integer; Doc: TTlvDocument;
   Root, Node: TTlvNode; Tag, Value: TBytes; Ref: TSimPhonebookReference;
 begin
   Result := nil;
@@ -683,8 +683,6 @@ begin
         Ref.RoleTag := Tag[0]; Ref.FileId := Word(Value[0]) shl 8 or Value[1]; Ref.ShortFileId := -1;
         if (Ref.FileId = 0) or (Ref.FileId = $3F00) or (Ref.FileId = $FFFF) then Fail;
         if Length(Value) = 3 then begin if (Value[2] < 1) or (Value[2] > 30) then Fail; Ref.ShortFileId := Value[2]; end;
-        for K := 0 to High(Result) do
-          if (Result[K].TemplateIndex = I) and (Result[K].RoleTag = Ref.RoleTag) then Fail;
         N := Length(Result); SetLength(Result,N+1); Result[N] := Ref;
       end;
     end;

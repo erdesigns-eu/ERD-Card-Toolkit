@@ -3,10 +3,10 @@
 The complete protocol/component/example suite was rebuilt and rerun in Linux on
 2026-10-08 after adding ordinary/counter memory, SLE4404, USB-HID RFID input and TWN4 memory,
 ten separate VCL family projects and SIM/USIM, the memory/RFID pages and standalone design bundle, starting from the
-maintainer's latest IDE changes (`951ea62`). The full run passed **2,153,191 assertions
+maintainer's latest IDE changes (`951ea62`). The full run passed **2,153,192 assertions
 across 38 program runs**: 1,789,463 existing protocol assertions, 65,619 RFID
 input/profile, 60,114 SLE4404, 34,280 counter/profile, 2,955 ordinary-memory,
-85 demo-worker and 1,596 family-executor, 127,696 TWN4 and 21 registration assertions and 71,362 SIM/USIM assertions. All 34 Python regression tests,
+85 demo-worker and 1,596 family-executor, 127,696 TWN4 and 21 registration assertions and 71,363 SIM/USIM assertions. All 34 Python regression tests,
 21 Pascal readers on 147 sources and distribution checks for twenty-five projects passed.
 
 The maintainer confirmed warning-free compilation and installation of the prior
@@ -34,7 +34,7 @@ Help Insight and physical memory-card compatibility remain unverified.
 | ICAO MRZ and DG1/DG2 data codecs | 297 assertions passed: published MRZ examples, synthetic FAC/CBEFF records and malformed inputs |
 | EMV data codecs, application reader and diagnostics | 1605 assertions in nine groups passed, including exact PSE/PPSE/GPO/AFL/GET DATA/log transcripts and resource limits |
 | TWN4 PRS/CDC memory | 127696 assertions passed: literal ASCII/CRC/tag/Classic/Type 2 chains, all byte-I/O failure boundaries and block/page read-back bits, stale/changed IDs/content, both key types, no-ops, pre/post-dispatch deadlines/reversal, ownership and cleanup; native TWN4 hardware not tested |
-| SIM / USIM | 71362 assertions: independent identity/alpha/ADN/SMS/service/PBR vectors, literal classic/UICC APDU chains, PIN budgets and proof, continuation/length bounds, caller ownership, full-file/record writes, every I/O failure and read-back bit, no replay and cleanup uncertainty |
+| SIM / USIM | 71363 assertions: independent identity/alpha/ADN/SMS/service/PBR vectors, literal classic/UICC APDU chains, PIN budgets and proof, continuation/length bounds, caller ownership, full-file/record writes, every I/O failure and read-back bit, no replay and cleanup uncertainty |
 | RFID input/report profiles | 65619 assertions passed: exhaustive two-byte decimal conversion plus independent wide/overflow vectors, literal boot/report-ID/ASCII fields, framing/deadlines/discard recovery, held keys/errors, event ownership and reentrancy; no physical USB opening |
 | SLE4404 | 60114 assertions passed: literal code/program/scratchpad/application erase transcripts, budgets/success proof, all I/O boundaries and read-back bits, chunking, stale state, owned caller buffers and release uncertainty; no physical card |
 | Contact memory profiles | 2955 assertions in nine groups passed: nineteen geometries, literal ACR38/ACR39/SLE/PIN/protection/page/bank transcripts, wrong/blocked retry counters, every write/PIN-chain I/O failure, every acknowledgement status/read-back data bit, no-op/locked ranges, release evidence, credential copies and acquisition recovery; no physical chip access |
@@ -85,9 +85,9 @@ constructor, a platform-dependent unreachable branch in the test handle factory,
 and unused test-result variable notes. None has been suppressed. Production TWN4/RFID/SLE4404/PCSC
 and eID/EMV/contactless units compile without additional FPC warnings in the tested branches.
 
-The suite reported 2,153,191 passing assertions across 38 program runs, including
+The suite reported 2,153,192 passing assertions across 38 program runs, including
 65,619 RFID, 60,114 SLE4404, 34,280 counter/profile, 2,955 memory-card,
-85 demo-worker and 1,596 family-executor, 127,696 TWN4 and 21 registration assertions and 71,362 SIM/USIM assertions.
+85 demo-worker and 1,596 family-executor, 127,696 TWN4 and 21 registration assertions and 71,363 SIM/USIM assertions.
 The full 21-reader profile covers 147 Pascal sources, including the VCL units.
 Only the non-VCL workers/executors and inactive component registration/streaming
 were compiled/executed under FPC. The actual forms, MSBuild projects, package BPLs
@@ -395,9 +395,9 @@ card support are claimed by this demo batch.
 ## SIM follow-up validation
 
 The full 38-program suite passed 2,153,042 assertions before the PBR extension.
-After that extension, the focused SIM suite passed 71,362 (17 additional PBR
-assertions) and the family executor passed 1,464 again; aggregate distinct final
-program results are 2,153,191. InspectSim was separately built and checked against
+After that extension, the focused SIM suite passed 71,363 (18 additional PBR
+assertions); the final family-executor run passed 1,596 after the extra demos.
+The aggregate distinct final program results are 2,153,192. InspectSim was separately built and checked against
 literal ICCID/IMSI/alpha output and help; malformed input exits with failure.
 Source validation, distribution readers and XML documentation were rerun after
 these additions. Physical SIM/USIM and Delphi/Windows tests remain outstanding.

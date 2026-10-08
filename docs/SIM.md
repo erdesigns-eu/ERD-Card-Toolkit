@@ -102,7 +102,7 @@ ETSI TS 102 221 (UICC), TS 131 102 / 3GPP TS 31.102 (USIM) en
 3GPP TS 23.038 (tekencodering). Publieke pySim-protocoldefinities zijn gebruikt
 als secundaire crosscheck; de Pascal-implementatie is zelfstandig geschreven.
 
-71.362 SIM/USIM-assertions zijn uitgevoerd onder FPC met range/overflow/heapchecks:
+71.363 SIM/USIM-assertions zijn uitgevoerd onder FPC met range/overflow/heapchecks:
 literal APDU's/codecs, PIN-budgetten, buffers, elke write-I/O-grens, volledige
 terugleesbits, chunking en cleanup-onzekerheid. De aparte familie-executor heeft
 ook literal SIM-leesroutes en preflighttests. **Delphi/Windows en fysieke SIMs zijn

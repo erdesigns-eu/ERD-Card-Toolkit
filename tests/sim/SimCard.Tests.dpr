@@ -378,7 +378,7 @@ end;
 
 procedure TestPbr;
 const Bad: array[0..11] of string = ('A800','A804C0024F','A804C0020000','A804C0023F00','A804C002FFFF',
-  'A805C0034F3000','A805C0034F301F','A804CC024F30','A808C0024F30C0024F31','A780','FF00','A880');
+  'A805C0034F3000','A805C0034F301F','A804CC024F30','A808C0024F30C202FFFF','A780','FF00','A880');
 var Ref: TSimPhonebookReferences; I: Integer; Failed: Boolean;
 begin
   Ref := TSimCodec.DecodePhonebookReferences(HexToBytes('A809C0034F3A01C1024F17A908CA024F50C4024F11AA04C2024F4AFF'));
@@ -387,6 +387,8 @@ begin
   Check((Ref[2].TemplateIndex = 1) and (Ref[2].ReferenceIndex = 0) and (Ref[2].TemplateTag = $A9) and (Ref[2].RoleTag = $CA) and (Ref[2].ShortFileId = -1),'PBR email IAP position');
   Check((Ref[3].ReferenceIndex = 1) and (Ref[3].RoleTag = $C4) and (Ref[4].TemplateTag = $AA),'PBR ANR position / independent EXT');
   Check(Length(TSimCodec.DecodePhonebookReferences(HexToBytes('FFFF'))) = 0,'Erased PBR');
+  Ref := TSimCodec.DecodePhonebookReferences(HexToBytes('A908C4024F11C4024F12'));
+  Check((Length(Ref) = 2) and (Ref[0].RoleTag = $C4) and (Ref[1].RoleTag = $C4) and (Ref[1].ReferenceIndex = 1), 'Repeated ANR roles preserve separate IAP positions');
   for I := 0 to High(Bad) do
   begin Failed := False; try Ref := TSimCodec.DecodePhonebookReferences(HexToBytes(Bad[I])); except on E: Exception do Failed := True; end;
     Check(Failed,'Malformed PBR refused'); end;
