@@ -1,17 +1,132 @@
-﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
-  <PropertyGroup><ProjectGuid>{DD042AB6-D275-57A0-B3A1-D89E500B69CA}</ProjectGuid><ProjectVersion>12.0</ProjectVersion></PropertyGroup>
-  <ItemGroup>
-    <Projects Include="runtime\ERDCardCore.dproj"><Dependencies/></Projects>
-    <Projects Include="runtime\ERDCardMagStripe.dproj"><Dependencies/></Projects>
-    <Projects Include="runtime\ERDCardPCSC.dproj"><Dependencies/></Projects>
-    <Projects Include="runtime\ERDCardEID.dproj"><Dependencies/></Projects>
-    <Projects Include="runtime\ERDCardEMV.dproj"><Dependencies/></Projects>
-    <Projects Include="runtime\ERDCardContactless.dproj"><Dependencies/></Projects>
-    <Projects Include="runtime\ERDCardCryptoWindows.dproj"><Dependencies/></Projects>
-    <Projects Include="runtime\ERDCardCryptoOpenSSL.dproj"><Dependencies/></Projects>
-  </ItemGroup>
-  <Target Name="Build"><MSBuild Projects="@(Projects)" Targets="Build" BuildInParallel="false"/></Target>
-  <Target Name="Clean"><MSBuild Projects="@(Projects)" Targets="Clean" BuildInParallel="false"/></Target>
-  <Target Name="Make"><MSBuild Projects="@(Projects)" Targets="Make" BuildInParallel="false"/></Target>
-  <ProjectExtensions><Borland.Personality>Default.Personality</Borland.Personality><Borland.ProjectType/><BorlandProject><Default.Personality/></BorlandProject></ProjectExtensions>
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{DD042AB6-D275-57A0-B3A1-D89E500B69CA}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="runtime\ERDCardContactless.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="runtime\ERDCardCore.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="runtime\ERDCardCryptoOpenSSL.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="runtime\ERDCardCryptoWindows.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="runtime\ERDCardEID.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="runtime\ERDCardEMV.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="runtime\ERDCardMagStripe.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="runtime\ERDCardPCSC.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="design\ERDCardDesign.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="ERDCardContactless">
+        <MSBuild Projects="runtime\ERDCardContactless.dproj"/>
+    </Target>
+    <Target Name="ERDCardContactless:Clean">
+        <MSBuild Projects="runtime\ERDCardContactless.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ERDCardContactless:Make">
+        <MSBuild Projects="runtime\ERDCardContactless.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ERDCardCore">
+        <MSBuild Projects="runtime\ERDCardCore.dproj"/>
+    </Target>
+    <Target Name="ERDCardCore:Clean">
+        <MSBuild Projects="runtime\ERDCardCore.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ERDCardCore:Make">
+        <MSBuild Projects="runtime\ERDCardCore.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ERDCardCryptoOpenSSL">
+        <MSBuild Projects="runtime\ERDCardCryptoOpenSSL.dproj"/>
+    </Target>
+    <Target Name="ERDCardCryptoOpenSSL:Clean">
+        <MSBuild Projects="runtime\ERDCardCryptoOpenSSL.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ERDCardCryptoOpenSSL:Make">
+        <MSBuild Projects="runtime\ERDCardCryptoOpenSSL.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ERDCardCryptoWindows">
+        <MSBuild Projects="runtime\ERDCardCryptoWindows.dproj"/>
+    </Target>
+    <Target Name="ERDCardCryptoWindows:Clean">
+        <MSBuild Projects="runtime\ERDCardCryptoWindows.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ERDCardCryptoWindows:Make">
+        <MSBuild Projects="runtime\ERDCardCryptoWindows.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ERDCardEID">
+        <MSBuild Projects="runtime\ERDCardEID.dproj"/>
+    </Target>
+    <Target Name="ERDCardEID:Clean">
+        <MSBuild Projects="runtime\ERDCardEID.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ERDCardEID:Make">
+        <MSBuild Projects="runtime\ERDCardEID.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ERDCardEMV">
+        <MSBuild Projects="runtime\ERDCardEMV.dproj"/>
+    </Target>
+    <Target Name="ERDCardEMV:Clean">
+        <MSBuild Projects="runtime\ERDCardEMV.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ERDCardEMV:Make">
+        <MSBuild Projects="runtime\ERDCardEMV.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ERDCardMagStripe">
+        <MSBuild Projects="runtime\ERDCardMagStripe.dproj"/>
+    </Target>
+    <Target Name="ERDCardMagStripe:Clean">
+        <MSBuild Projects="runtime\ERDCardMagStripe.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ERDCardMagStripe:Make">
+        <MSBuild Projects="runtime\ERDCardMagStripe.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ERDCardPCSC">
+        <MSBuild Projects="runtime\ERDCardPCSC.dproj"/>
+    </Target>
+    <Target Name="ERDCardPCSC:Clean">
+        <MSBuild Projects="runtime\ERDCardPCSC.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ERDCardPCSC:Make">
+        <MSBuild Projects="runtime\ERDCardPCSC.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ERDCardDesign">
+        <MSBuild Projects="design\ERDCardDesign.dproj"/>
+    </Target>
+    <Target Name="ERDCardDesign:Clean">
+        <MSBuild Projects="design\ERDCardDesign.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ERDCardDesign:Make">
+        <MSBuild Projects="design\ERDCardDesign.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="ERDCardContactless;ERDCardCore;ERDCardCryptoOpenSSL;ERDCardCryptoWindows;ERDCardEID;ERDCardEMV;ERDCardMagStripe;ERDCardPCSC;ERDCardDesign"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="ERDCardContactless:Clean;ERDCardCore:Clean;ERDCardCryptoOpenSSL:Clean;ERDCardCryptoWindows:Clean;ERDCardEID:Clean;ERDCardEMV:Clean;ERDCardMagStripe:Clean;ERDCardPCSC:Clean;ERDCardDesign:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="ERDCardContactless:Make;ERDCardCore:Make;ERDCardCryptoOpenSSL:Make;ERDCardCryptoWindows:Make;ERDCardEID:Make;ERDCardEMV:Make;ERDCardMagStripe:Make;ERDCardPCSC:Make;ERDCardDesign:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>
