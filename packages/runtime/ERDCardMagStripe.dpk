@@ -1,4 +1,7 @@
-package ERDCardMagStripe;
+﻿package ERDCardMagStripe;
+
+{$R *.res}
+{$IMPLICITBUILD ON}
 
 {$DESCRIPTION 'ERD Card MagStripe: track codecs, sessions, MagTek input and MSR206/MSR605 programming and 7HL same-swipe verified writing'}
 {$RUNONLY}

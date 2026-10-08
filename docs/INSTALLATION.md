@@ -29,8 +29,8 @@ tools\build-packages.cmd dcc32
 tools\build-packages.cmd dcc64
 ```
 
-These commands perform Debug builds with XML documentation, range and overflow
-checks. IDE/MSBuild projects also provide a Release configuration with checks
+These commands invoke MSBuild on the matching `.dproj` for a full Debug build,
+including project resource generation, XML documentation, range and overflow checks. IDE/MSBuild projects also provide a Release configuration with checks
 retained. For example:
 
 ```bat
@@ -81,3 +81,42 @@ If you use runtime packages in a deployed application, enable its matching runti
 package list and deploy those BPLs plus their transitive dependencies. The supplied
 VCL demos link source statically and do not need palette installation or ERD BPLs.
 See [VCL_DEMOS.md](VCL_DEMOS.md) for building and smoke testing them.
+
+## Retesting the reported IDE package crash
+
+The supplied `Delphi Packages/Core.dproj` and `.dpk` are the native-format reference;
+they remain unchanged. The user confirmed that this native Core project builds
+successfully in Delphi. The shipped projects now follow that configuration model:
+Explicit IDE `Borland.ProjectType=Package`, Base/Debug/Release inheritance,
+Win32/Win64 activation nodes, package generation,
+project names, named DCP dependencies and numeric debug-information settings.
+`DCC_IntegerOverflowCheck` replaces the incorrect `DCC_OverflowChecking` property.
+Project/package files use UTF-8 with BOM and CRLF, matching the reference. They
+already used CRLF before this repair; line endings alone do not explain the crash.
+The project format version follows the supplied reference (20.2); earlier IDE
+versions remain unverified.
+
+The package and VCL sources now reference their standard generated `.res`. Use
+IDE/MSBuild builds rather than compiling these `.dpk`/VCL `.dpr` files directly
+with DCC before resources have been generated. The build scripts use that same
+project pipeline. Console test builds still use DCC directly.
+
+For a focused retest, close the old project group, reopen the updated project,
+and build only `packages/runtime/ERDCardCore.dproj` as Debug/Win32 first. Old
+outputs under `dist/packages` can be removed before rebuilding; this does not
+require changing source files. From a matching RAD Studio command prompt:
+
+```bat
+msbuild packages\runtime\ERDCardCore.dproj /t:Build /p:Config=Debug /p:Platform=Win32 /p:DCC_BuildAllUnits=true /nologo /v:normal
+```
+
+Then build the full runtime group, the design package for the IDE architecture,
+and the VCL examples. The `Core` reference package and `ERDCardCore` contain the
+same units; use the shipped ERD package set for installation.
+
+The reported access violation is inside `delphicoreide290.bpl`. These corrections
+address verified project defects, but the Linux checks cannot confirm that the
+IDE crash is resolved. If it persists, compare building the user's native `Core`
+reference and the shipped `ERDCardCore` project, and compare IDE versus command-line
+MSBuild output. An IDE-only failure and an emitted compiler error require different
+follow-up diagnosis; keep the first actual error from the build output.

@@ -1,4 +1,7 @@
-package ERDCardContactless;
+﻿package ERDCardContactless;
+
+{$R *.res}
+{$IMPLICITBUILD ON}
 
 {$DESCRIPTION 'ERD Card Contactless: reader profiles, Classic/Type 2/Type 4/ISO 15693/Type 5 storage and programmable UID'}
 {$RUNONLY}

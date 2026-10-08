@@ -1,4 +1,7 @@
-package ERDCardPCSC;
+﻿package ERDCardPCSC;
+
+{$R *.res}
+{$IMPLICITBUILD ON}
 
 {$DESCRIPTION 'ERD Card PC/SC: non-visual reader and Windows byte transport'}
 {$RUNONLY}

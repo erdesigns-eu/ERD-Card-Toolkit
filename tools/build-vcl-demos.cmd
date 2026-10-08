@@ -10,15 +10,13 @@ if /i "%CARD_COMPILER%"=="dcc32" (set "CARD_PLATFORM=Win32") else if /i "%CARD_C
 )
 where %CARD_COMPILER% >nul 2>&1
 if errorlevel 1 exit /b %errorlevel%
-set "CARD_BUILD=dist\vcl\%CARD_PLATFORM%\Debug"
-set "CARD_UNITS=src\core;src\crypto;src\pcsc;src\eid;src\emv;src\magstripe;src\contactless;examples\vcl\shared"
+where msbuild >nul 2>&1
+if errorlevel 1 exit /b %errorlevel%
 call :build_demo smartcard SmartCardDemo
 if errorlevel 1 exit /b %errorlevel%
 call :build_demo magstripe MagStripeDemo
 exit /b %errorlevel%
 :build_demo
-set "CARD_DCU=%CARD_BUILD%\%~2\dcu"
-if not exist "%CARD_DCU%" mkdir "%CARD_DCU%"
-if errorlevel 1 exit /b %errorlevel%
-%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"%CARD_UNITS%" -N0"%CARD_DCU%" -E"%CARD_BUILD%" "examples\vcl\%~1\%~2.dpr"
+rem Use the same resource generation and configuration as the IDE projects.
+msbuild "examples\vcl\%~1\%~2.dproj" /t:Build /p:Config=Debug /p:Platform=%CARD_PLATFORM% /p:DCC_BuildAllUnits=true /nologo /v:minimal
 exit /b %errorlevel%

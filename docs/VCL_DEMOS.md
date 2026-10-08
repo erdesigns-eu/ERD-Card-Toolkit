@@ -9,6 +9,8 @@ tools\build-vcl-demos.cmd dcc32
 tools\build-vcl-demos.cmd dcc64
 ```
 
+The scripts build the `.dproj` through MSBuild, including generated application
+resources and the same configuration settings used by the IDE.
 Executables go to `dist/vcl/<Platform>/Debug`, with separate DCUs for each demo.
 IDE/MSBuild Release builds go to the corresponding Release directory. These are
 Windows VCL applications; they have not been built or rendered in the Linux cloud

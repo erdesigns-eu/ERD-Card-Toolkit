@@ -1,4 +1,7 @@
-package ERDCardDesign;
+﻿package ERDCardDesign;
+
+{$R *.res}
+{$IMPLICITBUILD ON}
 
 {$DESCRIPTION 'ERD Card component palette'}
 {$DESIGNONLY}
