@@ -260,6 +260,20 @@ begin
   Put(R,dfDesfire,'key','00');Rejected:=False;
   try CreateCardFamilyOperations(dfDesfire,Hardware).Run(R,D);except on E:Exception do Rejected:=True;end;
   Check(Rejected and (H.Acquires=Before),'DES profile exact key size checked before reader acquisition');
+  for I:=0 to 2 do
+  begin
+   R:=Request(dfDesfire,'createapp');Put(R,dfDesfire,'security',IntToStr(Profile));Put(R,dfDesfire,'key',Key);
+   Put(R,dfDesfire,'targetaid','263430');Put(R,dfDesfire,'settings','15');Put(R,dfDesfire,'keycount','1');Put(R,dfDesfire,'applicationkeytype',IntToStr(I));
+   Reached:=False;
+   try CreateCardFamilyOperations(dfDesfire,Hardware).Run(R,D);except on E:EReachedHardware do Reached:=True;end;
+   Check(Reached,'DES profile plus explicit application storage type reaches acquisition');Before:=H.Acquires;
+   Put(R,dfDesfire,'applicationkeytype','-1');Rejected:=False;
+   try CreateCardFamilyOperations(dfDesfire,Hardware).Run(R,D);except on E:EArgumentException do Rejected:=True;end;
+   Check(Rejected and (H.Acquires=Before),'Unselected storage type rejected before hardware');
+   Put(R,dfDesfire,'applicationkeytype',IntToStr(I));Put(R,dfDesfire,'keycount','129');Rejected:=False;
+   try CreateCardFamilyOperations(dfDesfire,Hardware).Run(R,D);except on E:EArgumentException do Rejected:=True;end;
+   Check(Rejected and (H.Acquires=Before),'Raw configuration byte cannot substitute for key count');
+  end;
  end;
  Check(H.Releases=0,'Rejected/failed hardware acquisitions are never released');Hardware:=nil;
 end;
@@ -688,7 +702,7 @@ begin
       R := Request(dfDesfire,A[I].Id); Put(R,dfDesfire,'aid','66051');
       Put(R,dfDesfire,'security','1'); Put(R,dfDesfire,'minimum','1'); Put(R,dfDesfire,'key','000102030405060708090A0B0C0D0E0F');
       Put(R,dfDesfire,'offset','0'); Put(R,dfDesfire,'count','1'); Put(R,dfDesfire,'file','0'); Put(R,dfDesfire,'data','01020304');
-      Put(R,dfDesfire,'amount','1'); Put(R,dfDesfire,'settings','15'); Put(R,dfDesfire,'keycount','129'); Put(R,dfDesfire,'targetaid','263430');
+      Put(R,dfDesfire,'amount','1'); Put(R,dfDesfire,'settings','15'); Put(R,dfDesfire,'keycount','1'); Put(R,dfDesfire,'applicationkeytype','2'); Put(R,dfDesfire,'targetaid','263430');
       Put(R,dfDesfire,'readkey','0'); Put(R,dfDesfire,'writekey','0'); Put(R,dfDesfire,'readwritekey','0'); Put(R,dfDesfire,'changekey','0');
       Put(R,dfDesfire,'filebytes','16'); Put(R,dfDesfire,'keyversion','1'); Put(R,dfDesfire,'newkey','101112131415161718191A1B1C1D1E1F');
       Reached := False;

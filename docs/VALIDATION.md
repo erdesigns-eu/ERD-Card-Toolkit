@@ -1,5 +1,19 @@
 # Library validation record
 
+## Latest run: DESFire native application/file management (2026-10-09)
+
+The full runner passed after extending explicit native application creation and
+DES/3DES ordinary management. The independent legacy suite passed **24,326
+assertions** through OpenSSL and the production CNG adapter/native shim, including
+all five ordinary file types, all three new application storage types, metadata,
+retained ownership, invalid counts and every management I/O failure boundary.
+Family-executor tests passed **2,146 assertions**, including unselected type and
+incorrect count rejection before hardware acquisition. Existing AES/session/key
+administration suites remain included. All 21 source readers, distribution checks
+and 36 Python regressions passed. The existing interface IIDs are unchanged; a new
+optional interface exposes typed application creation. This records supplemental
+Linux/compiler/shim evidence, not a native Delphi build.
+
 ## Latest run: Ultralight C, DES/3DES and demo events (2026-10-09)
 
 The complete `tools/run_core_tests.py` run passed after adding native DES providers,

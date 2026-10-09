@@ -6,9 +6,10 @@ It supplies application/file discovery, data/value/record reading, verified
 standard-data writing and retained transaction/management sessions. Explicit EV1 and EV2 AES profiles include mutual
 authentication and Plain, MACed and Full messaging. EV2 additionally supports an
 optional NonFirst switch to a second application key. Explicit EV1 2K3DES/3K3DES
-and D40 DES/2K3DES profiles cover ordinary file access and transactions; see
-[LEGACY_MIFARE_SECURITY.md](LEGACY_MIFARE_SECURITY.md). AES administration
-remains separate. No constructor opens a reader.
+and D40 DES/2K3DES profiles cover ordinary file access, transactions and native
+application/file creation/deletion; see
+[LEGACY_MIFARE_SECURITY.md](LEGACY_MIFARE_SECURITY.md). AES key/access-policy mutations
+remain separate. No constructor opens a reader.
 
 Source use requires `src/core` and `src/contactless`, plus `src/crypto` for a
 concrete provider and `src/pcsc` for Windows readers. The existing contactless
@@ -31,7 +32,7 @@ package. All exported declarations carry Delphi XML documentation.
 | EV2 NonFirst | Optional `77` authentication with a second explicit key after verified settings; new session keys, retained TI/counter | One key switch within each acquired data/value/record operation; key-set management is separate |
 | Secure file access | Plain/MACed/Full data/value/record reads and standard-data range writes; authenticated settings | Physical EV1/EV2/EV3/Light, firmware and reader compatibility remain unvalidated |
 | Backup/value/record modification | Owned sessions stage backup ranges, credit/debit/limited credit, linear/cyclic append and record clearing; explicit commit/abort and complete post-commit verification | Transaction-MAC files/receipts, readers/cards with additional transaction features |
-| Administration | Explicit PICC-level AES application create/delete and all five ordinary file create/delete operations, with verified directories/settings; AES key rotation, key policy and ordinary access/mode changes | Formatting, ISO creation, SDM/TMAC, key sets, generation-specific configuration and originality verification |
+| Administration | Explicit PICC-level application create/delete and all five ordinary file create/delete operations across public/AES/ISO-3DES/legacy profiles, selectable new application key storage, with verified directories/settings; AES key rotation, key policy and ordinary access/mode changes | Formatting, ISO creation, SDM/TMAC, key sets, generation-specific configuration and originality verification |
 
 EV2 is a **secure-messaging dialect**, not a guessed card generation. NXP AN12343
 states that DESFire Light AES messaging works like DESFire EV2. The shared
@@ -506,8 +507,18 @@ is redistributed or linked into this library:
 - [Microsoft CNG functions](https://learn.microsoft.com/en-us/windows/win32/seccng/cng-functions)
   and [OpenSSL EVP](https://docs.openssl.org/3.5/man3/EVP_EncryptInit/).
 
-Next security/access additions are DES/3DES administration and key rotation, EV2 key sets,
+Next security/access additions are DES/3DES key/access-policy changes and key rotation, EV2 key sets,
 LRP and generation-specific extensions, TMAC receipts, extended/SDM rights and
 configuration, ISO creation, originality and hardware profiles. Basic AES key policy,
 rotation and ordinary access administration are implemented. Broad support is built per implemented/tested operation, never inferred
 from one successful AES session or PC/SC connection.
+
+## Explicit application key storage
+
+`OpenApplicationManagementSession` returns the new optional
+`IDesfireApplicationManagement` extension without changing existing interface
+IIDs. `CreateApplicationWithKeyType` selects DES/2K3DES, 3K3DES or AES storage
+independently of PICC authentication. Existing `CreateApplication` retains its AES
+behavior. Native create/delete operations and metadata reads now have independent
+DES/3DES transcripts and every I/O failure boundary. See
+[DESFIRE_APPLICATIONS.md](DESFIRE_APPLICATIONS.md) for the exact contract and demo.

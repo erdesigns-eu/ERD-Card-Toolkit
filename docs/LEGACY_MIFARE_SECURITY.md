@@ -68,11 +68,17 @@ receipt. The profile does not invent MACs absent from that protocol. Select
 `MinimumCommunication` according to acquired file settings and application policy;
 failed authentication/integrity never falls back to public access.
 
-EV2 NonFirst and AES key/application/file administration remain AES-specific.
-DES/3DES key rotation, type conversion, application/file administration, EV2 key
-sets, LRP, SDM and TMAC extensions are not implemented by these new profiles.
-The separate DesfireDemo exposes new choices on file reading/writing and
-transaction pages; its administration pages retain the existing choices.
+Native application/ordinary-file create/delete, application settings, PICC free
+memory and key-version reading also work through the explicit DES/3DES profiles.
+The optional `IDesfireApplicationManagement` interface adds explicit application
+key-storage selection; see [DESFIRE_APPLICATIONS.md](DESFIRE_APPLICATIONS.md).
+Creation initializes card-default credentials, not caller-supplied keys.
+
+EV2 NonFirst, AES key rotation and key/access-policy changes remain AES-specific.
+DES/3DES key rotation, key-type conversion of existing applications, policy/access
+changes, EV2 key sets, LRP, SDM and TMAC extensions are not implemented by these
+profiles. DesfireDemo exposes the new choices on file, transaction and ordinary
+management pages; AES key/access mutation pages retain the existing choices.
 
 ## Native cryptography
 

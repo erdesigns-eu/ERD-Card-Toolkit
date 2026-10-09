@@ -61,13 +61,13 @@ class Card:
         rb=crypt(self.key,bytes(8),b)
         challenge=inverse_send(self.key,a+b[1:]+b[:1]) if self.legacy else crypt(self.key,rb[-8:],a+b[1:]+b[:1])
         ra=crypt(self.key,bytes(8) if self.legacy else challenge[-8:],a[1:]+a[:1])
-        self.pairs=[(wrap(0x5a,bytes.fromhex('01EFCD')),bytes.fromhex('9100')),
+        self.pairs=[(wrap(0x5a,kwargs.get('aid',bytes.fromhex('01EFCD'))),bytes.fromhex('9100')),
                     (wrap(0x0a if self.legacy else 0x1a,b'\0'),rb+bytes.fromhex('91AF')),
                     (wrap(0xaf,challenge),ra+bytes.fromhex('9100'))]
         self.session=a[:4]+b[:4]
         if profile==1:self.session+=a[6:10]+b[6:10]+a[12:]+b[12:]
         elif profile!=2:self.session+=a[4:8]+b[4:8]
-        self.iv=bytes(8);self.mode=mode;self.frame=kwargs.get("frame",48);self.response_chunk=kwargs.get("response_chunk",1048576)
+        self.app_config=(0x40 if profile==1 else 0)|1;self.iv=bytes(8);self.mode=mode;self.frame=kwargs.get("frame",48);self.response_chunk=kwargs.get("response_chunk",1048576)
     def exchange(self,cmd,header=b'',body=b'',returned=b'',mode=None,write=False,writing=False):
         write=write or writing
         mode=self.mode if mode is None else mode;request=header+body
@@ -95,6 +95,7 @@ class Card:
             self.pairs.append((wrap(0xaf),part+bytes.fromhex('91AF' if i<len(chunks)-1 else '9100')))
 
     def metadata(self,cmd,header=b'',returned=b''):
+        if cmd==0x45 and returned==bytes.fromhex('0F81'):returned=bytes([0x0b,self.app_config])
         self.exchange(cmd,header,returned=returned,mode=0)
     def switch(self): pass
     def settings(self):self.exchange(0xf5,b'\0',returned=bytes([0,self.mode,0,0,32,0,0]),mode=0)
@@ -124,19 +125,41 @@ def ulc(action,page=39):
 # Reuse only the protocol-independent workload definitions, without executing
 # the AES generator or importing its cryptographic implementation.
 workloads=ast.parse((ROOT/'tools/generate_desfire_session_fixtures.py').read_text())
-workloads.body=[node for node in workloads.body if isinstance(node,ast.FunctionDef) and node.name in ('raw_settings','transaction')]
+workloads.body=[node for node in workloads.body if isinstance(node,ast.FunctionDef) and node.name in ('raw_settings','transaction','manage_files')]
 namespace={'crypto':SimpleNamespace(MEMORY=MEMORY),'LINEAR':bytes.fromhex('1112131421222324'),'CYCLIC':bytes.fromhex('111213142122232431323334')}
 exec(compile(workloads,'independent-session-workload','exec'),namespace)
 def session(profile,mode):
     namespace['Card']=lambda generation,mode,**kwargs: Card(profile,mode,**kwargs)
     return namespace['transaction']('Ev1',mode)
 
+def files(profile,mode):
+    namespace['Card']=lambda generation,mode,**kwargs: Card(profile,mode,**kwargs)
+    return namespace['manage_files']('Ev1',mode)
+def applications(profile):
+    card=Card(profile,0,aid=bytes(3));current=[bytes.fromhex('563412')]
+    card.metadata(0x6e,returned=(1000).to_bytes(3,'little'))
+    card.metadata(0x45,returned=bytes([0x0b,card.app_config]));card.metadata(0x64,b'\0',returned=b'\5')
+    for kind in (0,0x40,0x80):
+        aid=bytes([kind+1,0xef,0xcd])
+        card.metadata(0x45,returned=bytes([0x0b,card.app_config]))
+        card.metadata(0x6a,returned=b''.join(current))
+        card.metadata(0xca,aid+bytes([0x0b,kind|1]));current.append(aid)
+        card.metadata(0x6a,returned=b''.join(current))
+    for aid in current[:0:-1]:
+        card.metadata(0x45,returned=bytes([0x0b,card.app_config]))
+        card.metadata(0x6a,returned=b''.join(current))
+        card.metadata(0xda,aid);current.remove(aid)
+        card.metadata(0x6a,returned=b''.join(current))
+    return card.pairs
+
 vectors={}
 for profile in range(4):
     for mode in (0,1,3):
         for write in (False,True):vectors[f'D{profile}M{mode}W{int(write)}']=desfire(profile,mode,write)
         vectors[f'S{profile}M{mode}']=session(profile,mode)
+        vectors[f'F{profile}M{mode}']=files(profile,mode)
     vectors[f'C{profile}']=desfire(profile,3,True,chained=True)
+    vectors[f'A{profile}']=applications(profile)
 for action in ('read','memory','write'):vectors['U'+action]=ulc(action)
 text=['unit LegacyMifare.Vectors;','{$IFDEF FPC}{$MODE DELPHI}{$ENDIF}','interface','type',
       '  /// <summary>Independent literal command/response pair using synthetic public credentials.</summary>',

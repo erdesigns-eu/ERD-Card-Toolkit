@@ -1715,7 +1715,7 @@ begin
       Result[13].Fields[0].Name := 'aid'; Result[13].Fields[0].LabelText := 'Explicit native AID (decimal; 0 = PICC)';
       Result[13].Fields[0].DefaultText := '0'; Result[13].Fields[0].Secret := False; Result[13].Fields[0].Choices := '';
       Result[13].Fields[1].Name := 'security'; Result[13].Fields[1].LabelText := 'Explicit security profile';
-      Result[13].Fields[1].DefaultText := '0'; Result[13].Fields[1].Secret := False; Result[13].Fields[1].Choices := 'Public|EV2 AES|EV1 AES';
+      Result[13].Fields[1].DefaultText := '0'; Result[13].Fields[1].Secret := False; Result[13].Fields[1].Choices := 'Public|EV2 AES|EV1 AES|EV1 2K3DES|EV1 3K3DES|D40 DES|D40 2K3DES';
       Result[13].Fields[2].Name := 'minimum'; Result[13].Fields[2].LabelText := 'Minimum communication';
       Result[13].Fields[2].DefaultText := '1'; Result[13].Fields[2].Secret := False; Result[13].Fields[2].Choices := 'Plain|MAC|Full';
       Result[13].Fields[3].Name := 'keynumber'; Result[13].Fields[3].LabelText := 'Supplied authentication key number';
@@ -1732,7 +1732,7 @@ begin
       Result[14].Fields[0].Name := 'aid'; Result[14].Fields[0].LabelText := 'Explicit native AID (decimal; 0 = PICC)';
       Result[14].Fields[0].DefaultText := '0'; Result[14].Fields[0].Secret := False; Result[14].Fields[0].Choices := '';
       Result[14].Fields[1].Name := 'security'; Result[14].Fields[1].LabelText := 'Explicit security profile';
-      Result[14].Fields[1].DefaultText := '0'; Result[14].Fields[1].Secret := False; Result[14].Fields[1].Choices := 'Public|EV2 AES|EV1 AES';
+      Result[14].Fields[1].DefaultText := '0'; Result[14].Fields[1].Secret := False; Result[14].Fields[1].Choices := 'Public|EV2 AES|EV1 AES|EV1 2K3DES|EV1 3K3DES|D40 DES|D40 2K3DES';
       Result[14].Fields[2].Name := 'minimum'; Result[14].Fields[2].LabelText := 'Minimum communication';
       Result[14].Fields[2].DefaultText := '1'; Result[14].Fields[2].Secret := False; Result[14].Fields[2].Choices := 'Plain|MAC|Full';
       Result[14].Fields[3].Name := 'keynumber'; Result[14].Fields[3].LabelText := 'Supplied authentication key number';
@@ -1749,7 +1749,7 @@ begin
       Result[15].Fields[0].Name := 'aid'; Result[15].Fields[0].LabelText := 'Explicit native AID (decimal; 0 = PICC)';
       Result[15].Fields[0].DefaultText := '0'; Result[15].Fields[0].Secret := False; Result[15].Fields[0].Choices := '';
       Result[15].Fields[1].Name := 'security'; Result[15].Fields[1].LabelText := 'Explicit security profile';
-      Result[15].Fields[1].DefaultText := '0'; Result[15].Fields[1].Secret := False; Result[15].Fields[1].Choices := 'Public|EV2 AES|EV1 AES';
+      Result[15].Fields[1].DefaultText := '0'; Result[15].Fields[1].Secret := False; Result[15].Fields[1].Choices := 'Public|EV2 AES|EV1 AES|EV1 2K3DES|EV1 3K3DES|D40 DES|D40 2K3DES';
       Result[15].Fields[2].Name := 'minimum'; Result[15].Fields[2].LabelText := 'Minimum communication';
       Result[15].Fields[2].DefaultText := '1'; Result[15].Fields[2].Secret := False; Result[15].Fields[2].Choices := 'Plain|MAC|Full';
       Result[15].Fields[3].Name := 'keynumber'; Result[15].Fields[3].LabelText := 'Supplied authentication key number';
@@ -1837,11 +1837,11 @@ begin
       Result[18].Fields[10].DefaultText := ''; Result[18].Fields[10].Secret := True; Result[18].Fields[10].Choices := '';
       Result[19].Id := 'createapp'; Result[19].LabelText := 'Create explicit application + verify';
       Result[19].Mutation := True; Result[19].Pcsc := True;
-      SetLength(Result[19].Fields,10);
+      SetLength(Result[19].Fields,11);
       Result[19].Fields[0].Name := 'aid'; Result[19].Fields[0].LabelText := 'Explicit native AID (decimal; 0 = PICC)';
       Result[19].Fields[0].DefaultText := '0'; Result[19].Fields[0].Secret := False; Result[19].Fields[0].Choices := '';
       Result[19].Fields[1].Name := 'security'; Result[19].Fields[1].LabelText := 'Explicit security profile';
-      Result[19].Fields[1].DefaultText := '0'; Result[19].Fields[1].Secret := False; Result[19].Fields[1].Choices := 'Public|EV2 AES|EV1 AES';
+      Result[19].Fields[1].DefaultText := '0'; Result[19].Fields[1].Secret := False; Result[19].Fields[1].Choices := 'Public|EV2 AES|EV1 AES|EV1 2K3DES|EV1 3K3DES|D40 DES|D40 2K3DES';
       Result[19].Fields[2].Name := 'minimum'; Result[19].Fields[2].LabelText := 'Minimum communication';
       Result[19].Fields[2].DefaultText := '1'; Result[19].Fields[2].Secret := False; Result[19].Fields[2].Choices := 'Plain|MAC|Full';
       Result[19].Fields[3].Name := 'keynumber'; Result[19].Fields[3].LabelText := 'Supplied authentication key number';
@@ -1856,15 +1856,17 @@ begin
       Result[19].Fields[7].DefaultText := ''; Result[19].Fields[7].Secret := False; Result[19].Fields[7].Choices := '';
       Result[19].Fields[8].Name := 'settings'; Result[19].Fields[8].LabelText := 'Exact key-settings byte (decimal)';
       Result[19].Fields[8].DefaultText := ''; Result[19].Fields[8].Secret := False; Result[19].Fields[8].Choices := '';
-      Result[19].Fields[9].Name := 'keycount'; Result[19].Fields[9].LabelText := 'Exact key-configuration byte (decimal)';
+      Result[19].Fields[9].Name := 'keycount'; Result[19].Fields[9].LabelText := 'Application key count (1..14)';
       Result[19].Fields[9].DefaultText := ''; Result[19].Fields[9].Secret := False; Result[19].Fields[9].Choices := '';
+      Result[19].Fields[10].Name := 'applicationkeytype'; Result[19].Fields[10].LabelText := 'Explicit new application key-storage type';
+      Result[19].Fields[10].DefaultText := ''; Result[19].Fields[10].Secret := False; Result[19].Fields[10].Choices := 'DES / 2K3DES|3K3DES|AES';
       Result[20].Id := 'deleteapp'; Result[20].LabelText := 'Delete explicit application + verify';
       Result[20].Mutation := True; Result[20].Pcsc := True;
       SetLength(Result[20].Fields,8);
       Result[20].Fields[0].Name := 'aid'; Result[20].Fields[0].LabelText := 'Explicit native AID (decimal; 0 = PICC)';
       Result[20].Fields[0].DefaultText := '0'; Result[20].Fields[0].Secret := False; Result[20].Fields[0].Choices := '';
       Result[20].Fields[1].Name := 'security'; Result[20].Fields[1].LabelText := 'Explicit security profile';
-      Result[20].Fields[1].DefaultText := '0'; Result[20].Fields[1].Secret := False; Result[20].Fields[1].Choices := 'Public|EV2 AES|EV1 AES';
+      Result[20].Fields[1].DefaultText := '0'; Result[20].Fields[1].Secret := False; Result[20].Fields[1].Choices := 'Public|EV2 AES|EV1 AES|EV1 2K3DES|EV1 3K3DES|D40 DES|D40 2K3DES';
       Result[20].Fields[2].Name := 'minimum'; Result[20].Fields[2].LabelText := 'Minimum communication';
       Result[20].Fields[2].DefaultText := '1'; Result[20].Fields[2].Secret := False; Result[20].Fields[2].Choices := 'Plain|MAC|Full';
       Result[20].Fields[3].Name := 'keynumber'; Result[20].Fields[3].LabelText := 'Supplied authentication key number';
@@ -1883,7 +1885,7 @@ begin
       Result[21].Fields[0].Name := 'aid'; Result[21].Fields[0].LabelText := 'Explicit native AID (decimal; 0 = PICC)';
       Result[21].Fields[0].DefaultText := '0'; Result[21].Fields[0].Secret := False; Result[21].Fields[0].Choices := '';
       Result[21].Fields[1].Name := 'security'; Result[21].Fields[1].LabelText := 'Explicit security profile';
-      Result[21].Fields[1].DefaultText := '0'; Result[21].Fields[1].Secret := False; Result[21].Fields[1].Choices := 'Public|EV2 AES|EV1 AES';
+      Result[21].Fields[1].DefaultText := '0'; Result[21].Fields[1].Secret := False; Result[21].Fields[1].Choices := 'Public|EV2 AES|EV1 AES|EV1 2K3DES|EV1 3K3DES|D40 DES|D40 2K3DES';
       Result[21].Fields[2].Name := 'minimum'; Result[21].Fields[2].LabelText := 'Minimum communication';
       Result[21].Fields[2].DefaultText := '1'; Result[21].Fields[2].Secret := False; Result[21].Fields[2].Choices := 'Plain|MAC|Full';
       Result[21].Fields[3].Name := 'keynumber'; Result[21].Fields[3].LabelText := 'Supplied authentication key number';
@@ -1902,7 +1904,7 @@ begin
       Result[22].Fields[0].Name := 'aid'; Result[22].Fields[0].LabelText := 'Explicit native AID (decimal; 0 = PICC)';
       Result[22].Fields[0].DefaultText := '0'; Result[22].Fields[0].Secret := False; Result[22].Fields[0].Choices := '';
       Result[22].Fields[1].Name := 'security'; Result[22].Fields[1].LabelText := 'Explicit security profile';
-      Result[22].Fields[1].DefaultText := '0'; Result[22].Fields[1].Secret := False; Result[22].Fields[1].Choices := 'Public|EV2 AES|EV1 AES';
+      Result[22].Fields[1].DefaultText := '0'; Result[22].Fields[1].Secret := False; Result[22].Fields[1].Choices := 'Public|EV2 AES|EV1 AES|EV1 2K3DES|EV1 3K3DES|D40 DES|D40 2K3DES';
       Result[22].Fields[2].Name := 'minimum'; Result[22].Fields[2].LabelText := 'Minimum communication';
       Result[22].Fields[2].DefaultText := '1'; Result[22].Fields[2].Secret := False; Result[22].Fields[2].Choices := 'Plain|MAC|Full';
       Result[22].Fields[3].Name := 'keynumber'; Result[22].Fields[3].LabelText := 'Supplied authentication key number';

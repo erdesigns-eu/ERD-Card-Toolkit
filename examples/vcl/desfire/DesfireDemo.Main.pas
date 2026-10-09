@@ -829,6 +829,10 @@ type
     ActCreateappKeycountLabel: TLabel;
     /// <summary>Exact key-configuration byte (decimal).</summary>
     ActCreateappKeycountEdit: TEdit;
+    /// <summary>Explicit new application key-storage type label.</summary>
+    ActCreateappKeytypeLabel: TLabel;
+    /// <summary>DES/2K3DES, 3K3DES or AES; requires explicit selection.</summary>
+    ActCreateappKeytypeBox: TComboBox;
     /// <summary>Delete explicit application + verify page.</summary>
     ActDeleteappTab: TTabSheet;
     /// <summary>Delete explicit application + verify inputs.</summary>
@@ -1334,7 +1338,7 @@ begin
     end;
     19:
     begin
-      SetLength(FInputs,10);
+      SetLength(FInputs,11);
       FInputs[0] := ActCreateappAidEdit;
       FInputs[1] := ActCreateappSecurityBox;
       FInputs[2] := ActCreateappMinimumBox;
@@ -1345,6 +1349,7 @@ begin
       FInputs[7] := ActCreateappTargetaidEdit;
       FInputs[8] := ActCreateappSettingsEdit;
       FInputs[9] := ActCreateappKeycountEdit;
+      FInputs[10] := ActCreateappKeytypeBox;
     end;
     20:
     begin

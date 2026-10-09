@@ -47,7 +47,7 @@ out of scope (see [Not supported](#not-supported)).
 | **Ultralight C** | `TUltralightCCardReaderWriter` | Supplied-key 2K3DES mutual authentication, exact user-page reads, a 144-byte user-memory snapshot and verified four-byte user-page writes through raw RF (ACR122U adapter). Manufacturer, locks, configuration and key pages are excluded. |
 | **NDEF** | `TType2NdefCardReader`, `TType4NdefCardReader`, `TType5NdefCardReader` | Complete NDEF message codec with chunk reassembly, plus Text, URI, MIME, external and Smart Poster record helpers. Read, replace and clear public NDEF messages on Type 2, Type 4 (mapping 1.0/2.0) and Type 5 tags, with read-back verification. |
 | **ISO 15693** | `TIso15693CardReader` | System information, block-range reads and verified single-block writes through an ACS ACR1552 (FF FB pass-through) session. |
-| **MIFARE DESFire** | `TDesfireCardReader` | Public, EV1/EV2 AES, EV1 2K3DES/3K3DES and explicit D40 DES/2K3DES (Plain, MACed, Full) access. Discover applications/files, read standard/backup/value/record files and write standard data. Transactions with commit/abort, and AES management of applications, files, keys and access rights. EV2 NonFirst re-authentication. |
+| **MIFARE DESFire** | `TDesfireCardReader` | Public, EV1/EV2 AES, EV1 2K3DES/3K3DES and explicit D40 DES/2K3DES (Plain, MACed, Full) access. Discover applications/files, read standard/backup/value/record files and write standard data. Transactions with commit/abort; application and ordinary-file create/delete across the explicit profiles, including selectable DES/2K3DES, 3K3DES or AES application storage. AES key and access-policy administration. EV2 NonFirst re-authentication. |
 | **Programmable (“magic”) UIDs** | `TRawUidProgrammer`, UID methods of `TContactlessCardReader` | Explicit profiles for Gen1a/Gen1b, unsealed UFUID, Gen2/CUID, factory FUID (one-time), Gen3, Gen4 UMC (4/7/10-byte), USCUID/GDM, partial UFUID/ZUID/PFUID and Type 2 DirectWrite. Raw RF access uses an ACS ACR122U/PN532 adapter. |
 | **Calypso / MOBIB** | `TCalypsoCardReader` | Read Calypso files and records (legacy CLA 94 or ISO CLA 00) using the built-in MOBIB plan or your own FID plan. Decode holder, events, contracts (versions 0–4) and counters. Native Calypso secure sessions through a provisioned SAM (revisions 1, 2, 3 and 3.2) or a custom provider. Offline activation/validity/zone checks with `TMobibRuleEngine` and caller-supplied operator profiles. |
 | **SIM / USIM** | `TSimCardReaderWriter` | Classic GSM SIM and UICC/USIM profiles. Read ICCID, IMSI, SPN, service tables and EF.DIR applications; inspect, read and verified-write transparent, linear-fixed and cyclic files. PIN/PUK status, verify, change and unblock with attempt budgets. Read, write and delete ADN contacts; read linked USIM contacts (PBR/IAP/EXT/EMAIL/ANR); verified linked write plans; SMS record and text/UDH codecs. |
@@ -121,7 +121,7 @@ for every card family.
 Add the `src` sub-directories you need to your project's unit search path. Most
 families need `src/core` plus their own directory, and `src/pcsc` for PC/SC
 readers on Windows. Add `src/crypto` when you need a cryptographic provider
-(DESFire AES, ICAO BAC/PACE). This is how the bundled VCL
+(DESFire AES/DES/3DES, Ultralight C, ICAO BAC/PACE). This is how the bundled VCL
 demos are built, so the palette doesn't have to be installed.
 
 ### Option 2: runtime packages
@@ -319,7 +319,7 @@ and show card offered/removed notifications without running a card operation.
 | `Type4NdefDemo` | Capability container, file descriptors and NDEF read/write/clear |
 | `Iso15693Demo` | ACR1552 ISO 15693 blocks and Type 5 NDEF |
 | `UidProgrammingDemo` | All programmable-UID profiles |
-| `DesfireDemo` | Public/EV1/EV2 reads, writes, transactions and management |
+| `DesfireDemo` | Public/AES/DES/3DES reads, writes and transactions; native application/file create-delete with explicit application key type/count; AES key/access-policy mutations |
 | `EmvDemo` | PSE/PPSE, PDOL, GPO/AFL records, extra record scan, GET DATA, logs and exports |
 | `MobibDemo` | Calypso/MOBIB files, contracts, SAM authentication and rule assessment |
 | `BelgianEidDemo` | Identity, address, photo, certificates and signatures with export |
@@ -381,7 +381,7 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
   online services are not validated; extra PACE/EAC profiles are missing
   ([docs/EUROPEAN_EID.md](docs/EUROPEAN_EID.md)).
 - **MIFARE/DESFire variants:** MIFARE Plus, DESFire LRP,
-  TMAC, SDM and extended key-set/configuration management. DES/3DES key rotation and administration; Ultralight C configuration/key/lock changes. NFC Forum Type 1/3 tags.
+  TMAC, SDM and extended key-set/configuration management. DES/3DES key rotation and key/access-policy changes; Ultralight C configuration/key/lock changes. NFC Forum Type 1/3 tags.
 - **UID programming:** only the listed programmable profiles; regular card UIDs
   are not writable.
 - **MOBIB:** no built-in De Lijn/STIB/TEC/NMBS-SNCB rule sets; operator profiles must be
@@ -501,7 +501,7 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 
 - [Belgian eID](docs/BELGIAN_EID.md) · [European eID / ICAO](docs/EUROPEAN_EID.md) · [EMV](docs/EMV_READER.md)
 - [Contactless / MIFARE](docs/CONTACTLESS.md) · [NDEF](docs/NDEF.md) · [Type 2 passwords](docs/TYPE2_PASSWORD.md) · [Ultralight C / DES security](docs/LEGACY_MIFARE_SECURITY.md) · [NTAG210/212](docs/NTAG210_212.md) · [Type 4 NDEF](docs/TYPE4_NDEF.md) · [ISO 15693 / Type 5](docs/ISO15693_TYPE5.md)
-- [DESFire](docs/DESFIRE.md) · [MOBIB / Calypso](docs/MOBIB_CALYPSO.md)
+- [DESFire](docs/DESFIRE.md) · [DESFire application/file management](docs/DESFIRE_APPLICATIONS.md) · [MOBIB / Calypso](docs/MOBIB_CALYPSO.md)
 - [Programmable UIDs](docs/PROGRAMMABLE_UID.md) · [Raw UID](docs/RAW_UID.md) · [Gen3/Gen4](docs/GEN3_GEN4_UID.md) · [USCUID/FUID](docs/USCUID_FUID.md) · [Gen1b/partial](docs/GEN1B_PARTIAL_UID.md)
 - [Contact memory cards](docs/MEMORY_CARDS.md) · [SLE4404](docs/SLE4404.md) · [SIM / USIM](docs/SIM.md)
 - [Magnetic stripe](docs/MAGSTRIPE.md) · [MSR206/MSR605](docs/MSR206.md) · [MSR206-7HL](docs/MSR206_7HL.md)
