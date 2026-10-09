@@ -1485,7 +1485,7 @@ begin
     end;
     dfSlix2:
     begin
-      SetLength(Result,5);
+      SetLength(Result,8);
       Result[0].Id := 'information'; Result[0].LabelText := 'Authenticate and read identity / geometry';
       Result[0].Mutation := True; Result[0].Pcsc := True;
       SetLength(Result[0].Fields,4);
@@ -1553,10 +1553,48 @@ begin
       Result[4].Fields[3].DefaultText := ''; Result[4].Fields[3].Secret := True; Result[4].Fields[3].Choices := '';
       Result[4].Fields[4].Name := 'ndef'; Result[4].Fields[4].LabelText := 'Complete NDEF bytes (hex; empty clears existing message)';
       Result[4].Fields[4].DefaultText := ''; Result[4].Fields[4].Secret := False; Result[4].Fields[4].Choices := '';
+      Result[5].Id := 'protection'; Result[5].LabelText := 'Read decoded page protection / lock / feature information';
+      Result[5].Mutation := False; Result[5].Pcsc := True;
+      SetLength(Result[5].Fields,2);
+      Result[5].Fields[0].Name := 'mode'; Result[5].Fields[0].LabelText := 'SLIX2 ordinary block addressing';
+      Result[5].Fields[0].DefaultText := '0'; Result[5].Fields[0].Secret := False; Result[5].Fields[0].Choices := 'Ordinary 8-bit';
+      Result[5].Fields[1].Name := 'format'; Result[5].Fields[1].LabelText := 'Actual firmware response format';
+      Result[5].Fields[1].DefaultText := '0'; Result[5].Fields[1].Secret := False; Result[5].Fields[1].Choices := 'Native flags|Payload only';
+      Result[6].Id := 'changepassword'; Result[6].LabelText := 'Change password + proof after RF reset';
+      Result[6].Mutation := True; Result[6].Pcsc := True;
+      SetLength(Result[6].Fields,5);
+      Result[6].Fields[0].Name := 'mode'; Result[6].Fields[0].LabelText := 'SLIX2 ordinary block addressing';
+      Result[6].Fields[0].DefaultText := '0'; Result[6].Fields[0].Secret := False; Result[6].Fields[0].Choices := 'Ordinary 8-bit';
+      Result[6].Fields[1].Name := 'format'; Result[6].Fields[1].LabelText := 'Actual firmware response format';
+      Result[6].Fields[1].DefaultText := '0'; Result[6].Fields[1].Secret := False; Result[6].Fields[1].Choices := 'Native flags|Payload only';
+      Result[6].Fields[2].Name := 'identifier'; Result[6].Fields[2].LabelText := 'Password identifier: 1 read, 2 write';
+      Result[6].Fields[2].DefaultText := '1'; Result[6].Fields[2].Secret := False; Result[6].Fields[2].Choices := '';
+      Result[6].Fields[3].Name := 'oldpassword'; Result[6].Fields[3].LabelText := 'Current password in RF wire order (hex)';
+      Result[6].Fields[3].DefaultText := ''; Result[6].Fields[3].Secret := True; Result[6].Fields[3].Choices := '';
+      Result[6].Fields[4].Name := 'newpassword'; Result[6].Fields[4].LabelText := 'New password in RF wire order (hex)';
+      Result[6].Fields[4].DefaultText := ''; Result[6].Fields[4].Secret := True; Result[6].Fields[4].Choices := '';
+      Result[7].Id := 'configure'; Result[7].LabelText := 'Configure page protection + post-reset verification';
+      Result[7].Mutation := True; Result[7].Pcsc := True;
+      SetLength(Result[7].Fields,7);
+      Result[7].Fields[0].Name := 'mode'; Result[7].Fields[0].LabelText := 'SLIX2 ordinary block addressing';
+      Result[7].Fields[0].DefaultText := '0'; Result[7].Fields[0].Secret := False; Result[7].Fields[0].Choices := 'Ordinary 8-bit';
+      Result[7].Fields[1].Name := 'format'; Result[7].Fields[1].LabelText := 'Actual firmware response format';
+      Result[7].Fields[1].DefaultText := '0'; Result[7].Fields[1].Secret := False; Result[7].Fields[1].Choices := 'Native flags|Payload only';
+      Result[7].Fields[2].Name := 'readpassword'; Result[7].Fields[2].LabelText := 'Supplied read password, four wire-order bytes';
+      Result[7].Fields[2].DefaultText := ''; Result[7].Fields[2].Secret := True; Result[7].Fields[2].Choices := '';
+      Result[7].Fields[3].Name := 'writepassword'; Result[7].Fields[3].LabelText := 'Supplied write password, four wire-order bytes';
+      Result[7].Fields[3].DefaultText := ''; Result[7].Fields[3].Secret := True; Result[7].Fields[3].Choices := '';
+      Result[7].Fields[4].Name := 'expected'; Result[7].Fields[4].LabelText := 'Exact complete AB protection preimage (hex)';
+      Result[7].Fields[4].DefaultText := ''; Result[7].Fields[4].Secret := False; Result[7].Fields[4].Choices := '';
+      Result[7].Fields[5].Name := 'pointer'; Result[7].Fields[5].LabelText := 'First Page H block (0..78)';
+      Result[7].Fields[5].DefaultText := '0'; Result[7].Fields[5].Secret := False; Result[7].Fields[5].Choices := '';
+      Result[7].Fields[6].Name := 'conditions'; Result[7].Fields[6].LabelText := 'RL/WL/RH/WH bit mask (hex byte; bits 0/1/4/5)';
+      Result[7].Fields[6].DefaultText := '00'; Result[7].Fields[6].Secret := False; Result[7].Fields[6].Choices := '';
+
     end;
     dfSt25Dv:
     begin
-      SetLength(Result,5);
+      SetLength(Result,8);
       Result[0].Id := 'information'; Result[0].LabelText := 'Authenticate and read identity / geometry';
       Result[0].Mutation := True; Result[0].Pcsc := True;
       SetLength(Result[0].Fields,4);
@@ -1624,6 +1662,48 @@ begin
       Result[4].Fields[3].DefaultText := ''; Result[4].Fields[3].Secret := True; Result[4].Fields[3].Choices := '';
       Result[4].Fields[4].Name := 'ndef'; Result[4].Fields[4].LabelText := 'Complete NDEF bytes (hex; empty clears existing message)';
       Result[4].Fields[4].DefaultText := ''; Result[4].Fields[4].Secret := False; Result[4].Fields[4].Choices := '';
+      Result[5].Id := 'configuration'; Result[5].LabelText := 'Read decoded RF area geometry / access / lock information';
+      Result[5].Mutation := False; Result[5].Pcsc := True;
+      SetLength(Result[5].Fields,2);
+      Result[5].Fields[0].Name := 'mode'; Result[5].Fields[0].LabelText := 'Explicit block address dialect';
+      Result[5].Fields[0].DefaultText := '0'; Result[5].Fields[0].Secret := False; Result[5].Fields[0].Choices := 'Ordinary 8-bit|Extended 16-bit';
+      Result[5].Fields[1].Name := 'format'; Result[5].Fields[1].LabelText := 'Actual firmware response format';
+      Result[5].Fields[1].DefaultText := '0'; Result[5].Fields[1].Secret := False; Result[5].Fields[1].Choices := 'Native flags|Payload only';
+      Result[6].Id := 'changepassword'; Result[6].LabelText := 'Change RF password + proof after RF reset';
+      Result[6].Mutation := True; Result[6].Pcsc := True;
+      SetLength(Result[6].Fields,6);
+      Result[6].Fields[0].Name := 'mode'; Result[6].Fields[0].LabelText := 'Explicit block address dialect';
+      Result[6].Fields[0].DefaultText := '0'; Result[6].Fields[0].Secret := False; Result[6].Fields[0].Choices := 'Ordinary 8-bit|Extended 16-bit';
+      Result[6].Fields[1].Name := 'format'; Result[6].Fields[1].LabelText := 'Actual firmware response format';
+      Result[6].Fields[1].DefaultText := '0'; Result[6].Fields[1].Secret := False; Result[6].Fields[1].Choices := 'Native flags|Payload only';
+      Result[6].Fields[2].Name := 'identifier'; Result[6].Fields[2].LabelText := 'RF password number: 0 configuration, 1..3 user';
+      Result[6].Fields[2].DefaultText := '1'; Result[6].Fields[2].Secret := False; Result[6].Fields[2].Choices := '';
+      Result[6].Fields[3].Name := 'oldpassword'; Result[6].Fields[3].LabelText := 'Current password in RF wire order (hex)';
+      Result[6].Fields[3].DefaultText := ''; Result[6].Fields[3].Secret := True; Result[6].Fields[3].Choices := '';
+      Result[6].Fields[4].Name := 'newpassword'; Result[6].Fields[4].LabelText := 'New password in RF wire order (hex)';
+      Result[6].Fields[4].DefaultText := ''; Result[6].Fields[4].Secret := True; Result[6].Fields[4].Choices := '';
+      Result[6].Fields[5].Name := 'stablevcc'; Result[6].Fields[5].LabelText := 'External VCC guaranteed stable if VCC_ON is set';
+      Result[6].Fields[5].DefaultText := '0'; Result[6].Fields[5].Secret := False; Result[6].Fields[5].Choices := 'No guarantee|Guaranteed stable';
+      Result[7].Id := 'configure'; Result[7].LabelText := 'Configure one RF area + post-reset verification';
+      Result[7].Mutation := True; Result[7].Pcsc := True;
+      SetLength(Result[7].Fields,8);
+      Result[7].Fields[0].Name := 'mode'; Result[7].Fields[0].LabelText := 'Explicit block address dialect';
+      Result[7].Fields[0].DefaultText := '0'; Result[7].Fields[0].Secret := False; Result[7].Fields[0].Choices := 'Ordinary 8-bit|Extended 16-bit';
+      Result[7].Fields[1].Name := 'format'; Result[7].Fields[1].LabelText := 'Actual firmware response format';
+      Result[7].Fields[1].DefaultText := '0'; Result[7].Fields[1].Secret := False; Result[7].Fields[1].Choices := 'Native flags|Payload only';
+      Result[7].Fields[2].Name := 'area'; Result[7].Fields[2].LabelText := 'Active RF area number (1..4)';
+      Result[7].Fields[2].DefaultText := '1'; Result[7].Fields[2].Secret := False; Result[7].Fields[2].Choices := '';
+      Result[7].Fields[3].Name := 'password'; Result[7].Fields[3].LabelText := 'Supplied RF configuration password 0, eight wire-order bytes';
+      Result[7].Fields[3].DefaultText := ''; Result[7].Fields[3].Secret := True; Result[7].Fields[3].Choices := '';
+      Result[7].Fields[4].Name := 'expected'; Result[7].Fields[4].LabelText := 'Exact eight-register configuration preimage (hex)';
+      Result[7].Fields[4].DefaultText := ''; Result[7].Fields[4].Secret := False; Result[7].Fields[4].Choices := '';
+      Result[7].Fields[5].Name := 'identifier'; Result[7].Fields[5].LabelText := 'Area user password number (0..3)';
+      Result[7].Fields[5].DefaultText := '1'; Result[7].Fields[5].Secret := False; Result[7].Fields[5].Choices := '';
+      Result[7].Fields[6].Name := 'protection'; Result[7].Fields[6].LabelText := 'Area protection code';
+      Result[7].Fields[6].DefaultText := '0'; Result[7].Fields[6].Secret := False; Result[7].Fields[6].Choices := 'Public|Write password|Read/write password (area 1 stays readable)|Write forbidden (areas 2..4 need read password)';
+      Result[7].Fields[7].Name := 'stablevcc'; Result[7].Fields[7].LabelText := 'External VCC guaranteed stable if VCC_ON is set';
+      Result[7].Fields[7].DefaultText := '0'; Result[7].Fields[7].Secret := False; Result[7].Fields[7].Choices := 'No guarantee|Guaranteed stable';
+
     end;
     dfIso15693:
     begin

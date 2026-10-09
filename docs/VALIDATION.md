@@ -787,3 +787,31 @@ or runtime BPL dependency. Test executables reported no leaked heap blocks.
 These results are compiler/protocol/backend/script checks, not a Delphi IDE
 build or physical-card qualification. RF password acceptance is not cryptographic
 card authenticity, and ending a PC/SC transaction is not a fresh RF power-on reset.
+
+## NFC-V password/protection management and explicit RF reset
+
+The full `run_core_tests.py` workflow passed after the management expansion.
+`Iso15693Management.Tests.dpr` passed 6,149 assertions with runtime range/overflow
+checking and heap tracing. Literal ACS FF-C2 start/reset/end packets validate the
+10,000-us RF timer and strict manage-TLV acknowledgement. Literal SLIX2 B4/B6 and
+ST25DV B1/A1 packets validate password replacement, protection settings and
+preserved unrelated RF access bits. Tests exercise all exposed password IDs,
+extended feature snapshots, ST area geometry/policy decoding, stable external VCC,
+same-password no-op, native/stripped ISO replies, no-reset backends, stale/locked
+settings, changed UID, busy setters, every I/O failure, failed fresh password proof,
+wrong read-back and release failure without replay. Both real adapter interfaces
+and component boundaries are exercised; reset failures poison the adapter.
+
+Existing profile tests retain 1,295 assertions; family demos passed 2,304
+assertions including all six new management actions and preflight/acknowledgement.
+Inactive palette and RTL streaming passed 30 assertions for 29 components.
+Distribution validation reported zero findings across 38 projects, two groups
+and 25 independent DFM forms. All 36 Python tool regressions and all 21 Pascal
+checkers passed. Runtime test executables reported no leaked heap blocks.
+The standalone design package still needs no ERD runtime BPL dependency, and no
+new source unit/package dependency was introduced.
+
+These are compiler/protocol/backend/script results, not Delphi IDE or physical
+card/firmware qualification. A tag's final accepted password may remain active
+until a later RF reset; verified replacement is not cryptographic card authenticity.
+ST RF exclusivity does not lock an external I²C host or guarantee its power supply.

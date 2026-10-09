@@ -342,7 +342,7 @@ var Hid: TUsbHidReaderWriter; HidHardware: ICardFamilyHidHardware; Devices: THid
   Type2Configuration: TType2AuthenticationConfiguration;
   Ulc: TUltralightCCardReaderWriter; UlcConfiguration: TUltralightCConfiguration; Des: ICardDesProvider;
   PasswordReader: TType2PasswordCardReader; RawUid: TRawUidProgrammer;
-  IsoReader: TIso15693CardReader; Type5: TType5NdefCardReader; IsoSession: IIso15693Session; IsoInfo: TIso15693SystemInfo; IsoPasswords: TIso15693Passwords; OtherKey: TBytes; Type5Snapshot: TType5NdefSnapshot;
+  IsoReader: TIso15693CardReader; Type5: TType5NdefCardReader; IsoSession: IIso15693Session; IsoInfo: TIso15693SystemInfo; IsoSecurity: TIso15693SecurityManager; SlixProtection: TSlix2Protection; StConfiguration: TSt25RfConfiguration; IsoPasswords: TIso15693Passwords; OtherKey: TBytes; Type5Snapshot: TType5NdefSnapshot;
   Rule: TMobibProductRule; Evidence: TMobibRuleEvidence; Assessment: TMobibRuleAssessment;
   Subscription: TMobibSubscription; Reason: TMobibRuleReason; Stamp: TDateTime; HasStamp: Boolean;
   SamCla: Byte;
@@ -912,6 +912,46 @@ begin
       begin
         I:=Number(R,A,'mode',0,1); if (FFamily=dfSlix2) and (I<>0) then Fail;
         IsoSession := TAcr1552Iso15693Session.Create(T,TIso15693AddressMode(Number(R,A,'mode',0,1)),TIso15693ResponseFormat(Number(R,A,'format',0,1)));
+        if (A.Id='protection') or (A.Id='configuration') or (A.Id='changepassword') or (A.Id='configure') then begin
+          IsoSecurity:=TIso15693SecurityManager.Create(nil);
+          try
+            IsoSecurity.Session:=IsoSession;
+            if A.Id='protection' then begin
+              SlixProtection:=IsoSecurity.ReadSlix2Protection;Data:=SlixProtection.Raw;
+              Output:='Preimage: '+BytesToHex(Data)+sLineBreak+'Page H starts at block '+IntToStr(SlixProtection.PointerBlock)+
+                sLineBreak+'Protection RL/WL/RH/WH: '+IntToHex(SlixProtection.Conditions,2)+
+                sLineBreak+'Locks AFI/EAS/DSFID/PPL: '+IntToHex(SlixProtection.LockBits,2)+
+                sLineBreak+'Features: '+IntToHex(SlixProtection.Features,8)+' / '+IntToHex(SlixProtection.ExtendedFeatures,8);
+              Artifact(D,'protection.bin',Data);
+            end else if A.Id='configuration' then begin
+              StConfiguration:=IsoSecurity.ReadSt25Configuration;Data:=StConfiguration.Raw;
+              Output:='Preimage: '+BytesToHex(Data)+sLineBreak+'Configuration locked: '+BoolToStr(StConfiguration.ConfigurationLocked,True);
+              for J:=0 to 3 do Output:=Output+sLineBreak+'Area '+IntToStr(J+1)+': first block '+IntToStr(StConfiguration.Areas[J].FirstBlock)+
+                ', count '+IntToStr(StConfiguration.Areas[J].BlockCount)+', password '+IntToStr(StConfiguration.Areas[J].PasswordNumber)+
+                ', protection '+IntToStr(StConfiguration.Areas[J].ProtectionCode)+', read needs password '+BoolToStr(StConfiguration.Areas[J].ReadRequiresPassword,True)+
+                ', write needs password '+BoolToStr(StConfiguration.Areas[J].WriteRequiresPassword,True)+', write forbidden '+BoolToStr(StConfiguration.Areas[J].WriteForbidden,True);
+              Artifact(D,'configuration.bin',Data);
+            end else if A.Id='changepassword' then begin
+              Key:=Bytes(R,A,'oldpassword');OtherKey:=Bytes(R,A,'newpassword');
+              if FFamily=dfSlix2 then IsoSecurity.ChangeSlix2Password(Number(R,A,'identifier',1,2),Key,OtherKey)
+              else IsoSecurity.ChangeSt25Password(Number(R,A,'identifier',0,3),Key,OtherKey,Number(R,A,'stablevcc',0,1)=1);
+              D.WriteVerified:=True;Output:='Replacement password accepted after RF power-on reset.';
+            end else begin
+              if FFamily=dfSlix2 then begin
+                Key:=Bytes(R,A,'readpassword');
+                OtherKey:=Bytes(R,A,'writepassword');
+                IsoSecurity.ConfigureSlix2Protection(Key,OtherKey,Bytes(R,A,'expected'),Number(R,A,'pointer',0,78),SingleByte(R,A,'conditions'));
+              end else begin
+                Key:=Bytes(R,A,'password');
+                IsoSecurity.ConfigureSt25Area(Number(R,A,'area',1,4),Key,Bytes(R,A,'expected'),Number(R,A,'identifier',0,3),Number(R,A,'protection',0,3),Number(R,A,'stablevcc',0,1)=1);
+              end;
+              D.WriteVerified:=True;Output:='RF protection configuration independently verified after reset.';
+            end;
+          finally
+            Wipe(Key);Wipe(OtherKey);IsoSecurity.Free;IsoSession:=nil;
+          end;
+          Exit;
+        end;
         if FFamily<>dfIso15693 then begin
           IsoPasswords:=nil;
           try

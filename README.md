@@ -47,7 +47,7 @@ out of scope (see [Not supported](#not-supported)).
 | **Ultralight C** | `TUltralightCCardReaderWriter` | Supplied-key 2K3DES mutual authentication, exact user-page reads, a 144-byte user-memory snapshot and verified four-byte user-page writes through raw RF (ACR122U adapter). Read authentication configuration; verified AUTH0/AUTH1 updates and key replacement with same-UID fresh RF authentication. Manufacturer, OTP, lock and counter writes remain excluded. |
 | **NDEF** | `TType2NdefCardReader`, `TType3NdefCardReader`, `TType4NdefCardReader`, `TType5NdefCardReader` | Complete NDEF message codec with chunk reassembly, plus Text, URI, MIME, external and Smart Poster record helpers. Read, replace and clear public NDEF messages on Type 2, Type 3 (mapping 1.0), Type 4 (mapping 1.0/2.0) and Type 5 tags, with read-back verification. Type 2 also supports NDEF within supplied-password sessions. |
 | **FeliCa / NFC Forum Type 3** | `TFelicaCardReader`, `TType3NdefCardReader` | Fresh explicit-system polling, IDm/PMm, unencrypted service block reads and preimage-checked verified writes, including 16-bit block addresses. Type 3 attribute parsing and verified NDEF read/replace/clear through an ACR122U/PN532 adapter at explicit 212/424 kbit/s. |
-| **ISO 15693 / NFC-V** | `TIso15693CardReader` | Ordinary/extended addressing, system information, single or explicit native multiple-block reads and verified data writes through ACS ACR1552 FF FB. `TIso15693PasswordSession` adds supplied-password user-memory access for ICODE SLIX2 and original ST25DV04K/16K/64K, including Type 5 NDEF. |
+| **ISO 15693 / NFC-V** | `TIso15693CardReader` | Ordinary/extended addressing, system information, single or explicit native multiple-block reads and verified data writes through ACS ACR1552 FF FB. `TIso15693PasswordSession` adds supplied-password user-memory access for ICODE SLIX2 and original ST25DV04K/16K/64K, including Type 5 NDEF. `TIso15693SecurityManager` adds decoded protection snapshots, RF password replacement with fresh RF proof, SLIX2 page protection and ST25DV RF area policy updates. |
 | **MIFARE DESFire** | `TDesfireCardReader` | Public, EV1/EV2 AES, EV1 2K3DES/3K3DES and explicit D40 DES/2K3DES (Plain, MACed, Full) access. Discover applications/files, read standard/backup/value/record files and write standard data. Transactions with commit/abort; application and ordinary-file create/delete across the explicit profiles, including selectable DES/2K3DES, 3K3DES or AES application storage. AES/DES/3DES key rotation, key-policy and ordinary-file access administration. EV2 NonFirst re-authentication. |
 | **Programmable (“magic”) UIDs** | `TRawUidProgrammer`, UID methods of `TContactlessCardReader` | Explicit profiles for Gen1a/Gen1b, unsealed UFUID, Gen2/CUID, factory FUID (one-time), Gen3, Gen4 UMC (4/7/10-byte), USCUID/GDM, partial UFUID/ZUID/PFUID and Type 2 DirectWrite. Raw RF access uses an ACS ACR122U/PN532 adapter. |
 | **Calypso / MOBIB** | `TCalypsoCardReader` | Read Calypso files and records (legacy CLA 94 or ISO CLA 00) using the built-in MOBIB plan or your own FID plan. Decode holder, events, contracts (versions 0–4) and counters. Native Calypso secure sessions through a provisioned SAM (revisions 1, 2, 3 and 3.2) or a custom provider. Offline activation/validity/zone checks with `TMobibRuleEngine` and caller-supplied operator profiles. |
@@ -167,13 +167,13 @@ tools\build-packages.cmd dcc32 design
 ```
 
 Then use **Component > Install Packages > Add** and select `ERDCardDesign.bpl`.
-It registers 28 components:
+It registers 29 components:
 
 | Palette page | Components |
 | --- | --- |
 | **ERD Cards** | `TSmartCardMonitor`, `TSmartCardReader`, `TBelgianEIDReader`, `TICAODocumentReader`, `TSimCardReaderWriter`, `TEMVCardReader`, `TMagStripeReaderWriter`, `TMemoryCardReaderWriter`, `TSleCounterCardReaderWriter`, `TSle4404CardReaderWriter` |
 | **ERD Input** | `THidDeviceMonitor`, `TUsbHidInputMonitor`, `TRfidKeyboardReader`, `TRfidHidReportReader`, `TUsbHidReaderWriter`, `TTwn4CardReaderWriter` |
-| **ERD Contactless** | `TFelicaCardReader`, `TType3NdefCardReader`, `TUltralightCCardReaderWriter`, `TCalypsoCardReader`, `TContactlessCardReader`, `TType2NdefCardReader`, `TType4NdefCardReader`, `TIso15693CardReader`, `TType5NdefCardReader`, `TDesfireCardReader`, `TType2PasswordCardReader`, `TRawUidProgrammer` |
+| **ERD Contactless** | `TFelicaCardReader`, `TType3NdefCardReader`, `TUltralightCCardReaderWriter`, `TCalypsoCardReader`, `TContactlessCardReader`, `TType2NdefCardReader`, `TType4NdefCardReader`, `TIso15693CardReader`, `TIso15693SecurityManager`, `TType5NdefCardReader`, `TDesfireCardReader`, `TType2PasswordCardReader`, `TRawUidProgrammer` |
 
 Scalar settings are stored in the DFM. Interface properties such as `Transport`,
 `Profile`, `Device`, `Session`, `Channel` and `CryptoProvider` must be assigned at
@@ -320,8 +320,8 @@ and show card offered/removed notifications without running a card operation.
 | `UltralightCDemo` | Supplied-key authentication, exact user-page/full user-memory reads and verified page writes, configuration and key replacement; own form and DFM |
 | `Type4NdefDemo` | Capability container, file descriptors and NDEF read/write/clear |
 | `Iso15693Demo` | ACR1552 ordinary/extended ISO 15693 blocks, native bulk reads and Type 5 NDEF |
-| `Slix2Demo` | Supplied read/write passwords, physical blocks and parsed Type 5 NDEF; own form/DFM and reader events |
-| `St25DvDemo` | Original ST25DV04K/16K/64K RF user password, ordinary/extended blocks and parsed Type 5 NDEF; own form/DFM and reader events |
+| `Slix2Demo` | Supplied read/write passwords, physical blocks, parsed Type 5 NDEF, decoded protection, password replacement and page protection; own form/DFM and reader events |
+| `St25DvDemo` | Original ST25DV04K/16K/64K passwords, ordinary/extended blocks, parsed Type 5 NDEF, decoded RF areas, password replacement and area policy; own form/DFM and reader events |
 | `UidProgrammingDemo` | All programmable-UID profiles |
 | `DesfireDemo` | Public/AES/DES/3DES reads, writes and transactions; native application/file create-delete with explicit application key type/count; AES/DES/3DES key/access-policy mutations |
 | `EmvDemo` | PSE/PPSE, PDOL, GPO/AFL records, extra record scan, GET DATA, logs and exports |
@@ -386,9 +386,10 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
   ([docs/EUROPEAN_EID.md](docs/EUROPEAN_EID.md)).
 - **MIFARE/DESFire variants:** MIFARE Plus, DESFire LRP,
   TMAC, SDM and extended key-set/configuration management. Ultralight C irreversible lock/counter/OTP programming. NFC Forum Type 1 tags; encrypted FeliCa services and FeliCa formatting/key provisioning.
-- **ISO 15693 vendor management:** no password/protection provisioning, SLIX2
-  privacy/destroy, ST25DV mailbox/I²C or ST25TV/KC password dialects. Supplied-password
-  user-memory access is implemented for SLIX2 and original ST25DV04K/16K/64K
+- **ISO 15693 vendor management:** no irreversible lock programming, SLIX2
+  privacy/destroy, ST25DV area resizing/mailbox/I²C or ST25TV/KC password dialects.
+  Supplied-password access and verified password/protection management cover SLIX2
+  and original ST25DV04K/16K/64K
   ([exact profiles and RF lifetime](docs/ISO15693_TYPE5.md)).
 - **UID programming:** only the listed programmable profiles; regular card UIDs
   are not writable.
@@ -451,7 +452,7 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 | `ERD.Card.Contactless.Type2.Password` | `TType2PasswordCardReader` (PWD_AUTH/PACK) |
 | `ERD.Card.Contactless.Type4.Ndef` | `TType4NdefCardReader` |
 | `ERD.Card.Contactless.Type5.Ndef` | `TType5NdefCardReader` |
-| `ERD.Card.Contactless.ISO15693` | `TIso15693CardReader`, codec, ACR1552 session, optional native bulk/custom interfaces, SLIX2/ST25DV password session |
+| `ERD.Card.Contactless.ISO15693` | `TIso15693CardReader`, codec, ACR1552 session, optional bulk/custom/RF-reset interfaces, SLIX2/ST25DV password session and `TIso15693SecurityManager` |
 | `ERD.Card.Ndef` | NDEF message codec |
 | `ERD.Card.Ndef.Records` | Text, URI, MIME, external and Smart Poster records |
 | `ERD.Card.Contactless.DESFire` | `TDesfireCardReader`, sessions and management |

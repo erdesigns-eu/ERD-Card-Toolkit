@@ -11,6 +11,74 @@ type
   /// <summary>Independent Slix2Demo form; all visual controls belong to its own editable DFM.</summary>
   TSlix2DemoForm = class(TForm)
   published
+    /// <summary>Read decoded page protection / lock / feature information.</summary>
+    ActProtectionTab: TTabSheet;
+    /// <summary>Read decoded page protection / lock / feature information inputs.</summary>
+    ActProtectionInputs: TScrollBox;
+    /// <summary>SLIX2 ordinary block addressing label.</summary>
+    ActProtectionModeLabel: TLabel;
+    /// <summary>SLIX2 ordinary block addressing.</summary>
+    ActProtectionModeBox: TComboBox;
+    /// <summary>Actual firmware response format label.</summary>
+    ActProtectionFormatLabel: TLabel;
+    /// <summary>Actual firmware response format.</summary>
+    ActProtectionFormatBox: TComboBox;
+    /// <summary>Change password + proof after RF reset.</summary>
+    ActChangepasswordTab: TTabSheet;
+    /// <summary>Change password + proof after RF reset inputs.</summary>
+    ActChangepasswordInputs: TScrollBox;
+    /// <summary>SLIX2 ordinary block addressing label.</summary>
+    ActChangepasswordModeLabel: TLabel;
+    /// <summary>SLIX2 ordinary block addressing.</summary>
+    ActChangepasswordModeBox: TComboBox;
+    /// <summary>Actual firmware response format label.</summary>
+    ActChangepasswordFormatLabel: TLabel;
+    /// <summary>Actual firmware response format.</summary>
+    ActChangepasswordFormatBox: TComboBox;
+    /// <summary>Password identifier: 1 read, 2 write label.</summary>
+    ActChangepasswordIdentifierLabel: TLabel;
+    /// <summary>Password identifier: 1 read, 2 write.</summary>
+    ActChangepasswordIdentifierEdit: TEdit;
+    /// <summary>Current password in RF wire order (hex) label.</summary>
+    ActChangepasswordOldpasswordLabel: TLabel;
+    /// <summary>Current password in RF wire order (hex).</summary>
+    ActChangepasswordOldpasswordEdit: TEdit;
+    /// <summary>New password in RF wire order (hex) label.</summary>
+    ActChangepasswordNewpasswordLabel: TLabel;
+    /// <summary>New password in RF wire order (hex).</summary>
+    ActChangepasswordNewpasswordEdit: TEdit;
+    /// <summary>Configure page protection + post-reset verification.</summary>
+    ActConfigureTab: TTabSheet;
+    /// <summary>Configure page protection + post-reset verification inputs.</summary>
+    ActConfigureInputs: TScrollBox;
+    /// <summary>SLIX2 ordinary block addressing label.</summary>
+    ActConfigureModeLabel: TLabel;
+    /// <summary>SLIX2 ordinary block addressing.</summary>
+    ActConfigureModeBox: TComboBox;
+    /// <summary>Actual firmware response format label.</summary>
+    ActConfigureFormatLabel: TLabel;
+    /// <summary>Actual firmware response format.</summary>
+    ActConfigureFormatBox: TComboBox;
+    /// <summary>Supplied read password, four wire-order bytes label.</summary>
+    ActConfigureReadpasswordLabel: TLabel;
+    /// <summary>Supplied read password, four wire-order bytes.</summary>
+    ActConfigureReadpasswordEdit: TEdit;
+    /// <summary>Supplied write password, four wire-order bytes label.</summary>
+    ActConfigureWritepasswordLabel: TLabel;
+    /// <summary>Supplied write password, four wire-order bytes.</summary>
+    ActConfigureWritepasswordEdit: TEdit;
+    /// <summary>Exact complete AB protection preimage (hex) label.</summary>
+    ActConfigureExpectedLabel: TLabel;
+    /// <summary>Exact complete AB protection preimage (hex).</summary>
+    ActConfigureExpectedEdit: TEdit;
+    /// <summary>First Page H block (0..78) label.</summary>
+    ActConfigurePointerLabel: TLabel;
+    /// <summary>First Page H block (0..78).</summary>
+    ActConfigurePointerEdit: TEdit;
+    /// <summary>RL/WL/RH/WH bit mask (hex byte; bits 0/1/4/5) label.</summary>
+    ActConfigureConditionsLabel: TLabel;
+    /// <summary>RL/WL/RH/WH bit mask (hex byte; bits 0/1/4/5).</summary>
+    ActConfigureConditionsEdit: TEdit;
     /// <summary>Reader discovery and transport guidance.</summary>
     HeaderPanel: TPanel;
     /// <summary>Native card offered/removed status, independent of operation output.</summary>
@@ -305,12 +373,42 @@ begin
       FInputs[3] := ActWritendefWritepasswordEdit;
       FInputs[4] := ActWritendefNdefEdit;
     end;
+    5:
+    begin
+      SetLength(FInputs,2);
+      FInputs[0] := ActProtectionModeBox;
+      FInputs[1] := ActProtectionFormatBox;
+    end;
+    6:
+    begin
+      SetLength(FInputs,5);
+      FInputs[0] := ActChangepasswordModeBox;
+      FInputs[1] := ActChangepasswordFormatBox;
+      FInputs[2] := ActChangepasswordIdentifierEdit;
+      FInputs[3] := ActChangepasswordOldpasswordEdit;
+      FInputs[4] := ActChangepasswordNewpasswordEdit;
+    end;
+    7:
+    begin
+      SetLength(FInputs,7);
+      FInputs[0] := ActConfigureModeBox;
+      FInputs[1] := ActConfigureFormatBox;
+      FInputs[2] := ActConfigureReadpasswordEdit;
+      FInputs[3] := ActConfigureWritepasswordEdit;
+      FInputs[4] := ActConfigureExpectedEdit;
+      FInputs[5] := ActConfigurePointerEdit;
+      FInputs[6] := ActConfigureConditionsEdit;
+    end;
   else Exit; end;
   AcknowledgeCheck.Enabled := FActions[ActionPages.ActivePageIndex].Mutation;
 end;
 
 procedure TSlix2DemoForm.ClearCredentials;
 begin
+  ActChangepasswordOldpasswordEdit.Clear;
+  ActChangepasswordNewpasswordEdit.Clear;
+  ActConfigureReadpasswordEdit.Clear;
+  ActConfigureWritepasswordEdit.Clear;
   ActInformationReadpasswordEdit.Clear;
   ActInformationWritepasswordEdit.Clear;
   ActReadReadpasswordEdit.Clear;

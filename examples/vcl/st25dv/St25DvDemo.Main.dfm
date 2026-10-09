@@ -736,6 +736,375 @@ object St25DvDemoForm: TSt25DvDemoForm
         end
       end
     end
+    object ActConfigurationTab: TTabSheet
+      Left = 4
+      Top = 44
+      Width = 1072
+      Height = 438
+      Caption = 'Read decoded RF area geometry / access / lock information'
+      Tag = 5
+      object ActConfigurationInputs: TScrollBox
+        Left = 0
+        Top = 0
+        Width = 1072
+        Height = 438
+        Align = alClient
+        BorderStyle = bsNone
+        TabOrder = 0
+        object ActConfigurationModeLabel: TLabel
+          Left = 16
+          Top = 8
+          Width = 940
+          Height = 18
+          Caption = 'Explicit block address dialect'
+        end
+        object ActConfigurationModeBox: TComboBox
+          Left = 16
+          Top = 30
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 0
+          Style = csDropDownList
+          ItemIndex = 0
+          Items.Strings = (
+            'Ordinary 8-bit'
+            'Extended 16-bit'
+          )
+          Text = 'Ordinary 8-bit'
+        end
+        object ActConfigurationFormatLabel: TLabel
+          Left = 16
+          Top = 70
+          Width = 940
+          Height = 18
+          Caption = 'Actual firmware response format'
+        end
+        object ActConfigurationFormatBox: TComboBox
+          Left = 16
+          Top = 92
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 1
+          Style = csDropDownList
+          ItemIndex = 0
+          Items.Strings = (
+            'Native flags'
+            'Payload only'
+          )
+          Text = 'Native flags'
+        end
+      end
+    end
+    object ActChangepasswordTab: TTabSheet
+      Left = 4
+      Top = 44
+      Width = 1072
+      Height = 438
+      Caption = 'Change RF password + proof after RF reset'
+      Tag = 6
+      object ActChangepasswordInputs: TScrollBox
+        Left = 0
+        Top = 0
+        Width = 1072
+        Height = 438
+        Align = alClient
+        BorderStyle = bsNone
+        TabOrder = 0
+        object ActChangepasswordModeLabel: TLabel
+          Left = 16
+          Top = 8
+          Width = 940
+          Height = 18
+          Caption = 'Explicit block address dialect'
+        end
+        object ActChangepasswordModeBox: TComboBox
+          Left = 16
+          Top = 30
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 0
+          Style = csDropDownList
+          ItemIndex = 0
+          Items.Strings = (
+            'Ordinary 8-bit'
+            'Extended 16-bit'
+          )
+          Text = 'Ordinary 8-bit'
+        end
+        object ActChangepasswordFormatLabel: TLabel
+          Left = 16
+          Top = 70
+          Width = 940
+          Height = 18
+          Caption = 'Actual firmware response format'
+        end
+        object ActChangepasswordFormatBox: TComboBox
+          Left = 16
+          Top = 92
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 1
+          Style = csDropDownList
+          ItemIndex = 0
+          Items.Strings = (
+            'Native flags'
+            'Payload only'
+          )
+          Text = 'Native flags'
+        end
+        object ActChangepasswordIdentifierLabel: TLabel
+          Left = 16
+          Top = 132
+          Width = 940
+          Height = 18
+          Caption = 'RF password number: 0 configuration, 1..3 user'
+        end
+        object ActChangepasswordIdentifierEdit: TEdit
+          Left = 16
+          Top = 154
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 2
+          MaxLength = 262144
+          Text = '1'
+        end
+        object ActChangepasswordOldpasswordLabel: TLabel
+          Left = 16
+          Top = 194
+          Width = 940
+          Height = 18
+          Caption = 'Current password in RF wire order (hex)'
+        end
+        object ActChangepasswordOldpasswordEdit: TEdit
+          Left = 16
+          Top = 216
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 3
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+        object ActChangepasswordNewpasswordLabel: TLabel
+          Left = 16
+          Top = 256
+          Width = 940
+          Height = 18
+          Caption = 'New password in RF wire order (hex)'
+        end
+        object ActChangepasswordNewpasswordEdit: TEdit
+          Left = 16
+          Top = 278
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 4
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+        object ActChangepasswordStablevccLabel: TLabel
+          Left = 16
+          Top = 318
+          Width = 940
+          Height = 18
+          Caption = 'External VCC guaranteed stable if VCC_ON is set'
+        end
+        object ActChangepasswordStablevccBox: TComboBox
+          Left = 16
+          Top = 340
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 5
+          Style = csDropDownList
+          ItemIndex = 0
+          Items.Strings = (
+            'No guarantee'
+            'Guaranteed stable'
+          )
+          Text = 'No guarantee'
+        end
+      end
+    end
+    object ActConfigureTab: TTabSheet
+      Left = 4
+      Top = 44
+      Width = 1072
+      Height = 438
+      Caption = 'Configure one RF area + post-reset verification'
+      Tag = 7
+      object ActConfigureInputs: TScrollBox
+        Left = 0
+        Top = 0
+        Width = 1072
+        Height = 438
+        Align = alClient
+        BorderStyle = bsNone
+        TabOrder = 0
+        object ActConfigureModeLabel: TLabel
+          Left = 16
+          Top = 8
+          Width = 940
+          Height = 18
+          Caption = 'Explicit block address dialect'
+        end
+        object ActConfigureModeBox: TComboBox
+          Left = 16
+          Top = 30
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 0
+          Style = csDropDownList
+          ItemIndex = 0
+          Items.Strings = (
+            'Ordinary 8-bit'
+            'Extended 16-bit'
+          )
+          Text = 'Ordinary 8-bit'
+        end
+        object ActConfigureFormatLabel: TLabel
+          Left = 16
+          Top = 70
+          Width = 940
+          Height = 18
+          Caption = 'Actual firmware response format'
+        end
+        object ActConfigureFormatBox: TComboBox
+          Left = 16
+          Top = 92
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 1
+          Style = csDropDownList
+          ItemIndex = 0
+          Items.Strings = (
+            'Native flags'
+            'Payload only'
+          )
+          Text = 'Native flags'
+        end
+        object ActConfigureAreaLabel: TLabel
+          Left = 16
+          Top = 132
+          Width = 940
+          Height = 18
+          Caption = 'Active RF area number (1..4)'
+        end
+        object ActConfigureAreaEdit: TEdit
+          Left = 16
+          Top = 154
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 2
+          MaxLength = 262144
+          Text = '1'
+        end
+        object ActConfigurePasswordLabel: TLabel
+          Left = 16
+          Top = 194
+          Width = 940
+          Height = 18
+          Caption = 'Supplied RF configuration password 0, eight wire-order bytes'
+        end
+        object ActConfigurePasswordEdit: TEdit
+          Left = 16
+          Top = 216
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 3
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+        object ActConfigureExpectedLabel: TLabel
+          Left = 16
+          Top = 256
+          Width = 940
+          Height = 18
+          Caption = 'Exact eight-register configuration preimage (hex)'
+        end
+        object ActConfigureExpectedEdit: TEdit
+          Left = 16
+          Top = 278
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 4
+          MaxLength = 262144
+        end
+        object ActConfigureIdentifierLabel: TLabel
+          Left = 16
+          Top = 318
+          Width = 940
+          Height = 18
+          Caption = 'Area user password number (0..3)'
+        end
+        object ActConfigureIdentifierEdit: TEdit
+          Left = 16
+          Top = 340
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 5
+          MaxLength = 262144
+          Text = '1'
+        end
+        object ActConfigureProtectionLabel: TLabel
+          Left = 16
+          Top = 380
+          Width = 940
+          Height = 18
+          Caption = 'Area protection code'
+        end
+        object ActConfigureProtectionBox: TComboBox
+          Left = 16
+          Top = 402
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 6
+          Style = csDropDownList
+          ItemIndex = 0
+          Items.Strings = (
+            'Public'
+            'Write password'
+            'Read/write password (area 1 stays readable)'
+            'Write forbidden (areas 2..4 need read password)'
+          )
+          Text = 'Public'
+        end
+        object ActConfigureStablevccLabel: TLabel
+          Left = 16
+          Top = 442
+          Width = 940
+          Height = 18
+          Caption = 'External VCC guaranteed stable if VCC_ON is set'
+        end
+        object ActConfigureStablevccBox: TComboBox
+          Left = 16
+          Top = 464
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 7
+          Style = csDropDownList
+          ItemIndex = 0
+          Items.Strings = (
+            'No guarantee'
+            'Guaranteed stable'
+          )
+          Text = 'No guarantee'
+        end
+      end
+    end
   end
   object ExportDialog: TSaveDialog
     Options = [ofOverwritePrompt, ofPathMustExist]

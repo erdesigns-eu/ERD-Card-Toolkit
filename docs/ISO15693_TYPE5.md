@@ -270,9 +270,11 @@ wrong SLIX2 password prevents further commands until a power-on reset; remove th
 card from the field or perform a supported explicit reader RF reset before a new
 attempt. Do not assume ending a PC/SC transaction clears tag authentication.
 
-This implements authenticated user-memory access, not password rotation,
-protection provisioning, RF configuration password 0, SLIX2 privacy/destroy/EAS,
-permanent locking, ST25DV mailbox/I²C access, ST25DVxxKC or ST25TV passwords.
+The password-session wrapper implements authenticated user-memory access.
+The separate security manager below adds password replacement and controlled
+protection updates, including ST25DV RF configuration password 0. Permanent
+locking, SLIX2 privacy/destroy/EAS, ST25DV mailbox/I²C, ST25DVxxKC and ST25TV
+passwords remain outside this implementation.
 ST25DV I²C activity can still modify memory while RF access is exclusive on the
 PC/SC connection. These limits are explicit rather than claiming all ST25 chips.
 
@@ -295,3 +297,90 @@ Protocol sources:
   random-number example uses flags 12; these implementations use addressed flags
   22 and include the acquired UID. No automatic UID insertion (flags 00) is used
   for custom commands.
+
+## Verified password and protection management
+
+`TIso15693SecurityManager` is an inactive nonvisual palette component in the
+existing ISO15693 unit. Assign its `Session` to a connected explicitly configured
+ACS FF-FB session, just as for the memory component. Public methods have Delphi
+XML documentation; configuration changes while `Busy` are rejected.
+
+| Method | Result / change |
+| --- | --- |
+| `ReadSlix2Protection` | Public AB snapshot: Page H pointer, RL/WL/RH/WH conditions, AFI/EAS/DSFID/PPL locks and one/two feature bitmaps; seven/eleven-byte `Raw` is the complete preimage |
+| `ConfigureSlix2Protection` | Both supplied read/write passwords, complete expected AB preimage, new pointer 0..78 and condition bits 0/1/4/5; one B6 change; exact snapshot verification after reset |
+| `ChangeSlix2Password` | Supplied old and new four-byte wire-order passwords, identifier 1 (read) or 2 (write); one B4 replacement and new-password acceptance after reset |
+| `ReadSt25Configuration` | Static registers 04..0A plus LOCK_CFG at 0F; derives four areas, inactive areas, password numbers and read/write policy from ENDA geometry |
+| `ConfigureSt25Area` | Supplied eight-byte configuration password 0, complete expected eight-register snapshot, active area 1..4 and new password/protection selection; one A1 update to RFAxSS only |
+| `ChangeSt25Password` | Supplied old/new eight-byte wire-order password for RF number 0..3; one B1 replacement and new-password acceptance after reset |
+
+Snapshot methods perform no password attempt or RF reset. The ST `Raw` array is
+in register order 04,05,06,07,08,09,0A,0F; ENDA units are eight blocks, with the last
+area ending at the acquired memory limit. Repeated ending boundaries produce
+inactive zero-length areas. Area 1 remains readable even for protection code 2
+or 3; areas 2..4 require a user password for code 2/3, and code 3 forbids writing.
+Unrelated high RFAxSS bits, all area boundaries and LOCK_CFG are preserved by
+policy changes. Requests that would make a protected area unopenable with
+password number 0 are refused, except area 1's readable/write-forbidden policy.
+No area partitioning, automatic password allocation or permanent configuration
+locking is performed. A locked SLIX2 PPL or ST LOCK_CFG denies configuration
+changes. ST password replacement remains possible when static configuration is
+locked, as specified by ST.
+
+Mutations require `IIso15693FieldReset` and `IIso15693CustomCommands` before the
+first transaction. A backend lacking explicit RF reset may still read public
+snapshots, but cannot claim verified password/protection changes. No reset is
+added to ordinary memory/password-session operations.
+
+The concrete `TAcr1552Iso15693Session.ResetField` uses the ACS v1.09 manage-session
+protocol (sections 5.3.5.3.1..5):
+
+1. `FF C2 00 00 02 81 00` starts transparent mode and disables polling.
+2. `FF C2 00 00 0B 83 00 5F 46 04 10 27 00 00 84 00` turns RF off, waits
+   10,000 microseconds (little-endian timer) and turns it on.
+3. `FF C2 00 00 02 82 00` ends transparent mode and restores prior polling.
+4. Addressed 2B/3B reacquires system information and verifies unchanged UID,
+   block count/size and IC-reference presence/value.
+
+For these manage APDUs the adapter accepts only the documented empty success
+payload or `C0 03 00 90 00`, together with APDU SW=9000. Error/index/status TLVs
+are not treated as success merely because the outer status is 9000. A failure
+ends transparent mode best-effort and poisons the ISO session; no RF command is
+retried. A reader failure can still leave the physical field/polling state
+unknown. These are explicit PC/SC APDUs, not E0 escape commands sent through the
+wrong transport interface.
+
+Password updates reset RF before authenticating the old credential, dispatch the
+replacement once, reset again, verify the same identity/geometry and authenticate
+the new credential. Identical old/new credentials are a verified no-op after
+one reset and one supplied-password proof. Protection changes similarly acquire
+fresh authentication, compare the complete supplied configuration preimage,
+write once and compare the complete public snapshot after another reset. Neither
+successful verification nor ending the transaction revokes the last accepted
+RF password; the card can remain authenticated until another RF reset.
+
+ST mutations read `EH_CTRL_Dyn` via AD pointer 02. If VCC_ON bit 3 is set, the
+caller must explicitly guarantee stable external VCC for the programming cycle
+(`AExternalPowerStable=True`); otherwise programming is refused before dispatch.
+This is a caller guarantee, not an automatic power-control feature. ST recommends
+this check for password writes because a VCC loss during programming may corrupt
+the password. A separate I²C host can still modify configuration between RF
+reads; PC/SC exclusivity does not lock that host, and preimage/read-back checks
+cannot make the entire operation atomic across both interfaces.
+
+After any mutation dispatch, a status, RF reset, identity, password proof,
+read-back or transaction-release failure produces `EContactlessWriteUncertain`.
+The component performs no retry or rollback. Supplied password arrays are owned
+copies, temporary authentication/command buffers are wiped and exceptions omit
+password/card contents. Destructive privacy/destroy commands, permanent password
+locks, 64-bit irreversible mode changes and ST25TV/KC dialects are not exposed.
+
+The own DFM forms in `Slix2Demo` and `St25DvDemo` add three pages each for these
+operations. Snapshot output includes the exact preimage and decoded state; the
+raw bytes can also be exported. Replacement credentials are masked and wiped
+through the existing worker lifecycle. No keys or default passwords are embedded.
+
+Additional protocol references: NXP SL2S2602 Rev.4.2 sections 9.5.3.3, 9.5.3.6
+and 9.5.3.18; ST DS10925 Rev.11 sections 5.6, 7.6.26/27, 7.6.28 (EH_CTRL_Dyn)
+and 7.6.35/36. The RF snapshot covers user-area policy, not a dump of every system
+register or I²C setting.
