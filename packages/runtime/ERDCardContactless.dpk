@@ -3,7 +3,7 @@
 {$R *.res}
 {$IMPLICITBUILD ON}
 
-{$DESCRIPTION 'ERD Card Contactless: reader profiles, Classic/Type 2/Type 4/ISO 15693/Type 5 storage and programmable UID'}
+{$DESCRIPTION 'ERD Card Contactless: reader profiles, Classic/Type 2/FeliCa/Type 3/Type 4/ISO 15693/Type 5 storage and programmable UID'}
 {$RUNONLY}
 
 requires
@@ -11,6 +11,9 @@ requires
   ERDCardCore;
 
 contains
+  ERD.Card.Contactless.Felica in '..\..\src\contactless\ERD.Card.Contactless.Felica.pas',
+  ERD.Card.Contactless.ACR122.Felica in '..\..\src\contactless\ERD.Card.Contactless.ACR122.Felica.pas',
+  ERD.Card.Contactless.Type3.Ndef in '..\..\src\contactless\ERD.Card.Contactless.Type3.Ndef.pas',
   ERD.Card.Contactless.UltralightC in '..\..\src\contactless\ERD.Card.Contactless.UltralightC.pas',
   ERD.Card.Contactless.DESFire.DES in '..\..\src\contactless\ERD.Card.Contactless.DESFire.DES.pas',
   ERD.Card.MOBIB.Rules in '..\..\src\contactless\ERD.Card.MOBIB.Rules.pas',

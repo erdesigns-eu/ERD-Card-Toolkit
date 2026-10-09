@@ -735,3 +735,28 @@ Python tool regressions passed all 36 tests, all 21 Pascal checkers were clean, 
 distribution validation reported zero findings across 35 projects and 22 DFM forms.
 Fixture regeneration produced identical committed transcripts. These checks do
 not substitute for Delphi compilation or physical-card evidence.
+
+## Combined Type 2 management and FeliCa/Type 3 expansion
+
+The full `run_core_tests.py` suite passed after this change, including existing
+AES/DES, SIM, eID and reader regressions. `Type2Felica.Tests.dpr` passed 43,881
+assertions using fixed independently generated transcripts: seven password models,
+configuration preimage/CFGLCK checks, preserved unrelated bits, credential replacement
+and same-UID fresh proof, supported 24-bit counters, protected NDEF length-last writes,
+FeliCa long block-list addresses, status/identity framing, Type 3 attribute checksums,
+full-message verification, no-op and every exchange/release failure boundary.
+The concrete PN532 adapter was exercised at both 212 and 424 kbit/s with exact native
+packets, finite timings, zero retries and cleanup after every failed operation.
+
+Family demo tests passed 2,224 assertions, including every new FeliCa/Type 3 action,
+choice validation and mutation acknowledgement before hardware acquisition. Inactive
+palette/RTL streaming passed 29 assertions for 28 components. Distribution validation
+reported zero findings across 36 projects, two groups and 23 DFM forms. All 36 Python
+tool regressions and 21 Pascal source/documentation checkers passed; runtime test
+executables reported zero leaked heap blocks. New projects retain BOM/CRLF and the
+standalone design package retains its complete source closure without runtime BPL
+dependencies. The fixture generator uses standard Python only and is reproducible.
+
+These are compiler/protocol/backend/script checks; they do not constitute a Delphi
+IDE build or physical-card qualification. Unencrypted FeliCa data and PWD_AUTH/PACK
+are not cryptographic card-authenticity claims.

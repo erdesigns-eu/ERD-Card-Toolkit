@@ -97,6 +97,10 @@ if errorlevel 1 exit /b %errorlevel%
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\Type2Password.Tests.exe"
 if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\contactless" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\contactless\Type2Felica.Tests.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\Type2Felica.Tests.exe"
+if errorlevel 1 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\contactless" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\contactless\Ndef.Tests.dpr
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\Ndef.Tests.exe"

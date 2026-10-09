@@ -1,7 +1,7 @@
 # Password-authenticated Type 2 memory
 
 `TType2PasswordCardReader` in `ERD.Card.Contactless.Type2.Password` adds supplied-
-password user-memory access for Ultralight EV1 48/128 and NTAG213/215/216. It is an
+password user-memory access for Ultralight EV1 48/128 and NTAG210/212/213/215/216. It is an
 RTL-only nonvisual component included in `ERDCardContactless.dpk`; every visible
 API declaration has English Delphi XML documentation.
 
@@ -40,7 +40,7 @@ stays alive during use. Supply exactly four password bytes and two expected PACK
 bytes in their configured card/wire order; no byte reversal or integer conversion
 is applied. There is no default password or optional PACK comparison.
 
-Every call is a separate session and authenticates exactly once. A standalone
+Every call is a separate session. User-memory and NDEF operations authenticate once; configuration/credential management verifies again after fresh RF activation. A standalone
 Authenticate method is deliberately not provided: release clears the RF state.
 The existing `TContactlessCardReader` PC/SC storage methods remain separate; reader
 firmware may reset/select between its pseudo-APDUs, so this implementation does not
@@ -52,6 +52,8 @@ mix raw authentication with those page commands.
 | --- | --- | --- |
 | `ttmUltralightEv1_48` | 4..15 | 48 |
 | `ttmUltralightEv1_128` | 4..35 | 128 |
+| `ttmNtag210` | 4..15 | 48 |
+| `ttmNtag212` | 4..35 | 128 |
 | `ttmNtag213` | 4..39 | 144 |
 | `ttmNtag215` | 4..129 | 504 |
 | `ttmNtag216` | 4..225 | 888 |
@@ -65,8 +67,7 @@ from UID, ATQA, ATR or version bytes; caller identification is required.
 
 The stateless `TType2PasswordCodec` validates credential lengths/model and bounded
 user ranges, and builds independent FAST_READ frames for tooling. It rejects zero,
-negative, oversized, overflow-prone or excluded ranges before I/O. Every read/write
-excludes manufacturer pages0..3 and each model's dynamic locks/configuration tail.
+negative, oversized, overflow-prone or excluded ranges before I/O. Generic user-memory operations exclude manufacturer pages0..3 and each model's dynamic locks/configuration tail. Dedicated configuration and NDEF APIs read specific metadata without exposing stored PWD/PACK pages.
 Passwords/PACK are not exposed by a user snapshot. Existing lock bits and card
 access conditions still apply after authentication.
 
@@ -92,8 +93,7 @@ Each operation:
 AUTHLIM can permanently block protected memory after unsuccessful verification
 attempts. A timeout/transport failure does not establish whether the card consumed
 an attempt. A successful PWD_AUTH can reset the internal failed-attempt counter;
-enabled NTAG NFC counters can also change on reading. The component does not inspect
-or alter AUTH0, PROT, AUTHLIM, CFGLCK, mirror/counter settings or password/PACK pages.
+enabled NTAG NFC counters can also change on reading. Generic user-memory methods do not change authentication settings. Dedicated management methods inspect configuration, change AUTH0/PROT/AUTHLIM, rotate credentials and read supported counters; they preserve CFGLCK, mirror/counter and unrelated bits.
 It cannot report remaining attempts. The caller must supply known credentials and
 reconcile a failed/ambiguous attempt before deciding whether to call again.
 
@@ -120,11 +120,7 @@ MemoryReader.WriteUserPage(
 
 `ReplacementPage: TBytes` contains exactly four bytes. This explicitly changes that
 page when executed; no command-line examples or tests access physical cards.
-A page write can alter an existing NDEF message; there is no automatic formatting
-or NDEF transaction. This API only changes ordinary user memory. Bounded NDEF
-codecs and public PC/SC Type 2 NDEF transactions are now available separately in
-[NDEF.md](NDEF.md); they do not inject page commands into a password-authenticated
-raw session.
+A page write can alter an existing NDEF message. Use the dedicated `ReadNdef` and `WriteNdefVerified` methods for complete mapping-aware NDEF access within one password-authenticated raw session. Public PC/SC NDEF remains separate. Neither path formats a card automatically; see [Type 2 management](TYPE2_MANAGEMENT.md).
 
 After the sole verified authentication, send one `A2 page data4 + CRC-A`, require
 an exact four-bit ACK nibbleA, then FAST_READ that same page and compare all four

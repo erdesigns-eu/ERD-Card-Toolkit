@@ -43,9 +43,10 @@ out of scope (see [Not supported](#not-supported)).
 | **ICAO travel/ID documents** | `TICAODocumentReader` | BAC (MRZ) or PACE (MRZ/CAN, ECDH Generic Mapping, AES-128, NIST P-256 or brainpoolP256r1) secure messaging. Read DG1 (MRZ identity), DG2 (JPEG and JPEG 2000 face images), and complete EF.COM/EF.SOD files. Includes MRZ parsing with check digits (TD1/TD2/TD3) and EF.CardAccess PACEInfo decoding. |
 | **EMV** | `TEMVCardReader` | PSE/PPSE directory discovery, PDOL inspection without GPO, GPO and AFL record reading, an optional bounded extra SFI/record scan, GET DATA objects, and transaction logs. Extracts PAN, expiry date, cardholder name, IBAN and Track 2 equivalent data where present. Reading only, no transactions. |
 | **MIFARE Classic** | `TContactlessCardReader` | Classic Mini/1K/4K layouts. Read blocks with a supplied key A/B and write data blocks; block 0 and sector trailers are refused. |
-| **Ultralight / NTAG (Type 2)** | `TContactlessCardReader`, `TType2PasswordCardReader` | Ultralight, Ultralight EV1 (48/128), NTAG210/212/213/215/216 page reads, user-memory snapshots and user-page writes. PWD_AUTH/PACK password-protected access through an ACR122U adapter. |
+| **Ultralight / NTAG (Type 2)** | `TContactlessCardReader`, `TType2PasswordCardReader` | Ultralight, Ultralight EV1 (48/128), NTAG210/212/213/215/216 page reads, user-memory snapshots and user-page writes. PWD_AUTH/PACK access, verified AUTH0/PROT/AUTHLIM configuration and password/PACK replacement, supported counter reads, and protected NDEF through an ACR122U adapter. |
 | **Ultralight C** | `TUltralightCCardReaderWriter` | Supplied-key 2K3DES mutual authentication, exact user-page reads, a 144-byte user-memory snapshot and verified four-byte user-page writes through raw RF (ACR122U adapter). Read authentication configuration; verified AUTH0/AUTH1 updates and key replacement with same-UID fresh RF authentication. Manufacturer, OTP, lock and counter writes remain excluded. |
-| **NDEF** | `TType2NdefCardReader`, `TType4NdefCardReader`, `TType5NdefCardReader` | Complete NDEF message codec with chunk reassembly, plus Text, URI, MIME, external and Smart Poster record helpers. Read, replace and clear public NDEF messages on Type 2, Type 4 (mapping 1.0/2.0) and Type 5 tags, with read-back verification. |
+| **NDEF** | `TType2NdefCardReader`, `TType3NdefCardReader`, `TType4NdefCardReader`, `TType5NdefCardReader` | Complete NDEF message codec with chunk reassembly, plus Text, URI, MIME, external and Smart Poster record helpers. Read, replace and clear public NDEF messages on Type 2, Type 3 (mapping 1.0), Type 4 (mapping 1.0/2.0) and Type 5 tags, with read-back verification. Type 2 also supports NDEF within supplied-password sessions. |
+| **FeliCa / NFC Forum Type 3** | `TFelicaCardReader`, `TType3NdefCardReader` | Fresh explicit-system polling, IDm/PMm, unencrypted service block reads and preimage-checked verified writes, including 16-bit block addresses. Type 3 attribute parsing and verified NDEF read/replace/clear through an ACR122U/PN532 adapter at explicit 212/424 kbit/s. |
 | **ISO 15693** | `TIso15693CardReader` | System information, block-range reads and verified single-block writes through an ACS ACR1552 (FF FB pass-through) session. |
 | **MIFARE DESFire** | `TDesfireCardReader` | Public, EV1/EV2 AES, EV1 2K3DES/3K3DES and explicit D40 DES/2K3DES (Plain, MACed, Full) access. Discover applications/files, read standard/backup/value/record files and write standard data. Transactions with commit/abort; application and ordinary-file create/delete across the explicit profiles, including selectable DES/2K3DES, 3K3DES or AES application storage. AES/DES/3DES key rotation, key-policy and ordinary-file access administration. EV2 NonFirst re-authentication. |
 | **Programmable (“magic”) UIDs** | `TRawUidProgrammer`, UID methods of `TContactlessCardReader` | Explicit profiles for Gen1a/Gen1b, unsealed UFUID, Gen2/CUID, factory FUID (one-time), Gen3, Gen4 UMC (4/7/10-byte), USCUID/GDM, partial UFUID/ZUID/PFUID and Type 2 DirectWrite. Raw RF access uses an ACS ACR122U/PN532 adapter. |
@@ -93,7 +94,7 @@ These rules apply to every component and are worth knowing before you start:
 | `src/pcsc` | PC/SC API abstraction, Windows `winscard.dll` binding, `TSmartCardReader`, `TSmartCardMonitor` |
 | `src/eid` | Belgian eID, ICAO document reader, MRZ, LDS, BAC/PACE access and secure messaging |
 | `src/emv` | EMV reader, data model and tag catalog |
-| `src/contactless` | MIFARE Classic, Type 2/4/5, NDEF, ISO 15693, DESFire, UID programming, Calypso/MOBIB |
+| `src/contactless` | MIFARE Classic, Type 2/3/4/5, FeliCa, NDEF, ISO 15693, DESFire, UID programming, Calypso/MOBIB |
 | `src/memory` | SLE/I²C memory chips, SLE counter chips, SLE4404, ACS capability catalog |
 | `src/sim` | SIM/USIM reader/writer and data codecs |
 | `src/magstripe` | Track codecs, serial port, MSR206/MSR605, MSR206-7HL, MagTek adapters |
@@ -145,7 +146,7 @@ Output goes to `dist/packages/<Platform>/<Config>`.
 | `ERDCardPCSC` | PC/SC reader and monitor | `ERDCardCore` |
 | `ERDCardEID` | Belgian eID and ICAO documents | `ERDCardCore` |
 | `ERDCardEMV` | EMV reader and tag catalog | `ERDCardCore` |
-| `ERDCardContactless` | Classic, Type 2/4/5, NDEF, ISO 15693, DESFire, UID, Calypso/MOBIB | `ERDCardCore` |
+| `ERDCardContactless` | Classic, Type 2/3/4/5, FeliCa, NDEF, ISO 15693, DESFire, UID, Calypso/MOBIB | `ERDCardCore` |
 | `ERDCardMemory` | Memory, counter and SLE4404 chips | `ERDCardCore` |
 | `ERDCardSIM` | SIM/USIM | `ERDCardCore` |
 | `ERDCardInput` | USB-HID, HID monitors, RFID input | `ERDCardCore` |
@@ -166,13 +167,13 @@ tools\build-packages.cmd dcc32 design
 ```
 
 Then use **Component > Install Packages > Add** and select `ERDCardDesign.bpl`.
-It registers 26 components:
+It registers 28 components:
 
 | Palette page | Components |
 | --- | --- |
 | **ERD Cards** | `TSmartCardMonitor`, `TSmartCardReader`, `TBelgianEIDReader`, `TICAODocumentReader`, `TSimCardReaderWriter`, `TEMVCardReader`, `TMagStripeReaderWriter`, `TMemoryCardReaderWriter`, `TSleCounterCardReaderWriter`, `TSle4404CardReaderWriter` |
 | **ERD Input** | `THidDeviceMonitor`, `TUsbHidInputMonitor`, `TRfidKeyboardReader`, `TRfidHidReportReader`, `TUsbHidReaderWriter`, `TTwn4CardReaderWriter` |
-| **ERD Contactless** | `TUltralightCCardReaderWriter`, `TCalypsoCardReader`, `TContactlessCardReader`, `TType2NdefCardReader`, `TType4NdefCardReader`, `TIso15693CardReader`, `TType5NdefCardReader`, `TDesfireCardReader`, `TType2PasswordCardReader`, `TRawUidProgrammer` |
+| **ERD Contactless** | `TFelicaCardReader`, `TType3NdefCardReader`, `TUltralightCCardReaderWriter`, `TCalypsoCardReader`, `TContactlessCardReader`, `TType2NdefCardReader`, `TType4NdefCardReader`, `TIso15693CardReader`, `TType5NdefCardReader`, `TDesfireCardReader`, `TType2PasswordCardReader`, `TRawUidProgrammer` |
 
 Scalar settings are stored in the DFM. Interface properties such as `Transport`,
 `Profile`, `Device`, `Session`, `Channel` and `CryptoProvider` must be assigned at
@@ -314,7 +315,8 @@ and show card offered/removed notifications without running a card operation.
 | `Sle4404Demo` | SLE4404 layout, code verification, programming and erases |
 | `SimCardDemo` | SIM/USIM files, identities, services, PIN/PUK, contacts, SMS and linked records |
 | `MifareClassicDemo` | UID, layout/trailers, block reads and writes |
-| `Type2Demo` | Ultralight/NTAG memory, NDEF and PWD_AUTH/PACK |
+| `Type2Demo` | Ultralight/NTAG memory, public/protected NDEF, PWD_AUTH/PACK, verified configuration/credentials and counter reads |
+| `FelicaDemo` | Explicit FeliCa system/services/blocks and Type 3 attributes/NDEF; own form, DFM, reader selection and presence events |
 | `UltralightCDemo` | Supplied-key authentication, exact user-page/full user-memory reads and verified page writes, configuration and key replacement; own form and DFM |
 | `Type4NdefDemo` | Capability container, file descriptors and NDEF read/write/clear |
 | `Iso15693Demo` | ACR1552 ISO 15693 blocks and Type 5 NDEF |
@@ -381,7 +383,7 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
   online services are not validated; extra PACE/EAC profiles are missing
   ([docs/EUROPEAN_EID.md](docs/EUROPEAN_EID.md)).
 - **MIFARE/DESFire variants:** MIFARE Plus, DESFire LRP,
-  TMAC, SDM and extended key-set/configuration management. Ultralight C irreversible lock/counter/OTP programming. NFC Forum Type 1/3 tags.
+  TMAC, SDM and extended key-set/configuration management. Ultralight C irreversible lock/counter/OTP programming. NFC Forum Type 1 tags; encrypted FeliCa services and FeliCa formatting/key provisioning.
 - **UID programming:** only the listed programmable profiles; regular card UIDs
   are not writable.
 - **MOBIB:** no built-in De Lijn/STIB/TEC/NMBS-SNCB rule sets; operator profiles must be
@@ -433,6 +435,9 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 | `ERD.Card.EMV.Data` | EMV data model, DOL/AFL/log codec |
 | `ERD.Card.EMV.Reader` | `TEMVCardReader` |
 | `ERD.Card.Contactless` | `TContactlessCardReader`, reader profiles, Classic layout |
+| `ERD.Card.Contactless.Felica` | Explicit-system target information, service block codec and verified block component |
+| `ERD.Card.Contactless.ACR122.Felica` | Explicit PN532 FeliCa polling/transfer at 212 or 424 kbit/s |
+| `ERD.Card.Contactless.Type3.Ndef` | Strict Type 3 attribute mapping, NDEF reader and verified length-last writer |
 | `ERD.Card.Contactless.UltralightC` | Supplied-key Ultralight C authentication and verified user-memory access |
 | `ERD.Card.Contactless.DESFire.DES` | Distinct EV1 3DES and D40 native-message codecs |
 | `ERD.Card.Contactless.Type2` | Ultralight/NTAG layouts |
@@ -500,6 +505,7 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 **Card families**
 
 - [Belgian eID](docs/BELGIAN_EID.md) · [European eID / ICAO](docs/EUROPEAN_EID.md) · [EMV](docs/EMV_READER.md)
+- [FeliCa / Type 3](docs/FELICA_TYPE3.md) · [Type 2 management and protected NDEF](docs/TYPE2_MANAGEMENT.md)
 - [Contactless / MIFARE](docs/CONTACTLESS.md) · [NDEF](docs/NDEF.md) · [Type 2 passwords](docs/TYPE2_PASSWORD.md) · [Ultralight C / DES security](docs/LEGACY_MIFARE_SECURITY.md) · [NTAG210/212](docs/NTAG210_212.md) · [Type 4 NDEF](docs/TYPE4_NDEF.md) · [ISO 15693 / Type 5](docs/ISO15693_TYPE5.md)
 - [DESFire](docs/DESFIRE.md) · [DESFire application/file management](docs/DESFIRE_APPLICATIONS.md) · [MOBIB / Calypso](docs/MOBIB_CALYPSO.md)
 - [Programmable UIDs](docs/PROGRAMMABLE_UID.md) · [Raw UID](docs/RAW_UID.md) · [Gen3/Gen4](docs/GEN3_GEN4_UID.md) · [USCUID/FUID](docs/USCUID_FUID.md) · [Gen1b/partial](docs/GEN1B_PARTIAL_UID.md)

@@ -26,7 +26,7 @@ hardware. Assign both a connected `ICardTransport` and an explicitly matching
 | Addressed ISO 15693 memory | `TIso15693CardReader`, explicit 8/16-bit geometry, single-block security and guarded writes; ACR1552U-M/ACM1552U-Y/Z FF FB adapter |
 | Public Type 5 NDEF memory | `TType5NdefCardReader`: initialized E1/E2 CC/TLV mapping, lock preflight and verified length-last updates |
 | Native DESFire files | `TDesfireCardReader`: discovery, ordinary data/value/record reads and verified standard-data writes; explicit EV1/EV2 AES authentication, Plain/MACed/Full messaging and EV2 NonFirst; retained owned backup/value/record transactions, commit/abort, authenticated directories and ordinary application/file management |
-| Additional DESFire security/TMAC/key management, Plus, Type 1/3 NDEF, other programmable UID families | Separate profiles still pending |
+| Additional DESFire security/TMAC/key management, Plus, Type 1 NDEF, other programmable UID families | Separate profiles still pending |
 
 The Mini model supplies the original memory layout, not a tested Mini/reader
 compatibility claim. This release has synthetic command tests and no physical reader
@@ -271,3 +271,5 @@ opcodes, with full read-back after fresh selection. See
 [GEN1B_PARTIAL_UID.md](GEN1B_PARTIAL_UID.md).
 
 NTAG210/212 layouts and mirror/configuration rules are documented in [NTAG210_212.md](NTAG210_212.md).
+
+FeliCa unencrypted-service access and NFC Forum Type 3 version 1.0 NDEF are now available through separate components and an explicit PN532/ACR122 adapter; see [FELICA_TYPE3.md](FELICA_TYPE3.md). Supplied-password Type 2 management and NDEF are described in [TYPE2_MANAGEMENT.md](TYPE2_MANAGEMENT.md).

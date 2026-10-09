@@ -34,6 +34,8 @@ call :build_demo mifareclassic MifareClassicDemo
 if errorlevel 1 exit /b %errorlevel%
 call :build_demo ultralightc UltralightCDemo
 if errorlevel 1 exit /b %errorlevel%
+call :build_demo felica FelicaDemo
+if errorlevel 1 exit /b %errorlevel%
 call :build_demo type2 Type2Demo
 if errorlevel 1 exit /b %errorlevel%
 call :build_demo type4ndef Type4NdefDemo

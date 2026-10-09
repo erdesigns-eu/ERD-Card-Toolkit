@@ -1,6 +1,6 @@
 # VCL examples: current coverage
 
-There are **twenty-two separately executable applications** in
+There are **twenty-three separately executable applications** in
 `examples/vcl/CardDemos.groupproj`. Each application has its own `TForm`,
 `.Main.pas`, and `.Main.dfm`. All visual controls are in that application's own
 DFM, including action pages, input fields, reader selection, and timers. There is
@@ -20,7 +20,8 @@ set.
 | RfidInputDemo | Foreground keyboard, boot/ID/fixed-ASCII reports, ASCII/hex/decimal profiles, and byte conversion |
 | SimCardDemo | Classic SIM/UICC-USIM, files/records/identities/services, PIN/PUK status, verify/change/unblock, ADN contact writes, PBR/IAP/EXT contact reads, explicit linked record plans, alpha/EMAIL/ANR/SMS/segment codecs |
 | MifareClassicDemo | UID, offline layout/trailers, supplied-key block reads, and status-only data writes |
-| Type2Demo | Ultralight/EV1/NTAG210/212/213/215/216, UID/page/memory, public NDEF, ACR122 PWD_AUTH/PACK page/memory/verified page write |
+| FelicaDemo | Explicit 212/424 kbit polling, FeliCa service block reads/verified writes, Type 3 attributes and NDEF with Text/URI interpretation |
+| Type2Demo | Ultralight/EV1/NTAG210/212/213/215/216, UID/page/memory, public NDEF, ACR122 PWD_AUTH/PACK user access, verified configuration/credential management, supported counter reads and protected NDEF |
 | UltralightCDemo | Supplied 16-byte key, mutual authentication, exact pages 4–39, full 144-byte memory and verified user-page writes through ACR122 raw RF |
 | Type4NdefDemo | Offline CC, mapping 1.0/2.0, file descriptors/FID, public NDEF read/write/clear |
 | EmvDemo | PSE/PPSE, PDOL inspection, explicit AID/terminal values, GPO/AFL records plus bounded extra SFI/record scan, visible raw records/statuses, GET DATA, advertised logs, DOL/log decoders, and exact exports |

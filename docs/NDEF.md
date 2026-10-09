@@ -10,7 +10,7 @@ Three RTL-only units are included in `ERDCardContactless.dpk`:
 Other access layers use the same message codecs: [Type 4 NDEF](TYPE4_NDEF.md)
 provides public ISO 7816 files, and [ISO 15693/Type 5](ISO15693_TYPE5.md) provides
 initialized public E1/E2 CC/TLV memory with guarded length-last updates.
-Type 1 and Type 3 access layers remain pending.
+[FeliCa/Type 3](FELICA_TYPE3.md) now supplies existing version 1.0 attribute/NDEF access. [Protected Type 2 NDEF](TYPE2_MANAGEMENT.md) retains supplied-password authentication during the entire mapping operation. Type 1 remains pending.
 
 Add `src/core` and `src/contactless` to the Delphi search path. These units need
 no VCL, vendor DLL, network connection or design-time package. Only the card
@@ -102,8 +102,7 @@ start at physical byte 160, outside the 144-byte CC data area. Lock Control TLVs
 must point into the selected model's three dynamic lock bytes. Memory Control TLVs
 may describe an external range within physical memory. Internal reserved-memory
 holes are rejected explicitly; no contiguous interpretation silently skips their
-semantics. Other mapping versions, sector selection and Type 1/3/5 access layers
-remain separate implementations. Public ISO 7816 Type 4 mapping 1.0/2.0 access is
+semantics. Other mapping versions and sector selection remain separate work. Type 3 and Type 5 have dedicated components; Type 1 remains pending. Public ISO 7816 Type 4 mapping 1.0/2.0 access is
 now available in [TYPE4_NDEF.md](TYPE4_NDEF.md).
 
 `HasNdef` distinguishes absence from an empty TLV. Empty length returns no records

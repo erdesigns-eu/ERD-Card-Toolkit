@@ -116,6 +116,9 @@
         <DCC_Optimize>true</DCC_Optimize>
     </PropertyGroup>
     <ItemGroup>
+        <DCCReference Include="..\..\..\src\contactless\ERD.Card.Contactless.Felica.pas" />
+        <DCCReference Include="..\..\..\src\contactless\ERD.Card.Contactless.ACR122.Felica.pas" />
+        <DCCReference Include="..\..\..\src\contactless\ERD.Card.Contactless.Type3.Ndef.pas" />
         <DCCReference Include="IcaoDocumentDemo.Main.pas">
             <Form>IcaoDocumentDemoForm</Form>
             <FormType>dfm</FormType>
