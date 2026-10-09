@@ -346,6 +346,221 @@ object MobibDemoForm: TMobibDemoForm
         end
       end
     end
+    object ActSamfileTab: TTabSheet
+      Left = 4
+      Top = 44
+      Width = 1072
+      Height = 438
+      Caption = 'Authenticated Calypso file via provisioned SAM'
+      Tag = 2
+      object ActSamfileInputs: TScrollBox
+        Left = 0
+        Top = 0
+        Width = 1072
+        Height = 438
+        Align = alClient
+        BorderStyle = bsNone
+        TabOrder = 0
+        object ActSamfileDialectLabel: TLabel
+          Left = 16
+          Top = 8
+          Width = 940
+          Height = 18
+          Caption = 'Explicit Calypso dialect'
+        end
+        object ActSamfileDialectBox: TComboBox
+          Left = 16
+          Top = 30
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 0
+          Style = csDropDownList
+          ItemIndex = -1
+          Items.Strings = (
+            'Legacy CLA 94 / LFI 00'
+            'Revision 3 CLA 00 / path 09'
+          )
+        end
+        object ActSamfileLeLabel: TLabel
+          Left = 16
+          Top = 70
+          Width = 940
+          Height = 18
+          Caption = 'Exact expected record bytes (maximum 253)'
+        end
+        object ActSamfileLeEdit: TEdit
+          Left = 16
+          Top = 92
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 1
+          MaxLength = 262144
+          Text = '29'
+        end
+        object ActSamfileLimitLabel: TLabel
+          Left = 16
+          Top = 132
+          Width = 940
+          Height = 18
+          Caption = 'Exact record count; no missing-record probing'
+        end
+        object ActSamfileLimitEdit: TEdit
+          Left = 16
+          Top = 154
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 2
+          MaxLength = 262144
+          Text = '1'
+        end
+        object ActSamfileFidLabel: TLabel
+          Left = 16
+          Top = 194
+          Width = 940
+          Height = 18
+          Caption = 'Known logical file identifier (hex)'
+        end
+        object ActSamfileFidEdit: TEdit
+          Left = 16
+          Top = 216
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 3
+          MaxLength = 262144
+          Text = '2020'
+        end
+        object ActSamfileSamreaderLabel: TLabel
+          Left = 16
+          Top = 256
+          Width = 940
+          Height = 18
+          Caption = 'Separate available PC/SC SAM reader'
+        end
+        object ActSamfileSamreaderEdit: TComboBox
+          Style = csDropDownList
+          Left = 16
+          Top = 278
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 4
+          MaxLength = 262144
+        end
+        object ActSamfileRevisionLabel: TLabel
+          Left = 16
+          Top = 318
+          Width = 940
+          Height = 18
+          Caption = 'Explicit secure-session revision'
+        end
+        object ActSamfileRevisionBox: TComboBox
+          Left = 16
+          Top = 340
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 5
+          Style = csDropDownList
+          ItemIndex = -1
+          Items.Strings = (
+            'Revision 1'
+            'Revision 2'
+            'Revision 3 compatibility'
+            'Revision 3.2 extended plaintext'
+          )
+        end
+        object ActSamfileSerialLabel: TLabel
+          Left = 16
+          Top = 380
+          Width = 940
+          Height = 18
+          Caption = 'Exact eight-byte card serial/diversifier (hex)'
+        end
+        object ActSamfileSerialEdit: TEdit
+          Left = 16
+          Top = 402
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 6
+          MaxLength = 262144
+        end
+        object ActSamfileKeyindexLabel: TLabel
+          Left = 16
+          Top = 442
+          Width = 940
+          Height = 18
+          Caption = 'Authorized card key index'
+        end
+        object ActSamfileKeyindexEdit: TEdit
+          Left = 16
+          Top = 464
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 7
+          MaxLength = 262144
+          Text = '1'
+        end
+        object ActSamfileKifLabel: TLabel
+          Left = 16
+          Top = 504
+          Width = 940
+          Height = 18
+          Caption = 'Authorized SAM key identifier (decimal)'
+        end
+        object ActSamfileKifEdit: TEdit
+          Left = 16
+          Top = 526
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 8
+          MaxLength = 262144
+        end
+        object ActSamfileKvcLabel: TLabel
+          Left = 16
+          Top = 566
+          Width = 940
+          Height = 18
+          Caption = 'Authorized key version (decimal)'
+        end
+        object ActSamfileKvcEdit: TEdit
+          Left = 16
+          Top = 588
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 9
+          MaxLength = 262144
+        end
+        object ActSamfileSamclassLabel: TLabel
+          Left = 16
+          Top = 628
+          Width = 940
+          Height = 18
+          Caption = 'SAM APDU class'
+        end
+        object ActSamfileSamclassBox: TComboBox
+          Left = 16
+          Top = 650
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 10
+          Style = csDropDownList
+          ItemIndex = -1
+          Items.Strings = (
+            '80'
+            '94'
+          )
+        end
+      end
+    end
   end
   object ExportDialog: TSaveDialog
     Options = [ofOverwritePrompt, ofPathMustExist]

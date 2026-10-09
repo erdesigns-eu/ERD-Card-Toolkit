@@ -1114,7 +1114,7 @@ begin
     end;
     dfMobib:
     begin
-      SetLength(Result,2);
+      SetLength(Result,3);
       Result[0].Id := 'snapshot'; Result[0].LabelText := 'Read public MOBIB files and records';
       Result[0].Pcsc := True; Result[0].Mutation := False;
       Result[1].Id := 'file'; Result[1].LabelText := 'Read explicit Calypso logical file';
@@ -1138,6 +1138,31 @@ begin
       Result[0].Fields[3].DefaultText := ''; Result[0].Fields[3].Secret := False; Result[0].Fields[3].Choices := 'Raw bytes only|Legacy MOBIB 056/001';
       Result[0].Fields[4].Name := 'files'; Result[0].Fields[4].LabelText := 'Logical file IDs (hex), semicolon-separated; edit to include additional known files';
       Result[0].Fields[4].DefaultText := '2001;2002;2010;2020;2069;2050;2040;3F1C'; Result[0].Fields[4].Secret := False; Result[0].Fields[4].Choices := '';
+      Result[2].Id := 'samfile'; Result[2].LabelText := 'Authenticated Calypso file via provisioned SAM';
+      Result[2].Pcsc := True; Result[2].Mutation := False;
+      SetLength(Result[2].Fields,11);
+      Result[2].Fields[0].Name := 'dialect'; Result[2].Fields[0].LabelText := 'Explicit Calypso dialect';
+      Result[2].Fields[0].DefaultText := ''; Result[2].Fields[0].Secret := False; Result[2].Fields[0].Choices := 'Legacy CLA 94 / LFI 00|Revision 3 CLA 00 / path 09';
+      Result[2].Fields[1].Name := 'le'; Result[2].Fields[1].LabelText := 'Exact expected record bytes (maximum 253)';
+      Result[2].Fields[1].DefaultText := '29'; Result[2].Fields[1].Secret := False; Result[2].Fields[1].Choices := '';
+      Result[2].Fields[2].Name := 'limit'; Result[2].Fields[2].LabelText := 'Exact record count; no missing-record probing';
+      Result[2].Fields[2].DefaultText := '1'; Result[2].Fields[2].Secret := False; Result[2].Fields[2].Choices := '';
+      Result[2].Fields[3].Name := 'fid'; Result[2].Fields[3].LabelText := 'Known logical file identifier (hex)';
+      Result[2].Fields[3].DefaultText := '2020'; Result[2].Fields[3].Secret := False; Result[2].Fields[3].Choices := '';
+      Result[2].Fields[4].Name := 'samreader'; Result[2].Fields[4].LabelText := 'Separate available PC/SC SAM reader';
+      Result[2].Fields[4].DefaultText := ''; Result[2].Fields[4].Secret := False; Result[2].Fields[4].Choices := '';
+      Result[2].Fields[5].Name := 'revision'; Result[2].Fields[5].LabelText := 'Explicit secure-session revision';
+      Result[2].Fields[5].DefaultText := ''; Result[2].Fields[5].Secret := False; Result[2].Fields[5].Choices := 'Revision 1|Revision 2|Revision 3 compatibility|Revision 3.2 extended plaintext';
+      Result[2].Fields[6].Name := 'serial'; Result[2].Fields[6].LabelText := 'Exact eight-byte card serial/diversifier (hex)';
+      Result[2].Fields[6].DefaultText := ''; Result[2].Fields[6].Secret := False; Result[2].Fields[6].Choices := '';
+      Result[2].Fields[7].Name := 'keyindex'; Result[2].Fields[7].LabelText := 'Authorized card key index';
+      Result[2].Fields[7].DefaultText := '1'; Result[2].Fields[7].Secret := False; Result[2].Fields[7].Choices := '';
+      Result[2].Fields[8].Name := 'kif'; Result[2].Fields[8].LabelText := 'Authorized SAM key identifier (decimal)';
+      Result[2].Fields[8].DefaultText := ''; Result[2].Fields[8].Secret := False; Result[2].Fields[8].Choices := '';
+      Result[2].Fields[9].Name := 'kvc'; Result[2].Fields[9].LabelText := 'Authorized key version (decimal)';
+      Result[2].Fields[9].DefaultText := ''; Result[2].Fields[9].Secret := False; Result[2].Fields[9].Choices := '';
+      Result[2].Fields[10].Name := 'samclass'; Result[2].Fields[10].LabelText := 'SAM APDU class';
+      Result[2].Fields[10].DefaultText := ''; Result[2].Fields[10].Secret := False; Result[2].Fields[10].Choices := '80|94';
     end;
     dfEmv:
     begin

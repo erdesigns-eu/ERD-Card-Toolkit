@@ -235,6 +235,8 @@ begin
      N := Length(Result.Events); SetLength(Result.Events,N+1); Result.Events[N] := E;
     end;
     $2020: begin
+     { The fixed purchase field belongs only to contract versions zero to three. }
+     if Bits(B,0,6)>3 then Continue;
      if Length(B)*8 < 55 then Fail; N := Length(Result.Contracts); SetLength(Result.Contracts,N+1);
      Result.Contracts[N].RecordNumber := ASnapshot.Files[I].Records[J].Number;
      Result.Contracts[N].PurchaseDate := DateValue(Bits(B,41,14));

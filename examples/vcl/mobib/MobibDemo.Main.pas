@@ -87,6 +87,54 @@ type
     ActFileFidLabel: TLabel;
     /// <summary>Logical file identifier (hex).</summary>
     ActFileFidEdit: TEdit;
+    /// <summary>Authenticated Calypso file via provisioned SAM page.</summary>
+    ActSamfileTab: TTabSheet;
+    /// <summary>Authenticated Calypso file via provisioned SAM inputs.</summary>
+    ActSamfileInputs: TScrollBox;
+    /// <summary>Explicit Calypso dialect label.</summary>
+    ActSamfileDialectLabel: TLabel;
+    /// <summary>Explicit Calypso dialect.</summary>
+    ActSamfileDialectBox: TComboBox;
+    /// <summary>Exact expected record bytes (maximum 253) label.</summary>
+    ActSamfileLeLabel: TLabel;
+    /// <summary>Exact expected record bytes (maximum 253).</summary>
+    ActSamfileLeEdit: TEdit;
+    /// <summary>Exact record count; no missing-record probing label.</summary>
+    ActSamfileLimitLabel: TLabel;
+    /// <summary>Exact record count; no missing-record probing.</summary>
+    ActSamfileLimitEdit: TEdit;
+    /// <summary>Known logical file identifier (hex) label.</summary>
+    ActSamfileFidLabel: TLabel;
+    /// <summary>Known logical file identifier (hex).</summary>
+    ActSamfileFidEdit: TEdit;
+    /// <summary>Separate available PC/SC SAM reader label.</summary>
+    ActSamfileSamreaderLabel: TLabel;
+    /// <summary>Separate available PC/SC SAM reader.</summary>
+    ActSamfileSamreaderEdit: TComboBox;
+    /// <summary>Explicit secure-session revision label.</summary>
+    ActSamfileRevisionLabel: TLabel;
+    /// <summary>Explicit secure-session revision.</summary>
+    ActSamfileRevisionBox: TComboBox;
+    /// <summary>Exact eight-byte card serial/diversifier (hex) label.</summary>
+    ActSamfileSerialLabel: TLabel;
+    /// <summary>Exact eight-byte card serial/diversifier (hex).</summary>
+    ActSamfileSerialEdit: TEdit;
+    /// <summary>Authorized card key index label.</summary>
+    ActSamfileKeyindexLabel: TLabel;
+    /// <summary>Authorized card key index.</summary>
+    ActSamfileKeyindexEdit: TEdit;
+    /// <summary>Authorized SAM key identifier (decimal) label.</summary>
+    ActSamfileKifLabel: TLabel;
+    /// <summary>Authorized SAM key identifier (decimal).</summary>
+    ActSamfileKifEdit: TEdit;
+    /// <summary>Authorized key version (decimal) label.</summary>
+    ActSamfileKvcLabel: TLabel;
+    /// <summary>Authorized key version (decimal).</summary>
+    ActSamfileKvcEdit: TEdit;
+    /// <summary>SAM APDU class label.</summary>
+    ActSamfileSamclassLabel: TLabel;
+    /// <summary>SAM APDU class.</summary>
+    ActSamfileSamclassBox: TComboBox;
     /// <summary>Select this form’s own action page.</summary>
     /// <param name="Sender">VCL event sender.</param>
     procedure ActionChanged(Sender: TObject);
@@ -190,6 +238,21 @@ begin
       FInputs[2] := ActFileLimitEdit;
       FInputs[3] := ActFileFidEdit;
     end;
+    2:
+    begin
+      SetLength(FInputs,11);
+      FInputs[0] := ActSamfileDialectBox;
+      FInputs[1] := ActSamfileLeEdit;
+      FInputs[2] := ActSamfileLimitEdit;
+      FInputs[3] := ActSamfileFidEdit;
+      FInputs[4] := ActSamfileSamreaderEdit;
+      FInputs[5] := ActSamfileRevisionBox;
+      FInputs[6] := ActSamfileSerialEdit;
+      FInputs[7] := ActSamfileKeyindexEdit;
+      FInputs[8] := ActSamfileKifEdit;
+      FInputs[9] := ActSamfileKvcEdit;
+      FInputs[10] := ActSamfileSamclassBox;
+    end;
   else Exit; end;
   AcknowledgeCheck.Enabled := FActions[ActionPages.ActivePageIndex].Mutation;
 end;
@@ -210,6 +273,7 @@ begin
   try
     for I := 0 to High(FInputs) do
       if FInputs[I] = ReaderBox then Result.Arguments[I] := SelectedAddress
+      else if FActions[ActionPages.ActivePageIndex].Fields[I].Name = 'samreader' then Result.Arguments[I] := TComboBox(FInputs[I]).Text
       else if FInputs[I] is TComboBox then
         Result.Arguments[I] := IntToStr(TComboBox(FInputs[I]).ItemIndex)
       else if FActions[ActionPages.ActivePageIndex].Fields[I].Secret then
@@ -286,11 +350,13 @@ var I: Integer;
 begin
   if AResult.Operation = cdoDemoDevices then
   begin
+    ActSamfileSamreaderEdit.Items.Clear; ActSamfileSamreaderEdit.ItemIndex := -1;
     FDevices := nil; ReaderBox.Items.Clear; ReaderBox.ItemIndex := -1;
     if AResult.Success then FDevices := AResult.Devices;
     for I := 0 to High(FDevices) do
     begin
       ReaderBox.Items.Add(string(FDevices[I].DisplayName));
+      ActSamfileSamreaderEdit.Items.Add(string(FDevices[I].Address));
       if FDevices[I].Address = FPreviousAddress then ReaderBox.ItemIndex := I;
     end;
     ReaderChanged(nil);

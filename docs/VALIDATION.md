@@ -542,3 +542,43 @@ All **36 Python regressions** and **21 source-aware Pascal checkers** pass on
 with regressions preventing omissions and duplicate targets. XML Help Insight
 coverage: **1,892 production and 2,434 VCL declarations**, zero findings.
 These headless tests/readers do not replace Delphi compilation or real-card testing.
+
+
+## Native Calypso SAM authentication and MOBIB subscriptions
+
+The built-in `TCalypsoSamSessionProvider` now orchestrates revision-1, revision-2,
+revision-3 compatibility and revision-3.2 extended plaintext sessions through a
+separate provisioned SAM. It requires exclusive SAM ownership, an explicit
+serial/key index/KIF/KVC/class, fresh SAM challenges, exact opening response
+framing and final SAM verification of the card MAC. It includes successful
+read/selection APDUs and full responses in the transcript, excluding Le from
+case-4 commands. The strict profile aborts on failed/chained responses, denies
+all writes, never downgrades, and returns no acquired result on verification
+failure. It does not implement encrypted sessions, PKI or software-only issuer keys.
+
+**609 native SAM assertions** cover four explicit generations, literal independent
+card/SAM command expectations, transcript framing, invalid/mismatched keys,
+malformed challenges, digest/authentication errors, transport failure, abort,
+abandoned sessions, post-close rejection, read-only allowlisting and preservation
+of the primary exception across failed cleanup. Synthetic MACs validate the
+native protocol engine; the SAM performs the actual secret-key cryptography.
+
+**370 MOBIB subscription assertions** cover fixed contract versions 0–3 and
+optional-field version 4, all 32 presence bitmaps, tariff/known product labels,
+price and sale date, duration fields, time-versus-trip counters, zero values,
+unknown versions, strict truncation, deep ownership and absolute-record counter
+association. The legacy codec no longer applies its fixed purchase-date offset
+to newer contracts. Unknown validity/zone/operator rules remain explicit.
+
+The independent MobibDemo DFM adds an authenticated read page with its own SAM
+reader dropdown populated by the existing in-demo discovery. Executor tests
+exercise both real protocol engines through separate injected transports,
+verified file exports, withheld exports on bad MAC and release of both readers.
+**2,041 family-executor assertions** pass.
+
+Final full FPC suite: **2,161,421 assertions across 45 configurations**.
+All **36 Python regressions** and **21 source-aware Pascal checkers** pass on
+**177 sources**. Distribution validation covers **34 projects, two groups and
+21 independent DFM forms**, including the new SAM selector and package source
+closure. English public XML documentation coverage: **1,929 production and
+2,461 VCL declarations**, zero findings. Native project BOM/CRLF conventions remain intact.

@@ -2,7 +2,9 @@
 
 `TCalypsoCardReader` leest logische bestanden en records. `TMobibCodec` uit
 `ERD.Card.MOBIB.Data` geeft de bekende velden als getypeerde gegevens terug.
-Beide units zitten in `ERDCardContactless` en het zelfstandige designpackage.
+`TMobibSubscriptionCodec` decodeert de gedocumenteerde contractversies.
+`TCalypsoSamSessionProvider` verzorgt native authenticatie via een aangesloten SAM.
+Deze units zitten in `ERDCardContactless` en het zelfstandige designpackage.
 `MobibDemo` heeft een eigen DFM en een eigen PC/SC-lezerkeuze.
 
 Een contactless smartcardlezer moet ISO 7816 APDU’s ondersteunen. Een reader die
@@ -51,8 +53,9 @@ De huidige typed resultaten bevatten:
 inclusief onbekende velden. Onbekende netwerken krijgen geen verzonnen naam,
 product, geldigheid of ritlocatie. Verkeerde BCD/datum/range in een bekende layout
 geeft een expliciete decodefout. Kies raw mode om een afwijkende layout te onderzoeken.
-Abonnementnamen, volledige contractgeldigheid, tariefregels en vervoerdergebonden
-locatienamen zijn nog niet generiek geparsed.
+De aanvullende abonnementcodec hieronder geeft bekende productnamen en
+versiegebonden contractsemantiek. Volledige contractgeldigheid, operatorregels
+en vervoerdergebonden locatienamen zijn niet universeel bekend.
 
 ```pascal
 Reader := TCalypsoCardReader.Create(nil);
@@ -95,12 +98,101 @@ de reader de snapshot. Bij een fout wordt `Abort` aangeroepen en blijft de
 primaire fout behouden. Geen fallback naar publieke of ongeverifieerde uitlezing.
 Een ontbrekende provider bij `RequireSecureSession=True` faalt vóór kaart-I/O.
 
-Dit is een **providerintegratie**, geen ingebouwde Calypso MAC/SAM-engine of
-standaardimplementatie waar je alleen een sleutelarray invult. De correcte
-revision-specifieke cryptografie/authenticatie komt uit de gekozen SDK/SAM-adapter.
-Ook die provider moet read-only werken; deze component geeft geen debit-, reload-
-of contractupdate-commando’s uit. Zonder zo’n adapter en geldige toegang kunnen
-beveiligde bestanden nog niet worden verworven.
+## Native authenticatie via SAM
+
+`ERD.Card.Contactless.Calypso.SAM` bevat een concrete Delphi-engine; een externe
+Calypso-SDK is daarvoor niet nodig. Ondersteunde sessievormen:
+
+| Instelling | Kaart-CLA | Challenge / sessie-MAC |
+| --- | --- | --- |
+| `csrRevision1` | 94 | 4 / 4 bytes |
+| `csrRevision2` | 94 | 4 / 4 bytes |
+| `csrRevision3` | 00 | 4 / 4 bytes, compatibility |
+| `csrRevision32` | 00 | 8 / 8 bytes, extended plaintext |
+
+De SAM verzorgt diversificatie, verse challenge, MAC-berekening en verificatie.
+Delphi stuurt SELECT DIVERSIFIER, GET CHALLENGE, DIGEST INIT/UPDATE/CLOSE en
+DIGEST AUTHENTICATE; de kaart krijgt OPEN/CLOSE SECURE SESSION. Iedere succesvolle
+SELECT/READ-opdracht en het complete antwoord worden opgenomen, met uitsluiting
+van Le bij case-4-opdrachten. Een resultaat verlaat de reader pas na verificatie
+van de kaart-MAC. Sleutels worden niet uit de SAM gelezen of gelogd.
+
+Voorbeeld na het verbinden van **twee afzonderlijke** `TSmartCardReader`-componenten:
+
+```pascal
+Reader.Transport := CardReader.Transport;
+Reader.Dialect := cdIso00;
+Reader.SecureSessionProvider := TCalypsoSamSessionProvider.Create(
+  SamReader.Transport, csrRevision3, CardSerialEightBytes,
+  AuthorizedKeyIndex, AuthorizedKif, AuthorizedKvc, $80);
+Reader.RequireSecureSession := True;
+FileData := Reader.ReadFile($2020, 1);
+```
+
+Vereist een geschikte legacy Calypso SAM met de geldige issuer-/werksleutels,
+eventueel vooraf geselecteerd en unlocked volgens zijn eigen provisioning.
+KIF/KVC moeten overeenkomen met de kaart; een mismatch leidt niet tot een andere
+sleutel of downgrade. De achtbyte-serie/diversifier moet uit een betrouwbare
+kaartselectie of applicatieconfiguratie komen; ticketingbytes worden niet als
+serienummer gegokt. SAM-CLA 80/94 is expliciet instelbaar.
+
+De SAM-verbinding krijgt een eigen exclusieve transactie. Gebruik beide
+verbindingen op dezelfde workerthread en deel de SAM niet tijdens een sessie.
+De engine ondersteunt hier geauthenticeerde **plaintext reads**, geen encrypted
+sessies, PKI, sleutelarray zonder SAM, writes, debits of contractupdates.
+
+Dit strikte profiel accepteert alleen succesvolle SELECT FILE/READ RECORD-APDU's.
+Gebruik bekende bestaande bestanden en een exact recordaantal; een foutstatus,
+6C/61-chaining, response boven 255 bytes inclusief status of READ-Le boven 253
+breekt de beveiligde acquisitie af. De publieke reader ondersteunt nog steeds
+zijn bestaande probe-/chaininggedrag. Een ontbrekend bestand kan dus in een
+publieke snapshot als status verschijnen, terwijl de native beveiligde snapshot
+wordt afgebroken. Voor het lezen van alleen record één is de limiet één; de
+`Truncated`-vlag blijft de bereikte acquisitielimiet aangeven.
+
+MobibDemo heeft hiervoor een derde, eigen DFM-pagina met aparte dropdown voor de
+SAM, gevuld door de demo zelf. Het voorbeeld meldt geverifieerde mutual MAC en
+exporteert pas nadat `Finish` gelukt is. Bij iedere fout worden beide verbindingen
+vrijgegeven; cleanupfouten overschrijven de primaire lees-/authenticatiefout niet.
+
+## Abonnementen en contractsemantiek
+
+`TMobibSubscriptionCodec.DecodeSnapshot(ParsedMobib)` werkt op het expliciet
+gematchte 056/001-profiel. `Decode` kan ook een los contract offline verwerken.
+Alle originele bytes blijven onafhankelijk beschikbaar in `Raw`.
+
+| Contractveld | Versies 0–3 | Versie 4 |
+| --- | --- | --- |
+| Tariefcode | 14 bits vanaf bit 27 | 14 bits vanaf bit 25 |
+| Prijs | 16 bits vanaf bit 103 | 16 bits vanaf bit 89 |
+| Aankoopdatum | 14 bits vanaf bit 41 | optioneel, presence-bitmap bit 2 |
+| Duur | niet gepubliceerd | optioneel, bitmap bit 3: unitcode 2 bits + waarde 8 bits |
+
+De vijfbit-bitmap bij bit 111 gebruikt bit 0 als eerste optionele veld; ook de
+onbekende optionele velden worden correct overgeslagen. Onbekende contractversies
+vanaf vijf blijven raw en krijgen `LayoutMatched=False`. Een nuldatum is afwezig;
+een nulprijs, nulduur of nulteller is een aanwezige waarde.
+
+Vier bekende tariefcodes hebben een productnaam: `2801` JUMP 1 trip, `2803` JUMP
+10 trips, `0805` airport bus en `303D` JUMP 24h inclusief airport bus. Overige
+codes blijven numeriek beschikbaar zonder verzonnen productnaam. Tariefbits
+10–12 geven counter-use: code vier is een tijdproduct; de teller wordt dan niet
+als resterende ritten gepresenteerd. Bij andere counter-use-profielen wordt een
+beschikbare gekoppelde teller apart als remaining trips aangeboden.
+
+De teller uit `2069` record één wordt gekoppeld via het **absolute contract-
+recordnummer**, niet de positie in de lijst met gevonden contracten. Ontbrekende
+of beveiligde tellers blijven afwezig. De prijs is eurocenten van de aankoop,
+geen elektronisch saldo. `HasSaleDate`, `HasDuration`, `HasCounter` en
+`HasRemainingTrips` onderscheiden een echte nul van ontbrekende informatie.
+
+Dit vult de eerder ontbrekende getypeerde abonnementgegevens aan, maar vormt
+geen universele issuer-entitlement-engine. De openbare layout geeft geen
+betrouwbare activatie-/einddatum of volledige De Lijn/STIB/TEC/NMBS-productcatalogus.
+Daarom wordt een aankoopdatum niet tot startdatum gemaakt en worden duurunits,
+zones en operatorregels niet gegokt. De applicatie kan aanvullende officiële
+operatorregels toepassen op de bewaarde velden/bytes. Kaartauthenticatie bewijst
+ook niet op zichzelf dat een abonnement vandaag geldig is.
 
 ## Protocolbronnen en validatie
 
@@ -108,11 +200,19 @@ De implementatie is onafhankelijk geschreven op basis van publieke protocolfeite
 [Cardpeek Calypso/MOBIB-layout](https://github.com/L1L1/cardpeek/blob/master/dot_cardpeek_dir/scripts/calypso/c56n1.lua),
 [MOBIB-extractor](https://github.com/zoobab/mobib-extractor),
 [EN1545-encoding](https://github.com/L1L1/cardpeek/blob/master/dot_cardpeek_dir/scripts/lib/en1545.lua) en
+[Metrodroid MOBIB-contractlayout](https://github.com/metrodroid/metrodroid/blob/master/src/commonMain/kotlin/au/id/micolous/metrodroid/transit/mobib/MobibSubscription.kt),
+[Metrodroid tariefcodes](https://github.com/metrodroid/metrodroid/blob/master/src/commonMain/kotlin/au/id/micolous/metrodroid/transit/mobib/MobibLookup.kt),
+[Keyple SAM protocol](https://github.com/eclipse-keyple/keyple-card-calypso-crypto-legacysam-java-lib),
+[Keyple secure-session framing](https://github.com/eclipse-keyple/keyple-card-calypso-java-lib) en
 [Keyple SELECT-vormen](https://github.com/eclipse-keyple/keyple-card-calypso-java-lib/blob/main/src/main/java/org/eclipse/keyple/card/calypso/CommandSelectFile.java).
 Er is geen implementatiecode uit deze projecten overgenomen.
 
 Tests gebruiken synthetische gegevens en exacte APDU-transcripten voor reads,
 caller-fileplannen, fouten, bounds en sessielifecycle. De codec heeft onafhankelijke
 bitvectors, houder-/datum-/event-/counterfixtures en tests voor ownership en
-onbekende layouts. Providerfixtures testen dispatch en foutafhandeling; zij testen
-geen echte SAM-cryptografie en certificeren geen fysieke kaartgeneratie.
+onbekende layouts. Native SAM-tests gebruiken afzonderlijke exacte kaart-/SAM-transcripten voor alle
+vier sessievormen, case-4-Le-uitsluiting, verkeerde MAC/sleutel/challenge, abort,
+transportfouten en cleanup. Abonnementtests omvatten alle 32 presence-bitmaps,
+versies 0–4, onbekende versies, nulwaarden, truncatie en absolute tellertoewijzing.
+De synthetische MAC-waarden testen protocolorkestratie, niet het cryptografische
+binnenwerk van fysieke SAM-hardware; ze certificeren geen fysieke kaartgeneratie.

@@ -47,15 +47,18 @@ type
     function ReceiveByte(const Timeout: Cardinal): Byte;
     function NowMs: UInt64;
   end;
-  THardware = class(TInterfacedObject, ICardFamilyHardware, ICardFamilyHidHardware)
+  THardware = class(TInterfacedObject, ICardFamilyHardware, ICardFamilyHidHardware, ICardFamilySamHardware)
   public
     Acquires, Releases, Channels, HidFactories: Integer;
     ReportDevice: IHidReportDevice;
+    SamTransport: ICardTransport; SamAcquires,SamReleases: Integer;
     Transport: ICardTransport;
     Channel: ITwn4ByteChannel;
     FailRelease: Boolean;
     function HidDevices: THidDevices;
     function HidDevice(const APath: UnicodeString): IHidReportDevice;
+    function AcquireSam(const AName: string): ICardTransport;
+    procedure ReleaseSam;
     function AcquireReader(const AName: string): ICardTransport;
     procedure ReleaseReader;
     function CreateTwn4Channel(const APort: string): ITwn4ByteChannel;
@@ -107,6 +110,10 @@ begin
   if N = FailAt then raise ECardTransportError.Create('Sensitive backend message');
   Result := CopyBytes(Steps[N].Response);
 end;
+function THardware.AcquireSam(const AName: string): ICardTransport;
+begin Inc(SamAcquires); Check(AName='SAM reader','Exact separate SAM selection'); Result:=SamTransport; end;
+procedure THardware.ReleaseSam;
+begin Inc(SamReleases); end;
 function THardware.AcquireReader(const AName: string): ICardTransport;
 begin Inc(Acquires); Check(AName = 'Exact test reader','Exact reader passed');
   if Transport = nil then raise EReachedHardware.Create('Reached'); Result := Transport; end;
@@ -536,6 +543,35 @@ begin
 end;
 
 
+procedure TestNativeSamDemo;
+var R: TCardDemoRequest; D: TCardDemoResult; H: THardware; Hardware: ICardFamilyHardware;
+ Card,Sam:TScript; CT,ST:ICardTransport; I:Integer; Failed:Boolean;
+begin
+ for I:=0 to 1 do begin
+  Card:=TScript.Create; CT:=Card; Sam:=TScript.Create; ST:=Sam;
+  H:=THardware.Create; Hardware:=H;H.Transport:=CT;H.SamTransport:=ST;
+  Card.Add('008A0101040102030400','10203040001122009000');
+  Card.Add('00A4090002202000','9000');Card.Add('00B201041D','ABCD9000');Card.Add('008E8000041122334400','556677889000');
+  Sam.Add('80140000080102030405060708','9000');Sam.Add('8084000004','010203049000');
+  Sam.Add('808A00FF0A11221020304000112200','9000');
+  Sam.Add('808C00000700A40900022020','9000');Sam.Add('808C0000029000','9000');
+  Sam.Add('808C00000500B201041D','9000');Sam.Add('808C000004ABCD9000','9000');Sam.Add('808E000004','112233449000');
+  if I=0 then Sam.Add('808200000455667788','9000') else Sam.Add('808200000455667788','6988');
+  R:=Request(dfMobib,'samfile');Put(R,dfMobib,'dialect','1');Put(R,dfMobib,'revision','2');
+  Put(R,dfMobib,'samreader','SAM reader');Put(R,dfMobib,'serial','0102030405060708');Put(R,dfMobib,'kif','17');Put(R,dfMobib,'kvc','34');
+  Failed:=False;try CreateCardFamilyOperations(dfMobib,Hardware).Run(R,D);except on E:Exception do Failed:=True;end;
+  Check(Failed=(I=1),'Native SAM failure propagated');Check((H.Acquires=1) and (H.Releases=1),'Card connection released');
+  Check((H.SamAcquires=1) and (H.SamReleases=1),'SAM connection released');
+  Check((Card.Position=4) and (Sam.Position=9),'Native card/SAM transcript complete');
+  Check((Sam.Begins=1) and (Sam.Ends=1) and (Card.Begins=1) and (Card.Ends=1),'Both native transactions released');
+  if I=0 then Check(D.Success and (Pos('Mutual session MAC verified',string(D.Text))>0) and (Length(D.Artifacts)=1),'Authenticated file export')
+  else Check(not D.Success and (Length(D.Artifacts)=0),'Failed authentication exports no data');
+  Put(R,dfMobib,'serial','01');Failed:=False;try CreateCardFamilyOperations(dfMobib,Hardware).Run(R,D);except on E:Exception do Failed:=True;end;
+  Check(Failed and (H.Acquires=1) and (H.SamAcquires=1),'Invalid native input before either reader acquisition');
+  Hardware:=nil;CT:=nil;ST:=nil;
+ end;
+end;
+
 procedure TestMobibParsedDemo;
 const Ids: array[0..7] of Word = ($2001,$2002,$2010,$2020,$2069,$2050,$2040,$3F1C);
 var R: TCardDemoRequest; D: TCardDemoResult; H: THardware; Hardware: ICardFamilyHardware;
@@ -645,7 +681,7 @@ end;
 
 begin
   try
-    TestMobibParsedDemo; TestRecordAcquisitionDemos; TestNativeHidDemo; TestAdditionalFamilies; TestDocumentAndEmvDemos; TestExtendedSimDemo; TestStorageDemos; TestSimRoutes; TestOffline; TestPreflight; TestCounterAndSleRoutes;
+    TestMobibParsedDemo; TestNativeSamDemo; TestRecordAcquisitionDemos; TestNativeHidDemo; TestAdditionalFamilies; TestDocumentAndEmvDemos; TestExtendedSimDemo; TestStorageDemos; TestSimRoutes; TestOffline; TestPreflight; TestCounterAndSleRoutes;
     TestTwnRoutes(0,False); TestTwnRoutes(1,False); TestTwnRoutes(2,False); TestTwnRoutes(3,False); TestTwnRoutes(3,True);
     TestMemoryWrite(-1,False,False); TestMemoryWrite(6,False,False);
     TestMemoryWrite(7,False,False); TestMemoryWrite(-1,True,False); TestMemoryWrite(-1,False,True);

@@ -25,6 +25,17 @@ type
     function CreateTwn4Channel(const APort: string): ITwn4ByteChannel;
   end;
 
+  /// <summary>Optional separate, caller-selected Calypso SAM connection for native authentication.</summary>
+  ICardFamilySamHardware = interface
+    ['{E0388894-B101-4C5B-8F74-96A24B2C3AE2}']
+    /// <summary>Connects the selected provisioned SAM after all action inputs pass preflight.</summary>
+    /// <param name="AName">Exact PC/SC SAM reader name, distinct from the card reader.</param>
+    /// <returns>Retained transport with exclusive transaction capability.</returns>
+    function AcquireSam(const AName: string): ICardTransport;
+    /// <summary>Releases the separate SAM after authentication or abort; never retries commands.</summary>
+    procedure ReleaseSam;
+  end;
+
   /// <summary>Optional injectable Windows HID boundary for descriptor enumeration and inactive device factories.</summary>
   ICardFamilyHidHardware = interface
     ['{C7E94CF9-D5E1-4B0B-A8D6-8C6A55B057CD}']
@@ -57,7 +68,7 @@ uses
 {$ELSE}
   System.SysUtils, System.Classes,
 {$ENDIF}
-  ERD.Card.MOBIB.Data, ERD.Card.Contactless.Calypso, ERD.Card.EMV.Data, ERD.Card.EMV.Reader, ERD.Card.EID.Data, ERD.Card.EID.Reader,
+  ERD.Card.Contactless.Calypso.SAM, ERD.Card.MOBIB.Subscriptions, ERD.Card.MOBIB.Data, ERD.Card.Contactless.Calypso, ERD.Card.EMV.Data, ERD.Card.EMV.Reader, ERD.Card.EID.Data, ERD.Card.EID.Reader,
   ERD.Card.EID.DocumentReader, ERD.Card.EID.ICAO, ERD.Card.Crypto.EAC, ERD.Card.Crypto.EAC.OpenSSL,
   ERD.Card.EID.Access, ERD.Card.Bytes, ERD.Card.APDU, ERD.Card.ATR, ERD.Card.ATR.Catalog,
   ERD.Card.TLV, ERD.Card.EMV.Tags, ERD.Card.Ndef,
@@ -89,9 +100,11 @@ type
     function DecryptCbc(const AKey, AIv, AData: TBytes): TBytes;
     function RandomBytes(const ACount: Integer): TBytes;
   end;
-  TNativeHardware = class(TInterfacedObject, ICardFamilyHardware, ICardFamilyHidHardware)
-  private FReader: TSmartCardReader;
+  TNativeHardware = class(TInterfacedObject, ICardFamilyHardware, ICardFamilyHidHardware, ICardFamilySamHardware)
+  private FReader, FSamReader: TSmartCardReader;
   public
+    function AcquireSam(const AName: string): ICardTransport;
+    procedure ReleaseSam;
     function HidDevices: THidDevices;
     function HidDevice(const APath: UnicodeString): IHidReportDevice;
     destructor Destroy; override;
@@ -103,6 +116,7 @@ type
   private
     FFamily: TCardDemoFamily;
     FHardware: ICardFamilyHardware;
+    FSamTransport: ICardTransport;
     procedure Execute(const R: TCardDemoRequest; const A: TCardFamilyAction;
       const T: ICardTransport; const C: ITwn4ByteChannel; var D: TCardDemoResult);
   public
@@ -207,7 +221,16 @@ function TPreflight.NowMs: UInt64;
 begin Result := 0; end;
 
 destructor TNativeHardware.Destroy;
-begin FReader.Free; inherited Destroy; end;
+begin FSamReader.Free; FReader.Free; inherited Destroy; end;
+function TNativeHardware.AcquireSam(const AName: string): ICardTransport;
+begin
+  if FSamReader <> nil then Fail;
+  FSamReader := TSmartCardReader.Create(nil);
+  try FSamReader.ReaderName := UnicodeString(AName); FSamReader.Connect; Result := FSamReader.Transport;
+  except FreeAndNil(FSamReader); raise; end;
+end;
+procedure TNativeHardware.ReleaseSam;
+begin try if FSamReader <> nil then FSamReader.Disconnect; finally FreeAndNil(FSamReader); end; end;
 function TNativeHardware.AcquireReader(const AName: string): ICardTransport;
 begin
   if FReader <> nil then Fail;
@@ -257,6 +280,9 @@ var Hid: TUsbHidReaderWriter; HidHardware: ICardFamilyHidHardware; Devices: THid
   Aes: ICardAesProvider; Aid: Cardinal; Settings: TDesfireFileSettings;
   PasswordReader: TType2PasswordCardReader; RawUid: TRawUidProgrammer;
   IsoReader: TIso15693CardReader; Type5: TType5NdefCardReader; IsoSession: IIso15693Session; IsoInfo: TIso15693SystemInfo; Type5Snapshot: TType5NdefSnapshot;
+  SamCla: Byte;
+  SamTransport: ICardTransport; SamProvider: ICalypsoSecureSessionProvider;
+  Subscriptions: TMobibSubscriptions;
   CalypsoIds: array of Word; ChosenMobibLayout: TMobibLayout; ParsedMobib: TMobibData; Calypso: TCalypsoCardReader; Mobib: TMobibSnapshot; TransitFile: TCalypsoFile;
   Emv: TEMVCardReader; Belgian: TBelgianEIDReader; Icao: TICAODocumentReader;
   Directory: TEmvDirectoryData; Application: TEmvApplicationData; ObjectData: TEmvDataObjectResult; Log: TEmvTransactionLogData;
@@ -458,6 +484,18 @@ begin
         try
           Calypso.Transport := T; Calypso.Dialect := TCalypsoDialect(Number(R,A,'dialect',0,1));
           Calypso.RecordBytes := Number(R,A,'le',1,256); N := Number(R,A,'limit',1,255);
+          if A.Id = 'samfile' then begin
+            if (Trim(Text(R,A,'samreader')) = '') or (Text(R,A,'samreader') = R.ReaderName) then Fail;
+            if Calypso.RecordBytes > 253 then Fail;
+            Id := Bytes(R,A,'serial'); if Length(Id) <> 8 then Fail;
+            I := Number(R,A,'revision',0,3); J := Number(R,A,'keyindex',1,3);
+            Count := Number(R,A,'kif',1,255); Address := Number(R,A,'kvc',1,255);
+            if Number(R,A,'samclass',0,1) = 0 then SamCla := $80 else SamCla := $94;
+            if ((I < 2) and (Calypso.Dialect <> cdLegacy94)) or ((I >= 2) and (Calypso.Dialect <> cdIso00)) then Fail;
+            SamTransport := FSamTransport; if SamTransport = nil then SamTransport := TPreflight.Create;
+            SamProvider := TCalypsoSamSessionProvider.Create(SamTransport,TCalypsoSessionRevision(I),Id,J,Count,Address,SamCla);
+            Calypso.SecureSessionProvider := SamProvider; Calypso.RequireSecureSession := True;
+          end;
           if A.Id = 'snapshot' then begin
             ChosenMobibLayout := TMobibLayout(Number(R,A,'layout',0,1));
             Lines := TStringList.Create;
@@ -478,12 +516,23 @@ begin
               if ParsedMobib.Holder.HasBirthDate then Output := Output+'Birth date '+FormatDateTime('yyyy-mm-dd',ParsedMobib.Holder.BirthDate)+sLineBreak;
             end;
             for I := 0 to High(ParsedMobib.Events) do Output := Output+'Event '+IntToStr(ParsedMobib.Events[I].RecordNumber)+' '+FormatDateTime('yyyy-mm-dd',ParsedMobib.Events[I].Date)+' minutes '+IntToStr(ParsedMobib.Events[I].Minutes)+' transport '+IntToStr(ParsedMobib.Events[I].TransportCode)+' location '+IntToStr(ParsedMobib.Events[I].LocationId)+' bus route '+IntToStr(ParsedMobib.Events[I].BusRoute)+' count '+IntToStr(ParsedMobib.Events[I].CouponCount)+sLineBreak;
-            for I := 0 to High(ParsedMobib.Contracts) do Output := Output+'Contract '+IntToStr(ParsedMobib.Contracts[I].RecordNumber)+' purchase '+FormatDateTime('yyyy-mm-dd',ParsedMobib.Contracts[I].PurchaseDate)+sLineBreak;
+            Subscriptions := TMobibSubscriptionCodec.DecodeSnapshot(ParsedMobib);
+            for I := 0 to High(Subscriptions) do begin
+              Output := Output+'Contract '+IntToStr(Subscriptions[I].RecordNumber)+' version '+IntToStr(Subscriptions[I].Version)+' layout matched '+BoolToStr(Subscriptions[I].LayoutMatched,True)+sLineBreak;
+              if Subscriptions[I].LayoutMatched then begin
+                Output := Output+'Tariff '+IntToHex(Subscriptions[I].Tariff,4)+' '+Subscriptions[I].ProductName+' price EUR cents '+IntToStr(Subscriptions[I].PriceCents)+' counter use '+IntToStr(Subscriptions[I].CounterUse)+sLineBreak;
+                if Subscriptions[I].HasSaleDate then Output := Output+'Sale '+FormatDateTime('yyyy-mm-dd',Subscriptions[I].SaleDate)+sLineBreak;
+                if Subscriptions[I].HasDuration then Output := Output+'Duration '+IntToStr(Subscriptions[I].DurationValue)+' unit code '+IntToStr(Subscriptions[I].DurationUnitCode)+sLineBreak;
+                if Subscriptions[I].HasRemainingTrips then Output := Output+'Remaining trips '+IntToStr(Subscriptions[I].RemainingTrips)+sLineBreak
+                else if Subscriptions[I].HasCounter then Output := Output+'Raw counter '+IntToStr(Subscriptions[I].Counter)+' (time product)'+sLineBreak;
+              end;
+            end;
             for I := 0 to High(ParsedMobib.Counters) do Output := Output+'Counter record '+IntToStr(ParsedMobib.Counters[I].RecordNumber)+' slot '+IntToStr(ParsedMobib.Counters[I].Slot)+' value '+IntToStr(ParsedMobib.Counters[I].Value)+sLineBreak;
             if ParsedMobib.HasContractCount then Output := Output+'Contract count '+IntToStr(ParsedMobib.ContractCount)+sLineBreak;
-          end else if A.Id = 'file' then begin
+          end else if (A.Id = 'file') or (A.Id = 'samfile') then begin
             Id := Bytes(R,A,'fid'); if (Length(Id) <> 2) or ((Id[0] = 0) and (Id[1] = 0)) then Fail;
             SetLength(Mobib.Files,1); Mobib.Files[0] := Calypso.ReadFile((Word(Id[0]) shl 8) or Id[1],N);
+            if A.Id = 'samfile' then Output := 'Mutual session MAC verified by SAM.'+sLineBreak;
           end else Fail;
           for I := 0 to High(Mobib.Files) do begin
             TransitFile := Mobib.Files[I];
@@ -1019,7 +1068,7 @@ end;
 
 procedure TFamilyOperations.Run(const ARequest: TCardDemoRequest; var AResult: TCardDemoResult);
 var A: TCardFamilyAction; T: ICardTransport; C: ITwn4ByteChannel;
-  P: TPreflight; Probe: TCardDemoResult; H: ICardFamilyHardware; Validated: Boolean;
+  P: TPreflight; Probe: TCardDemoResult; H: ICardFamilyHardware; SamHardware: ICardFamilySamHardware; Validated, SamAcquired: Boolean;
 begin
   A := Action(FFamily,ARequest); AResult := Default(TCardDemoResult); AResult.Operation := cdoFamily;
   if (A.Pcsc and (FFamily <> dfTools)) or (FFamily = dfTwn4) then
@@ -1033,7 +1082,12 @@ begin
     H := FHardware; if H = nil then H := TNativeHardware.Create;
     if FFamily = dfTwn4 then C := H.CreateTwn4Channel(string(Text(ARequest,A,'port')))
     else T := H.AcquireReader(string(ARequest.ReaderName));
+    SamAcquired := False;
     try
+      if (FFamily = dfMobib) and (A.Id = 'samfile') then begin
+        if not Supports(H,ICardFamilySamHardware,SamHardware) then Fail;
+        FSamTransport := SamHardware.AcquireSam(string(Text(ARequest,A,'samreader'))); SamAcquired := True;
+      end;
       try Execute(ARequest,A,T,C,AResult);
       except
         on E: EMemoryCardWriteUncertain do begin AResult.WriteUncertain := True; AResult.WriteVerified := E.Verified; raise; end;
@@ -1042,9 +1096,15 @@ begin
         on E: ETwn4WriteUncertain do begin AResult.WriteUncertain := True; AResult.WriteVerified := E.VerifiedReadBack; raise; end;
       end;
     except
+      FSamTransport := nil;
+      if SamAcquired then try SamHardware.ReleaseSam; except end;
       if FFamily <> dfTwn4 then try H.ReleaseReader; except end;
       raise;
     end;
+    FSamTransport := nil;
+    if SamAcquired then
+      try SamHardware.ReleaseSam;
+      except try H.ReleaseReader; except end; raise; end;
     if FFamily <> dfTwn4 then
       try H.ReleaseReader;
       except if AResult.WriteVerified then AResult.WriteUncertain := True; raise; end;

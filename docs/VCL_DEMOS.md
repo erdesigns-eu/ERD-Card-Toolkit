@@ -338,9 +338,15 @@ are reported, while unexpected failures abort. This does not guarantee every
 issuer record is accessible. The range can be increased within component bounds.
 
 MobibDemo is a separate designer form with its own PC/SC dropdown, explicit
-Calypso dialect/record length and bound. Its two actions read the MOBIB
-file plan (editable FIDs) or one caller-specified logical file. An explicit layout
-selector enables known legacy holder/events/contract-date/counter decoding. It displays every actual raw
+Calypso dialect/record length and bound. Its three actions read the MOBIB
+file plan (editable FIDs), one caller-specified logical file, or one authenticated
+logical file through a separately selected provisioned SAM. The SAM dropdown
+is populated from the same in-demo PC/SC discovery. Both connections run in the worker. An explicit layout
+selector enables known holder/events/counter and versioned subscription decoding,
+including tariff, known product names, sale price/date, optional duration and
+associated remaining-trip counters. The authenticated action requires explicit
+revision, eight-byte serial, key index, KIF/KVC and an exact existing-record count;
+it aborts on missing/restricted/chained responses rather than guessing a MAC transcript. It displays every actual raw
 record and exports it through the own save dialog. See [MOBIB_CALYPSO.md](MOBIB_CALYPSO.md)
 for the concrete files, status behavior, parsed fields, secure-provider integration and remaining issuer-specific schemas.
 
