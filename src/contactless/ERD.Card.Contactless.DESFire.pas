@@ -13,7 +13,8 @@ uses
   System.SysUtils, System.Classes,
 {$ENDIF}
   ERD.Card.Transport, ERD.Card.Crypto, ERD.Card.Contactless,
-  ERD.Card.Contactless.DESFire.EV2, ERD.Card.Contactless.DESFire.EV1;
+  ERD.Card.Contactless.DESFire.EV2, ERD.Card.Contactless.DESFire.EV1,
+  ERD.Card.Crypto.DES, ERD.Card.Contactless.DESFire.DES;
 
 const
   /// <summary>Hard bound for an individual acquired/plain DESFire transfer; wire fields remain 24-bit.</summary>
@@ -42,7 +43,15 @@ type
     /// <summary>AuthenticateEV2First with caller-supplied AES key and EV2 Plain/MACed/Full messaging.</summary>
     dfsEv2Aes,
     /// <summary>EV1 AuthenticateAES with chained-IV AES-CMAC and encrypted CRC32 messaging.</summary>
-    dfsEv1Aes
+    dfsEv1Aes,
+    /// <summary>ISO Authenticate 1A with an explicit 16-byte 2K3DES key; chained eight-byte CMAC/CRC32.</summary>
+    dfsEv1TwoKey3Des,
+    /// <summary>ISO Authenticate 1A with an explicit 24-byte 3K3DES key; sixteen-byte nonces and CMAC/CRC32.</summary>
+    dfsEv1ThreeKey3Des,
+    /// <summary>Legacy Authenticate 0A with an explicit eight-byte DES key; reset-IV CBC-MAC/CRC16.</summary>
+    dfsD40Des,
+    /// <summary>Legacy Authenticate 0A with an explicit sixteen-byte 2K3DES key; no ISO messaging.</summary>
+    dfsD40TwoKey3Des
   );
   /// <summary>Supported ordinary native DESFire file types; administration and transaction writes are separate.</summary>
   TDesfireFileType = (
@@ -389,6 +398,10 @@ type
     procedure Finish(const ASucceeded: Boolean);
     procedure ValidateCredentials;
     procedure Authenticate(const AReauthenticate: Boolean = False);
+    procedure AuthenticateDes;
+    function DesProvider: ICardDesProvider;
+    function IsDes: Boolean;
+    function IsLegacyDes: Boolean;
     procedure SetRekey(const AValue: TBytes);
     function GetRekey: TBytes;
     procedure SetRekeyNumber(const AValue: Byte);
@@ -465,9 +478,9 @@ type
     function OpenManagementSession(const AAid: Cardinal): IDesfireManagement;
     /// <summary>Retained connected native-wrapping transport with ICardTransaction; cannot change while busy.</summary>
     property Transport: ICardTransport read FTransport write SetTransport;
-    /// <summary>Retained maintained AES backend; required for the explicit EV1/EV2 AES profiles.</summary>
+    /// <summary>Retained maintained backend; DES profiles require the optional ICardDesProvider capability.</summary>
     property CryptoProvider: ICardAesProvider read FProvider write SetProvider;
-    /// <summary>Owned copy of exactly 16 authentication bytes, or empty to clear; getter returns a separate copy.</summary>
+    /// <summary>Owned profile key: 8-byte DES, 16-byte AES/2K3DES or 24-byte 3K3DES; empty clears; getter copies.</summary>
     property AuthenticationKey: TBytes read GetKey write SetKey;
     /// <summary>Explicit application authentication key number 0..13; not automatically guessed.</summary>
     property KeyNumber: Byte read FKeyNumber write SetKeyNumber;
@@ -477,7 +490,7 @@ type
     property ReauthenticationKey: TBytes read GetRekey write SetRekey;
     /// <summary>Explicit target application key number 0..13 for the optional EV2 NonFirst switch.</summary>
     property ReauthenticationKeyNumber: Byte read FRekeyNumber write SetRekeyNumber;
-    /// <summary>Explicit public, EV1 AES or EV2 AES profile, default public; no downgrade/fallback.</summary>
+    /// <summary>Explicit public, EV1/EV2 AES, ISO 2K/3K3DES or D40 DES/2K3DES profile; no downgrade/fallback.</summary>
     property Security: TDesfireSecurity read FSecurity write SetSecurity;
     /// <summary>Minimum acquired file mode for authenticated operations, default MACed; choose Plain explicitly if intended.</summary>
     property MinimumCommunication: TDesfireCommunication read FMinimum write SetMinimum;
@@ -669,7 +682,7 @@ begin if FBusy then InvalidDesfire; FProvider:=AValue; end;
 procedure TDesfireCardReader.SetKey(const AValue:TBytes);
 var B:TBytes;
 begin
-  if FBusy or not (Length(AValue) in [0,16]) then InvalidDesfire;
+  if FBusy or not (Length(AValue) in [0,8,16,24]) then InvalidDesfire;
   B:=CopyBytes(AValue); TCardCrypto.Clear(FKey); FKey:=B;
 end;
 function TDesfireCardReader.GetKey:TBytes;
@@ -687,7 +700,14 @@ begin if FBusy or (AValue>13) then InvalidDesfire; FRekeyNumber:=AValue; end;
 
 procedure TDesfireCardReader.ValidateCredentials;
 begin
-  if (FSecurity<>dfsPublic) and ((FProvider=nil) or (Length(FKey)<>16)) then InvalidDesfire;
+  if FSecurity<>dfsPublic then begin
+    if FProvider=nil then InvalidDesfire;
+    case FSecurity of
+      dfsEv1ThreeKey3Des: if Length(FKey)<>24 then InvalidDesfire;
+      dfsD40Des: if Length(FKey)<>8 then InvalidDesfire;
+    else if Length(FKey)<>16 then InvalidDesfire;end;
+    if IsDes then DesProvider;
+  end;
   if (Length(FRekey)>0) and (FSecurity<>dfsEv2Aes) then InvalidDesfire;
 end;
 
@@ -750,10 +770,48 @@ begin
   finally TCardCrypto.Clear(Buffer); TCardCrypto.Clear(Chunk); TCardCrypto.Clear(Part); end;
 end;
 
+function TDesfireCardReader.IsDes: Boolean;
+begin Result:=FSecurity in [dfsEv1TwoKey3Des,dfsEv1ThreeKey3Des,dfsD40Des,dfsD40TwoKey3Des];end;
+function TDesfireCardReader.IsLegacyDes: Boolean;
+begin Result:=FSecurity in [dfsD40Des,dfsD40TwoKey3Des];end;
+function TDesfireCardReader.DesProvider: ICardDesProvider;
+begin if not Supports(FProvider,ICardDesProvider,Result) then InvalidDesfire;end;
+procedure TDesfireCardReader.AuthenticateDes;
+var
+  P:ICardDesProvider;
+  K,InitialVector,Header,Cipher,A,B,Plain,Challenge,Rotated,Received:TBytes;
+  N,J:Integer;Status,Instruction:Byte;
+begin
+  P:=DesProvider;K:=CopyBytes(FKey);InitialVector:=nil;Header:=nil;Cipher:=nil;A:=nil;B:=nil;
+  Plain:=nil;Challenge:=nil;Rotated:=nil;Received:=nil;FAuthenticated:=False;
+  try
+    N:=8;if FSecurity=dfsEv1ThreeKey3Des then N:=16;
+    A:=P.RandomBytes(N);if Length(A)<>N then InvalidDesfire;
+    SetLength(InitialVector,8);SetLength(Header,1);Header[0]:=FKeyNumber;Instruction:=$1A;if IsLegacyDes then Instruction:=$0A;
+    Cipher:=Frame(Instruction,Header,Status,False);if (Status<>$AF) or (Length(Cipher)<>N) then InvalidDesfire;
+    B:=TCardDesCrypto.Crypt(P,K,InitialVector,Cipher,False);
+    if not IsLegacyDes then begin TCardCrypto.Clear(InitialVector);InitialVector:=Copy(Cipher,N-8,8);end;
+    SetLength(Plain,N*2);Move(A[0],Plain[0],N);for J:=0 to N-1 do Plain[N+J]:=B[(J+1) mod N];
+    if IsLegacyDes then Challenge:=TCardDesCrypto.LegacySend(P,K,Plain)
+    else Challenge:=TCardDesCrypto.Crypt(P,K,InitialVector,Plain,True);
+    if not IsLegacyDes then begin TCardCrypto.Clear(InitialVector);InitialVector:=Copy(Challenge,N*2-8,8);end;
+    TCardCrypto.Clear(Cipher);Cipher:=Frame($AF,Challenge,Status,False);if (Status<>0) or (Length(Cipher)<>N) then InvalidDesfire;
+    Received:=TCardDesCrypto.Crypt(P,K,InitialVector,Cipher,False);SetLength(Rotated,N);for J:=0 to N-1 do Rotated[J]:=A[(J+1) mod N];
+    if not TCardCrypto.EqualSecret(Rotated,Received) then InvalidDesfire;
+    TDesfireEv2Codec.ClearKeys(FKeys);FKeys.Encryption:=TDesfireDesCodec.DeriveKey(A,B,Length(K));
+    TCardCrypto.Clear(FSessionIv);SetLength(FSessionIv,8);FSessionKeyNumber:=FKeyNumber;FReauthenticated:=False;FAuthenticated:=True;
+  finally
+    TCardCrypto.Clear(K);TCardCrypto.Clear(InitialVector);TCardCrypto.Clear(Header);TCardCrypto.Clear(Cipher);
+    TCardCrypto.Clear(A);TCardCrypto.Clear(B);TCardCrypto.Clear(Plain);TCardCrypto.Clear(Challenge);
+    TCardCrypto.Clear(Rotated);TCardCrypto.Clear(Received);
+  end;
+end;
+
 procedure TDesfireCardReader.Authenticate(const AReauthenticate:Boolean);
 var Key,Initial,Header,Cipher,RndA,RndB,Plain,Challenge,Rotated,Received:TBytes;
   Status,Instruction,Number:Byte; I,Expected,Offset:Integer;
 begin
+  if IsDes then begin if AReauthenticate then InvalidDesfire;AuthenticateDes;Exit;end;
   if AReauthenticate and ((FSecurity<>dfsEv2Aes) or not FAuthenticated or
     (Length(FRekey)<>16) or FReauthenticated) then InvalidDesfire;
   Number:=FKeyNumber; Key:=CopyBytes(FKey);
@@ -840,11 +898,20 @@ end;
 
 function TDesfireCardReader.Send(const AInstruction:Byte; const AHeader,AData:TBytes;
   const AMode:TDesfireCommunication; const AExpected:Integer; const AWrite:Boolean):TBytes;
-var Packet,Wire:TBytes; Limit:Integer;
+var Packet,Wire:TBytes; Limit:Integer;ResponseMode:TDesfireCommunication;
 begin
   Result:=nil; Packet:=nil; Wire:=nil;
   try
-    if FAuthenticated and (FSecurity=dfsEv1Aes) then
+    if FAuthenticated and IsDes then begin
+      Packet:=TDesfireDesCodec.EncodeCommand(DesProvider,FKeys.Encryption,FSessionIv,AInstruction,AHeader,AData,AMode,AWrite,IsLegacyDes);
+      ResponseMode:=AMode;if AWrite then begin if IsLegacyDes then ResponseMode:=dfcPlain else ResponseMode:=dfcMac;end;
+      Limit:=AExpected+8;if IsLegacyDes then Limit:=AExpected+4;
+      if ResponseMode=dfcPlain then begin if IsLegacyDes then Limit:=AExpected;end;
+      if ResponseMode=dfcFull then begin if IsLegacyDes then Limit:=((AExpected+2+7) div 8)*8 else Limit:=((AExpected+4+7) div 8)*8;end;
+      Wire:=Exchange(AInstruction,Packet,Limit,AWrite);
+      Result:=TDesfireDesCodec.DecodeResponse(DesProvider,FKeys.Encryption,FSessionIv,Wire,ResponseMode,AExpected,IsLegacyDes);
+    end
+    else if FAuthenticated and (FSecurity=dfsEv1Aes) then
     begin
       Packet:=TDesfireEv1Codec.EncodeCommand(FProvider,FKeys.Encryption,FSessionIv,
         AInstruction,AHeader,AData,AMode,AWrite);
@@ -880,7 +947,14 @@ begin
   H:=nil; Wire:=nil; Packet:=nil;
   try
     SetLength(H,1); H[0]:=AFile;
-    if FAuthenticated and (FSecurity=dfsEv1Aes) then
+    if FAuthenticated and IsDes then begin
+      Packet:=TDesfireDesCodec.EncodeCommand(DesProvider,FKeys.Encryption,FSessionIv,$F5,H,nil,dfcPlain,False,IsLegacyDes);
+      Wire:=Exchange($F5,Packet,25,False);
+      if IsLegacyDes then Packet:=TDesfireDesCodec.DecodeResponse(DesProvider,FKeys.Encryption,FSessionIv,Wire,dfcPlain,Length(Wire),True)
+      else begin if Length(Wire)<8 then InvalidDesfire;Packet:=TDesfireDesCodec.DecodeResponse(DesProvider,FKeys.Encryption,FSessionIv,Wire,dfcMac,Length(Wire)-8,False);end;
+      Result:=TDesfireCodec.FileSettings(AFile,Packet);
+    end
+    else if FAuthenticated and (FSecurity=dfsEv1Aes) then
     begin
       Packet:=TDesfireEv1Codec.EncodeCommand(FProvider,FKeys.Encryption,FSessionIv,$F5,H,nil,dfcPlain,False);
       Wire:=Exchange($F5,Packet,25,False); if Length(Wire)<8 then InvalidDesfire;
@@ -1122,7 +1196,13 @@ var Packet,Wire:TBytes;
 begin
   Result:=nil; Packet:=nil; Wire:=nil;
   try
-    if FAuthenticated and (FSecurity=dfsEv2Aes) then
+    if FAuthenticated and IsDes then begin
+      Packet:=TDesfireDesCodec.EncodeCommand(DesProvider,FKeys.Encryption,FSessionIv,AInstruction,AHeader,nil,dfcPlain,False,IsLegacyDes);
+      Wire:=Exchange(AInstruction,Packet,AMaxBytes+8,AMutation);
+      if IsLegacyDes then Result:=TDesfireDesCodec.DecodeResponse(DesProvider,FKeys.Encryption,FSessionIv,Wire,dfcPlain,Length(Wire),True)
+      else begin if Length(Wire)<8 then InvalidDesfire;Result:=TDesfireDesCodec.DecodeResponse(DesProvider,FKeys.Encryption,FSessionIv,Wire,dfcMac,Length(Wire)-8,False);end;
+    end
+    else if FAuthenticated and (FSecurity=dfsEv2Aes) then
     begin
       Packet:=TDesfireEv2Codec.EncodeCommand(FProvider,FKeys,FTi,FCounter,AInstruction,AHeader,nil,dfcMac);
       Wire:=Exchange(AInstruction,Packet,AMaxBytes+8,AMutation); Inc(FCounter);

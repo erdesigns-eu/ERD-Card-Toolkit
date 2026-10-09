@@ -44,9 +44,10 @@ out of scope (see [Not supported](#not-supported)).
 | **EMV** | `TEMVCardReader` | PSE/PPSE directory discovery, PDOL inspection without GPO, GPO and AFL record reading, an optional bounded extra SFI/record scan, GET DATA objects, and transaction logs. Extracts PAN, expiry date, cardholder name, IBAN and Track 2 equivalent data where present. Reading only, no transactions. |
 | **MIFARE Classic** | `TContactlessCardReader` | Classic Mini/1K/4K layouts. Read blocks with a supplied key A/B and write data blocks; block 0 and sector trailers are refused. |
 | **Ultralight / NTAG (Type 2)** | `TContactlessCardReader`, `TType2PasswordCardReader` | Ultralight, Ultralight EV1 (48/128), NTAG210/212/213/215/216 page reads, user-memory snapshots and user-page writes. PWD_AUTH/PACK password-protected access through an ACR122U adapter. |
+| **Ultralight C** | `TUltralightCCardReaderWriter` | Supplied-key 2K3DES mutual authentication, exact user-page reads, a 144-byte user-memory snapshot and verified four-byte user-page writes through raw RF (ACR122U adapter). Manufacturer, locks, configuration and key pages are excluded. |
 | **NDEF** | `TType2NdefCardReader`, `TType4NdefCardReader`, `TType5NdefCardReader` | Complete NDEF message codec with chunk reassembly, plus Text, URI, MIME, external and Smart Poster record helpers. Read, replace and clear public NDEF messages on Type 2, Type 4 (mapping 1.0/2.0) and Type 5 tags, with read-back verification. |
 | **ISO 15693** | `TIso15693CardReader` | System information, block-range reads and verified single-block writes through an ACS ACR1552 (FF FB pass-through) session. |
-| **MIFARE DESFire** | `TDesfireCardReader` | Public and EV1/EV2 AES-authenticated (Plain, MACed, Full) access. Discover applications/files, read standard/backup/value/record files and write standard data. Transactions with commit/abort, and management of applications, files, keys and access rights. EV2 NonFirst re-authentication. |
+| **MIFARE DESFire** | `TDesfireCardReader` | Public, EV1/EV2 AES, EV1 2K3DES/3K3DES and explicit D40 DES/2K3DES (Plain, MACed, Full) access. Discover applications/files, read standard/backup/value/record files and write standard data. Transactions with commit/abort, and AES management of applications, files, keys and access rights. EV2 NonFirst re-authentication. |
 | **Programmable (“magic”) UIDs** | `TRawUidProgrammer`, UID methods of `TContactlessCardReader` | Explicit profiles for Gen1a/Gen1b, unsealed UFUID, Gen2/CUID, factory FUID (one-time), Gen3, Gen4 UMC (4/7/10-byte), USCUID/GDM, partial UFUID/ZUID/PFUID and Type 2 DirectWrite. Raw RF access uses an ACS ACR122U/PN532 adapter. |
 | **Calypso / MOBIB** | `TCalypsoCardReader` | Read Calypso files and records (legacy CLA 94 or ISO CLA 00) using the built-in MOBIB plan or your own FID plan. Decode holder, events, contracts (versions 0–4) and counters. Native Calypso secure sessions through a provisioned SAM (revisions 1, 2, 3 and 3.2) or a custom provider. Offline activation/validity/zone checks with `TMobibRuleEngine` and caller-supplied operator profiles. |
 | **SIM / USIM** | `TSimCardReaderWriter` | Classic GSM SIM and UICC/USIM profiles. Read ICCID, IMSI, SPN, service tables and EF.DIR applications; inspect, read and verified-write transparent, linear-fixed and cyclic files. PIN/PUK status, verify, change and unblock with attempt budgets. Read, write and delete ADN contacts; read linked USIM contacts (PBR/IAP/EXT/EMAIL/ANR); verified linked write plans; SMS record and text/UDH codecs. |
@@ -102,7 +103,7 @@ These rules apply to every component and are worth knowing before you start:
 | `src/design` | IDE palette registration |
 | `packages/` | `ERDCards.groupproj`: 12 runtime packages and the design-time package |
 | `Delphi Packages/` | Native-format `Core` reference package used for IDE troubleshooting |
-| `examples/` | 19 console examples and 21 VCL demos (`examples/vcl/CardDemos.groupproj`) |
+| `examples/` | 19 console examples and 22 VCL demos (`examples/vcl/CardDemos.groupproj`) |
 | `tests/` | Pascal test programs (Free Pascal/Delphi), native ABI shims and Python tests |
 | `tools/` | Build scripts, test runner, distribution checker, `pascalcheck` static analysis, fixture generators |
 | `docs/` | Per-family guides, installation, validation and planning documents |
@@ -165,13 +166,13 @@ tools\build-packages.cmd dcc32 design
 ```
 
 Then use **Component > Install Packages > Add** and select `ERDCardDesign.bpl`.
-It registers 25 components:
+It registers 26 components:
 
 | Palette page | Components |
 | --- | --- |
 | **ERD Cards** | `TSmartCardMonitor`, `TSmartCardReader`, `TBelgianEIDReader`, `TICAODocumentReader`, `TSimCardReaderWriter`, `TEMVCardReader`, `TMagStripeReaderWriter`, `TMemoryCardReaderWriter`, `TSleCounterCardReaderWriter`, `TSle4404CardReaderWriter` |
 | **ERD Input** | `THidDeviceMonitor`, `TUsbHidInputMonitor`, `TRfidKeyboardReader`, `TRfidHidReportReader`, `TUsbHidReaderWriter`, `TTwn4CardReaderWriter` |
-| **ERD Contactless** | `TCalypsoCardReader`, `TContactlessCardReader`, `TType2NdefCardReader`, `TType4NdefCardReader`, `TIso15693CardReader`, `TType5NdefCardReader`, `TDesfireCardReader`, `TType2PasswordCardReader`, `TRawUidProgrammer` |
+| **ERD Contactless** | `TUltralightCCardReaderWriter`, `TCalypsoCardReader`, `TContactlessCardReader`, `TType2NdefCardReader`, `TType4NdefCardReader`, `TIso15693CardReader`, `TType5NdefCardReader`, `TDesfireCardReader`, `TType2PasswordCardReader`, `TRawUidProgrammer` |
 
 Scalar settings are stored in the DFM. Interface properties such as `Transport`,
 `Profile`, `Device`, `Session`, `Channel` and `CryptoProvider` must be assigned at
@@ -250,17 +251,17 @@ report card removal. See [docs/READER_EVENTS.md](docs/READER_EVENTS.md).
 
 ## Cryptographic providers
 
-Cryptography is supplied through interfaces (`ICardAesProvider`, `ICardEacProvider`)
+Cryptography is supplied through interfaces (`ICardAesProvider`, `ICardDesProvider`, `ICardEacProvider`)
 so that the core stays dependency-free:
 
 | Provider | Unit | Used for |
 | --- | --- | --- |
-| `TCardWindowsAesProvider` | `ERD.Card.Crypto.Windows` | AES-128 CBC and system CSPRNG via Windows CNG (Windows 7+); DESFire EV1/EV2 |
+| `TCardWindowsAesProvider` | `ERD.Card.Crypto.Windows` | AES-128/3DES CBC and system CSPRNG via Windows CNG; DESFire and Ultralight C |
 | `TCardEacOpenSslProvider` | `ERD.Card.Crypto.EAC.OpenSSL` | ICAO BAC/PACE (AES, 3DES, SHA-1, ECDH) via a separately installed **OpenSSL 3** library whose architecture matches your application. Loads `libcrypto-3.dll` by default; you can also pass an explicit path. |
-| `TCardOpenSslAesProvider` | `ERD.Card.Crypto.OpenSSL` | AES-128 CBC via `libcrypto.so.3`; Linux test backend, not part of any package |
+| `TCardOpenSslAesProvider` | `ERD.Card.Crypto.OpenSSL` | AES-128/3DES CBC via `libcrypto.so.3`; Linux test backend, not part of any package |
 
 `TCardCrypto` in `ERD.Card.Crypto` adds AES-CMAC (including the DESFire chained
-variant), timing-aware secret comparison and buffer clearing. OpenSSL is not bundled.
+variant), timing-aware secret comparison and buffer clearing. `TCardDesCrypto` adds explicit DES/2K3DES key expansion, 64-bit CMAC and the D40 inverse-send transform through native ciphers. OpenSSL is not bundled.
 
 ## Examples
 
@@ -293,10 +294,11 @@ needs no hardware. Run them with `--help` to see their arguments.
 
 ### VCL demos
 
-`examples/vcl/CardDemos.groupproj` contains 21 Windows VCL applications. Each one has
+`examples/vcl/CardDemos.groupproj` contains 22 Windows VCL applications. Each one has
 its own form and DFM, its own reader/HID/COM-port picker with a refresh button, and
 runs card work on a background thread. Write, PIN and management actions require
-an explicit acknowledgement.
+an explicit acknowledgement. PC/SC demos update their reader list from native hotplug events
+and show card offered/removed notifications without running a card operation.
 
 | Demo | Covers |
 | --- | --- |
@@ -313,6 +315,7 @@ an explicit acknowledgement.
 | `SimCardDemo` | SIM/USIM files, identities, services, PIN/PUK, contacts, SMS and linked records |
 | `MifareClassicDemo` | UID, layout/trailers, block reads and writes |
 | `Type2Demo` | Ultralight/NTAG memory, NDEF and PWD_AUTH/PACK |
+| `UltralightCDemo` | Supplied-key authentication, exact user-page/full user-memory reads and verified page writes; own form and DFM |
 | `Type4NdefDemo` | Capability container, file descriptors and NDEF read/write/clear |
 | `Iso15693Demo` | ACR1552 ISO 15693 blocks and Type 5 NDEF |
 | `UidProgrammingDemo` | All programmable-UID profiles |
@@ -377,8 +380,8 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 - **Other European eIDs:** Dutch, Luxembourg and German documents and their national
   online services are not validated; extra PACE/EAC profiles are missing
   ([docs/EUROPEAN_EID.md](docs/EUROPEAN_EID.md)).
-- **MIFARE/DESFire variants:** MIFARE Plus, DESFire D40 and DES/3DES security, LRP,
-  TMAC, SDM and extended key-set/configuration management. NFC Forum Type 1/3 tags.
+- **MIFARE/DESFire variants:** MIFARE Plus, DESFire LRP,
+  TMAC, SDM and extended key-set/configuration management. DES/3DES key rotation and administration; Ultralight C configuration/key/lock changes. NFC Forum Type 1/3 tags.
 - **UID programming:** only the listed programmable profiles; regular card UIDs
   are not writable.
 - **MOBIB:** no built-in De Lijn/STIB/TEC/NMBS-SNCB rule sets; operator profiles must be
@@ -410,6 +413,7 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 | `ERD.Card.Transport` | `ICardTransport` and `ICardTransaction` contracts |
 | `ERD.Card.Events` | Bounded main-thread event queue used by monitors |
 | `ERD.Card.Crypto` | AES provider contract, AES-CMAC and secret helpers |
+| `ERD.Card.Crypto.DES` | Optional DES provider, explicit key expansion and protocol MAC composition |
 | `ERD.Card.Crypto.EAC` | BAC/PACE provider contract (3DES, SHA-1, ECDH GM) |
 | `ERD.Card.Crypto.Windows` | Windows CNG AES/CSPRNG provider |
 | `ERD.Card.Crypto.OpenSSL` | Linux OpenSSL 3 AES/CSPRNG provider (tests) |
@@ -429,6 +433,8 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 | `ERD.Card.EMV.Data` | EMV data model, DOL/AFL/log codec |
 | `ERD.Card.EMV.Reader` | `TEMVCardReader` |
 | `ERD.Card.Contactless` | `TContactlessCardReader`, reader profiles, Classic layout |
+| `ERD.Card.Contactless.UltralightC` | Supplied-key Ultralight C authentication and verified user-memory access |
+| `ERD.Card.Contactless.DESFire.DES` | Distinct EV1 3DES and D40 native-message codecs |
 | `ERD.Card.Contactless.Type2` | Ultralight/NTAG layouts |
 | `ERD.Card.Contactless.Type2.Ndef` | `TType2NdefCardReader` and Type 2 NDEF mapping |
 | `ERD.Card.Contactless.Type2.Password` | `TType2PasswordCardReader` (PWD_AUTH/PACK) |
@@ -494,7 +500,7 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 **Card families**
 
 - [Belgian eID](docs/BELGIAN_EID.md) · [European eID / ICAO](docs/EUROPEAN_EID.md) · [EMV](docs/EMV_READER.md)
-- [Contactless / MIFARE](docs/CONTACTLESS.md) · [NDEF](docs/NDEF.md) · [Type 2 passwords](docs/TYPE2_PASSWORD.md) · [NTAG210/212](docs/NTAG210_212.md) · [Type 4 NDEF](docs/TYPE4_NDEF.md) · [ISO 15693 / Type 5](docs/ISO15693_TYPE5.md)
+- [Contactless / MIFARE](docs/CONTACTLESS.md) · [NDEF](docs/NDEF.md) · [Type 2 passwords](docs/TYPE2_PASSWORD.md) · [Ultralight C / DES security](docs/LEGACY_MIFARE_SECURITY.md) · [NTAG210/212](docs/NTAG210_212.md) · [Type 4 NDEF](docs/TYPE4_NDEF.md) · [ISO 15693 / Type 5](docs/ISO15693_TYPE5.md)
 - [DESFire](docs/DESFIRE.md) · [MOBIB / Calypso](docs/MOBIB_CALYPSO.md)
 - [Programmable UIDs](docs/PROGRAMMABLE_UID.md) · [Raw UID](docs/RAW_UID.md) · [Gen3/Gen4](docs/GEN3_GEN4_UID.md) · [USCUID/FUID](docs/USCUID_FUID.md) · [Gen1b/partial](docs/GEN1B_PARTIAL_UID.md)
 - [Contact memory cards](docs/MEMORY_CARDS.md) · [SLE4404](docs/SLE4404.md) · [SIM / USIM](docs/SIM.md)

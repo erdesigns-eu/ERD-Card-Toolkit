@@ -46,7 +46,9 @@ type
     /// <summary>NativeHid family demonstration.</summary>
     dfNativeHid,
     /// <summary>Public Calypso / MOBIB file-record demonstration.</summary>
-    dfMobib
+    dfMobib,
+    /// <summary>Authenticated Ultralight C user-memory demonstration.</summary>
+    dfUltralightC
   );
   /// <summary>One named form input; secrets are decoded to owned buffers, never stored as public arguments.</summary>
   TCardFamilyField = record
@@ -110,6 +112,7 @@ begin
     dfSim: Result := 'SimCardDemo';
     dfClassic: Result := 'MifareClassicDemo';
     dfType2: Result := 'Type2Demo';
+    dfUltralightC: Result := 'UltralightCDemo';
     dfType4: Result := 'Type4NdefDemo';
     dfMobib: Result := 'MobibDemo';
     dfEmv: Result := 'EmvDemo';
@@ -997,6 +1000,31 @@ begin
       Result[3].Fields[5].Name := 'data'; Result[3].Fields[5].LabelText := 'Replacement bytes (hex)';
       Result[3].Fields[5].DefaultText := ''; Result[3].Fields[5].Secret := False; Result[3].Fields[5].Choices := '';
     end;
+    dfUltralightC:
+    begin
+      SetLength(Result,3);
+      Result[0].Id := 'page'; Result[0].LabelText := 'Authenticate + read user page';
+      Result[0].Mutation := True; Result[0].Pcsc := True;
+      SetLength(Result[0].Fields,2);
+      Result[0].Fields[0].Name := 'page'; Result[0].Fields[0].LabelText := 'Physical user page (4..39)';
+      Result[0].Fields[0].DefaultText := '4'; Result[0].Fields[0].Secret := False; Result[0].Fields[0].Choices := '';
+      Result[0].Fields[1].Name := 'key'; Result[0].Fields[1].LabelText := '16-byte supplied 2K3DES key (hex)';
+      Result[0].Fields[1].DefaultText := ''; Result[0].Fields[1].Secret := True; Result[0].Fields[1].Choices := '';
+      Result[1].Id := 'memory'; Result[1].LabelText := 'Authenticate + read all 144 user bytes';
+      Result[1].Mutation := True; Result[1].Pcsc := True;
+      SetLength(Result[1].Fields,1);
+      Result[1].Fields[0].Name := 'key'; Result[1].Fields[0].LabelText := '16-byte supplied 2K3DES key (hex)';
+      Result[1].Fields[0].DefaultText := ''; Result[1].Fields[0].Secret := True; Result[1].Fields[0].Choices := '';
+      Result[2].Id := 'write'; Result[2].LabelText := 'Authenticate + write user page + verify';
+      Result[2].Mutation := True; Result[2].Pcsc := True;
+      SetLength(Result[2].Fields,3);
+      Result[2].Fields[0].Name := 'page'; Result[2].Fields[0].LabelText := 'Physical user page (4..39)';
+      Result[2].Fields[0].DefaultText := '4'; Result[2].Fields[0].Secret := False; Result[2].Fields[0].Choices := '';
+      Result[2].Fields[1].Name := 'data'; Result[2].Fields[1].LabelText := 'Exactly four replacement bytes (hex)';
+      Result[2].Fields[1].DefaultText := ''; Result[2].Fields[1].Secret := False; Result[2].Fields[1].Choices := '';
+      Result[2].Fields[2].Name := 'key'; Result[2].Fields[2].LabelText := '16-byte supplied 2K3DES key (hex)';
+      Result[2].Fields[2].DefaultText := ''; Result[2].Fields[2].Secret := True; Result[2].Fields[2].Choices := '';
+    end;
     dfType2:
     begin
       SetLength(Result,10);
@@ -1432,12 +1460,12 @@ begin
       Result[2].Fields[0].Name := 'aid'; Result[2].Fields[0].LabelText := 'Explicit native AID (decimal; 0 = PICC)';
       Result[2].Fields[0].DefaultText := '0'; Result[2].Fields[0].Secret := False; Result[2].Fields[0].Choices := '';
       Result[2].Fields[1].Name := 'security'; Result[2].Fields[1].LabelText := 'Explicit security profile';
-      Result[2].Fields[1].DefaultText := '0'; Result[2].Fields[1].Secret := False; Result[2].Fields[1].Choices := 'Public|EV2 AES|EV1 AES';
+      Result[2].Fields[1].DefaultText := '0'; Result[2].Fields[1].Secret := False; Result[2].Fields[1].Choices := 'Public|EV2 AES|EV1 AES|EV1 2K3DES|EV1 3K3DES|D40 DES|D40 2K3DES';
       Result[2].Fields[2].Name := 'minimum'; Result[2].Fields[2].LabelText := 'Minimum communication';
       Result[2].Fields[2].DefaultText := '1'; Result[2].Fields[2].Secret := False; Result[2].Fields[2].Choices := 'Plain|MAC|Full';
       Result[2].Fields[3].Name := 'keynumber'; Result[2].Fields[3].LabelText := 'Supplied authentication key number';
       Result[2].Fields[3].DefaultText := '0'; Result[2].Fields[3].Secret := False; Result[2].Fields[3].Choices := '';
-      Result[2].Fields[4].Name := 'key'; Result[2].Fields[4].LabelText := 'Supplied AES key (hex)';
+      Result[2].Fields[4].Name := 'key'; Result[2].Fields[4].LabelText := 'Supplied authentication key (hex; 8/16/24 bytes by profile)';
       Result[2].Fields[4].DefaultText := ''; Result[2].Fields[4].Secret := True; Result[2].Fields[4].Choices := '';
       Result[2].Fields[5].Name := 'rekeynumber'; Result[2].Fields[5].LabelText := 'Secondary proof-context key number';
       Result[2].Fields[5].DefaultText := '0'; Result[2].Fields[5].Secret := False; Result[2].Fields[5].Choices := '';
@@ -1449,12 +1477,12 @@ begin
       Result[3].Fields[0].Name := 'aid'; Result[3].Fields[0].LabelText := 'Explicit native AID (decimal; 0 = PICC)';
       Result[3].Fields[0].DefaultText := '0'; Result[3].Fields[0].Secret := False; Result[3].Fields[0].Choices := '';
       Result[3].Fields[1].Name := 'security'; Result[3].Fields[1].LabelText := 'Explicit security profile';
-      Result[3].Fields[1].DefaultText := '0'; Result[3].Fields[1].Secret := False; Result[3].Fields[1].Choices := 'Public|EV2 AES|EV1 AES';
+      Result[3].Fields[1].DefaultText := '0'; Result[3].Fields[1].Secret := False; Result[3].Fields[1].Choices := 'Public|EV2 AES|EV1 AES|EV1 2K3DES|EV1 3K3DES|D40 DES|D40 2K3DES';
       Result[3].Fields[2].Name := 'minimum'; Result[3].Fields[2].LabelText := 'Minimum communication';
       Result[3].Fields[2].DefaultText := '1'; Result[3].Fields[2].Secret := False; Result[3].Fields[2].Choices := 'Plain|MAC|Full';
       Result[3].Fields[3].Name := 'keynumber'; Result[3].Fields[3].LabelText := 'Supplied authentication key number';
       Result[3].Fields[3].DefaultText := '0'; Result[3].Fields[3].Secret := False; Result[3].Fields[3].Choices := '';
-      Result[3].Fields[4].Name := 'key'; Result[3].Fields[4].LabelText := 'Supplied AES key (hex)';
+      Result[3].Fields[4].Name := 'key'; Result[3].Fields[4].LabelText := 'Supplied authentication key (hex; 8/16/24 bytes by profile)';
       Result[3].Fields[4].DefaultText := ''; Result[3].Fields[4].Secret := True; Result[3].Fields[4].Choices := '';
       Result[3].Fields[5].Name := 'rekeynumber'; Result[3].Fields[5].LabelText := 'Secondary proof-context key number';
       Result[3].Fields[5].DefaultText := '0'; Result[3].Fields[5].Secret := False; Result[3].Fields[5].Choices := '';
@@ -1472,12 +1500,12 @@ begin
       Result[4].Fields[0].Name := 'aid'; Result[4].Fields[0].LabelText := 'Explicit native AID (decimal; 0 = PICC)';
       Result[4].Fields[0].DefaultText := '0'; Result[4].Fields[0].Secret := False; Result[4].Fields[0].Choices := '';
       Result[4].Fields[1].Name := 'security'; Result[4].Fields[1].LabelText := 'Explicit security profile';
-      Result[4].Fields[1].DefaultText := '0'; Result[4].Fields[1].Secret := False; Result[4].Fields[1].Choices := 'Public|EV2 AES|EV1 AES';
+      Result[4].Fields[1].DefaultText := '0'; Result[4].Fields[1].Secret := False; Result[4].Fields[1].Choices := 'Public|EV2 AES|EV1 AES|EV1 2K3DES|EV1 3K3DES|D40 DES|D40 2K3DES';
       Result[4].Fields[2].Name := 'minimum'; Result[4].Fields[2].LabelText := 'Minimum communication';
       Result[4].Fields[2].DefaultText := '1'; Result[4].Fields[2].Secret := False; Result[4].Fields[2].Choices := 'Plain|MAC|Full';
       Result[4].Fields[3].Name := 'keynumber'; Result[4].Fields[3].LabelText := 'Supplied authentication key number';
       Result[4].Fields[3].DefaultText := '0'; Result[4].Fields[3].Secret := False; Result[4].Fields[3].Choices := '';
-      Result[4].Fields[4].Name := 'key'; Result[4].Fields[4].LabelText := 'Supplied AES key (hex)';
+      Result[4].Fields[4].Name := 'key'; Result[4].Fields[4].LabelText := 'Supplied authentication key (hex; 8/16/24 bytes by profile)';
       Result[4].Fields[4].DefaultText := ''; Result[4].Fields[4].Secret := True; Result[4].Fields[4].Choices := '';
       Result[4].Fields[5].Name := 'rekeynumber'; Result[4].Fields[5].LabelText := 'Secondary proof-context key number';
       Result[4].Fields[5].DefaultText := '0'; Result[4].Fields[5].Secret := False; Result[4].Fields[5].Choices := '';
@@ -1491,12 +1519,12 @@ begin
       Result[5].Fields[0].Name := 'aid'; Result[5].Fields[0].LabelText := 'Explicit native AID (decimal; 0 = PICC)';
       Result[5].Fields[0].DefaultText := '0'; Result[5].Fields[0].Secret := False; Result[5].Fields[0].Choices := '';
       Result[5].Fields[1].Name := 'security'; Result[5].Fields[1].LabelText := 'Explicit security profile';
-      Result[5].Fields[1].DefaultText := '0'; Result[5].Fields[1].Secret := False; Result[5].Fields[1].Choices := 'Public|EV2 AES|EV1 AES';
+      Result[5].Fields[1].DefaultText := '0'; Result[5].Fields[1].Secret := False; Result[5].Fields[1].Choices := 'Public|EV2 AES|EV1 AES|EV1 2K3DES|EV1 3K3DES|D40 DES|D40 2K3DES';
       Result[5].Fields[2].Name := 'minimum'; Result[5].Fields[2].LabelText := 'Minimum communication';
       Result[5].Fields[2].DefaultText := '1'; Result[5].Fields[2].Secret := False; Result[5].Fields[2].Choices := 'Plain|MAC|Full';
       Result[5].Fields[3].Name := 'keynumber'; Result[5].Fields[3].LabelText := 'Supplied authentication key number';
       Result[5].Fields[3].DefaultText := '0'; Result[5].Fields[3].Secret := False; Result[5].Fields[3].Choices := '';
-      Result[5].Fields[4].Name := 'key'; Result[5].Fields[4].LabelText := 'Supplied AES key (hex)';
+      Result[5].Fields[4].Name := 'key'; Result[5].Fields[4].LabelText := 'Supplied authentication key (hex; 8/16/24 bytes by profile)';
       Result[5].Fields[4].DefaultText := ''; Result[5].Fields[4].Secret := True; Result[5].Fields[4].Choices := '';
       Result[5].Fields[5].Name := 'rekeynumber'; Result[5].Fields[5].LabelText := 'Secondary proof-context key number';
       Result[5].Fields[5].DefaultText := '0'; Result[5].Fields[5].Secret := False; Result[5].Fields[5].Choices := '';
@@ -1514,12 +1542,12 @@ begin
       Result[6].Fields[0].Name := 'aid'; Result[6].Fields[0].LabelText := 'Explicit native AID (decimal; 0 = PICC)';
       Result[6].Fields[0].DefaultText := '0'; Result[6].Fields[0].Secret := False; Result[6].Fields[0].Choices := '';
       Result[6].Fields[1].Name := 'security'; Result[6].Fields[1].LabelText := 'Explicit security profile';
-      Result[6].Fields[1].DefaultText := '0'; Result[6].Fields[1].Secret := False; Result[6].Fields[1].Choices := 'Public|EV2 AES|EV1 AES';
+      Result[6].Fields[1].DefaultText := '0'; Result[6].Fields[1].Secret := False; Result[6].Fields[1].Choices := 'Public|EV2 AES|EV1 AES|EV1 2K3DES|EV1 3K3DES|D40 DES|D40 2K3DES';
       Result[6].Fields[2].Name := 'minimum'; Result[6].Fields[2].LabelText := 'Minimum communication';
       Result[6].Fields[2].DefaultText := '1'; Result[6].Fields[2].Secret := False; Result[6].Fields[2].Choices := 'Plain|MAC|Full';
       Result[6].Fields[3].Name := 'keynumber'; Result[6].Fields[3].LabelText := 'Supplied authentication key number';
       Result[6].Fields[3].DefaultText := '0'; Result[6].Fields[3].Secret := False; Result[6].Fields[3].Choices := '';
-      Result[6].Fields[4].Name := 'key'; Result[6].Fields[4].LabelText := 'Supplied AES key (hex)';
+      Result[6].Fields[4].Name := 'key'; Result[6].Fields[4].LabelText := 'Supplied authentication key (hex; 8/16/24 bytes by profile)';
       Result[6].Fields[4].DefaultText := ''; Result[6].Fields[4].Secret := True; Result[6].Fields[4].Choices := '';
       Result[6].Fields[5].Name := 'rekeynumber'; Result[6].Fields[5].LabelText := 'Secondary proof-context key number';
       Result[6].Fields[5].DefaultText := '0'; Result[6].Fields[5].Secret := False; Result[6].Fields[5].Choices := '';
@@ -1537,12 +1565,12 @@ begin
       Result[7].Fields[0].Name := 'aid'; Result[7].Fields[0].LabelText := 'Explicit native AID (decimal; 0 = PICC)';
       Result[7].Fields[0].DefaultText := '0'; Result[7].Fields[0].Secret := False; Result[7].Fields[0].Choices := '';
       Result[7].Fields[1].Name := 'security'; Result[7].Fields[1].LabelText := 'Explicit security profile';
-      Result[7].Fields[1].DefaultText := '0'; Result[7].Fields[1].Secret := False; Result[7].Fields[1].Choices := 'Public|EV2 AES|EV1 AES';
+      Result[7].Fields[1].DefaultText := '0'; Result[7].Fields[1].Secret := False; Result[7].Fields[1].Choices := 'Public|EV2 AES|EV1 AES|EV1 2K3DES|EV1 3K3DES|D40 DES|D40 2K3DES';
       Result[7].Fields[2].Name := 'minimum'; Result[7].Fields[2].LabelText := 'Minimum communication';
       Result[7].Fields[2].DefaultText := '1'; Result[7].Fields[2].Secret := False; Result[7].Fields[2].Choices := 'Plain|MAC|Full';
       Result[7].Fields[3].Name := 'keynumber'; Result[7].Fields[3].LabelText := 'Supplied authentication key number';
       Result[7].Fields[3].DefaultText := '0'; Result[7].Fields[3].Secret := False; Result[7].Fields[3].Choices := '';
-      Result[7].Fields[4].Name := 'key'; Result[7].Fields[4].LabelText := 'Supplied AES key (hex)';
+      Result[7].Fields[4].Name := 'key'; Result[7].Fields[4].LabelText := 'Supplied authentication key (hex; 8/16/24 bytes by profile)';
       Result[7].Fields[4].DefaultText := ''; Result[7].Fields[4].Secret := True; Result[7].Fields[4].Choices := '';
       Result[7].Fields[5].Name := 'rekeynumber'; Result[7].Fields[5].LabelText := 'Secondary proof-context key number';
       Result[7].Fields[5].DefaultText := '0'; Result[7].Fields[5].Secret := False; Result[7].Fields[5].Choices := '';
@@ -1564,12 +1592,12 @@ begin
       Result[8].Fields[0].Name := 'aid'; Result[8].Fields[0].LabelText := 'Explicit native AID (decimal; 0 = PICC)';
       Result[8].Fields[0].DefaultText := '0'; Result[8].Fields[0].Secret := False; Result[8].Fields[0].Choices := '';
       Result[8].Fields[1].Name := 'security'; Result[8].Fields[1].LabelText := 'Explicit security profile';
-      Result[8].Fields[1].DefaultText := '0'; Result[8].Fields[1].Secret := False; Result[8].Fields[1].Choices := 'Public|EV2 AES|EV1 AES';
+      Result[8].Fields[1].DefaultText := '0'; Result[8].Fields[1].Secret := False; Result[8].Fields[1].Choices := 'Public|EV2 AES|EV1 AES|EV1 2K3DES|EV1 3K3DES|D40 DES|D40 2K3DES';
       Result[8].Fields[2].Name := 'minimum'; Result[8].Fields[2].LabelText := 'Minimum communication';
       Result[8].Fields[2].DefaultText := '1'; Result[8].Fields[2].Secret := False; Result[8].Fields[2].Choices := 'Plain|MAC|Full';
       Result[8].Fields[3].Name := 'keynumber'; Result[8].Fields[3].LabelText := 'Supplied authentication key number';
       Result[8].Fields[3].DefaultText := '0'; Result[8].Fields[3].Secret := False; Result[8].Fields[3].Choices := '';
-      Result[8].Fields[4].Name := 'key'; Result[8].Fields[4].LabelText := 'Supplied AES key (hex)';
+      Result[8].Fields[4].Name := 'key'; Result[8].Fields[4].LabelText := 'Supplied authentication key (hex; 8/16/24 bytes by profile)';
       Result[8].Fields[4].DefaultText := ''; Result[8].Fields[4].Secret := True; Result[8].Fields[4].Choices := '';
       Result[8].Fields[5].Name := 'rekeynumber'; Result[8].Fields[5].LabelText := 'Secondary proof-context key number';
       Result[8].Fields[5].DefaultText := '0'; Result[8].Fields[5].Secret := False; Result[8].Fields[5].Choices := '';
@@ -1589,12 +1617,12 @@ begin
       Result[9].Fields[0].Name := 'aid'; Result[9].Fields[0].LabelText := 'Explicit native AID (decimal; 0 = PICC)';
       Result[9].Fields[0].DefaultText := '0'; Result[9].Fields[0].Secret := False; Result[9].Fields[0].Choices := '';
       Result[9].Fields[1].Name := 'security'; Result[9].Fields[1].LabelText := 'Explicit security profile';
-      Result[9].Fields[1].DefaultText := '0'; Result[9].Fields[1].Secret := False; Result[9].Fields[1].Choices := 'Public|EV2 AES|EV1 AES';
+      Result[9].Fields[1].DefaultText := '0'; Result[9].Fields[1].Secret := False; Result[9].Fields[1].Choices := 'Public|EV2 AES|EV1 AES|EV1 2K3DES|EV1 3K3DES|D40 DES|D40 2K3DES';
       Result[9].Fields[2].Name := 'minimum'; Result[9].Fields[2].LabelText := 'Minimum communication';
       Result[9].Fields[2].DefaultText := '1'; Result[9].Fields[2].Secret := False; Result[9].Fields[2].Choices := 'Plain|MAC|Full';
       Result[9].Fields[3].Name := 'keynumber'; Result[9].Fields[3].LabelText := 'Supplied authentication key number';
       Result[9].Fields[3].DefaultText := '0'; Result[9].Fields[3].Secret := False; Result[9].Fields[3].Choices := '';
-      Result[9].Fields[4].Name := 'key'; Result[9].Fields[4].LabelText := 'Supplied AES key (hex)';
+      Result[9].Fields[4].Name := 'key'; Result[9].Fields[4].LabelText := 'Supplied authentication key (hex; 8/16/24 bytes by profile)';
       Result[9].Fields[4].DefaultText := ''; Result[9].Fields[4].Secret := True; Result[9].Fields[4].Choices := '';
       Result[9].Fields[5].Name := 'rekeynumber'; Result[9].Fields[5].LabelText := 'Secondary proof-context key number';
       Result[9].Fields[5].DefaultText := '0'; Result[9].Fields[5].Secret := False; Result[9].Fields[5].Choices := '';
@@ -1614,12 +1642,12 @@ begin
       Result[10].Fields[0].Name := 'aid'; Result[10].Fields[0].LabelText := 'Explicit native AID (decimal; 0 = PICC)';
       Result[10].Fields[0].DefaultText := '0'; Result[10].Fields[0].Secret := False; Result[10].Fields[0].Choices := '';
       Result[10].Fields[1].Name := 'security'; Result[10].Fields[1].LabelText := 'Explicit security profile';
-      Result[10].Fields[1].DefaultText := '0'; Result[10].Fields[1].Secret := False; Result[10].Fields[1].Choices := 'Public|EV2 AES|EV1 AES';
+      Result[10].Fields[1].DefaultText := '0'; Result[10].Fields[1].Secret := False; Result[10].Fields[1].Choices := 'Public|EV2 AES|EV1 AES|EV1 2K3DES|EV1 3K3DES|D40 DES|D40 2K3DES';
       Result[10].Fields[2].Name := 'minimum'; Result[10].Fields[2].LabelText := 'Minimum communication';
       Result[10].Fields[2].DefaultText := '1'; Result[10].Fields[2].Secret := False; Result[10].Fields[2].Choices := 'Plain|MAC|Full';
       Result[10].Fields[3].Name := 'keynumber'; Result[10].Fields[3].LabelText := 'Supplied authentication key number';
       Result[10].Fields[3].DefaultText := '0'; Result[10].Fields[3].Secret := False; Result[10].Fields[3].Choices := '';
-      Result[10].Fields[4].Name := 'key'; Result[10].Fields[4].LabelText := 'Supplied AES key (hex)';
+      Result[10].Fields[4].Name := 'key'; Result[10].Fields[4].LabelText := 'Supplied authentication key (hex; 8/16/24 bytes by profile)';
       Result[10].Fields[4].DefaultText := ''; Result[10].Fields[4].Secret := True; Result[10].Fields[4].Choices := '';
       Result[10].Fields[5].Name := 'rekeynumber'; Result[10].Fields[5].LabelText := 'Secondary proof-context key number';
       Result[10].Fields[5].DefaultText := '0'; Result[10].Fields[5].Secret := False; Result[10].Fields[5].Choices := '';
@@ -1639,12 +1667,12 @@ begin
       Result[11].Fields[0].Name := 'aid'; Result[11].Fields[0].LabelText := 'Explicit native AID (decimal; 0 = PICC)';
       Result[11].Fields[0].DefaultText := '0'; Result[11].Fields[0].Secret := False; Result[11].Fields[0].Choices := '';
       Result[11].Fields[1].Name := 'security'; Result[11].Fields[1].LabelText := 'Explicit security profile';
-      Result[11].Fields[1].DefaultText := '0'; Result[11].Fields[1].Secret := False; Result[11].Fields[1].Choices := 'Public|EV2 AES|EV1 AES';
+      Result[11].Fields[1].DefaultText := '0'; Result[11].Fields[1].Secret := False; Result[11].Fields[1].Choices := 'Public|EV2 AES|EV1 AES|EV1 2K3DES|EV1 3K3DES|D40 DES|D40 2K3DES';
       Result[11].Fields[2].Name := 'minimum'; Result[11].Fields[2].LabelText := 'Minimum communication';
       Result[11].Fields[2].DefaultText := '1'; Result[11].Fields[2].Secret := False; Result[11].Fields[2].Choices := 'Plain|MAC|Full';
       Result[11].Fields[3].Name := 'keynumber'; Result[11].Fields[3].LabelText := 'Supplied authentication key number';
       Result[11].Fields[3].DefaultText := '0'; Result[11].Fields[3].Secret := False; Result[11].Fields[3].Choices := '';
-      Result[11].Fields[4].Name := 'key'; Result[11].Fields[4].LabelText := 'Supplied AES key (hex)';
+      Result[11].Fields[4].Name := 'key'; Result[11].Fields[4].LabelText := 'Supplied authentication key (hex; 8/16/24 bytes by profile)';
       Result[11].Fields[4].DefaultText := ''; Result[11].Fields[4].Secret := True; Result[11].Fields[4].Choices := '';
       Result[11].Fields[5].Name := 'rekeynumber'; Result[11].Fields[5].LabelText := 'Secondary proof-context key number';
       Result[11].Fields[5].DefaultText := '0'; Result[11].Fields[5].Secret := False; Result[11].Fields[5].Choices := '';
@@ -1664,12 +1692,12 @@ begin
       Result[12].Fields[0].Name := 'aid'; Result[12].Fields[0].LabelText := 'Explicit native AID (decimal; 0 = PICC)';
       Result[12].Fields[0].DefaultText := '0'; Result[12].Fields[0].Secret := False; Result[12].Fields[0].Choices := '';
       Result[12].Fields[1].Name := 'security'; Result[12].Fields[1].LabelText := 'Explicit security profile';
-      Result[12].Fields[1].DefaultText := '0'; Result[12].Fields[1].Secret := False; Result[12].Fields[1].Choices := 'Public|EV2 AES|EV1 AES';
+      Result[12].Fields[1].DefaultText := '0'; Result[12].Fields[1].Secret := False; Result[12].Fields[1].Choices := 'Public|EV2 AES|EV1 AES|EV1 2K3DES|EV1 3K3DES|D40 DES|D40 2K3DES';
       Result[12].Fields[2].Name := 'minimum'; Result[12].Fields[2].LabelText := 'Minimum communication';
       Result[12].Fields[2].DefaultText := '1'; Result[12].Fields[2].Secret := False; Result[12].Fields[2].Choices := 'Plain|MAC|Full';
       Result[12].Fields[3].Name := 'keynumber'; Result[12].Fields[3].LabelText := 'Supplied authentication key number';
       Result[12].Fields[3].DefaultText := '0'; Result[12].Fields[3].Secret := False; Result[12].Fields[3].Choices := '';
-      Result[12].Fields[4].Name := 'key'; Result[12].Fields[4].LabelText := 'Supplied AES key (hex)';
+      Result[12].Fields[4].Name := 'key'; Result[12].Fields[4].LabelText := 'Supplied authentication key (hex; 8/16/24 bytes by profile)';
       Result[12].Fields[4].DefaultText := ''; Result[12].Fields[4].Secret := True; Result[12].Fields[4].Choices := '';
       Result[12].Fields[5].Name := 'rekeynumber'; Result[12].Fields[5].LabelText := 'Secondary proof-context key number';
       Result[12].Fields[5].DefaultText := '0'; Result[12].Fields[5].Secret := False; Result[12].Fields[5].Choices := '';
@@ -1692,7 +1720,7 @@ begin
       Result[13].Fields[2].DefaultText := '1'; Result[13].Fields[2].Secret := False; Result[13].Fields[2].Choices := 'Plain|MAC|Full';
       Result[13].Fields[3].Name := 'keynumber'; Result[13].Fields[3].LabelText := 'Supplied authentication key number';
       Result[13].Fields[3].DefaultText := '0'; Result[13].Fields[3].Secret := False; Result[13].Fields[3].Choices := '';
-      Result[13].Fields[4].Name := 'key'; Result[13].Fields[4].LabelText := 'Supplied AES key (hex)';
+      Result[13].Fields[4].Name := 'key'; Result[13].Fields[4].LabelText := 'Supplied authentication key (hex; 8/16/24 bytes by profile)';
       Result[13].Fields[4].DefaultText := ''; Result[13].Fields[4].Secret := True; Result[13].Fields[4].Choices := '';
       Result[13].Fields[5].Name := 'rekeynumber'; Result[13].Fields[5].LabelText := 'Secondary proof-context key number';
       Result[13].Fields[5].DefaultText := '0'; Result[13].Fields[5].Secret := False; Result[13].Fields[5].Choices := '';
@@ -1709,7 +1737,7 @@ begin
       Result[14].Fields[2].DefaultText := '1'; Result[14].Fields[2].Secret := False; Result[14].Fields[2].Choices := 'Plain|MAC|Full';
       Result[14].Fields[3].Name := 'keynumber'; Result[14].Fields[3].LabelText := 'Supplied authentication key number';
       Result[14].Fields[3].DefaultText := '0'; Result[14].Fields[3].Secret := False; Result[14].Fields[3].Choices := '';
-      Result[14].Fields[4].Name := 'key'; Result[14].Fields[4].LabelText := 'Supplied AES key (hex)';
+      Result[14].Fields[4].Name := 'key'; Result[14].Fields[4].LabelText := 'Supplied authentication key (hex; 8/16/24 bytes by profile)';
       Result[14].Fields[4].DefaultText := ''; Result[14].Fields[4].Secret := True; Result[14].Fields[4].Choices := '';
       Result[14].Fields[5].Name := 'rekeynumber'; Result[14].Fields[5].LabelText := 'Secondary proof-context key number';
       Result[14].Fields[5].DefaultText := '0'; Result[14].Fields[5].Secret := False; Result[14].Fields[5].Choices := '';
@@ -1726,7 +1754,7 @@ begin
       Result[15].Fields[2].DefaultText := '1'; Result[15].Fields[2].Secret := False; Result[15].Fields[2].Choices := 'Plain|MAC|Full';
       Result[15].Fields[3].Name := 'keynumber'; Result[15].Fields[3].LabelText := 'Supplied authentication key number';
       Result[15].Fields[3].DefaultText := '0'; Result[15].Fields[3].Secret := False; Result[15].Fields[3].Choices := '';
-      Result[15].Fields[4].Name := 'key'; Result[15].Fields[4].LabelText := 'Supplied AES key (hex)';
+      Result[15].Fields[4].Name := 'key'; Result[15].Fields[4].LabelText := 'Supplied authentication key (hex; 8/16/24 bytes by profile)';
       Result[15].Fields[4].DefaultText := ''; Result[15].Fields[4].Secret := True; Result[15].Fields[4].Choices := '';
       Result[15].Fields[5].Name := 'rekeynumber'; Result[15].Fields[5].LabelText := 'Secondary proof-context key number';
       Result[15].Fields[5].DefaultText := '0'; Result[15].Fields[5].Secret := False; Result[15].Fields[5].Choices := '';
@@ -1745,7 +1773,7 @@ begin
       Result[16].Fields[2].DefaultText := '1'; Result[16].Fields[2].Secret := False; Result[16].Fields[2].Choices := 'Plain|MAC|Full';
       Result[16].Fields[3].Name := 'keynumber'; Result[16].Fields[3].LabelText := 'Supplied authentication key number';
       Result[16].Fields[3].DefaultText := '0'; Result[16].Fields[3].Secret := False; Result[16].Fields[3].Choices := '';
-      Result[16].Fields[4].Name := 'key'; Result[16].Fields[4].LabelText := 'Supplied AES key (hex)';
+      Result[16].Fields[4].Name := 'key'; Result[16].Fields[4].LabelText := 'Supplied authentication key (hex; 8/16/24 bytes by profile)';
       Result[16].Fields[4].DefaultText := ''; Result[16].Fields[4].Secret := True; Result[16].Fields[4].Choices := '';
       Result[16].Fields[5].Name := 'rekeynumber'; Result[16].Fields[5].LabelText := 'Secondary proof-context key number';
       Result[16].Fields[5].DefaultText := '0'; Result[16].Fields[5].Secret := False; Result[16].Fields[5].Choices := '';
@@ -1764,7 +1792,7 @@ begin
       Result[17].Fields[2].DefaultText := '1'; Result[17].Fields[2].Secret := False; Result[17].Fields[2].Choices := 'Plain|MAC|Full';
       Result[17].Fields[3].Name := 'keynumber'; Result[17].Fields[3].LabelText := 'Supplied authentication key number';
       Result[17].Fields[3].DefaultText := '0'; Result[17].Fields[3].Secret := False; Result[17].Fields[3].Choices := '';
-      Result[17].Fields[4].Name := 'key'; Result[17].Fields[4].LabelText := 'Supplied AES key (hex)';
+      Result[17].Fields[4].Name := 'key'; Result[17].Fields[4].LabelText := 'Supplied authentication key (hex; 8/16/24 bytes by profile)';
       Result[17].Fields[4].DefaultText := ''; Result[17].Fields[4].Secret := True; Result[17].Fields[4].Choices := '';
       Result[17].Fields[5].Name := 'rekeynumber'; Result[17].Fields[5].LabelText := 'Secondary proof-context key number';
       Result[17].Fields[5].DefaultText := '0'; Result[17].Fields[5].Secret := False; Result[17].Fields[5].Choices := '';
@@ -1793,7 +1821,7 @@ begin
       Result[18].Fields[2].DefaultText := '1'; Result[18].Fields[2].Secret := False; Result[18].Fields[2].Choices := 'Plain|MAC|Full';
       Result[18].Fields[3].Name := 'keynumber'; Result[18].Fields[3].LabelText := 'Supplied authentication key number';
       Result[18].Fields[3].DefaultText := '0'; Result[18].Fields[3].Secret := False; Result[18].Fields[3].Choices := '';
-      Result[18].Fields[4].Name := 'key'; Result[18].Fields[4].LabelText := 'Supplied AES key (hex)';
+      Result[18].Fields[4].Name := 'key'; Result[18].Fields[4].LabelText := 'Supplied authentication key (hex; 8/16/24 bytes by profile)';
       Result[18].Fields[4].DefaultText := ''; Result[18].Fields[4].Secret := True; Result[18].Fields[4].Choices := '';
       Result[18].Fields[5].Name := 'rekeynumber'; Result[18].Fields[5].LabelText := 'Secondary proof-context key number';
       Result[18].Fields[5].DefaultText := '0'; Result[18].Fields[5].Secret := False; Result[18].Fields[5].Choices := '';
@@ -1818,7 +1846,7 @@ begin
       Result[19].Fields[2].DefaultText := '1'; Result[19].Fields[2].Secret := False; Result[19].Fields[2].Choices := 'Plain|MAC|Full';
       Result[19].Fields[3].Name := 'keynumber'; Result[19].Fields[3].LabelText := 'Supplied authentication key number';
       Result[19].Fields[3].DefaultText := '0'; Result[19].Fields[3].Secret := False; Result[19].Fields[3].Choices := '';
-      Result[19].Fields[4].Name := 'key'; Result[19].Fields[4].LabelText := 'Supplied AES key (hex)';
+      Result[19].Fields[4].Name := 'key'; Result[19].Fields[4].LabelText := 'Supplied authentication key (hex; 8/16/24 bytes by profile)';
       Result[19].Fields[4].DefaultText := ''; Result[19].Fields[4].Secret := True; Result[19].Fields[4].Choices := '';
       Result[19].Fields[5].Name := 'rekeynumber'; Result[19].Fields[5].LabelText := 'Secondary proof-context key number';
       Result[19].Fields[5].DefaultText := '0'; Result[19].Fields[5].Secret := False; Result[19].Fields[5].Choices := '';
@@ -1841,7 +1869,7 @@ begin
       Result[20].Fields[2].DefaultText := '1'; Result[20].Fields[2].Secret := False; Result[20].Fields[2].Choices := 'Plain|MAC|Full';
       Result[20].Fields[3].Name := 'keynumber'; Result[20].Fields[3].LabelText := 'Supplied authentication key number';
       Result[20].Fields[3].DefaultText := '0'; Result[20].Fields[3].Secret := False; Result[20].Fields[3].Choices := '';
-      Result[20].Fields[4].Name := 'key'; Result[20].Fields[4].LabelText := 'Supplied AES key (hex)';
+      Result[20].Fields[4].Name := 'key'; Result[20].Fields[4].LabelText := 'Supplied authentication key (hex; 8/16/24 bytes by profile)';
       Result[20].Fields[4].DefaultText := ''; Result[20].Fields[4].Secret := True; Result[20].Fields[4].Choices := '';
       Result[20].Fields[5].Name := 'rekeynumber'; Result[20].Fields[5].LabelText := 'Secondary proof-context key number';
       Result[20].Fields[5].DefaultText := '0'; Result[20].Fields[5].Secret := False; Result[20].Fields[5].Choices := '';
@@ -1860,7 +1888,7 @@ begin
       Result[21].Fields[2].DefaultText := '1'; Result[21].Fields[2].Secret := False; Result[21].Fields[2].Choices := 'Plain|MAC|Full';
       Result[21].Fields[3].Name := 'keynumber'; Result[21].Fields[3].LabelText := 'Supplied authentication key number';
       Result[21].Fields[3].DefaultText := '0'; Result[21].Fields[3].Secret := False; Result[21].Fields[3].Choices := '';
-      Result[21].Fields[4].Name := 'key'; Result[21].Fields[4].LabelText := 'Supplied AES key (hex)';
+      Result[21].Fields[4].Name := 'key'; Result[21].Fields[4].LabelText := 'Supplied authentication key (hex; 8/16/24 bytes by profile)';
       Result[21].Fields[4].DefaultText := ''; Result[21].Fields[4].Secret := True; Result[21].Fields[4].Choices := '';
       Result[21].Fields[5].Name := 'rekeynumber'; Result[21].Fields[5].LabelText := 'Secondary proof-context key number';
       Result[21].Fields[5].DefaultText := '0'; Result[21].Fields[5].Secret := False; Result[21].Fields[5].Choices := '';
@@ -1879,7 +1907,7 @@ begin
       Result[22].Fields[2].DefaultText := '1'; Result[22].Fields[2].Secret := False; Result[22].Fields[2].Choices := 'Plain|MAC|Full';
       Result[22].Fields[3].Name := 'keynumber'; Result[22].Fields[3].LabelText := 'Supplied authentication key number';
       Result[22].Fields[3].DefaultText := '0'; Result[22].Fields[3].Secret := False; Result[22].Fields[3].Choices := '';
-      Result[22].Fields[4].Name := 'key'; Result[22].Fields[4].LabelText := 'Supplied AES key (hex)';
+      Result[22].Fields[4].Name := 'key'; Result[22].Fields[4].LabelText := 'Supplied authentication key (hex; 8/16/24 bytes by profile)';
       Result[22].Fields[4].DefaultText := ''; Result[22].Fields[4].Secret := True; Result[22].Fields[4].Choices := '';
       Result[22].Fields[5].Name := 'rekeynumber'; Result[22].Fields[5].LabelText := 'Secondary proof-context key number';
       Result[22].Fields[5].DefaultText := '0'; Result[22].Fields[5].Secret := False; Result[22].Fields[5].Choices := '';

@@ -75,7 +75,7 @@ uses
   ERD.Card.Memory, ERD.Card.Memory.Counter, ERD.Card.Memory.Sle4404,
   ERD.Card.SIM.Data, ERD.Card.SIM.Reader, ERD.Card.Memory.Capabilities, ERD.Card.PCSC.Reader,
   ERD.Card.MagStripe, ERD.Card.MagStripe.Tracks, ERD.Card.MagStripe.MSR206,
-  ERD.Card.MagStripe.MagTek, ERD.Card.MagStripe.Serial, ERD.Card.Crypto, ERD.Card.Crypto.Windows, ERD.Card.Contactless.DESFire, ERD.Card.Contactless.DESFire.EV2,
+  ERD.Card.MagStripe.MagTek, ERD.Card.MagStripe.Serial, ERD.Card.Crypto, ERD.Card.Crypto.DES, ERD.Card.Contactless.UltralightC, ERD.Card.Crypto.Windows, ERD.Card.Contactless.DESFire, ERD.Card.Contactless.DESFire.EV2,
   ERD.Card.Contactless.Raw, ERD.Card.Contactless.ACR122, ERD.Card.Contactless.UID,
   ERD.Card.Contactless.UID.Profiles, ERD.Card.Contactless.UID.USCUID, ERD.Card.Contactless.UID.Partial,
   ERD.Card.Contactless.ISO15693, ERD.Card.Contactless.Type5.Ndef, ERD.Card.Contactless.Type2.Password,
@@ -85,7 +85,7 @@ uses
 
 type
   EPreflightComplete = class(Exception);
-  TPreflight = class(TInterfacedObject, ICardTransport, ICardTransaction, ITwn4ByteChannel, ICardAesProvider)
+  TPreflight = class(TInterfacedObject, ICardTransport, ICardTransaction, ITwn4ByteChannel, ICardAesProvider, ICardDesProvider)
   public
     ReachedBoundary: Boolean;
     function Exchange(const ACommand: TBytes): TBytes;
@@ -99,6 +99,7 @@ type
     function EncryptCbc(const AKey, AIv, AData: TBytes): TBytes;
     function DecryptCbc(const AKey, AIv, AData: TBytes): TBytes;
     function RandomBytes(const ACount: Integer): TBytes;
+    function TripleDesCbc(const AKey, AIv, AData: TBytes; const AEncrypt: Boolean): TBytes;
   end;
   TNativeHardware = class(TInterfacedObject, ICardFamilyHardware, ICardFamilyHidHardware, ICardFamilySamHardware)
   private FReader, FSamReader: TSmartCardReader;
@@ -262,6 +263,8 @@ function TPreflight.EncryptCbc(const AKey, AIv, AData: TBytes): TBytes;
 begin Result := nil; raise EInvalidOpException.Create('Preflight must never perform cryptography.'); end;
 function TPreflight.DecryptCbc(const AKey, AIv, AData: TBytes): TBytes;
 begin Result := nil; raise EInvalidOpException.Create('Preflight must never perform cryptography.'); end;
+function TPreflight.TripleDesCbc(const AKey, AIv, AData: TBytes; const AEncrypt: Boolean): TBytes;
+begin Result := nil; raise EPreflightComplete.Create('Preflight crypto boundary.'); end;
 function TPreflight.RandomBytes(const ACount: Integer): TBytes;
 begin Result := nil; raise EInvalidOpException.Create('Preflight must never perform cryptography.'); end;
 
@@ -317,6 +320,7 @@ var Hid: TUsbHidReaderWriter; HidHardware: ICardFamilyHidHardware; Devices: THid
   Desfire: TDesfireCardReader; Session: IDesfireSession; Management: IDesfireManagement;
   Definition: TDesfireFileDefinition; Files: TDesfireFiles; Applications: TDesfireApplicationIds;
   Aes: ICardAesProvider; Aid: Cardinal; Settings: TDesfireFileSettings;
+  Ulc: TUltralightCCardReaderWriter; Des: ICardDesProvider;
   PasswordReader: TType2PasswordCardReader; RawUid: TRawUidProgrammer;
   IsoReader: TIso15693CardReader; Type5: TType5NdefCardReader; IsoSession: IIso15693Session; IsoInfo: TIso15693SystemInfo; Type5Snapshot: TType5NdefSnapshot;
   Rule: TMobibProductRule; Evidence: TMobibRuleEvidence; Assessment: TMobibRuleAssessment;
@@ -803,7 +807,7 @@ begin
             else
             begin
               Aid := Cardinal(Number(R,A,'aid',0,$FFFFFF));
-              Desfire.Security := TDesfireSecurity(Number(R,A,'security',0,2));
+              Desfire.Security := TDesfireSecurity(Number(R,A,'security',0,Ord(High(TDesfireSecurity))));
               Desfire.MinimumCommunication := TDesfireCommunication(Number(R,A,'minimum',0,2));
               Key := Bytes(R,A,'key'); Desfire.AuthenticationKey := Key; Desfire.KeyNumber := Number(R,A,'keynumber',0,13);
               NewP := Bytes(R,A,'rekey'); Desfire.ReauthenticationKey := NewP; Desfire.ReauthenticationKeyNumber := Number(R,A,'rekeynumber',0,13); Wipe(NewP);
@@ -924,6 +928,21 @@ begin
           finally RawUid.Free; end;
         end;
         D.WriteVerified := True; Output := 'Fresh RF UID independently verified: '+BytesToHex(Data);
+      end;
+      dfUltralightC:
+      begin
+        Ulc := TUltralightCCardReaderWriter.Create(nil);
+        try
+          Ulc.Reader := TAcr122RawReader.Create(T);
+          if not Supports(T,ICardDesProvider,Des) then Des := TCardWindowsAesProvider.Create;
+          Ulc.CryptoProvider := Des; Des := nil; Key := Bytes(R,A,'key');
+          if A.Id = 'page' then Data := Ulc.ReadUserPage(Number(R,A,'page',4,39),Key)
+          else if A.Id = 'memory' then Data := Ulc.ReadUserMemory(Key)
+          else if A.Id = 'write' then
+          begin Data := Ulc.WriteUserPageVerified(Number(R,A,'page',4,39),Bytes(R,A,'data'),Key); D.WriteVerified := True; end
+          else Fail;
+          Output := BytesToHex(Data); Artifact(D,'user-memory.bin',Data);
+        finally Ulc.Free; end;
       end;
       dfClassic, dfType2:
       begin

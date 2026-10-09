@@ -1,6 +1,6 @@
 # VCL examples: current coverage
 
-There are **twenty-one separately executable applications** in
+There are **twenty-two separately executable applications** in
 `examples/vcl/CardDemos.groupproj`. Each application has its own `TForm`,
 `.Main.pas`, and `.Main.dfm`. All visual controls are in that application's own
 DFM, including action pages, input fields, reader selection, and timers. There is
@@ -21,16 +21,22 @@ set.
 | SimCardDemo | Classic SIM/UICC-USIM, files/records/identities/services, PIN/PUK status, verify/change/unblock, ADN contact writes, PBR/IAP/EXT contact reads, explicit linked record plans, alpha/EMAIL/ANR/SMS/segment codecs |
 | MifareClassicDemo | UID, offline layout/trailers, supplied-key block reads, and status-only data writes |
 | Type2Demo | Ultralight/EV1/NTAG210/212/213/215/216, UID/page/memory, public NDEF, ACR122 PWD_AUTH/PACK page/memory/verified page write |
+| UltralightCDemo | Supplied 16-byte key, mutual authentication, exact pages 4–39, full 144-byte memory and verified user-page writes through ACR122 raw RF |
 | Type4NdefDemo | Offline CC, mapping 1.0/2.0, file descriptors/FID, public NDEF read/write/clear |
 | EmvDemo | PSE/PPSE, PDOL inspection, explicit AID/terminal values, GPO/AFL records plus bounded extra SFI/record scan, visible raw records/statuses, GET DATA, advertised logs, DOL/log decoders, and exact exports |
 | BelgianEidDemo | All public sections, identity/address, JPEG, RAW/DER certificate export, and raw signature export |
 | IcaoDocumentDemo | BAC/PACE with MRZ/CAN/curve/provider, all document sections/face images, CardAccess/DG1/DG2/COM/SOD export, JPEG preview, and JPEG2000 export |
 | Iso15693Demo | ACR1552 explicit address/response dialects, UID/geometry, block reads/verified writes, and Type 5 NDEF read/write/clear |
 | UidProgrammingDemo | PC/SC Gen2/FUID; ACR122 Gen1a/Gen1b/unsealed UFUID, DirectWrite, Gen3, six Gen4 layouts, USCUID/GDM, and partial UFUID/ZUID/PFUID |
-| DesfireDemo | Public/EV1/EV2 AES, directories/data/values/records, standard writes, backup/value/record transactions with commit/abort, application/file/key/access management |
+| DesfireDemo | Public/EV1/EV2 AES, EV1 2K3DES/3K3DES and D40 DES/2K3DES, directories/data/values/records, standard writes, backup/value/record transactions with commit/abort, application/file/key/access management |
 | MagStripeProfilesDemo | Track bit/parity/LRC and financial decoders, MagTek keyboard/HID, MSR206/MSR605 reads, and status-only all-track programming |
 | UsbHidDemo | Reader hotplug and continuous input-report events with its own DFM controls/event log; native HID collections/VID/PID/usage/lengths, exact interface path, interrupt and feature report read/send/export |
 | MobibDemo | Calypso legacy-94/revision-3-00, MOBIB file profile and custom FID plan, explicit FID/record reading, holder/events, subscription versions 0–4 with tariff/price/duration/counter assignment, native SAM authentication with two reader choices, offline activation/validity/zone evaluation with an explicitly sourced profile, raw data/status/truncation, and exact exports; no implicit issuer rules |
+
+All PC/SC demos automatically observe reader hotplug and card insertion/removal through
+native events. Their own DFM status label shows presence; the worker timer only
+collects explicit operation completion. Observation never connects, authenticates or writes.
+The shared event bridge is nonvisual. Refresh devices explicitly restarts observation.
 
 ## Reader selection in every demo
 

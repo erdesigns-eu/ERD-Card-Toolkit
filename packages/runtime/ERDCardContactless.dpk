@@ -11,6 +11,8 @@ requires
   ERDCardCore;
 
 contains
+  ERD.Card.Contactless.UltralightC in '..\..\src\contactless\ERD.Card.Contactless.UltralightC.pas',
+  ERD.Card.Contactless.DESFire.DES in '..\..\src\contactless\ERD.Card.Contactless.DESFire.DES.pas',
   ERD.Card.MOBIB.Rules in '..\..\src\contactless\ERD.Card.MOBIB.Rules.pas',
   ERD.Card.MOBIB.Subscriptions in '..\..\src\contactless\ERD.Card.MOBIB.Subscriptions.pas',
   ERD.Card.MOBIB.Data in '..\..\src\contactless\ERD.Card.MOBIB.Data.pas',

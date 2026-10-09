@@ -471,7 +471,7 @@ begin
 end;
 
 procedure TReaderToolsDemoForm.FormShow(Sender: TObject);
-begin if FDiscoveryStarted then Exit; FDiscoveryStarted := True; RefreshReadersClick(nil); end;
+begin if FDiscoveryStarted then Exit; FDiscoveryStarted := True; WatchClick(nil); end;
 
 procedure TReaderToolsDemoForm.PollTimer(Sender: TObject);
 begin if FController <> nil then FController.Poll; end;

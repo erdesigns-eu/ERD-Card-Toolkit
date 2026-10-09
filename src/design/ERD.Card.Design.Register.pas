@@ -19,14 +19,14 @@ uses
   ERD.Card.Contactless.Calypso, ERD.Card.Contactless, ERD.Card.Contactless.Type2.Ndef,
   ERD.Card.Contactless.Type4.Ndef, ERD.Card.Contactless.Type5.Ndef,
   ERD.Card.Contactless.ISO15693, ERD.Card.Contactless.DESFire,
-  ERD.Card.Contactless.Type2.Password, ERD.Card.Contactless.Raw;
+  ERD.Card.Contactless.UltralightC, ERD.Card.Contactless.Type2.Password, ERD.Card.Contactless.Raw;
 
 procedure Register;
 begin
   RegisterComponents('ERD Cards', [TSmartCardMonitor, TSmartCardReader, TBelgianEIDReader,
     TICAODocumentReader, TSimCardReaderWriter, TEMVCardReader, TMagStripeReaderWriter, TMemoryCardReaderWriter, TSleCounterCardReaderWriter, TSle4404CardReaderWriter]);
   RegisterComponents('ERD Input', [THidDeviceMonitor, TUsbHidInputMonitor, TRfidKeyboardReader, TRfidHidReportReader, TUsbHidReaderWriter, TTwn4CardReaderWriter]);
-  RegisterComponents('ERD Contactless', [TCalypsoCardReader, TContactlessCardReader,
+  RegisterComponents('ERD Contactless', [TUltralightCCardReaderWriter, TCalypsoCardReader, TContactlessCardReader,
     TType2NdefCardReader, TType4NdefCardReader, TIso15693CardReader,
     TType5NdefCardReader, TDesfireCardReader, TType2PasswordCardReader,
     TRawUidProgrammer]);

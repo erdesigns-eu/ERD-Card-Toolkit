@@ -18,7 +18,7 @@ object EmvDemoForm: TEmvDemoForm
     Top = 0
     Width = 1080
     Align = alTop
-    Height = 94
+    Height = 118
     BevelOuter = bvNone
     TabOrder = 0
     object GuidanceLabel: TLabel
@@ -55,6 +55,15 @@ object EmvDemoForm: TEmvDemoForm
       Caption = 'Refresh devices'
       TabOrder = 1
       OnClick = RefreshReadersClick
+    end
+    object EventStatusLabel: TLabel
+      Left = 16
+      Top = 88
+      Width = 1040
+      Height = 22
+      AutoSize = False
+      Anchors = [akLeft, akTop, akRight]
+      Caption = 'Reader events inactive.'
     end
   end
   object BottomPanel: TPanel

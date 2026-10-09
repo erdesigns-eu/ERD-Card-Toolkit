@@ -1,7 +1,7 @@
 # VCL read/write demos
 
-Twenty-one applications demonstrate implemented APIs: SmartCardDemo,
-MagStripeDemo and nineteen family projects. Each application owns a direct TForm
+Twenty-two applications demonstrate implemented APIs: SmartCardDemo,
+MagStripeDemo and twenty family projects. Each application owns a direct TForm
 class and its own designer-editable Main.dfm, including all action inputs and a
 reader dropdown.
 Only nonvisual operation, metadata and worker/controller units are shared.
@@ -24,6 +24,12 @@ IDE/MSBuild Release builds go to the corresponding Release directory. These are
 Windows VCL applications; they have not been built or rendered in the Linux cloud
 environment. The provided scripts are an executable validation path for a Delphi
 host, not evidence that those builds already pass.
+
+PC/SC demos start native reader/card observation when shown. Their own reader
+combobox updates on reader arrival/removal; presence is displayed independently
+of card-operation output. Refresh explicitly restarts observation, and no event
+starts authentication, reading or writing. ReaderToolsDemo additionally exposes
+Watch/Stop controls and a detailed event log. Shared observation code is nonvisual.
 
 ## Separate family projects
 
@@ -49,13 +55,14 @@ that byte-buffer wiping guarantee. Errors display their class, never backend tex
 | `simcard/SimCardDemo.dproj` | Classic SIM/UICC-USIM files, records, identities and services; PIN/PUK status, verify/change/unblock, ADN contact writes, PBR/IAP/EXT contact reads, explicit linked-record plans, alpha/EMAIL/ANR/SMS/segment codecs |
 | `mifareclassic/MifareClassicDemo.dproj` | UID, offline layout/trailer inspection, supplied-key block reads and status-only data writes |
 | `type2/Type2Demo.dproj` | Ultralight/EV1/NTAG210/212/213/215/216 UID, page and memory reads, public NDEF, ACR122 PWD_AUTH/PACK page and memory operations, verified page writes |
+| `ultralightc/UltralightCDemo.dproj` | Supplied-key 2K3DES authentication, exact user-page/full-memory reads and independently verified page writes |
 | `type4ndef/Type4NdefDemo.dproj` | Offline CC, mapping 1.0/2.0, file descriptors/FID, public NDEF read/write/clear |
 | `emv/EmvDemo.dproj` | PSE/PPSE, PDOL inspection, explicit AID/terminal values, GPO/AFL records, bounded SFI/record scan, raw records/statuses, GET DATA, advertised logs, DOL/log decoders and exact exports |
 | `belgianeid/BelgianEidDemo.dproj` | Public sections, identity/address/photo, JPEG preview, RAW/DER certificates and raw signature exports |
 | `icaodocument/IcaoDocumentDemo.dproj` | BAC/PACE with MRZ/CAN/curve/provider, document sections and face images, CardAccess/DG1/DG2/COM/SOD exports, JPEG preview and JPEG2000 export |
 | `iso15693/Iso15693Demo.dproj` | ACR1552 explicit address/response dialects, UID/geometry, block reads/verified writes and Type 5 NDEF read/write/clear |
 | `uid/UidProgrammingDemo.dproj` | PC/SC Gen2/FUID; ACR122 Gen1a/Gen1b/unsealed UFUID, DirectWrite, Gen3, six Gen4 layouts, USCUID/GDM and partial UFUID/ZUID/PFUID |
-| `desfire/DesfireDemo.dproj` | Public/EV1/EV2 AES, directories/data/values/records, standard writes, backup/value/record transactions with commit/abort, application/file/key/access management |
+| `desfire/DesfireDemo.dproj` | Public/EV1/EV2 AES, EV1 2K3DES/3K3DES and D40 DES/2K3DES, directories/data/values/records, standard writes, backup/value/record transactions with commit/abort, application/file/key/access management |
 | `magstripeprofiles/MagStripeProfilesDemo.dproj` | Track-bit/parity/LRC and financial decoders, MagTek keyboard/HID, MSR206/MSR605 reads and status-only all-track programming |
 | `usbhid/UsbHidDemo.dproj` | Reader hotplug and continuous input-report events, native HID collection metadata/VID/PID/usage/lengths, exact interface path, interrupt and feature reports read/send/export |
 | `mobib/MobibDemo.dproj` | Calypso legacy-94/revision-3-00, MOBIB file profile and explicit FID plan, holder/events and subscription decoding, two-reader SAM authentication, offline activation/validity/zone assessment, raw exports |

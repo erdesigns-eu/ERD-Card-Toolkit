@@ -9,13 +9,13 @@ uses
 {$ELSE}
   System.SysUtils,
 {$ENDIF}
-  ERD.Card.Crypto, ERD.Card.Crypto.EAC;
+  ERD.Card.Crypto, ERD.Card.Crypto.EAC, ERD.Card.Crypto.DES;
 
 type
   /// <summary>Optional dynamically loaded OpenSSL 3 provider for ICAO BAC/PACE, AES, SHA-1, Triple DES and ECDH.</summary>
   /// <remarks>Linux defaults to libcrypto.so.3; Windows to libcrypto-3.dll. An explicit library path may be supplied.
   /// OpenSSL installation, updates and deployment policy belong to the host. No primitives or RNG fallback are bundled.</remarks>
-  TCardEacOpenSslProvider = class(TInterfacedObject,ICardAesProvider,ICardEacProvider)
+  TCardEacOpenSslProvider = class(TInterfacedObject,ICardAesProvider,ICardEacProvider, ICardDesProvider)
   private
     FNative:TObject;
     function Crypt(const AKey,AIv,AData:TBytes; const AEncrypt,ATripleDes:Boolean):TBytes;

@@ -5,7 +5,7 @@ interface
 uses System.Classes, System.SysUtils, Vcl.Forms, Vcl.Controls, Vcl.StdCtrls,
   Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.Dialogs, Vcl.Imaging.jpeg,
   ERD.Card.Demo.Job, ERD.Card.Demo.Controller, ERD.Card.Demo.Devices,
-  ERD.Card.Demo.Families, ERD.Card.RFID.Input;
+  ERD.Card.Demo.ReaderEvents, ERD.Card.Demo.Families, ERD.Card.RFID.Input;
 
 type
   /// <summary>Independent Type2Demo form; all visual controls belong to its own editable DFM.</summary>
@@ -13,6 +13,8 @@ type
   published
     /// <summary>Reader discovery and transport guidance.</summary>
     HeaderPanel: TPanel;
+    /// <summary>Native card offered/removed status, independent of operation output.</summary>
+    EventStatusLabel: TLabel;
     /// <summary>Explicit operation guidance.</summary>
     GuidanceLabel: TLabel;
     /// <summary>Available device transport.</summary>
@@ -211,6 +213,9 @@ type
     FDevices: TCardDemoDevices;
     FPreviousAddress: UnicodeString;
     FController: TCardDemoController;
+    FReaderEvents: TCardDemoReaderEvents;
+    procedure ReaderInventory(const ADevices: TCardDemoDevices);
+    procedure ReaderStatus(const AText: string);
     function SelectedAddress: UnicodeString;
     procedure Identifier(Sender: TObject; const AIdentifier: TRfidInputIdentifier);
     procedure StopCapture;
@@ -246,12 +251,13 @@ begin
   inherited Create(AOwner);
   FFamily := dfType2; FActions := CardFamilyActions(FFamily);
   FController := TCardDemoController.Create(ddkPcsc,CreateCardFamilyOperations(FFamily),SetBusy,Complete,Close);
+  FReaderEvents := TCardDemoReaderEvents.Create(ReaderInventory,ReaderStatus);
   ActionChanged(nil);
 end;
 
 destructor TType2DemoForm.Destroy;
 begin
-  if WorkerTimer <> nil then WorkerTimer.Enabled := False; StopCapture; FController.Free; inherited Destroy;
+  if WorkerTimer <> nil then WorkerTimer.Enabled := False; StopCapture; FReaderEvents.Free; FController.Free; inherited Destroy;
 end;
 
 procedure TType2DemoForm.ActionChanged(Sender: TObject);
@@ -481,13 +487,29 @@ end;
 procedure TType2DemoForm.ReaderChanged(Sender: TObject);
 begin ReaderBox.Hint := SelectedAddress; end;
 
+procedure TType2DemoForm.ReaderInventory(const ADevices: TCardDemoDevices);
+var I: Integer; Previous: UnicodeString;
+begin
+  Previous := SelectedAddress;
+  if Previous = '' then Previous := FPreviousAddress;
+  FDevices := Copy(ADevices,0,Length(ADevices)); ReaderBox.Items.Clear; ReaderBox.ItemIndex := -1;
+  for I := 0 to High(FDevices) do
+  begin
+    ReaderBox.Items.Add(string(FDevices[I].DisplayName));
+    if FDevices[I].Address = Previous then ReaderBox.ItemIndex := I;
+  end;
+  ReaderChanged(nil);
+end;
+
+procedure TType2DemoForm.ReaderStatus(const AText: string);
+begin EventStatusLabel.Caption := AText; end;
+
 procedure TType2DemoForm.RefreshReadersClick(Sender: TObject);
-var R: TCardDemoRequest;
 begin
   if FBusy or (FCapture <> nil) then Exit;
   FPreviousAddress := SelectedAddress;
-  R := Default(TCardDemoRequest); R.Operation := cdoDemoDevices;
-  try StartRequest(R); except on E: Exception do OutputMemo.Text := 'Discovery could not start: '+E.ClassName+'.'; end;
+  try FReaderEvents.Start; EventStatusLabel.Caption := 'Watching reader and card events.';
+  except on E: Exception do EventStatusLabel.Caption := 'Reader events could not start: '+E.ClassName+'. Use Refresh devices to retry.'; end;
 end;
 
 procedure TType2DemoForm.FormShow(Sender: TObject);
