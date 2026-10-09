@@ -11,6 +11,58 @@ type
   /// <summary>Independent DesfireDemo form; all visual controls belong to its own editable DFM.</summary>
   TDesfireDemoForm = class(TForm)
   published
+    /// <summary>Change DES/3DES key + fresh authentication proof.</summary>
+    ActChangedeskeyTab: TTabSheet;
+    /// <summary>Change DES/3DES key + fresh authentication proof inputs.</summary>
+    ActChangedeskeyInputs: TScrollBox;
+    /// <summary>Explicit native AID (decimal; 0 = PICC) label.</summary>
+    ActChangedeskeyAidLabel: TLabel;
+    /// <summary>Explicit native AID (decimal; 0 = PICC).</summary>
+    ActChangedeskeyAidEdit: TEdit;
+    /// <summary>Explicit security profile label.</summary>
+    ActChangedeskeySecurityLabel: TLabel;
+    /// <summary>Explicit security profile.</summary>
+    ActChangedeskeySecurityBox: TComboBox;
+    /// <summary>Minimum communication label.</summary>
+    ActChangedeskeyMinimumLabel: TLabel;
+    /// <summary>Minimum communication.</summary>
+    ActChangedeskeyMinimumBox: TComboBox;
+    /// <summary>Supplied authentication key number label.</summary>
+    ActChangedeskeyKeynumberLabel: TLabel;
+    /// <summary>Supplied authentication key number.</summary>
+    ActChangedeskeyKeynumberEdit: TEdit;
+    /// <summary>Supplied authentication key (hex; 8/16/24 bytes by profile) label.</summary>
+    ActChangedeskeyKeyLabel: TLabel;
+    /// <summary>Supplied authentication key (hex; 8/16/24 bytes by profile).</summary>
+    ActChangedeskeyKeyEdit: TEdit;
+    /// <summary>Secondary proof-context key number label.</summary>
+    ActChangedeskeyRekeynumberLabel: TLabel;
+    /// <summary>Secondary proof-context key number.</summary>
+    ActChangedeskeyRekeynumberEdit: TEdit;
+    /// <summary>Optional explicit secondary-context AES key (hex) label.</summary>
+    ActChangedeskeyRekeyLabel: TLabel;
+    /// <summary>Optional explicit secondary-context AES key (hex).</summary>
+    ActChangedeskeyRekeyEdit: TEdit;
+    /// <summary>Target key number label.</summary>
+    ActChangedeskeyTargetkeyLabel: TLabel;
+    /// <summary>Target key number.</summary>
+    ActChangedeskeyTargetkeyEdit: TEdit;
+    /// <summary>New key version label.</summary>
+    ActChangedeskeyKeyversionLabel: TLabel;
+    /// <summary>New key version.</summary>
+    ActChangedeskeyKeyversionEdit: TEdit;
+    /// <summary>New key (8/16/24 bytes for selected profile, hex) label.</summary>
+    ActChangedeskeyNewkeyLabel: TLabel;
+    /// <summary>New key (8/16/24 bytes for selected profile, hex).</summary>
+    ActChangedeskeyNewkeyEdit: TEdit;
+    /// <summary>Old stored target key including second/third subkey version bits; empty if current (hex) label.</summary>
+    ActChangedeskeyOldkeyLabel: TLabel;
+    /// <summary>Old stored target key including second/third subkey version bits; empty if current (hex).</summary>
+    ActChangedeskeyOldkeyEdit: TEdit;
+    /// <summary>Old first-subkey version (decimal; ignored for current key) label.</summary>
+    ActChangedeskeyOldversionLabel: TLabel;
+    /// <summary>Old first-subkey version (decimal; ignored for current key).</summary>
+    ActChangedeskeyOldversionEdit: TEdit;
     /// <summary>Reader discovery and transport guidance.</summary>
     HeaderPanel: TPanel;
     /// <summary>Native card offered/removed status, independent of operation output.</summary>
@@ -1406,12 +1458,32 @@ begin
       FInputs[0] := ActDecodeFileEdit;
       FInputs[1] := ActDecodeHexEdit;
     end;
+    24:
+    begin
+      SetLength(FInputs,12);
+      FInputs[0] := ActChangedeskeyAidEdit;
+      FInputs[1] := ActChangedeskeySecurityBox;
+      FInputs[2] := ActChangedeskeyMinimumBox;
+      FInputs[3] := ActChangedeskeyKeynumberEdit;
+      FInputs[4] := ActChangedeskeyKeyEdit;
+      FInputs[5] := ActChangedeskeyRekeynumberEdit;
+      FInputs[6] := ActChangedeskeyRekeyEdit;
+      FInputs[7] := ActChangedeskeyTargetkeyEdit;
+      FInputs[8] := ActChangedeskeyKeyversionEdit;
+      FInputs[9] := ActChangedeskeyNewkeyEdit;
+      FInputs[10] := ActChangedeskeyOldkeyEdit;
+      FInputs[11] := ActChangedeskeyOldversionEdit;
+    end;
   else Exit; end;
   AcknowledgeCheck.Enabled := FActions[ActionPages.ActivePageIndex].Mutation;
 end;
 
 procedure TDesfireDemoForm.ClearCredentials;
 begin
+  ActChangedeskeyKeyEdit.Clear;
+  ActChangedeskeyRekeyEdit.Clear;
+  ActChangedeskeyNewkeyEdit.Clear;
+  ActChangedeskeyOldkeyEdit.Clear;
   ActFilesKeyEdit.Clear;
   ActFilesRekeyEdit.Clear;
   ActReadKeyEdit.Clear;

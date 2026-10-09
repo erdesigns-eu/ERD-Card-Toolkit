@@ -44,10 +44,10 @@ out of scope (see [Not supported](#not-supported)).
 | **EMV** | `TEMVCardReader` | PSE/PPSE directory discovery, PDOL inspection without GPO, GPO and AFL record reading, an optional bounded extra SFI/record scan, GET DATA objects, and transaction logs. Extracts PAN, expiry date, cardholder name, IBAN and Track 2 equivalent data where present. Reading only, no transactions. |
 | **MIFARE Classic** | `TContactlessCardReader` | Classic Mini/1K/4K layouts. Read blocks with a supplied key A/B and write data blocks; block 0 and sector trailers are refused. |
 | **Ultralight / NTAG (Type 2)** | `TContactlessCardReader`, `TType2PasswordCardReader` | Ultralight, Ultralight EV1 (48/128), NTAG210/212/213/215/216 page reads, user-memory snapshots and user-page writes. PWD_AUTH/PACK password-protected access through an ACR122U adapter. |
-| **Ultralight C** | `TUltralightCCardReaderWriter` | Supplied-key 2K3DES mutual authentication, exact user-page reads, a 144-byte user-memory snapshot and verified four-byte user-page writes through raw RF (ACR122U adapter). Manufacturer, locks, configuration and key pages are excluded. |
+| **Ultralight C** | `TUltralightCCardReaderWriter` | Supplied-key 2K3DES mutual authentication, exact user-page reads, a 144-byte user-memory snapshot and verified four-byte user-page writes through raw RF (ACR122U adapter). Read authentication configuration; verified AUTH0/AUTH1 updates and key replacement with same-UID fresh RF authentication. Manufacturer, OTP, lock and counter writes remain excluded. |
 | **NDEF** | `TType2NdefCardReader`, `TType4NdefCardReader`, `TType5NdefCardReader` | Complete NDEF message codec with chunk reassembly, plus Text, URI, MIME, external and Smart Poster record helpers. Read, replace and clear public NDEF messages on Type 2, Type 4 (mapping 1.0/2.0) and Type 5 tags, with read-back verification. |
 | **ISO 15693** | `TIso15693CardReader` | System information, block-range reads and verified single-block writes through an ACS ACR1552 (FF FB pass-through) session. |
-| **MIFARE DESFire** | `TDesfireCardReader` | Public, EV1/EV2 AES, EV1 2K3DES/3K3DES and explicit D40 DES/2K3DES (Plain, MACed, Full) access. Discover applications/files, read standard/backup/value/record files and write standard data. Transactions with commit/abort; application and ordinary-file create/delete across the explicit profiles, including selectable DES/2K3DES, 3K3DES or AES application storage. AES key and access-policy administration. EV2 NonFirst re-authentication. |
+| **MIFARE DESFire** | `TDesfireCardReader` | Public, EV1/EV2 AES, EV1 2K3DES/3K3DES and explicit D40 DES/2K3DES (Plain, MACed, Full) access. Discover applications/files, read standard/backup/value/record files and write standard data. Transactions with commit/abort; application and ordinary-file create/delete across the explicit profiles, including selectable DES/2K3DES, 3K3DES or AES application storage. AES/DES/3DES key rotation, key-policy and ordinary-file access administration. EV2 NonFirst re-authentication. |
 | **Programmable (“magic”) UIDs** | `TRawUidProgrammer`, UID methods of `TContactlessCardReader` | Explicit profiles for Gen1a/Gen1b, unsealed UFUID, Gen2/CUID, factory FUID (one-time), Gen3, Gen4 UMC (4/7/10-byte), USCUID/GDM, partial UFUID/ZUID/PFUID and Type 2 DirectWrite. Raw RF access uses an ACS ACR122U/PN532 adapter. |
 | **Calypso / MOBIB** | `TCalypsoCardReader` | Read Calypso files and records (legacy CLA 94 or ISO CLA 00) using the built-in MOBIB plan or your own FID plan. Decode holder, events, contracts (versions 0–4) and counters. Native Calypso secure sessions through a provisioned SAM (revisions 1, 2, 3 and 3.2) or a custom provider. Offline activation/validity/zone checks with `TMobibRuleEngine` and caller-supplied operator profiles. |
 | **SIM / USIM** | `TSimCardReaderWriter` | Classic GSM SIM and UICC/USIM profiles. Read ICCID, IMSI, SPN, service tables and EF.DIR applications; inspect, read and verified-write transparent, linear-fixed and cyclic files. PIN/PUK status, verify, change and unblock with attempt budgets. Read, write and delete ADN contacts; read linked USIM contacts (PBR/IAP/EXT/EMAIL/ANR); verified linked write plans; SMS record and text/UDH codecs. |
@@ -315,11 +315,11 @@ and show card offered/removed notifications without running a card operation.
 | `SimCardDemo` | SIM/USIM files, identities, services, PIN/PUK, contacts, SMS and linked records |
 | `MifareClassicDemo` | UID, layout/trailers, block reads and writes |
 | `Type2Demo` | Ultralight/NTAG memory, NDEF and PWD_AUTH/PACK |
-| `UltralightCDemo` | Supplied-key authentication, exact user-page/full user-memory reads and verified page writes; own form and DFM |
+| `UltralightCDemo` | Supplied-key authentication, exact user-page/full user-memory reads and verified page writes, configuration and key replacement; own form and DFM |
 | `Type4NdefDemo` | Capability container, file descriptors and NDEF read/write/clear |
 | `Iso15693Demo` | ACR1552 ISO 15693 blocks and Type 5 NDEF |
 | `UidProgrammingDemo` | All programmable-UID profiles |
-| `DesfireDemo` | Public/AES/DES/3DES reads, writes and transactions; native application/file create-delete with explicit application key type/count; AES key/access-policy mutations |
+| `DesfireDemo` | Public/AES/DES/3DES reads, writes and transactions; native application/file create-delete with explicit application key type/count; AES/DES/3DES key/access-policy mutations |
 | `EmvDemo` | PSE/PPSE, PDOL, GPO/AFL records, extra record scan, GET DATA, logs and exports |
 | `MobibDemo` | Calypso/MOBIB files, contracts, SAM authentication and rule assessment |
 | `BelgianEidDemo` | Identity, address, photo, certificates and signatures with export |
@@ -381,7 +381,7 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
   online services are not validated; extra PACE/EAC profiles are missing
   ([docs/EUROPEAN_EID.md](docs/EUROPEAN_EID.md)).
 - **MIFARE/DESFire variants:** MIFARE Plus, DESFire LRP,
-  TMAC, SDM and extended key-set/configuration management. DES/3DES key rotation and key/access-policy changes; Ultralight C configuration/key/lock changes. NFC Forum Type 1/3 tags.
+  TMAC, SDM and extended key-set/configuration management. Ultralight C irreversible lock/counter/OTP programming. NFC Forum Type 1/3 tags.
 - **UID programming:** only the listed programmable profiles; regular card UIDs
   are not writable.
 - **MOBIB:** no built-in De Lijn/STIB/TEC/NMBS-SNCB rule sets; operator profiles must be

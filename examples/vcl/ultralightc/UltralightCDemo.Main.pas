@@ -11,6 +11,46 @@ type
   /// <summary>Independent UltralightCDemo form; all visual controls belong to its own editable DFM.</summary>
   TUltralightCDemoForm = class(TForm)
   published
+    /// <summary>Read authentication configuration.</summary>
+    ActConfigurationTab: TTabSheet;
+    /// <summary>Read authentication configuration inputs.</summary>
+    ActConfigurationInputs: TScrollBox;
+    /// <summary>Supplied 16-byte current key (hex) label.</summary>
+    ActConfigurationKeyLabel: TLabel;
+    /// <summary>Supplied 16-byte current key (hex).</summary>
+    ActConfigurationKeyEdit: TEdit;
+    /// <summary>Configure authentication + fresh RF proof.</summary>
+    ActConfigureTab: TTabSheet;
+    /// <summary>Configure authentication + fresh RF proof inputs.</summary>
+    ActConfigureInputs: TScrollBox;
+    /// <summary>First protected page (3..48; 48 = disabled) label.</summary>
+    ActConfigureFirstpageLabel: TLabel;
+    /// <summary>First protected page (3..48; 48 = disabled).</summary>
+    ActConfigureFirstpageEdit: TEdit;
+    /// <summary>Protection scope label.</summary>
+    ActConfigureProtectreadsLabel: TLabel;
+    /// <summary>Protection scope.</summary>
+    ActConfigureProtectreadsBox: TComboBox;
+    /// <summary>Exact pages 42/43 preimage (8 bytes, hex) label.</summary>
+    ActConfigureBeforeLabel: TLabel;
+    /// <summary>Exact pages 42/43 preimage (8 bytes, hex).</summary>
+    ActConfigureBeforeEdit: TEdit;
+    /// <summary>Supplied 16-byte current key (hex) label.</summary>
+    ActConfigureKeyLabel: TLabel;
+    /// <summary>Supplied 16-byte current key (hex).</summary>
+    ActConfigureKeyEdit: TEdit;
+    /// <summary>Replace key + fresh RF proof.</summary>
+    ActChangekeyTab: TTabSheet;
+    /// <summary>Replace key + fresh RF proof inputs.</summary>
+    ActChangekeyInputs: TScrollBox;
+    /// <summary>Supplied 16-byte current key (hex) label.</summary>
+    ActChangekeyKeyLabel: TLabel;
+    /// <summary>Supplied 16-byte current key (hex).</summary>
+    ActChangekeyKeyEdit: TEdit;
+    /// <summary>New 16-byte key (hex) label.</summary>
+    ActChangekeyNewkeyLabel: TLabel;
+    /// <summary>New 16-byte key (hex).</summary>
+    ActChangekeyNewkeyEdit: TEdit;
     /// <summary>Reader discovery and transport guidance.</summary>
     HeaderPanel: TPanel;
     /// <summary>Native card offered/removed status, independent of operation output.</summary>
@@ -189,12 +229,35 @@ begin
       FInputs[1] := ActWriteDataEdit;
       FInputs[2] := ActWriteKeyEdit;
     end;
+    3:
+    begin
+      SetLength(FInputs,1);
+      FInputs[0] := ActConfigurationKeyEdit;
+    end;
+    4:
+    begin
+      SetLength(FInputs,4);
+      FInputs[0] := ActConfigureFirstpageEdit;
+      FInputs[1] := ActConfigureProtectreadsBox;
+      FInputs[2] := ActConfigureBeforeEdit;
+      FInputs[3] := ActConfigureKeyEdit;
+    end;
+    5:
+    begin
+      SetLength(FInputs,2);
+      FInputs[0] := ActChangekeyKeyEdit;
+      FInputs[1] := ActChangekeyNewkeyEdit;
+    end;
   else Exit; end;
   AcknowledgeCheck.Enabled := FActions[ActionPages.ActivePageIndex].Mutation;
 end;
 
 procedure TUltralightCDemoForm.ClearCredentials;
 begin
+  ActConfigurationKeyEdit.Clear;
+  ActConfigureKeyEdit.Clear;
+  ActChangekeyKeyEdit.Clear;
+  ActChangekeyNewkeyEdit.Clear;
   ActPageKeyEdit.Clear;
   ActMemoryKeyEdit.Clear;
   ActWriteKeyEdit.Clear;

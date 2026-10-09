@@ -56,13 +56,13 @@ def inverse_send(key,data):
 def wrap(cmd,data=b''):return bytes([0x90,cmd,0,0])+ (bytes([len(data)])+data if data else b'')+b'\0'
 class Card:
     def __init__(self,profile,mode,**kwargs):
-        self.legacy=profile>=2;self.key=KEY[:8 if profile==2 else 24 if profile==1 else 16]
+        self.legacy=profile>=2;self.key=kwargs.get('key',KEY[:8 if profile==2 else 24 if profile==1 else 16])
         n=16 if profile==1 else 8;a,b=A[:n],B[:n]
         rb=crypt(self.key,bytes(8),b)
         challenge=inverse_send(self.key,a+b[1:]+b[:1]) if self.legacy else crypt(self.key,rb[-8:],a+b[1:]+b[:1])
         ra=crypt(self.key,bytes(8) if self.legacy else challenge[-8:],a[1:]+a[:1])
         self.pairs=[(wrap(0x5a,kwargs.get('aid',bytes.fromhex('01EFCD'))),bytes.fromhex('9100')),
-                    (wrap(0x0a if self.legacy else 0x1a,b'\0'),rb+bytes.fromhex('91AF')),
+                    (wrap(0x0a if self.legacy else 0x1a,bytes([kwargs.get('key_number',0)])),rb+bytes.fromhex('91AF')),
                     (wrap(0xaf,challenge),ra+bytes.fromhex('9100'))]
         self.session=a[:4]+b[:4]
         if profile==1:self.session+=a[6:10]+b[6:10]+a[12:]+b[12:]
@@ -152,6 +152,63 @@ def applications(profile):
         card.metadata(0x6a,returned=b''.join(current))
     return card.pairs
 
+NEW_KEY=bytes.fromhex('1032547698BADCFE0123456789ABCDEFFEDCBA9876543210')
+def version_key(material,version,new=True):
+    out=bytearray(material)
+    for i in range(8):
+        bit=version>>(7-i)&1;out[i]=(out[i]&0xfe)|bit
+        if new and len(out)==16:out[i+8]=(out[i+8]&0xfe)|(bit^1)
+    return bytes(out)
+def des_admin(profile,action,root=False,free=False):
+    card=Card(profile,3,aid=bytes(3) if root else bytes.fromhex('01EFCD'))
+    config=(0x40 if profile==1 else 0)|2
+    card.metadata(0x45,returned=bytes([0x0f,config]))
+    if action=='policy':
+        card.exchange(0x54,body=b'\xef',mode=3,write=True)
+        card.metadata(0x45,returned=bytes([0xef,config]))
+    elif action=='access':
+        original=bytes.fromhex('00030e0e200000') if free else bytes.fromhex('00030000200000')
+        updated=bytes.fromhex('000110e1200000')
+        card.metadata(0xf5,b'\0',original)
+        card.exchange(0x5f,b'\0',updated[1:4],mode=0 if free else 3,write=True)
+        card.metadata(0xf5,b'\0',updated)
+    else:
+        current=action=='current';size=8 if profile==2 else 24 if profile==1 else 16
+        new=version_key(NEW_KEY[:size],0x42);old=version_key(KEY[:size],0x21,False)
+        new_wire=new*2 if size==8 else new;old_wire=old*2 if size==8 else old
+        number=(0x40 if root and profile==1 else 0) | (0 if current else 1)
+        body=new_wire if current else xor(new_wire,old_wire)
+        body+=crc16(body) if card.legacy else crc32(bytes([0xc4,number])+body)
+        if not current:body+=crc16(new_wire) if card.legacy else crc32(new_wire)
+        encrypted=inverse_send(card.session,pad(body)) if card.legacy else crypt(card.session,card.iv,pad(body))
+        if card.legacy:response=b''
+        else:
+            card.iv=encrypted[-8:];card.iv=mac(card.session,card.iv,b'\0');response=card.iv
+        # A changed current key loses authentication, so the native response may be bare.
+        card.pairs.append((wrap(0xc4,bytes([number])+encrypted),(b'' if current else response)+bytes.fromhex('9100')))
+        fresh=Card(profile,3,key=new,key_number=0 if current else 1)
+        card.pairs.extend(fresh.pairs[1:]);card.session=fresh.session;card.iv=fresh.iv
+        card.metadata(0x64,bytes([0 if current else 1]),b'\x42')
+        card.metadata(0x45,returned=bytes([0x0f,config]))
+    return card.pairs
+
+def ulc_auth(key):
+    a,b=A[:8],B[:8];rb=crypt(key,bytes(8),b);challenge=crypt(key,rb,a+b[1:]+b[:1]);ra=crypt(key,challenge[-8:],a[1:]+a[:1])
+    return [(rf(bytes.fromhex('1A00')),rf(b'\xaf'+rb)),(rf(b'\xaf'+challenge),rf(b'\0'+ra))]
+def ulc_admin(action,locked=0):
+    key=KEY[:16];new=NEW_KEY[:16];config=bytearray.fromhex('000000BD0000000030AABBCCF1DDEEFF');config[1]=locked
+    pairs=ulc_auth(key)+[(rf(bytes.fromhex('3028')),rf(config))]
+    if action=='read' or locked:return pairs
+    if action=='config':
+        config[12]&=0xfe;pairs.append((rf(b'\xa2\x2b'+config[12:16]),b'\x0a'))
+        config[8]=4;pairs.append((rf(b'\xa2\x2a'+config[8:12]),b'\x0a'))
+    if action=='key':
+        stored=new[:8][::-1]+new[8:][::-1]
+        for i in range(4):pairs.append((rf(bytes([0xa2,44+i])+stored[i*4:i*4+4]),b'\x0a'))
+    pairs+=ulc_auth(new if action=='key' else key)
+    if action=='config' or action=='noop':pairs.append((rf(bytes.fromhex('3028')),rf(config)))
+    return pairs
+
 vectors={}
 for profile in range(4):
     for mode in (0,1,3):
@@ -160,7 +217,14 @@ for profile in range(4):
         vectors[f'F{profile}M{mode}']=files(profile,mode)
     vectors[f'C{profile}']=desfire(profile,3,True,chained=True)
     vectors[f'A{profile}']=applications(profile)
+    for action in ('policy','access','current','other'):
+        vectors[f'K{profile}{action}']=des_admin(profile,action)
+    vectors[f'K{profile}root']=des_admin(profile,'current',root=True)
+    vectors[f'K{profile}free']=des_admin(profile,'access',free=True)
 for action in ('read','memory','write'):vectors['U'+action]=ulc(action)
+for action in ('read','config','key','noop','samekey'):vectors['UC'+action]=ulc_admin(action)
+vectors['UClockedconfig']=ulc_admin('config',0x60)
+vectors['UClockedkey']=ulc_admin('key',0x80)
 text=['unit LegacyMifare.Vectors;','{$IFDEF FPC}{$MODE DELPHI}{$ENDIF}','interface','type',
       '  /// <summary>Independent literal command/response pair using synthetic public credentials.</summary>',
       '  TLegacyWirePair=record','    /// <summary>Exact outgoing bytes encoded as hex.</summary>','    Command:string;',

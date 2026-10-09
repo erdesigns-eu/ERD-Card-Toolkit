@@ -16,8 +16,8 @@ type
   function RandomBytes(const N:Integer):TBytes;
  end;
  TScript=class(TInterfacedObject,ICardTransport,ICardTransaction,IRawContactlessReader)
-  Pairs:TLegacyWirePairs;Calls,Begins,Ends,FailCall,CorruptCall,CorruptByte,CorruptBit:Integer;
-  EndFails,Active:Boolean;
+  Pairs:TLegacyWirePairs;Calls,Begins,Ends,FailCall,CorruptCall,CorruptByte,CorruptBit,Activations:Integer;
+  EndFails,Active,SwapOnSecond:Boolean;
   function Exchange(const C:TBytes):TBytes;overload;
   function Exchange(const C:TBytes;const Bits:Integer):TRawRfResponse;overload;
   procedure BeginTransaction;procedure EndTransaction;procedure BeginSession;procedure EndSession;
@@ -44,7 +44,7 @@ procedure TScript.BeginTransaction;begin Check(not Active,'Exclusive acquire');A
 procedure TScript.EndTransaction;begin Check(Active,'Owned release');Active:=False;Inc(Ends);if EndFails then raise ECardTransportError.Create('Test release failure.');end;
 procedure TScript.BeginSession;begin BeginTransaction;end;
 procedure TScript.EndSession;begin EndTransaction;end;
-function TScript.Activate:TBytes;begin Result:=HexToBytes('04112233445566');end;
+function TScript.Activate:TBytes;begin Inc(Activations);Result:=HexToBytes('04112233445566');if SwapOnSecond and (Activations>1) then Result[1]:=$22;end;
 function Fixed:ICardDesProvider;
 var P:TFixed;begin P:=TFixed.Create;P.Base:=Base;Result:=P;end;
 function PairsFor(const Profile,Mode:Integer;const Write:Boolean):TLegacyWirePairs;
@@ -303,6 +303,151 @@ begin
   end;
  end;
 end;
+procedure TestDesKeyManagement;
+var Profile,Action,Attempt,I,J,K,FirstWrite:Integer;R:TDesfireCardReader;T:TScript;Transport:ICardTransport;
+ S:IDesfireDesManagement;P:TLegacyWirePairs;NewKey,OldKey:TBytes;Failed,Uncertain:Boolean;Aid:Cardinal;
+ procedure Workflow;
+ begin
+  case Action of
+   0:S.ChangeKeySettings($EF);
+   1,5:S.ChangeFileAccess(0,dfcMac,14,1,1,0);
+   2,4:S.ChangeDesKey(0,$42,0,NewKey,nil);
+   3:S.ChangeDesKey(1,$42,$21,NewKey,OldKey);
+  end;
+  if Action>=2 then if Action<=4 then Check(S.ReadApplicationSettings.KeySettings=$0F,'Fresh key context remains usable');
+ end;
+begin
+ for Profile:=0 to 3 do for Action:=0 to 5 do begin
+  case Profile*10+Action of
+   0:P:=K0policy;
+   1:P:=K0access;
+   2:P:=K0current;
+   3:P:=K0other;
+   4:P:=K0root;
+   5:P:=K0free;
+   10:P:=K1policy;
+   11:P:=K1access;
+   12:P:=K1current;
+   13:P:=K1other;
+   14:P:=K1root;
+   15:P:=K1free;
+   20:P:=K2policy;
+   21:P:=K2access;
+   22:P:=K2current;
+   23:P:=K2other;
+   24:P:=K2root;
+   25:P:=K2free;
+   30:P:=K3policy;
+   31:P:=K3access;
+   32:P:=K3current;
+   33:P:=K3other;
+   34:P:=K3root;
+   35:P:=K3free;
+  end;
+  FirstWrite:=0;
+  for I:=0 to High(P) do if (Pos('9054',P[I].Command)=1) or (Pos('905F',P[I].Command)=1) or (Pos('90C4',P[I].Command)=1) then begin FirstWrite:=I+1;Break;end;
+  Check(FirstWrite>0,'Native key-management dispatch boundary');
+  Aid:=$CDEF01;if Action=4 then Aid:=0;
+  NewKey:=HexToBytes('1032547698BADCFE0123456789ABCDEFFEDCBA9876543210');
+  OldKey:=HexToBytes('0123456789ABCDEFFEDCBA98765432100123456789ABCDEF');
+  if Profile=2 then begin SetLength(NewKey,8);SetLength(OldKey,8);end
+  else if Profile<>1 then begin SetLength(NewKey,16);SetLength(OldKey,16);end;
+  for Attempt:=0 to Length(P) do begin
+   R:=TDesfireCardReader.Create(nil);T:=TScript.Create;Transport:=T;T.Pairs:=P;T.FailCall:=Attempt;S:=nil;Failed:=False;Uncertain:=False;
+   try
+    Configure(R,T,Profile,0);
+    try S:=R.OpenDesManagementSession(Aid);Workflow;
+    except on E:Exception do begin Failed:=True;Uncertain:=E is EContactlessWriteUncertain;if Attempt=0 then raise;end;end;
+    if Attempt=0 then begin Check(T.Calls=Length(P),'Independent native key-policy/access/rotation transcript');S.Close;end
+    else begin
+     Check(Failed and (T.Calls=Attempt),'Key management stops at every failed exchange');
+     Check(Uncertain=((Attempt>=FirstWrite) and ((Action in [0,1,5]) or (Attempt<Length(P)))),'Key management mutation uncertainty');
+    end;
+    if S<>nil then S.Close;
+    Check((T.Ends=1) and not T.Active,'Native management releases exactly once');
+   finally S:=nil;R.Free;Transport:=nil;end;
+  end;
+  if Action in [2,3,4] then begin
+   for I:=FirstWrite-1 to High(P)-1 do
+    if (Profile<2) or (Pos('90AF',P[I].Command)=1) then
+     for J:=0 to Length(P[I].Response) div 2-1 do for K:=0 to 7 do begin
+      R:=TDesfireCardReader.Create(nil);T:=TScript.Create;Transport:=T;T.Pairs:=P;
+      T.CorruptCall:=I+1;T.CorruptByte:=J;T.CorruptBit:=K;S:=nil;Failed:=False;
+      try
+       Configure(R,T,Profile,0);
+       try S:=R.OpenDesManagementSession(Aid);Workflow;except on E:Exception do Failed:=True;end;
+       Check(Failed and (T.Ends=1) and not T.Active,'DES replacement proof/integrity every response bit');
+      finally S:=nil;R.Free;Transport:=nil;end;
+     end;
+   R:=TDesfireCardReader.Create(nil);T:=TScript.Create;Transport:=T;T.Pairs:=P;S:=nil;
+   try
+    Configure(R,T,Profile,0);S:=R.OpenDesManagementSession(Aid);I:=T.Calls;Failed:=False;
+    try S.ChangeDesKey(0,$42,0,HexToBytes('00'),nil);except on E:EContactlessError do Failed:=True;end;
+    Check(Failed and (T.Calls=I) and (S.Outcome=dsoActive),'Bad replacement size does not dispatch or poison');
+    Failed:=False;try S.ChangeDesKey(0,$42,0,NewKey,OldKey);except on E:EContactlessError do Failed:=True;end;
+    Check(Failed and (T.Calls=I) and (S.Outcome=dsoActive),'Current replacement rejects extraneous old key before I/O');
+    S.Close;Check(T.Ends=1,'Rejected key inputs still close once');
+   finally S:=nil;R.Free;Transport:=nil;end;
+  end;
+ end;
+end;
+
+procedure TestUlcManagement;
+var Action,Attempt,I,J,K,Boundary:Integer;R:TUltralightCCardReaderWriter;T:TScript;Reader:IRawContactlessReader;
+ P:TLegacyWirePairs;Key,NewKey,Expected:TBytes;C:TUltralightCConfiguration;Failed,Uncertain:Boolean;
+ procedure Workflow;
+ begin
+  case Action of
+   0:C:=R.ReadConfiguration(Key);
+   1,5:C:=R.ConfigureAuthenticationVerified(4,True,Expected,Key);
+   2,6:Check(R.ChangeKeyVerified(Key,NewKey),'ULC new key verified');
+   3:C:=R.ConfigureAuthenticationVerified(48,False,Expected,Key);
+   4:Check(R.ChangeKeyVerified(Key,Key),'ULC unchanged key verified');
+  end;
+ end;
+begin
+ R:=TUltralightCCardReaderWriter.Create(nil);
+ Key:=HexToBytes('0123456789ABCDEFFEDCBA9876543210');NewKey:=HexToBytes('1032547698BADCFE0123456789ABCDEF');Expected:=HexToBytes('30AABBCCF1DDEEFF');
+ try
+  R.CryptoProvider:=Fixed;
+  for Action:=0 to 6 do begin
+   case Action of 0:P:=UCread;1:P:=UCconfig;2:P:=UCkey;3:P:=UCnoop;4:P:=UCsamekey;5:P:=UClockedconfig;6:P:=UClockedkey;end;
+   Boundary:=Length(P)+1;for I:=0 to High(P) do if Pos('A2',P[I].Command)=1 then begin Boundary:=I+1;Break;end;
+   for Attempt:=0 to Length(P) do begin
+    T:=TScript.Create;Reader:=T;T.Pairs:=P;T.FailCall:=Attempt;R.Reader:=T;Failed:=False;Uncertain:=False;
+    try Workflow;except on E:Exception do begin Failed:=True;Uncertain:=E is EContactlessWriteUncertain;if (Attempt=0) and (Action<5) then raise;end;end;
+    Check(Failed=((Attempt>0) or (Action>=5)),'ULC management success or locked preflight');
+    Check(Uncertain=((Attempt>0) and (Attempt>=Boundary)),'ULC configuration/key mutation uncertainty');
+    Check((T.Ends=1) and not R.Busy and (T.Calls=Length(P)) or ((Attempt>0) and (T.Calls=Attempt) and (T.Ends=1) and not R.Busy),'ULC exact transcript and release');
+    if (Attempt=0) and (Action<5) then Check(T.Activations=1+Ord(Action<>0),'ULC management fresh RF activation');
+    if (Attempt=0) and (Action=1) then Check((C.FirstProtectedPage=4) and C.ProtectReads and (BytesToHex(C.AuthenticationPages)='04AABBCCF0DDEEFF'),'ULC preserves reserved bytes');
+   end;
+   if Action in [1,2] then begin
+    for I:=0 to High(P) do for J:=0 to Length(P[I].Response) div 2-1 do for K:=0 to 7 do begin
+     // Upper ACK bits are outside the four-bit RF response.
+     if (Length(P[I].Response)=2) and (K>3) then Continue;
+     T:=TScript.Create;Reader:=T;T.Pairs:=P;T.CorruptCall:=I+1;T.CorruptByte:=J;T.CorruptBit:=K;R.Reader:=T;Failed:=False;
+     try Workflow;except on E:Exception do Failed:=True;end;
+     Check(Failed and (T.Ends=1) and not R.Busy,'ULC configuration/key response bit corruption');
+    end;
+    T:=TScript.Create;Reader:=T;T.Pairs:=P;T.SwapOnSecond:=True;R.Reader:=T;Uncertain:=False;
+    try Workflow;except on E:EContactlessWriteUncertain do Uncertain:=True;end;
+    Check(Uncertain and (T.Activations=2) and (T.Ends=1),'ULC swapped UID after mutation cannot verify');
+    T:=TScript.Create;Reader:=T;T.Pairs:=P;T.EndFails:=True;R.Reader:=T;Uncertain:=False;
+    try Workflow;except on E:EContactlessWriteUncertain do Uncertain:=True;end;
+    Check(Uncertain and (T.Ends=1),'ULC failed release after management proof remains uncertain');
+   end;
+  end;
+  T:=TScript.Create;Reader:=T;T.Pairs:=UCread;R.Reader:=T;Failed:=False;
+  try C:=R.ConfigureAuthenticationVerified(4,True,HexToBytes('31AABBCCF1DDEEFF'),Key);
+  except on E:EContactlessError do Failed:=True;end;
+  Check(Failed and (T.Calls=3) and (T.Ends=1),'ULC stale preimage rejected before config writes');
+  T:=TScript.Create;Reader:=T;R.Reader:=T;Failed:=False;
+  try C:=R.ConfigureAuthenticationVerified(49,True,Expected,Key);except on E:EContactlessError do Failed:=True;end;
+  Check(Failed and (T.Begins=0),'ULC invalid AUTH0 rejected before acquisition');
+ finally R.Free;Reader:=nil;end;
+end;
+
 procedure TestCrypto;
 var K,V,B,Original:TBytes;
 begin
@@ -315,6 +460,6 @@ end;
 begin
  try
 {$IFDEF MSWINDOWS}Base:=TCardWindowsAesProvider.Create;{$ELSE}Base:=TCardOpenSslAesProvider.Create;{$ENDIF}
- TestCrypto;TestUlc;TestDesfire;TestChaining;TestSessions;TestManagement;Writeln('PASS: ',Checks,' independent legacy MIFARE assertions.');
+ TestCrypto;TestDesKeyManagement;TestUlcManagement;TestUlc;TestDesfire;TestChaining;TestSessions;TestManagement;Writeln('PASS: ',Checks,' independent legacy MIFARE assertions.');
  except on E:Exception do begin Writeln(E.ClassName,': ',E.Message);ExitCode:=1;end;end;
 end.

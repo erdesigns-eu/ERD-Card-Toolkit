@@ -239,7 +239,7 @@ begin
  for I:=0 to High(A) do
  begin
   Check(A[I].Mutation and A[I].Pcsc,'ULC explicit acknowledgement and PC/SC reader');
-  R:=Request(dfUltralightC,A[I].Id);Put(R,dfUltralightC,'key','0123456789ABCDEFFEDCBA9876543210');Put(R,dfUltralightC,'data','AABBCCDD');Put(R,dfUltralightC,'page','4');
+  R:=Request(dfUltralightC,A[I].Id);Put(R,dfUltralightC,'key','0123456789ABCDEFFEDCBA9876543210');Put(R,dfUltralightC,'data','AABBCCDD');Put(R,dfUltralightC,'page','4');Put(R,dfUltralightC,'before','30AABBCCF1DDEEFF');Put(R,dfUltralightC,'newkey','1032547698BADCFE0123456789ABCDEF');
   Reached:=False;
   try CreateCardFamilyOperations(dfUltralightC,Hardware).Run(R,D);except on E:EReachedHardware do Reached:=True;end;
   Check(Reached,'ULC valid supplied-key action reaches acquisition');Before:=H.Acquires;
@@ -704,6 +704,7 @@ begin
       Put(R,dfDesfire,'offset','0'); Put(R,dfDesfire,'count','1'); Put(R,dfDesfire,'file','0'); Put(R,dfDesfire,'data','01020304');
       Put(R,dfDesfire,'amount','1'); Put(R,dfDesfire,'settings','15'); Put(R,dfDesfire,'keycount','1'); Put(R,dfDesfire,'applicationkeytype','2'); Put(R,dfDesfire,'targetaid','263430');
       Put(R,dfDesfire,'readkey','0'); Put(R,dfDesfire,'writekey','0'); Put(R,dfDesfire,'readwritekey','0'); Put(R,dfDesfire,'changekey','0');
+      if A[I].Id='changedeskey' then Put(R,dfDesfire,'security','3');
       Put(R,dfDesfire,'filebytes','16'); Put(R,dfDesfire,'keyversion','1'); Put(R,dfDesfire,'newkey','101112131415161718191A1B1C1D1E1F');
       Reached := False;
       try CreateCardFamilyOperations(dfDesfire,Hardware).Run(R,D); except on E: EReachedHardware do Reached := True; end;

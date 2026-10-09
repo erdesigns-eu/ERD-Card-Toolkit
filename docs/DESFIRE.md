@@ -26,7 +26,7 @@ package. All exported declarations carry Delphi XML documentation.
 | Ordinary file settings | Standard, backup, signed value, linear/cyclic records; strict geometry/access parsing | Extended access rights, SDM, transaction-MAC and generation-specific file types |
 | Public file access | Plaintext free-access reads and verified standard-data range writes | No key guessing or automatic authentication fallback |
 | EV1 AES | `AuthenticateAES` (`AA`), fresh CSPRNG nonce, mutual verification, AES session key and chained IV | Native EV1 AES dialect; D40/DES/2K3DES/3K3DES are separate profiles |
-| EV1 3DES | Explicit `1A` authentication, 16/24-byte keys, nonce sizes 8/16, chained eight-byte CMAC and CRC32 encryption | DES/3DES key rotation and management are outside this profile |
+| EV1 3DES | Explicit `1A` authentication, 16/24-byte keys, nonce sizes 8/16, chained eight-byte CMAC and CRC32 encryption | Same-type rotation and ordinary native management; extended key sets remain separate |
 | D40 legacy | Explicit `0A` authentication, 8/16-byte keys, reset-IV legacy inverse send, four-byte CBC-MAC and CRC16 encryption | Plain legacy metadata/acks have no transmitted MAC; no security downgrade |
 | EV2 AES | `AuthenticateEV2First`, fresh CSPRNG nonce, mutual nonce/capability-echo verification, session ENC/MAC keys and TI | Explicit AES profile, no LRP negotiation |
 | EV2 NonFirst | Optional `77` authentication with a second explicit key after verified settings; new session keys, retained TI/counter | One key switch within each acquired data/value/record operation; key-set management is separate |
@@ -507,7 +507,7 @@ is redistributed or linked into this library:
 - [Microsoft CNG functions](https://learn.microsoft.com/en-us/windows/win32/seccng/cng-functions)
   and [OpenSSL EVP](https://docs.openssl.org/3.5/man3/EVP_EncryptInit/).
 
-Next security/access additions are DES/3DES key/access-policy changes and key rotation, EV2 key sets,
+Next security/access additions are EV2 key sets,
 LRP and generation-specific extensions, TMAC receipts, extended/SDM rights and
 configuration, ISO creation, originality and hardware profiles. Basic AES key policy,
 rotation and ordinary access administration are implemented. Broad support is built per implemented/tested operation, never inferred
@@ -522,3 +522,13 @@ independently of PICC authentication. Existing `CreateApplication` retains its A
 behavior. Native create/delete operations and metadata reads now have independent
 DES/3DES transcripts and every I/O failure boundary. See
 [DESFIRE_APPLICATIONS.md](DESFIRE_APPLICATIONS.md) for the exact contract and demo.
+
+## DES/3DES key administration
+
+The four explicit DES/3DES profiles now support key policy and ordinary-file access
+updates through `IDesfireManagement`. `OpenDesManagementSession` exposes the new
+optional `IDesfireDesManagement` interface for same-type key replacement. It checks
+acquired policy, secures the native ChangeKey command and verifies fresh mutual
+authentication plus the new key version. Existing interface IIDs remain unchanged.
+See [legacy MIFARE security](LEGACY_MIFARE_SECURITY.md) for stored version-bit
+requirements, protocol differences and the dedicated DFM controls.
