@@ -86,14 +86,14 @@ terugleesbewijs en offline decoders. Geen verbinding of PIN-poging bij opstarten
 
 Dit is geen telefonie-stack: geen netwerkregistratie, telefoonmodem, SMS verzenden,
 GSM/AKA-authenticatie, Ki-uitlezing, eSIM-download/provisioning of SIM Toolkit.
-PIN-wijziging/PUK-herstel, ADM-authenticatie, gekoppeld USIM PBR/IAP/EXT-schrijfbeheer,
+ADM-authenticatie, automatische recordallocatie voor USIM-contacten,
 automatische SMS-berichtgroepering, nationale taaltabellen en extra telefoonbestanden zijn vervolgstappen.
 Cyclic-recordwrites ontbreken; absolute cyclic reads zijn aanwezig. Binary-offsets
 zijn beperkt tot 32767; volledige transparante files tot 32768 bytes. Records zijn
 maximaal 255 bytes/255 records. Grotere profielen worden geweigerd, niet afgekapt.
 
-Praktische volgende uitbreidingen: eerst veilige gekoppelde contactwrites,
-daarna gecontroleerde PIN/PUK-methoden met nieuw sessiebewijs en aparte transcripttests.
+Praktische volgende uitbreidingen: eerst automatische link-/recordallocatie,
+daarna automatische recordallocatie/telefoniebestandprofielen waar een concreet protocol beschikbaar is.
 Andere kaartfamilies: de resterende VCL-demo's, native USB-HID-bronnen, MIFARE Plus
 of CryptoMemory vereisen elk hun eigen reader/protocolprofiel; betalingen blijven buiten scope.
 
@@ -104,7 +104,7 @@ ETSI TS 102 221 (UICC), TS 131 102 / 3GPP TS 31.102 (USIM) en
 3GPP TS 23.038 (tekencodering). Publieke pySim-protocoldefinities zijn gebruikt
 als secundaire crosscheck; de Pascal-implementatie is zelfstandig geschreven.
 
-72.312 SIM/USIM-assertions zijn uitgevoerd onder FPC met range/overflow/heapchecks:
+74.402 SIM/USIM-assertions zijn uitgevoerd onder FPC met range/overflow/heapchecks:
 literal APDU's/codecs, PIN-budgetten, buffers, elke write-I/O-grens, volledige
 terugleesbits, chunking en cleanup-onzekerheid. De aparte familie-executor heeft
 ook literal SIM-leesroutes en preflighttests. **Delphi/Windows en fysieke SIMs zijn
@@ -117,7 +117,7 @@ linear-fixed EFs onder één exclusieve transactie. De ADN-keuze is expliciet;
 ontbrekende/ambigue IAP/EXT-referenties, pointers buiten het bestand en loops worden
 geweigerd. EXT type 2 wordt als extra nummerdigits gevolgd; overige gekoppelde
 velden blijven volledige bytes inclusief footer. EMAIL/ANR-codecs vereisen een expliciete footer-layout; ANR retourneert het inline nummer en behoudt CCP/EXT-verwijzingen.
-Gekoppelde writes zijn nog niet aangeboden. Dit profiel vereist precies één ADN en ondubbelzinnige IAP/EXT-referenties in het gekozen PBR-record. Type-2 EMAIL/ANR/SNE-terugverwijzingen worden tegen de gekozen ADN-record/SFI gecontroleerd.
+Gekoppelde writes gebruiken een expliciet caller-plan; er wordt geen vrije record/link gegokt. Dit profiel vereist precies één ADN en ondubbelzinnige IAP/EXT-referenties in het gekozen PBR-record. Type-2 EMAIL/ANR/SNE-terugverwijzingen worden tegen de gekozen ADN-record/SFI gecontroleerd.
 Maximaal 32 verschillende EFs worden
 ingelezen. Type-3 referenties worden alleen gevolgd voor de ondersteunde EXT-keten.
 
@@ -140,3 +140,32 @@ complete EF.SMS-records gescheiden door puntkomma en ordent de segmenten.
 Onbekende UDH-elementen moeten gelijk zijn voor de hele set. Bij binaire SMS
 worden de payloads zonder hun headers samengevoegd; originele segmentbytes blijven
 in `Segments` beschikbaar. De caller bepaalt welk bericht de set vormt.
+
+## PIN/PUK-beheer en gekoppelde writes
+
+`GetPukStatus` leest classic PUK-counters of gebruikt een expliciete UICC
+RESET RETRY query. Kaarten die daarbij geen bekend budget rapporteren worden
+voor unblock geweigerd; er wordt geen codepoging gebruikt om het budget te raden.
+`ChangePin` en `UnblockPin` sturen één CHANGE/UNBLOCK met supplied ASCII-cijfers.
+`MinimumPinAttempts` geldt ook voor het bekende PUK-budget. Geen voorafgaande
+VERIFY die een extra poging kan verbruiken. Zowel caller-input als backend errors
+worden beschermd door owned/wiped commandokopieën en gesaniteerde fouten.
+
+De returnwaarde `TSimCredentialReceipt.CommandAccepted` is uitsluitend het
+commandostatusbewijs na geslaagde afsluiting. **Geen nieuw-PIN-bewijs wordt geclaimd.**
+Een applicatie kan na een expliciete reset/nieuwe sessie `VerifyPin` gebruiken.
+De component doet zelf geen reset, automatische retry of tweede codepoging.
+
+`WriteLinkedPhonebookRecords` neemt één tot 32 expliciet geordende veranderingen
+met USIM `5F3A/FID`, record, exacte before/data. Alle beginrecords worden onder één
+transactie gecheckt vóór de eerste UPDATE; elk gewijzigd record opnieuw vlak vóór
+zijn write; alle eindrecords worden onafhankelijk teruggelezen. De volgorde is
+caller-defined, bijvoorbeeld eerst een nieuwe EMAIL/EXT-recordinhoud en pas daarna
+de IAP/ADN-link. Meerdere writes zijn **niet atomair**. Na partial dispatch geen
+rollback/replay: `ESimCardWriteUncertain` blijft expliciet, met readback proof waar
+aanwezig. PBR-wijzigingen, duplicate records en onbekende geometrie zijn geweigerd.
+Geen automatische allocatie of impliciete wijziging van andere contacten.
+
+De VCL-planactie gebruikt `FIDhex:record:beforehex:datahex` per puntkommaregel,
+bijvoorbeeld `4F50:1:41420101:42420101`. PIN/PUK wordt uitsluitend als ASCII-hex
+ingevoerd; credential-acties tonen statusreceipt, linked writes volledig readback.

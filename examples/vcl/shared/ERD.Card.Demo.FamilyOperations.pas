@@ -45,7 +45,9 @@ uses
 {$ELSE}
   System.SysUtils, System.Classes,
 {$ENDIF}
-  ERD.Card.Bytes, ERD.Card.APDU, ERD.Card.ATR, ERD.Card.ATR.Catalog,
+  ERD.Card.EMV.Data, ERD.Card.EMV.Reader, ERD.Card.EID.Data, ERD.Card.EID.Reader,
+  ERD.Card.EID.DocumentReader, ERD.Card.EID.ICAO, ERD.Card.Crypto.EAC, ERD.Card.Crypto.EAC.OpenSSL,
+  ERD.Card.EID.Access, ERD.Card.Bytes, ERD.Card.APDU, ERD.Card.ATR, ERD.Card.ATR.Catalog,
   ERD.Card.TLV, ERD.Card.EMV.Tags, ERD.Card.Ndef,
   ERD.Card.Memory, ERD.Card.Memory.Counter, ERD.Card.Memory.Sle4404,
   ERD.Card.SIM.Data, ERD.Card.SIM.Reader, ERD.Card.Memory.Capabilities, ERD.Card.PCSC.Reader,
@@ -204,13 +206,23 @@ begin
   for I := 0 to Node.ChildCount - 1 do Result := Result + sLineBreak + TlvText(Node.Children[I],Depth+1);
 end;
 
+procedure Artifact(var D: TCardDemoResult; const Name: string; const Data: TBytes);
+var N: Integer;
+begin
+  if Length(Data) = 0 then Exit; N := Length(D.Artifacts); SetLength(D.Artifacts,N+1);
+  D.Artifacts[N].Name := Name; D.Artifacts[N].Data := CopyBytes(Data);
+end;
+
 procedure TFamilyOperations.Execute(const R: TCardDemoRequest; const A: TCardFamilyAction;
   const T: ICardTransport; const C: ITwn4ByteChannel; var D: TCardDemoResult);
-var M: TMemoryCardReaderWriter; S: TSleCounterCardReaderWriter; L: TSle4404CardReaderWriter;
+var Emv: TEMVCardReader; Belgian: TBelgianEIDReader; Icao: TICAODocumentReader;
+  Directory: TEmvDirectoryData; Application: TEmvApplicationData; ObjectData: TEmvDataObjectResult; Log: TEmvTransactionLogData;
+  Values: TEmvValues; Dol: TEmvDolEntries; Eid: TBelgianEidData; Sections: TEidSections; Document: TIcaoDocumentData; PaceInfos: TIcaoPaceInfos;
+  M: TMemoryCardReaderWriter; S: TSleCounterCardReaderWriter; L: TSle4404CardReaderWriter;
   Contact: TContactlessCardReader; T2: TType2NdefCardReader; T4: TType4NdefCardReader;
   CC: TType4CapabilityContainer; T4Snapshot: TType4NdefSnapshot; T2Snapshot: TType2NdefSnapshot; UserMemory: TType2UserMemory;
   Sim: TSimCardReaderWriter; SF: TSimFileAddress; SI: TSimFileInfo; PS: TSimPinStatus;
-  SR: TSimRecords; SC: TSimPhonebookEntries; SA: TSimApplications; SD: TSimApplicationInfo; SS: TSimServices; SP: TSimServiceProvider; SE: TSimPhonebookEntry; Assembled: TSimAssembledSms; SMS: TSimSmsMessage; Linked: TSimLinkedContact; SM: TSimSmsRecord; PB: TSimPhonebookReferences;
+  SR: TSimRecords; SC: TSimPhonebookEntries; SA: TSimApplications; SD: TSimApplicationInfo; SS: TSimServices; SP: TSimServiceProvider; SE: TSimPhonebookEntry; Parts: TStringList; Changes: TSimRecordChanges; Receipt: TSimCredentialReceipt; Assembled: TSimAssembledSms; SMS: TSimSmsMessage; Linked: TSimLinkedContact; SM: TSimSmsRecord; PB: TSimPhonebookReferences;
   W: TTwn4CardReaderWriter; H: TRfidHidReportReader;
   Layout: TSle4404AccessLayout; Info: TTwn4TagInfo; Identifier: TRfidInputIdentifier;
   Field: TRfidHidAsciiField; P, NewP, Data, Key, Id, Wire: TBytes;
@@ -397,6 +409,74 @@ begin
           end else Fail;
         finally W.Free; end;
       end;
+      dfEmv:
+      begin
+        Emv := TEMVCardReader.Create(nil);
+        try
+          Emv.Transport := T;
+          if A.Id = 'discover' then
+          begin
+            Directory := Emv.DiscoverApplications(TEmvDirectory(Number(R,A,'directory',0,1)));
+            Output := 'Directory present '+BoolToStr(Directory.Present,True)+sLineBreak; Artifact(D,'directory-fci.bin',Directory.Fci);
+            for I := 0 to High(Directory.Applications) do Output := Output+BytesToHex(Directory.Applications[I].Aid)+' '+string(Directory.Applications[I].LabelText)+sLineBreak;
+          end
+          else if A.Id = 'dol' then begin Dol := TEmvCodec.DecodeDol(Bytes(R,A,'hex')); for I := 0 to High(Dol) do Output := Output+BytesToHex(Dol[I].Tag)+' bytes '+IntToStr(Dol[I].Size)+sLineBreak; end
+          else if A.Id = 'logdecode' then begin Values := TEmvCodec.DecodeLogRecord(Bytes(R,A,'format'),Bytes(R,A,'hex')); for I := 0 to High(Values) do Output := Output+BytesToHex(Values[I].Tag)+'='+BytesToHex(Values[I].Value)+sLineBreak; end
+          else
+          begin
+            Id := Bytes(R,A,'aid'); if (Length(Id) < 5) or (Length(Id) > 16) then Fail;
+            if A.Id = 'application' then
+            begin
+              Values := nil; Lines := TStringList.Create; Parts := nil;
+              try
+                Parts := TStringList.Create; Lines.StrictDelimiter := True; Lines.Delimiter := ';'; Parts.StrictDelimiter := True; Parts.Delimiter := '=';
+                Lines.DelimitedText := string(Text(R,A,'values')); if Lines.Count > 128 then Fail; SetLength(Values,Lines.Count);
+                for I := 0 to Lines.Count-1 do begin Parts.DelimitedText := Lines[I]; if Parts.Count <> 2 then Fail; Values[I].Tag := HexToBytes(Parts[0]); Values[I].Value := HexToBytes(Parts[1]); end;
+                Data := TEmvCodec.BuildDolData(nil,Values); Application := Emv.ReadApplication(Id,Values);
+              finally Parts.Free; Lines.Free; end;
+              Output := 'Name '+string(Application.CardholderName)+' PAN '+string(Application.Pan)+' expiry '+string(Application.ExpiryDate)+' IBAN '+string(Application.Iban)+sLineBreak;
+              Artifact(D,'application-fci.bin',Application.Fci); Artifact(D,'gpo.bin',Application.Gpo);
+              for I := 0 to High(Application.Records) do Artifact(D,'record-'+IntToStr(Application.Records[I].Sfi)+'-'+IntToStr(Application.Records[I].Number)+'.bin',Application.Records[I].RawData);
+              for I := 0 to High(Application.Fields) do Output := Output+BytesToHex(Application.Fields[I].Tag)+'='+BytesToHex(Application.Fields[I].Value)+sLineBreak;
+            end
+            else if A.Id = 'getdata' then begin ObjectData := Emv.ReadDataObject(Id,TEmvDataObject(Number(R,A,'object',0,3))); Output := 'Present '+BoolToStr(ObjectData.Present,True)+' status '+IntToHex(ObjectData.StatusWord,4)+' value '+BytesToHex(ObjectData.Value); Artifact(D,'get-data.bin',ObjectData.RawData); end
+            else if A.Id = 'log' then begin Log := Emv.ReadTransactionLog(Id); Output := 'Log advertised '+BoolToStr(Log.Supported,True)+sLineBreak; Artifact(D,'log-format.bin',Log.LogFormat); for I := 0 to High(Log.Records) do begin Artifact(D,'log-'+IntToStr(Log.Records[I].Number)+'.bin',Log.Records[I].RawData); for J := 0 to High(Log.Records[I].Fields) do Output := Output+BytesToHex(Log.Records[I].Fields[J].Tag)+'='+BytesToHex(Log.Records[I].Fields[J].Value)+sLineBreak; end; end
+            else Fail;
+          end;
+        finally Emv.Free; end;
+      end;
+      dfBelgian:
+      begin
+        case Number(R,A,'sections',0,5) of
+          0: Sections := [esIdentity,esAddress,esPhoto,esSignatures,esCertificates];
+          1: Sections := [esIdentity]; 2: Sections := [esAddress]; 3: Sections := [esPhoto];
+          4: Sections := [esCertificates]; 5: Sections := [esSignatures];
+        end;
+        Belgian := TBelgianEIDReader.Create(nil);
+        try
+          Belgian.Transport := T; Eid := Belgian.ReadCard(Sections);
+          Output := string(Eid.Identity.GivenNames)+' '+string(Eid.Identity.Surname)+sLineBreak+string(Eid.Address.StreetAndNumber)+sLineBreak+string(Eid.Address.PostalCode)+' '+string(Eid.Address.Municipality);
+          Artifact(D,'identity.bin',Eid.Identity.Data.RawData); Artifact(D,'address.bin',Eid.Address.Data.RawData); Artifact(D,'photo.jpg',Eid.Photo);
+          Artifact(D,'identity-signature.bin',Eid.IdentitySignature); Artifact(D,'address-signature.bin',Eid.AddressSignature);
+          for I := 0 to High(Eid.Certificates) do begin Output := Output+sLineBreak+'Certificate '+IntToStr(Ord(Eid.Certificates[I].Kind))+' state '+IntToStr(Ord(Eid.Certificates[I].State)); Artifact(D,'certificate-'+IntToStr(I)+'.bin',Eid.Certificates[I].RawData); Artifact(D,'certificate-'+IntToStr(I)+'.der',Eid.Certificates[I].DerData); end;
+        finally Belgian.Free; end;
+      end;
+      dfIcao:
+      begin
+        if A.Id = 'cardaccess' then begin PaceInfos := TIcaoCardAccessCodec.Decode(Bytes(R,A,'hex')); Output := 'Advertised PACE infos: '+IntToStr(Length(PaceInfos)); end
+        else
+        begin
+          Icao := TICAODocumentReader.Create(nil);
+          try
+            Icao.Transport := T; Icao.Security := TIcaoAccessSecurity(Number(R,A,'security',0,1)); Icao.PasswordKind := TIcaoPasswordKind(Number(R,A,'passwordkind',0,1)); Icao.PaceCurve := TCardPaceCurve(Number(R,A,'curve',0,1));
+            P := Bytes(R,A,'password'); Icao.AccessPassword := P; Icao.CryptoProvider := TCardEacOpenSslProvider.Create(string(Text(R,A,'library')));
+            Document := Icao.ReadDocument([idsIdentity,idsFace,idsCommon,idsSecurityObject]);
+            Output := string(Document.Identity.GivenNames)+' '+string(Document.Identity.Surname)+sLineBreak+'Images '+IntToStr(Length(Document.Biometrics.Images));
+            Artifact(D,'cardaccess.bin',Document.CardAccess); Artifact(D,'dg1.bin',Document.DG1); Artifact(D,'dg2.bin',Document.DG2); Artifact(D,'com.bin',Document.Common); Artifact(D,'sod.bin',Document.SecurityObject);
+            for I := 0 to High(Document.Biometrics.Images) do begin if Document.Biometrics.Images[I].Format = iffJpeg2000 then Artifact(D,'face-'+IntToStr(I)+'.jp2',Document.Biometrics.Images[I].Data) else Artifact(D,'face-'+IntToStr(I)+'.jpg',Document.Biometrics.Images[I].Data); end;
+          finally Icao.Free; end;
+        end;
+      end;
       dfClassic, dfType2:
       begin
         Contact := TContactlessCardReader.Create(nil);
@@ -508,7 +588,33 @@ begin
                 SF := TSimCodec.FileAddress(SF.Root,SF.Path);
               finally Lines.Free; end;
             end;
-            if A.Id = 'iccid' then Output := string(Sim.ReadIccid)
+            if A.Id = 'pukstatus' then begin PS := Sim.GetPukStatus; Output := 'Known PUK attempts '+IntToStr(PS.RemainingAttempts)+' blocked '+BoolToStr(PS.Blocked,True); end
+            else if (A.Id = 'changepin') or (A.Id = 'unblockpin') then
+            begin
+              NewP := Bytes(R,A,'newpin');
+              if A.Id = 'changepin' then Receipt := Sim.ChangePin(P,NewP)
+              else begin Key := Bytes(R,A,'puk'); Receipt := Sim.UnblockPin(Key,NewP); end;
+              Output := 'Credential command accepted '+BoolToStr(Receipt.CommandAccepted,True)+'; fresh-session new PIN verification has not been performed.';
+            end
+            else if A.Id = 'linkedwrite' then
+            begin
+              Lines := TStringList.Create; Parts := nil;
+              try
+                Parts := TStringList.Create; Lines.StrictDelimiter := True; Lines.Delimiter := ';';
+                Parts.StrictDelimiter := True; Parts.Delimiter := ':'; Lines.DelimitedText := string(Text(R,A,'plan'));
+                if (Lines.Count < 1) or (Lines.Count > 32) then Fail; SetLength(Changes,Lines.Count);
+                for I := 0 to Lines.Count-1 do
+                begin
+                  Parts.DelimitedText := Lines[I]; if Parts.Count <> 4 then Fail;
+                  Data := HexToBytes(Parts[0]); if Length(Data) <> 2 then Fail;
+                  Changes[I].FileAddress := TSimCodec.FileAddress(sfrUsimApplication,[$5F3A,Word(Data[0]) shl 8 or Data[1]]);
+                  if not TryStrToInt(Parts[1],N) then Fail; Changes[I].RecordNumber := N;
+                  Changes[I].ExpectedBefore := HexToBytes(Parts[2]); Changes[I].Data := HexToBytes(Parts[3]);
+                end;
+                Sim.WriteLinkedPhonebookRecords(Changes,P); D.WriteVerified := True; Output := 'All planned linked records independently verified.';
+              finally Parts.Free; Lines.Free; end;
+            end
+            else if A.Id = 'iccid' then Output := string(Sim.ReadIccid)
             else if A.Id = 'applications' then begin SA := Sim.ReadApplications; for I := 0 to High(SA) do Output := Output+BytesToHex(SA[I].Aid)+' '+string(SA[I].LabelText)+sLineBreak; end
             else if (A.Id = 'pinstatus') or (A.Id = 'verify') then
             begin

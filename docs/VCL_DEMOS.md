@@ -267,3 +267,24 @@ of ISO APDU's (Type 4). Readerondersteuning voor dat profiel is vereist.
 
 Geen constructor opent hardware. Test ack/ongeldige modellen/keys en beschermde
 pagina’s vóór writes op testkaarten; onzekere uitkomsten mogen niet worden herhaald.
+
+## BelgianEidDemo, IcaoDocumentDemo en EmvDemo
+
+De gedeelde form heeft een selector voor exact acquired files en een expliciete
+Save-dialog met overwrite prompt. Geen automatisch exportpad. Mislukte jobs
+publiceren geen exportbestanden. Belgische eID en ICAO tonen geselecteerde JPEG
+foto's; JPEG2000 blijft exact als .jp2 exporteerbaar zonder codecconversie.
+
+BelgianEidDemo: kies all public sections of identity/address/photo/certificates/
+signatures. Ontbrekende certificaten hebben expliciete states; beschikbare
+certificaten zijn als originele RAW en DER beschikbaar. Geen issuer trustclaim.
+
+IcaoDocumentDemo: kies BAC/PACE, MRZ/CAN, curve en supplied password als ASCII-hex
+plus OpenSSL-library. Read haalt DG1/DG2/COM/SOD en waar toepasselijk CardAccess
+op; elke face image staat in de selector. Offline CardAccess werkt zonder kaart.
+
+EmvDemo: kies PSE/PPSE expliciet; geen directoryfallback. ReadApplication neemt
+AID en terminal values `taghex=valuehex;...` zonder verzonnen PDOL-values.
+GPO initialiseert de uitlezing, geen betaling. FCI/GPO/records zijn exporteerbaar;
+GET DATA counter/logformat en advertised transactionlog blijven optioneel.
+Offline DOL en raw-logdecoding tonen exact tag/values zonder betalingsinterpretatie.

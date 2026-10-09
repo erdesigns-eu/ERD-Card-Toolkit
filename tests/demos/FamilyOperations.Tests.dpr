@@ -17,7 +17,7 @@ uses
 {$ELSE}
   System.SysUtils,
 {$ENDIF}
-  ERD.Card.Bytes, ERD.Card.Transport, ERD.Card.Demo.Job, ERD.Card.Demo.Families,
+  ERD.Card.Bytes, ERD.Card.Transport, ERD.Card.Demo.Job, ERD.Card.SIM.Data, ERD.Card.Demo.Families,
   ERD.Card.Demo.FamilyOperations, ERD.Card.Reader.TWN4, ERD.Card.RFID.Input,
   ERD.Card.Memory, ERD.Card.Demo.Operations;
 
@@ -426,6 +426,16 @@ end;
 procedure TestExtendedSimDemo;
 var R: TCardDemoRequest; D: TCardDemoResult; H: THardware; Hardware: ICardFamilyHardware; Failed: Boolean;
 begin
+  H := THardware.Create; Hardware := H;
+  R := Request(dfSim,'changepin'); Put(R,dfSim,'pin','31323334'); Put(R,dfSim,'newpin','35363738');
+  Failed := False; try CreateCardFamilyOperations(dfSim,Hardware).Run(R,D); except on E: EReachedHardware do Failed := True; end;
+  Check(Failed and (H.Acquires = 1),'Credential action explicit acquisition');
+  R := Request(dfSim,'linkedwrite'); Put(R,dfSim,'profile','1'); Put(R,dfSim,'aid','A0000000871002'); Put(R,dfSim,'pin',''); Put(R,dfSim,'plan','4F50:1:41420101:42420101');
+  Failed := False; try CreateCardFamilyOperations(dfSim,Hardware).Run(R,D); except on E: EReachedHardware do Failed := True; end;
+  Check(Failed and (H.Acquires = 2),'Linked plan explicit acquisition');
+  Put(R,dfSim,'plan','4F30:1:41420101:42420101'); Failed := False;
+  try CreateCardFamilyOperations(dfSim,Hardware).Run(R,D); except on E: ESimCardError do Failed := True; end;
+  Check(Failed and (H.Acquires = 2),'PBR mutation rejected before acquisition'); Hardware := nil;
   R := Request(dfSim,'email'); Put(R,dfSim,'hex','610062FFFF0102'); Put(R,dfSim,'footer','1');
   CreateCardFamilyOperations(dfSim).Run(R,D); Check(D.Text = 'a@b','EMAIL demo explicit footer');
   R := Request(dfSim,'decode'); Put(R,dfSim,'kind','8');
@@ -441,9 +451,41 @@ begin
   Hardware := nil;
 end;
 
+procedure TestDocumentAndEmvDemos;
+var R: TCardDemoRequest; D: TCardDemoResult; H: THardware; Hardware: ICardFamilyHardware;
+  S: TScript; T: ICardTransport; Failed: Boolean; I: Integer;
+begin
+  R := Request(dfEmv,'dol'); Put(R,dfEmv,'hex','9F02069F1A02'); CreateCardFamilyOperations(dfEmv).Run(R,D);
+  Check(Pos('9F02 bytes 6',string(D.Text)) > 0,'EMV offline DOL');
+  R := Request(dfEmv,'logdecode'); Put(R,dfEmv,'format','9F3602'); Put(R,dfEmv,'hex','0001');
+  CreateCardFamilyOperations(dfEmv).Run(R,D); Check(Pos('9F36=0001',string(D.Text)) > 0,'EMV offline raw log');
+  R := Request(dfIcao,'cardaccess'); Put(R,dfIcao,'hex','31143012060A04007F0007020204020202010202010D');
+  CreateCardFamilyOperations(dfIcao).Run(R,D); Check(Pos('1',string(D.Text)) > 0,'ICAO offline CardAccess');
+  H := THardware.Create; Hardware := H; R := Request(dfBelgian,'read'); Failed := False;
+  try CreateCardFamilyOperations(dfBelgian,Hardware).Run(R,D); except on E: EReachedHardware do Failed := True; end;
+  Check(Failed and (H.Acquires = 1),'Belgian eID explicit acquisition'); Hardware := nil;
+  for I := 0 to 3 do
+  begin
+    S := TScript.Create; T := S; H := THardware.Create; Hardware := H; H.Transport := T;
+    case I of
+      0: begin R := Request(dfEmv,'discover'); S.Add('00A404000E315041592E5359532E444446303100','6A82'); end;
+      1: begin R := Request(dfEmv,'getdata'); S.Add('00A4040007A000000003101000','6F0B8407A0000000031010A5009000'); S.Add('80CA9F3600','9F360200019000'); end;
+      2: begin R := Request(dfEmv,'application'); S.Add('00A4040007A000000003101000','6F0B8407A0000000031010A5009000'); S.Add('80A8000002830000','800200009000'); end;
+      3: begin R := Request(dfEmv,'log'); S.Add('00A4040007A000000003101000','6F0B8407A0000000031010A5009000'); end;
+    end;
+    Put(R,dfEmv,'aid','A0000000031010');
+    CreateCardFamilyOperations(dfEmv,Hardware).Run(R,D);
+    Check(D.Success and (S.Position = Length(S.Steps)) and (S.Begins = 1) and (S.Ends = 1),'EMV literal complete family transcript');
+    Check((H.Acquires = 1) and (H.Releases = 1),'EMV connection lifetime');
+    if I = 1 then Check((Length(D.Artifacts) = 1) and BytesEqual(D.Artifacts[0].Data,HexToBytes('9F36020001')),'GET DATA owned export')
+    else if I = 2 then Check((Length(D.Artifacts) = 2) and (D.Artifacts[0].Name = 'application-fci.bin') and (D.Artifacts[1].Name = 'gpo.bin'),'Application FCI/GPO export');
+    Hardware := nil; T := nil;
+  end;
+end;
+
 begin
   try
-    TestExtendedSimDemo; TestStorageDemos; TestSimRoutes; TestOffline; TestPreflight; TestCounterAndSleRoutes;
+    TestDocumentAndEmvDemos; TestExtendedSimDemo; TestStorageDemos; TestSimRoutes; TestOffline; TestPreflight; TestCounterAndSleRoutes;
     TestTwnRoutes(0,False); TestTwnRoutes(1,False); TestTwnRoutes(2,False); TestTwnRoutes(3,False); TestTwnRoutes(3,True);
     TestMemoryWrite(-1,False,False); TestMemoryWrite(6,False,False);
     TestMemoryWrite(7,False,False); TestMemoryWrite(-1,True,False); TestMemoryWrite(-1,False,True);

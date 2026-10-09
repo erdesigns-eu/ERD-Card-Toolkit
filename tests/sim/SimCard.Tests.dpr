@@ -24,6 +24,7 @@ type
     Position, Begins, Ends, FailAt, Writes, PinAttempts: Integer;
     Active, BeginFails, EndFails: Boolean;
     MutatePin, MutateBefore, MutateData, RetainedPinCommand: TBytes;
+    RetainedCredentialCommand: TBytes; CredentialAttempts: Integer;
     MutatePath: TSimFilePath;
     constructor Create;
     procedure Add(const Command, Response: string);
@@ -73,6 +74,7 @@ begin
   if Command[1] in [$D6,$DC] then Inc(Writes);
   if Command[1] = $20 then begin RetainedPinCommand := Command;
     if (Length(Command) = 13) and (Command[4] = 8) then Inc(PinAttempts); end;
+  if (Length(Command) = 21) and ((Command[1] = $24) or (Command[1] = $2C)) then begin Inc(CredentialAttempts); RetainedCredentialCommand := Command; end;
   if N = FailAt then raise ECardTransportError.Create('Sensitive transmit message');
   Result := CopyBytes(Steps[N].Response);
 end;
@@ -524,9 +526,121 @@ begin
   Check(Failed,'Mixed recipient refused');
 end;
 
+procedure TestCredentialManagement(const Modern,Unblock: Boolean; const Failure: Integer; const Cleanup: Boolean);
+var S: TScript; T: ICardTransport; Reader: TSimCardReaderWriter; Receipt: TSimCredentialReceipt;
+  Failed,Uncertain: Boolean; I: Integer;
+begin
+  S := TScript.Create; T := S; Reader := TSimCardReaderWriter.Create(nil);
+  try
+    Reader.Transport := T;
+    if Modern then
+    begin
+      Reader.Profile := scpUiccUsim; Reader.ApplicationAid := HexToBytes('A0000000871002');
+      S.Add('00A4040407A000000087100200',UiccAdf+'9000');
+      if Unblock then S.Add('002C0001','63CA') else S.Add('00200001','63C3');
+    end
+    else begin S.Add('A0A40000023F00',LegacyMf+'9000'); S.Add('A0A40000027F20',LegacyGsm+'9000'); end;
+    if Unblock then
+    begin
+      if Modern then S.Add('002C000110313233343536373835363738FFFFFFFF','9000')
+      else S.Add('A02C000110313233343536373835363738FFFFFFFF','9000');
+    end
+    else begin
+      if Modern then S.Add('002400011031323334FFFFFFFF35363738FFFFFFFF','9000')
+      else S.Add('A02400011031323334FFFFFFFF35363738FFFFFFFF','9000');
+    end;
+    S.FailAt := Failure; S.EndFails := Cleanup; Failed := False; Uncertain := False;
+    try
+      if Unblock then Receipt := Reader.UnblockPin(HexToBytes('3132333435363738'),HexToBytes('35363738'))
+      else Receipt := Reader.ChangePin(HexToBytes('31323334'),HexToBytes('35363738'));
+    except on E: ESimCardWriteUncertain do begin Failed := True; Uncertain := True; Check(not E.VerifiedReadBack,'Credential receipt does not prove new PIN'); end;
+      on E: Exception do Failed := True; end;
+    Check(Failed = ((Failure >= 0) or Cleanup),'Credential operation failure');
+    Check(Uncertain = ((Failure = 2) or ((Failure < 0) and Cleanup)), 'Credential dispatch uncertainty boundary');
+    Check((S.Begins = 1) and (S.Ends = 1) and not S.Active,'Credential transaction cleanup');
+    Check(S.CredentialAttempts <= 1,'No credential command retry');
+    for I := 0 to High(S.RetainedCredentialCommand) do Check(S.RetainedCredentialCommand[I] = 0,'Credential command copy wiped');
+    if not Failed then Check(Receipt.CommandAccepted and (S.Position = 3),'Explicit credential status receipt');
+  finally Reader.Free; T := nil; end;
+end;
+procedure TestLinkedWrite(const Failure: Integer; const Cleanup: Boolean);
+var S: TScript; T: ICardTransport; Reader: TSimCardReaderWriter; Changes: TSimRecordChanges;
+  I: Integer; Failed,Uncertain: Boolean;
+  procedure SelectEmail;
+  begin
+    S.Add('00A4040407A000000087100200',UiccAdf+'9000');
+    S.Add('00A40004025F3A00','62088202782183025F3A9000');
+    S.Add('00A40004024F5000','620F8205422100040183024F50800200049000');
+  end;
+begin
+  S := TScript.Create; T := S; Reader := TSimCardReaderWriter.Create(nil);
+  try
+    Reader.Profile := scpUiccUsim; Reader.ApplicationAid := HexToBytes('A0000000871002'); Reader.Transport := T;
+    SetLength(Changes,1); Changes[0].FileAddress := TSimCodec.FileAddress(sfrUsimApplication,[$5F3A,$4F50]);
+    Changes[0].RecordNumber := 1; Changes[0].ExpectedBefore := HexToBytes('41420101'); Changes[0].Data := HexToBytes('42420101');
+    SelectEmail; S.Add('00B2010404','414201019000');
+    SelectEmail; S.Add('00B2010404','414201019000'); S.Add('00DC01040442420101','9000');
+    SelectEmail; S.Add('00B2010404','424201019000');
+    S.FailAt := Failure; S.EndFails := Cleanup; Failed := False; Uncertain := False;
+    try Reader.WriteLinkedPhonebookRecords(Changes);
+    except on E: ESimCardWriteUncertain do begin Failed := True; Uncertain := True; Check(E.VerifiedReadBack = (Failure < 0),'Linked complete proof survives cleanup failure'); end;
+      on E: Exception do Failed := True; end;
+    Check(Failed = ((Failure >= 0) or Cleanup),'Linked write failure '+IntToStr(Failure)+' pos '+IntToStr(S.Position));
+    Check(Uncertain = ((Failure >= 8) or ((Failure < 0) and Cleanup)),'Linked dispatch boundary');
+    Check((S.Begins = 1) and (S.Ends = 1) and not S.Active and (S.Writes <= 1),'Linked write no replay and cleanup');
+    for I := 0 to High(Changes[0].Data) do Check(Changes[0].Data[I] = HexToBytes('42420101')[I],'Caller change bytes preserved');
+  finally Reader.Free; T := nil; end;
+end;
+
+procedure TestTwoLinkedRecords(const Failure: Integer; const StaleSecond: Boolean);
+var S: TScript; T: ICardTransport; Reader: TSimCardReaderWriter; Changes: TSimRecordChanges;
+  Stage,I: Integer; Failed,Uncertain: Boolean; Fid,Before,After: string;
+begin
+  S := TScript.Create; T := S; Reader := TSimCardReaderWriter.Create(nil);
+  try
+    Reader.Profile := scpUiccUsim; Reader.ApplicationAid := HexToBytes('A0000000871002'); Reader.Transport := T;
+    SetLength(Changes,2);
+    for I := 0 to 1 do
+    begin
+      if I = 0 then begin Fid := '4F50'; Before := '41420101'; After := '42420101'; end
+      else begin Fid := '4F11'; Before := '43440101'; After := '44440101'; end;
+      Changes[I].FileAddress := TSimCodec.FileAddress(sfrUsimApplication,[$5F3A,$4F50]);
+      if I = 1 then Changes[I].FileAddress.Path[1] := $4F11;
+      Changes[I].RecordNumber := 1; Changes[I].ExpectedBefore := HexToBytes(Before); Changes[I].Data := HexToBytes(After);
+    end;
+    for Stage := 0 to 2 do for I := 0 to 1 do
+    begin
+      if I = 0 then begin Fid := '4F50'; Before := '41420101'; After := '42420101'; end
+      else begin Fid := '4F11'; Before := '43440101'; After := '44440101'; end;
+      S.Add('00A4040407A000000087100200',UiccAdf+'9000');
+      S.Add('00A40004025F3A00','62088202782183025F3A9000');
+      S.Add('00A4000402'+Fid+'00','620F820542210004018302'+Fid+'800200049000');
+      if Stage = 2 then Before := After;
+      if StaleSecond and (Stage = 0) and (I = 1) then Before := 'FFFFFFFF';
+      S.Add('00B2010404',Before+'9000');
+      if Stage = 1 then S.Add('00DC010404'+After,'9000');
+    end;
+    S.FailAt := Failure; Failed := False; Uncertain := False;
+    try Reader.WriteLinkedPhonebookRecords(Changes);
+    except on E: ESimCardWriteUncertain do begin Failed := True; Uncertain := True; end;
+      on E: Exception do Failed := True; end;
+    Check(Failed = ((Failure >= 0) or StaleSecond),'Two-EF outcome');
+    Check(Uncertain = ((Failure >= 12) and not StaleSecond),'Two-EF partial dispatch');
+    Check((S.Begins = 1) and (S.Ends = 1) and not S.Active and (S.Writes <= 2),'Two-EF one transaction/no retry');
+    if StaleSecond then Check(S.Writes = 0,'All begin records checked before first write');
+    if not Failed then Check((S.Position = 26) and (S.Writes = 2),'Complete two-EF plan');
+  finally Reader.Free; T := nil; end;
+end;
+
 var I: Integer;
 begin
   try
+    TestTwoLinkedRecords(-1,False); TestTwoLinkedRecords(-1,True); for I := 0 to 25 do TestTwoLinkedRecords(I,False);
+    TestCredentialManagement(False,False,-1,False); TestCredentialManagement(False,True,-1,False);
+    TestCredentialManagement(True,False,-1,False); TestCredentialManagement(True,True,-1,False);
+    for I := 0 to 2 do begin TestCredentialManagement(False,False,I,True); TestCredentialManagement(True,True,I,True); end;
+    TestCredentialManagement(True,False,-1,True); TestLinkedWrite(-1,False); TestLinkedWrite(-1,True);
+    for I := 0 to 12 do TestLinkedWrite(I,True);
     TestAssembly; TestLinkedRead(-1,False); TestLinkedRead(-1,True); for I := 0 to 20 do TestLinkedRead(I,True);
     TestSmsText; TestLinkedContact; TestPbr; TestCodecs; TestIdentityReads; TestProtectedReadAndDirectory; TestGeometryAndStatusFailures;
     TestWholeFile(-1,False); TestWholeFile(-1,True);

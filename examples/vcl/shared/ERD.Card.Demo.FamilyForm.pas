@@ -3,7 +3,7 @@ unit ERD.Card.Demo.FamilyForm;
 interface
 
 uses System.Classes, System.SysUtils, Vcl.Forms, Vcl.Controls, Vcl.StdCtrls,
-  Vcl.ExtCtrls, ERD.Card.Demo.Form, ERD.Card.Demo.Job, ERD.Card.Demo.Families,
+  Vcl.Imaging.jpeg, Vcl.Dialogs, Vcl.ExtCtrls, ERD.Card.Demo.Form, ERD.Card.Demo.Job, ERD.Card.Demo.Families,
   ERD.Card.RFID.Input;
 
 type
@@ -21,6 +21,10 @@ type
     FOutput, FCaptureInput: TMemo;
     FCapture: TRfidKeyboardReader;
     FBusy: Boolean;
+    FPreview: TImage;
+    procedure PreviewArtifact(Sender: TObject);
+    FArtifacts: TCardDemoArtifacts; FArtifact: TComboBox; FSave: TButton;
+    procedure SaveArtifact(Sender: TObject);
     procedure ActionChanged(Sender: TObject);
     procedure RunClick(Sender: TObject);
     procedure CaptureKey(Sender: TObject; var Key: Char);
@@ -92,8 +96,16 @@ begin
   FCaptureInput.WantReturns := True; FCaptureInput.OnKeyPress := CaptureKey;
   FCaptureInput.Enabled := False; FCaptureInput.Visible := FFamily = dfRfid;
   FCaptureInput.Text := 'Live capture: keep focus here; only complete delimited frames are accepted.';
+  FArtifact := TComboBox.Create(Self); FArtifact.Parent := Bottom; FArtifact.Style := csDropDownList;
+  FArtifact.OnChange := PreviewArtifact;
+  FArtifact.SetBounds(196,34,380,25); FArtifact.Visible := FFamily <> dfRfid;
+  FSave := TButton.Create(Self); FSave.Parent := Bottom; FSave.SetBounds(588,34,144,30);
+  FSave.Caption := 'Save selected file'; FSave.OnClick := SaveArtifact; FSave.Enabled := False; FSave.Visible := FFamily <> dfRfid;
   FOutput := TMemo.Create(Self); FOutput.Parent := Bottom; FOutput.SetBounds(12,86,720,232);
   FOutput.Anchors := [akLeft,akTop,akRight,akBottom]; FOutput.ReadOnly := True;
+  FPreview := TImage.Create(Self); FPreview.Parent := Bottom; FPreview.SetBounds(536,104,196,210);
+  FPreview.Stretch := True; FPreview.Proportional := True; FPreview.Visible := FFamily in [dfBelgian,dfIcao];
+  if FPreview.Visible then FOutput.Width := 510;
   FOutput.ScrollBars := ssBoth; FOutput.WordWrap := False;
   FFields := TScrollBox.Create(Self); FFields.Parent := Self; FFields.Align := alClient;
   FAction.ItemIndex := 0; ActionChanged(nil);
@@ -230,11 +242,45 @@ end;
 procedure TCardFamilyForm.Complete(const AResult: TCardDemoResult);
 var I: Integer;
 begin
+  FPreview.Picture.Assign(nil); FArtifacts := nil; FArtifact.Items.Clear; FSave.Enabled := False;
+  if AResult.Success then FArtifacts := AResult.Artifacts;
+  for I := 0 to High(FArtifacts) do FArtifact.Items.Add(FArtifacts[I].Name);
+  if Length(FArtifacts) > 0 then begin FArtifact.ItemIndex := 0; FSave.Enabled := True; end;
   FOutput.Text := AResult.Text;
   for I := 0 to High(AResult.Readers) do FOutput.Lines.Add(AResult.Readers[I]);
   if AResult.WriteVerified then FOutput.Lines.Add('Independent verification completed.');
   if AResult.WriteUncertain then FOutput.Lines.Add('WRITE OUTCOME / CLEANUP UNCERTAIN. Inspect the card; do not repeat automatically.');
   if not AResult.Success then FOutput.Lines.Add('Operation failed: ' + AResult.ErrorClass + '. No automatic retry.');
+  PreviewArtifact(nil);
+end;
+
+procedure TCardFamilyForm.PreviewArtifact(Sender: TObject);
+var Index: Integer; Stream: TBytesStream; Jpeg: TJPEGImage;
+begin
+  FPreview.Picture.Assign(nil); Index := FArtifact.ItemIndex;
+  if not FPreview.Visible or (Index < 0) or (Index >= Length(FArtifacts)) then Exit;
+  if not SameText(ExtractFileExt(FArtifacts[Index].Name),'.jpg') then Exit;
+  Stream := TBytesStream.Create(FArtifacts[Index].Data); Jpeg := nil;
+  try
+    Jpeg := TJPEGImage.Create;
+    try Jpeg.LoadFromStream(Stream); FPreview.Picture.Assign(Jpeg);
+    except on E: Exception do FOutput.Lines.Add('Image preview failed: '+E.ClassName+'. Exact file export remains available.'); end;
+  finally Jpeg.Free; Stream.Free; end;
+end;
+
+procedure TCardFamilyForm.SaveArtifact(Sender: TObject);
+var Dialog: TSaveDialog; Stream: TFileStream; Index: Integer;
+begin
+  Index := FArtifact.ItemIndex; if FBusy or (Index < 0) or (Index >= Length(FArtifacts)) then Exit;
+  Dialog := TSaveDialog.Create(Self);
+  try
+    Dialog.FileName := FArtifacts[Index].Name;
+    Dialog.Options := Dialog.Options+[ofOverwritePrompt,ofPathMustExist];
+    if not Dialog.Execute then Exit;
+    Stream := TFileStream.Create(Dialog.FileName,fmCreate);
+    try if Length(FArtifacts[Index].Data) > 0 then Stream.WriteBuffer(FArtifacts[Index].Data[0],Length(FArtifacts[Index].Data));
+    finally Stream.Free; end;
+  finally Dialog.Free; end;
 end;
 
 function TCardFamilyForm.CloseQuery: Boolean;

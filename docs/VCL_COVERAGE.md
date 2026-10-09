@@ -1,8 +1,8 @@
 # VCL-voorbeelden: dekking en volgende uitbreiding
 
-Er zijn nu **twaalf runnable projecten**: SmartCardDemo, MagStripeDemo en de tien
+Er zijn nu **vijftien runnable projecten**: SmartCardDemo, MagStripeDemo en de dertien
 familiedemo’s ReaderToolsDemo, RfidInputDemo, Twn4Demo, MemoryCardDemo,
-SleCounterDemo, Sle4404Demo, SimCardDemo, MifareClassicDemo, Type2Demo en Type4NdefDemo. De nieuwe projecten delen formulier-, invoer- en
+SleCounterDemo, Sle4404Demo, SimCardDemo, MifareClassicDemo, Type2Demo Type4NdefDemo, EmvDemo, BelgianEidDemo en IcaoDocumentDemo. De nieuwe projecten delen formulier-, invoer- en
 workerbasis. Hun Delphi/Windows/UI- en hardwaretests staan nog open. De overige
 projectnamen hieronder zijn gepland. Betalingen blijven buiten scope.
 
@@ -11,9 +11,9 @@ projectnamen hieronder zijn gepland. Betalingen blijven buiten scope.
 | SimCardDemo | Klassieke SIM en UICC/USIM, identiteiten, servicebits, PIN-status/proof, expliciete bestanden/records en contactwrites | Apart project aanwezig: alle componentmethoden, volledige AID/path-keuze, verwachte bytes, PIN als ASCII-hex, onzekerheidsbewijs, IAP/EXT-contactreads en offline record/name/SMS-tekst/UDH-codecs; fysieke SIM-tests open |
 | ReaderToolsDemo | PC/SC-lezers, verbinding/kaartstatus, ATR/protocol; offline APDU, ATR, BER-TLV, hex/bytes en catalogs | Apart project aanwezig: PC/SC-lijst/status, command/response-APDU, ATR/protocol/hints, TLV-boom/roundtrip, EMV-tagmetadata en NDEF-roundtrip |
 | MagStripeDemo | Track 1–3, framing/pariteit/LRC, financiële velden, MagTek-inputprofielen; MSR206/MSR605 statuswrites en MSR206-7HL geverifieerde writes | Offline tracks en MSR206-7HL lezen/schrijven aanwezig; overige profielen/decoders ontbreken |
-| BelgianEidDemo | Identiteit, adres, foto opslaan, beschikbare certificaten en ruwe handtekeningen exporteren | Identiteit/adres/foto in SmartCardDemo; volledige bestandsexport ontbreekt |
-| IcaoDocumentDemo | BAC/PACE, MRZ/CAN, CardAccess/DG1/DG2/COM/SOD, alle foto's bekijken/opslaan en ruwe bestanden exporteren | Toegang en identiteit/eerste foto in SmartCardDemo; volledige export en alle foto's ontbreken |
-| EmvDemo | PSE/PPSE, expliciete applicatie/PDOL, GPO/AFL/records, beschikbare bankvelden, GET DATA en transactielogs; offline EMV/TLV-diagnostiek | Alleen applicatiedetectie in SmartCardDemo |
+| BelgianEidDemo | Identiteit, adres, foto opslaan, beschikbare certificaten en ruwe handtekeningen exporteren | Apart project aanwezig: alle publieke sections, originele identiteit/adres/foto/signaturen, RAW/DER-certificaten en expliciete bestands-export; JPEG-preview |
+| IcaoDocumentDemo | BAC/PACE, MRZ/CAN, CardAccess/DG1/DG2/COM/SOD, alle foto's bekijken/opslaan en ruwe bestanden exporteren | Apart project aanwezig: expliciete BAC/PACE, alle ondersteunde documentsections, alle face-imagebestanden plus CardAccess/DG1/DG2/COM/SOD-export; JPEG-preview, JPEG2000-export |
+| EmvDemo | PSE/PPSE, expliciete applicatie/PDOL, GPO/AFL/records, beschikbare bankvelden, GET DATA en transactielogs; offline EMV/TLV-diagnostiek | Apart project aanwezig: PSE/PPSE, explicit AID/terminal values, GPO/AFL/records, GET DATA/logs, offline DOL/logdecoding en acquired-file-export |
 | MifareClassicDemo | Mini/1K/4K-layout, aangeleverde sleutel A/B, blokken lezen en ondersteunde datablokken geverifieerd schrijven | Apart project aanwezig: UID, offline trailerlayout, aangeleverde A/B-sleutel en slot, blokreads en datablokwrites met statusreceipt; onafhankelijke blokwrite-verificatie ontbreekt in dit PC/SC-profiel |
 | Type2Demo | Ultralight/EV1/NTAG-modellen, pagina's/geheugen lezen, gebruikerspagina's schrijven, ondersteunde PWD_AUTH/PACK-profielen en Type 2 NDEF | Apart project aanwezig: UID, fysieke pagina’s, volledig user-memorysnapshot, status-only paginawrites en geverifieerde NDEF-read/write/clear; PWD_AUTH/PACK-demo volgt |
 | Type4NdefDemo | Ondersteunde capability/file-selectie en publieke NDEF lezen/vervangen met terugleescontrole | Apart project aanwezig: offline/full CC, alle filedescriptors, expliciete mapping/FID, public NDEF-read/write/clear met controle |

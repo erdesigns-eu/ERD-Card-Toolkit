@@ -441,3 +441,20 @@ Missing/duplicate segments, mixed recipients and DCS are refused; caller buffers
 remain independent. EMAIL and ANR have explicit footer layouts and ANR preserves
 unresolved CCP/EXT. Family actions expose the codecs; source and distribution
 checks pass. This batch changes no PIN/write protocol.
+
+## PIN/PUK and linked write plans; three document/EMV demos
+
+The complete 38-program suite passed 2,156,246 assertions after SIM management
+(SIM 74,402, family 1,611). Credential tests cover classic/UICC CHANGE and UNBLOCK
+literal commands, no retries, every transmit failure, cleanup uncertainty and
+owned command wiping. Linked plans check all pre-states before mutation, each
+write pre-state and all final records; one- and two-EF transcripts cover every
+I/O position, partial writes, stale second records and complete proof across
+cleanup failure. Credential success is a command receipt, not fresh-PIN proof.
+
+After adding Belgian/ICAO/EMV projects and acquired-file export, focused family
+tests pass 1,664 and worker tests 88 (56 more final assertions). EMV literal
+directory/GPO/GET DATA/log routes, raw export, offline codecs and Belgian
+preflight pass. Worker failures never publish exportable artifacts. Source and
+distribution readers cover 28 projects. This follows the existing native project
+settings; no Delphi compiler execution is implied.

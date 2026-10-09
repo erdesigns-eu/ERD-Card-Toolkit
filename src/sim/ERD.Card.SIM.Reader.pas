@@ -25,7 +25,7 @@ type
     /// <summary>Exact status word for diagnostics and explicit caller decisions.</summary>
     property StatusWord: Word read FStatusWord;
   end;
-  /// <summary>A dispatched UPDATE has an uncertain outcome or cleanup; never replay it automatically.</summary>
+  /// <summary>A dispatched mutating command has an uncertain outcome or cleanup; never replay it automatically.</summary>
   ESimCardWriteUncertain = class(ESimCardError)
   private
     FVerified: Boolean;
@@ -76,6 +76,8 @@ type
     procedure SelectRoot(const ARoot: TSimFileRoot);
     function SelectPath(const AFile: TSimFileAddress): TSimFileInfo;
     function ReadPinStatusSelected: TSimPinStatus;
+    function PukStatusSelected: TSimPinStatus;
+    function ReplaceCredential(const ACurrent, ANewPin: TBytes; const AUnblock: Boolean): TSimCredentialReceipt;
     function Authenticate(const APin: TBytes; const ARequireProof: Boolean): TSimPinStatus;
     function InitializeFile(const AFile: TSimFileAddress; const APin: TBytes): TSimFileInfo;
     function ReadBinarySelected(const AOffset, ACount: Integer): TBytes;
@@ -100,6 +102,27 @@ type
     /// <param name="APin">Four through eight ASCII digit bytes; independently copied and wiped.</param>
     /// <returns>Proof of this supplied-code VERIFY; existing UICC verification alone is refused.</returns>
     function VerifyPin(const APin: TBytes): TSimPinStatus;
+    /// <summary>Queries the configured PIN's unblock-code budget without presenting a PUK.</summary>
+    /// <returns>Known PUK retries; unknown/unsupported card responses are explicit errors.</returns>
+    function GetPukStatus: TSimPinStatus;
+    /// <summary>Changes an enabled PIN once using supplied old/new ASCII digits and a known current retry budget.</summary>
+    /// <param name="AOldPin">Four through eight ASCII digits; owned copies are wiped.</param>
+    /// <param name="ANewPin">Four through eight ASCII digits.</param>
+    /// <returns>Card acceptance receipt; fresh-session new-PIN verification is separate.</returns>
+    /// <exception cref="ESimCardWriteUncertain">Credential mutation was dispatched but acceptance or cleanup cannot be established.</exception>
+    function ChangePin(const AOldPin, ANewPin: TBytes): TSimCredentialReceipt;
+    /// <summary>Resets PIN retries and replaces the PIN once using an explicit PUK with a known sufficient unblock budget.</summary>
+    /// <param name="APuk">Exactly eight supplied ASCII digits; no guessed/default PUK.</param>
+    /// <param name="ANewPin">Four through eight new ASCII digits.</param>
+    /// <returns>Card acceptance receipt, not proof of a fresh-session new PIN.</returns>
+    /// <exception cref="ESimCardWriteUncertain">UNBLOCK was dispatched but outcome or cleanup is uncertain.</exception>
+    function UnblockPin(const APuk, ANewPin: TBytes): TSimCredentialReceipt;
+    /// <summary>Applies an explicit ordered linked-phonebook record plan under one exclusive transaction.</summary>
+    /// <param name="AChanges">One through 32 unique phonebook records, exact expected/replacement bytes and explicit USIM paths; links remain caller-defined.</param>
+    /// <param name="APin">Optional supplied ASCII PIN; authentication occurs at most once.</param>
+    /// <remarks>All expected records are checked before the first UPDATE; each final record is read back. Multi-file writes are not atomic and are never rolled back/replayed.</remarks>
+    /// <exception cref="ESimCardWriteUncertain">Any UPDATE was dispatched without complete outcome/cleanup proof.</exception>
+    procedure WriteLinkedPhonebookRecords(const AChanges: TSimRecordChanges; const APin: TBytes = nil);
     /// <summary>Reads a complete transparent file using its actual selected geometry.</summary>
     /// <param name="AFile">Explicit root and directory/EF path.</param>
     /// <param name="APin">Optional supplied ASCII PIN, used only when authentication is needed.</param>
@@ -399,6 +422,114 @@ begin
     B := Send(Cmd,False,False,0,S); RequireSuccess(S); if Length(B) <> 0 then Fail('VERIFY result data');
     Result.Verified := True; Result.VerificationKnown := True; Result.RemainingAttempts := -1;
   finally TCardCrypto.Clear(Cmd); end;
+end;
+function TSimCardReaderWriter.PukStatusSelected: TSimPinStatus;
+var Info: TSimFileInfo; Cmd,B: TBytes; S: Word; Value: Byte;
+begin
+  Result := Default(TSimPinStatus); Result.RemainingAttempts := -1;
+  if FProfile = scpGsmSim then
+  begin
+    SelectRoot(sfrMasterFile); Info := SelectFileId($7F20);
+    if Length(Info.Raw) < 22 then Fail('GSM PUK status header');
+    Value := Info.Raw[19+2*(FPinReference-1)]; Result.Initialized := Value and $80 <> 0;
+    Result.RemainingAttempts := Value and 15; Result.Blocked := Result.RemainingAttempts = 0;
+  end
+  else
+  begin
+    SelectRoot(sfrUsimApplication); Cmd := HexToBytes('002C0000'); Cmd[3] := FPinReference;
+    B := Send(Cmd,False,False,0,S); if Length(B) <> 0 then Fail('PUK query data');
+    if S and $FFF0 = $63C0 then begin Result.Initialized := True; Result.RemainingAttempts := S and 15; Result.Blocked := Result.RemainingAttempts = 0; end
+    else if S = $6983 then begin Result.Initialized := True; Result.RemainingAttempts := 0; Result.Blocked := True; end
+    else raise ESimCardStatusError.Create(S);
+  end;
+end;
+function TSimCardReaderWriter.GetPukStatus: TSimPinStatus;
+var Good: Boolean;
+begin
+  RequireIdle; ValidateConfiguration; BeginOperation; Good := False;
+  try Result := PukStatusSelected; Good := True; finally FinishOperation(Good); end;
+end;
+function TSimCardReaderWriter.ReplaceCredential(const ACurrent, ANewPin: TBytes;
+  const AUnblock: Boolean): TSimCredentialReceipt;
+var Current,NewPin,Cmd: TBytes; Status: TSimPinStatus; Good,Dispatched: Boolean;
+begin
+  RequireIdle; ValidateConfiguration; ValidatePin(ACurrent,True); ValidatePin(ANewPin,True);
+  if AUnblock and (Length(ACurrent) <> 8) then Fail('PUK must have eight ASCII digits');
+  Current := nil; NewPin := nil; Cmd := nil; Result := Default(TSimCredentialReceipt);
+  try
+    Current := CopyBytes(ACurrent); NewPin := CopyBytes(ANewPin);
+    BeginOperation; Good := False; Dispatched := False;
+    try
+      try
+        if AUnblock then Status := PukStatusSelected else Status := ReadPinStatusSelected;
+        if not Status.Initialized or Status.Disabled or Status.Blocked or (Status.RemainingAttempts < FMinimumPinAttempts) then Fail('known sufficient credential budget required');
+        Cmd := HexToBytes('0024000010'); Cmd[0] := Cla; Cmd[3] := FPinReference;
+        if AUnblock then Cmd[1] := $2C;
+        SetLength(Cmd,21); FillChar(Cmd[5],16,$FF); Move(Current[0],Cmd[5],Length(Current)); Move(NewPin[0],Cmd[13],Length(NewPin));
+        Update(Cmd,Dispatched); Good := True;
+      finally FinishOperation(Good); end;
+    except on E: Exception do begin if Dispatched then raise ESimCardWriteUncertain.Create(E.ClassName,False); raise; end; end;
+    Result.CommandAccepted := True;
+  finally TCardCrypto.Clear(Current); TCardCrypto.Clear(NewPin); TCardCrypto.Clear(Cmd); end;
+end;
+function TSimCardReaderWriter.ChangePin(const AOldPin, ANewPin: TBytes): TSimCredentialReceipt;
+begin Result := ReplaceCredential(AOldPin,ANewPin,False); end;
+function TSimCardReaderWriter.UnblockPin(const APuk, ANewPin: TBytes): TSimCredentialReceipt;
+begin Result := ReplaceCredential(APuk,ANewPin,True); end;
+
+procedure TSimCardReaderWriter.WriteLinkedPhonebookRecords(const AChanges: TSimRecordChanges; const APin: TBytes);
+var Changes: TSimRecordChanges; Pin,Actual,Cmd: TBytes; Info: TSimFileInfo;
+  I,J: Integer; Good,Dispatched,Verified: Boolean;
+begin
+  RequireIdle;
+  if (FProfile <> scpUiccUsim) or (Length(AChanges) < 1) or (Length(AChanges) > 32) then Fail('explicit linked write budget');
+  Changes := nil; Pin := nil; Cmd := nil;
+  try
+    ValidatePin(APin,False); SetLength(Changes,Length(AChanges));
+    for I := 0 to High(Changes) do
+    begin
+      Changes[I].FileAddress := OwnAddress(AChanges[I].FileAddress,APin);
+      if (Changes[I].FileAddress.Root <> sfrUsimApplication) or (Length(Changes[I].FileAddress.Path) <> 2) then Fail('explicit phonebook path');
+      if (Changes[I].FileAddress.Path[0] <> $5F3A) or (Changes[I].FileAddress.Path[1] = $4F30) then Fail('phonebook data EF required');
+      Changes[I].RecordNumber := AChanges[I].RecordNumber;
+      if (Changes[I].RecordNumber < 1) or (Changes[I].RecordNumber > 255) or
+        (Length(AChanges[I].Data) < 1) or (Length(AChanges[I].Data) > 255) or (Length(AChanges[I].ExpectedBefore) <> Length(AChanges[I].Data)) then Fail('complete linked record');
+      for J := 0 to I-1 do
+        if (Changes[J].FileAddress.Path[1] = Changes[I].FileAddress.Path[1]) and (Changes[J].RecordNumber = Changes[I].RecordNumber) then Fail('duplicate linked write');
+      Changes[I].ExpectedBefore := CopyBytes(AChanges[I].ExpectedBefore); Changes[I].Data := CopyBytes(AChanges[I].Data);
+    end;
+    Pin := CopyBytes(APin); BeginOperation; Good := False; Dispatched := False; Verified := False;
+    try
+      try
+        if Length(Pin) > 0 then Authenticate(Pin,False);
+        for I := 0 to High(Changes) do
+        begin
+          Info := SelectPath(Changes[I].FileAddress); ValidateRecord(Info,Changes[I].RecordNumber,True);
+          if Info.RecordBytes <> Length(Changes[I].Data) then Fail('linked record geometry');
+          Actual := ReadRecordSelected(Changes[I].RecordNumber,Info.RecordBytes);
+          if not BytesEqual(Actual,Changes[I].ExpectedBefore) then Fail('linked expected state mismatch');
+        end;
+        for I := 0 to High(Changes) do
+          if not BytesEqual(Changes[I].ExpectedBefore,Changes[I].Data) then
+          begin
+            Info := SelectPath(Changes[I].FileAddress); ValidateRecord(Info,Changes[I].RecordNumber,True);
+            if Info.RecordBytes <> Length(Changes[I].Data) then Fail('changed linked geometry');
+            Actual := ReadRecordSelected(Changes[I].RecordNumber,Info.RecordBytes);
+            if not BytesEqual(Actual,Changes[I].ExpectedBefore) then Fail('changed linked state');
+            Cmd := HexToBytes('00DC000400'); Cmd[2] := Changes[I].RecordNumber; Cmd[4] := Length(Changes[I].Data);
+            SetLength(Cmd,5+Length(Changes[I].Data)); Move(Changes[I].Data[0],Cmd[5],Length(Changes[I].Data)); Update(Cmd,Dispatched); TCardCrypto.Clear(Cmd);
+          end;
+        for I := 0 to High(Changes) do
+        begin
+          Info := SelectPath(Changes[I].FileAddress); ValidateRecord(Info,Changes[I].RecordNumber,False);
+          if Info.RecordBytes <> Length(Changes[I].Data) then Fail('linked read-back geometry');
+          Actual := ReadRecordSelected(Changes[I].RecordNumber,Info.RecordBytes);
+          if not BytesEqual(Actual,Changes[I].Data) then Fail('linked read-back mismatch');
+        end;
+        Verified := True; Good := True;
+      finally FinishOperation(Good); end;
+    except on E: Exception do begin if Dispatched then raise ESimCardWriteUncertain.Create(E.ClassName,Verified); raise; end; end;
+  finally TCardCrypto.Clear(Pin); TCardCrypto.Clear(Cmd); end;
 end;
 function TSimCardReaderWriter.InitializeFile(const AFile: TSimFileAddress; const APin: TBytes): TSimFileInfo;
 begin

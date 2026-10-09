@@ -67,6 +67,24 @@ type
     /// <summary>Returned ADF name when present; independently owned.</summary>
     ApplicationAid: TBytes;
   end;
+  /// <summary>One explicitly ordered linked-phonebook record replacement; no allocation or link is guessed.</summary>
+  TSimRecordChange = record
+    /// <summary>Explicit USIM phonebook EF path under 5F3A.</summary>
+    FileAddress: TSimFileAddress;
+    /// <summary>One-based physical record.</summary>
+    RecordNumber: Integer;
+    /// <summary>Exact expected current complete record.</summary>
+    ExpectedBefore: TBytes;
+    /// <summary>Exact replacement complete record.</summary>
+    Data: TBytes;
+  end;
+  /// <summary>Explicit caller-ordered linked record writes; shared assignment is not an owned copy.</summary>
+  TSimRecordChanges = array of TSimRecordChange;
+  /// <summary>Credential command receipt; status acceptance does not prove a fresh-session new PIN.</summary>
+  TSimCredentialReceipt = record
+    /// <summary>True only after the card accepted the CHANGE/UNBLOCK command and transaction cleanup succeeded.</summary>
+    CommandAccepted: Boolean;
+  end;
   /// <summary>Owned independent record buffers; assignment shares the outer and inner arrays.</summary>
   TSimRecords = array of TBytes;
   /// <summary>PIN status without retaining a PIN; unknown retry counts are never guessed.</summary>

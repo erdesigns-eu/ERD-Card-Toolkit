@@ -39,6 +39,15 @@
     <Projects Include="type4ndef\Type4NdefDemo.dproj">
             <Dependencies/>
         </Projects>
+    <Projects Include="emv\EmvDemo.dproj">
+            <Dependencies/>
+        </Projects>
+    <Projects Include="belgianeid\BelgianEidDemo.dproj">
+            <Dependencies/>
+        </Projects>
+    <Projects Include="icaodocument\IcaoDocumentDemo.dproj">
+            <Dependencies/>
+        </Projects>
   </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -154,6 +163,33 @@
     </Target>
     <Target Name="Type4NdefDemo:Make">
         <MSBuild Projects="type4ndef\Type4NdefDemo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="EmvDemo">
+        <MSBuild Projects="emv\EmvDemo.dproj"/>
+    </Target>
+    <Target Name="EmvDemo:Clean">
+        <MSBuild Projects="emv\EmvDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="EmvDemo:Make">
+        <MSBuild Projects="emv\EmvDemo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="BelgianEidDemo">
+        <MSBuild Projects="belgianeid\BelgianEidDemo.dproj"/>
+    </Target>
+    <Target Name="BelgianEidDemo:Clean">
+        <MSBuild Projects="belgianeid\BelgianEidDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="BelgianEidDemo:Make">
+        <MSBuild Projects="belgianeid\BelgianEidDemo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="IcaoDocumentDemo">
+        <MSBuild Projects="icaodocument\IcaoDocumentDemo.dproj"/>
+    </Target>
+    <Target Name="IcaoDocumentDemo:Clean">
+        <MSBuild Projects="icaodocument\IcaoDocumentDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="IcaoDocumentDemo:Make">
+        <MSBuild Projects="icaodocument\IcaoDocumentDemo.dproj" Targets="Make"/>
     </Target>
     <Target Name="Build">
         <CallTarget Targets="MagStripeDemo;SmartCardDemo;ReaderToolsDemo;MemoryCardDemo;SleCounterDemo;Sle4404Demo;Twn4Demo;RfidInputDemo;SimCardDemo;MifareClassicDemo"/>

@@ -36,6 +36,12 @@ call :build_demo type2 Type2Demo
 if errorlevel 1 exit /b %errorlevel%
 call :build_demo type4ndef Type4NdefDemo
 if errorlevel 1 exit /b %errorlevel%
+call :build_demo emv EmvDemo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo belgianeid BelgianEidDemo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo icaodocument IcaoDocumentDemo
+if errorlevel 1 exit /b %errorlevel%
 exit /b %errorlevel%
 :build_demo
 rem Use the same resource generation and configuration as the IDE projects.
