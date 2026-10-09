@@ -224,3 +224,5 @@ were consulted for interoperability facts, not bundled or copied into the librar
   SHA-256 `53cc29c6c7d8d93b12ad11f9de9c2c1368ad537f56e363e29b8c1723504a07f8`:
   user/configuration regions and AUTH0. Original Ultralight layout is documented
   in the [contactless guide](CONTACTLESS.md).
+
+NTAG210/212 layouts and mirror/configuration rules are documented in [NTAG210_212.md](NTAG210_212.md).

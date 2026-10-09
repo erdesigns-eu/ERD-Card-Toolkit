@@ -7,7 +7,7 @@ unit ERD.Card.Demo.FamilyOperations;
 interface
 
 uses ERD.Card.Demo.Job, ERD.Card.Demo.Families, ERD.Card.Transport,
-  ERD.Card.Reader.TWN4, ERD.Card.RFID.Input;
+  ERD.Card.Reader.TWN4, ERD.Card.RFID.Input, ERD.Card.HID;
 
 type
   /// <summary>Explicit hardware boundary for family executors, with injectable scripted implementations.</summary>
@@ -23,6 +23,18 @@ type
     /// <param name="APort">Exact COM device name.</param>
     /// <returns>Channel whose lifetime is managed by the TWN4 component.</returns>
     function CreateTwn4Channel(const APort: string): ITwn4ByteChannel;
+  end;
+
+  /// <summary>Optional injectable Windows HID boundary for descriptor enumeration and inactive device factories.</summary>
+  ICardFamilyHidHardware = interface
+    ['{C7E94CF9-D5E1-4B0B-A8D6-8C6A55B057CD}']
+    /// <summary>Enumerates collection metadata; never selects a device or sends vendor commands.</summary>
+    /// <returns>Independent native collection descriptors and exact paths.</returns>
+    function HidDevices: THidDevices;
+    /// <summary>Creates an inactive channel; the component controls acquisition and release.</summary>
+    /// <param name="APath">Explicit selected Unicode device-interface path.</param>
+    /// <returns>Retained report device; factory opens no hardware.</returns>
+    function HidDevice(const APath: UnicodeString): IHidReportDevice;
   end;
 
 /// <summary>Creates an inactive worker executor for one separately runnable family.</summary>
@@ -51,13 +63,18 @@ uses
   ERD.Card.TLV, ERD.Card.EMV.Tags, ERD.Card.Ndef,
   ERD.Card.Memory, ERD.Card.Memory.Counter, ERD.Card.Memory.Sle4404,
   ERD.Card.SIM.Data, ERD.Card.SIM.Reader, ERD.Card.Memory.Capabilities, ERD.Card.PCSC.Reader,
+  ERD.Card.MagStripe, ERD.Card.MagStripe.Tracks, ERD.Card.MagStripe.MSR206,
+  ERD.Card.MagStripe.MagTek, ERD.Card.MagStripe.Serial, ERD.Card.Crypto, ERD.Card.Crypto.Windows, ERD.Card.Contactless.DESFire, ERD.Card.Contactless.DESFire.EV2,
+  ERD.Card.Contactless.Raw, ERD.Card.Contactless.ACR122, ERD.Card.Contactless.UID,
+  ERD.Card.Contactless.UID.Profiles, ERD.Card.Contactless.UID.USCUID, ERD.Card.Contactless.UID.Partial,
+  ERD.Card.Contactless.ISO15693, ERD.Card.Contactless.Type5.Ndef, ERD.Card.Contactless.Type2.Password,
   ERD.Card.Contactless.Type2.Ndef, ERD.Card.Contactless.Type4.Ndef,
   ERD.Card.Contactless, ERD.Card.Contactless.Type2, ERD.Card.RFID.HID,
   ERD.Card.Reader.TWN4.Serial, ERD.Card.Demo.Operations;
 
 type
   EPreflightComplete = class(Exception);
-  TPreflight = class(TInterfacedObject, ICardTransport, ICardTransaction, ITwn4ByteChannel)
+  TPreflight = class(TInterfacedObject, ICardTransport, ICardTransaction, ITwn4ByteChannel, ICardAesProvider)
   public
     ReachedBoundary: Boolean;
     function Exchange(const ACommand: TBytes): TBytes;
@@ -68,10 +85,15 @@ type
     procedure Send(const ABytes: TBytes; const ATimeoutMs: Cardinal);
     function ReceiveByte(const ATimeoutMs: Cardinal): Byte;
     function NowMs: UInt64;
+    function EncryptCbc(const AKey, AIv, AData: TBytes): TBytes;
+    function DecryptCbc(const AKey, AIv, AData: TBytes): TBytes;
+    function RandomBytes(const ACount: Integer): TBytes;
   end;
-  TNativeHardware = class(TInterfacedObject, ICardFamilyHardware)
+  TNativeHardware = class(TInterfacedObject, ICardFamilyHardware, ICardFamilyHidHardware)
   private FReader: TSmartCardReader;
   public
+    function HidDevices: THidDevices;
+    function HidDevice(const APath: UnicodeString): IHidReportDevice;
     destructor Destroy; override;
     function AcquireReader(const AName: string): ICardTransport;
     procedure ReleaseReader;
@@ -213,9 +235,29 @@ begin
   D.Artifacts[N].Name := Name; D.Artifacts[N].Data := CopyBytes(Data);
 end;
 
+function TPreflight.EncryptCbc(const AKey, AIv, AData: TBytes): TBytes;
+begin Result := nil; raise EInvalidOpException.Create('Preflight must never perform cryptography.'); end;
+function TPreflight.DecryptCbc(const AKey, AIv, AData: TBytes): TBytes;
+begin Result := nil; raise EInvalidOpException.Create('Preflight must never perform cryptography.'); end;
+function TPreflight.RandomBytes(const ACount: Integer): TBytes;
+begin Result := nil; raise EInvalidOpException.Create('Preflight must never perform cryptography.'); end;
+
+function TNativeHardware.HidDevices: THidDevices;
+begin Result := EnumerateWindowsHidDevices; end;
+function TNativeHardware.HidDevice(const APath: UnicodeString): IHidReportDevice;
+begin Result := CreateWindowsHidReportDevice(APath); end;
+
 procedure TFamilyOperations.Execute(const R: TCardDemoRequest; const A: TCardFamilyAction;
   const T: ICardTransport; const C: ITwn4ByteChannel; var D: TCardDemoResult);
-var Emv: TEMVCardReader; Belgian: TBelgianEIDReader; Icao: TICAODocumentReader;
+var Hid: TUsbHidReaderWriter; HidHardware: ICardFamilyHidHardware; Devices: THidDevices; Path: UnicodeString;
+  Mag: TMagStripeReaderWriter; MagTracks: TMagStripeTracks; TrackSet: TMagStripeTrackSet;
+  MagReceipt: TMagStripeProgrammingReceipt; Financial: TMagStripeFinancialData; MagPort: string;
+  Desfire: TDesfireCardReader; Session: IDesfireSession; Management: IDesfireManagement;
+  Definition: TDesfireFileDefinition; Files: TDesfireFiles; Applications: TDesfireApplicationIds;
+  Aes: ICardAesProvider; Aid: Cardinal; Settings: TDesfireFileSettings;
+  PasswordReader: TType2PasswordCardReader; RawUid: TRawUidProgrammer;
+  IsoReader: TIso15693CardReader; Type5: TType5NdefCardReader; IsoSession: IIso15693Session; IsoInfo: TIso15693SystemInfo; Type5Snapshot: TType5NdefSnapshot;
+  Emv: TEMVCardReader; Belgian: TBelgianEIDReader; Icao: TICAODocumentReader;
   Directory: TEmvDirectoryData; Application: TEmvApplicationData; ObjectData: TEmvDataObjectResult; Log: TEmvTransactionLogData;
   Values: TEmvValues; Dol: TEmvDolEntries; Eid: TBelgianEidData; Sections: TEidSections; Document: TIcaoDocumentData; PaceInfos: TIcaoPaceInfos;
   M: TMemoryCardReaderWriter; S: TSleCounterCardReaderWriter; L: TSle4404CardReaderWriter;
@@ -401,7 +443,7 @@ begin
           end
           else if (A.Id = 'type2read') or (A.Id = 'type2write') then
           begin
-            I := Number(R,A,'type2model',0,5); Address := Number(R,A,'page',0,255); Id := Bytes(R,A,'id');
+            I := Number(R,A,'type2model',0,Ord(High(TType2TagModel))); Address := Number(R,A,'page',0,255); Id := Bytes(R,A,'id');
             if A.Id = 'type2read' then
             begin Data := W.ReadType2UserPage(TType2TagModel(I),Address,Id); Output := BytesToHex(Data); end
             else begin W.WriteType2UserPage(TType2TagModel(I),Address,Id,Bytes(R,A,'before'),Bytes(R,A,'data'));
@@ -477,6 +519,218 @@ begin
           finally Icao.Free; end;
         end;
       end;
+      dfNativeHid:
+      begin
+        if A.Id = 'devices' then
+        begin
+          if not Supports(FHardware,ICardFamilyHidHardware,HidHardware) then HidHardware := TNativeHardware.Create;
+          Devices := HidHardware.HidDevices;
+          for I := 0 to High(Devices) do Output := Output+string(Devices[I].DevicePath)+sLineBreak+'VID '+IntToHex(Devices[I].VendorId,4)+' PID '+IntToHex(Devices[I].ProductId,4)+' usage '+IntToHex(Devices[I].UsagePage,4)+':'+IntToHex(Devices[I].Usage,4)+' input/output/feature bytes '+IntToStr(Devices[I].InputBytes)+'/'+IntToStr(Devices[I].OutputBytes)+'/'+IntToStr(Devices[I].FeatureBytes)+sLineBreak;
+          if Output = '' then Output := 'No metadata-readable HID collections.';
+        end
+        else
+        begin
+          Path := Text(R,A,'path'); if (Trim(Path) = '') or (Pos(#0,Path) > 0) then Fail;
+          I := Number(R,A,'kind',0,1); N := Number(R,A,'timeout',1,600000);
+          if A.Id = 'read' then J := Number(R,A,'reportid',0,255)
+          else begin Data := Bytes(R,A,'report'); if (Length(Data) < 1) or (Length(Data) > 4096) then Fail; end;
+          if not Supports(FHardware,ICardFamilyHidHardware,HidHardware) then HidHardware := TNativeHardware.Create;
+          Hid := TUsbHidReaderWriter.Create(nil);
+          try
+            Hid.TimeoutMs := N; Hid.Device := HidHardware.HidDevice(Path);
+            if A.Id = 'read' then begin Data := Hid.ReadReport(THidReportKind(I),J); Output := BytesToHex(Data); Artifact(D,'hid-report.bin',Data); end
+            else if A.Id = 'send' then
+            begin
+              try Hid.SendReport(THidReportKind(I),Data); except on E: EHidSendUncertain do begin D.WriteUncertain := True; raise; end; end;
+              Output := 'HID transfer accepted; card-memory completion requires the documented vendor response. No card read-back proof.';
+            end else Fail;
+          finally Hid.Free; Wipe(Data); end;
+        end;
+      end;
+      dfMagProfiles:
+      begin
+        if (A.Id = 'bits') or (A.Id = 'decodebits') then
+        begin
+          I := Number(R,A,'track',0,2);
+          if A.Id = 'bits' then begin Data := TMagStripeTrackCodec.EncodeBits(TMagStripeTrack(I),string(Text(R,A,'payload'))); Output := TMagStripeTrackCodec.DecodeBits(TMagStripeTrack(I),Data)+sLineBreak+BytesToHex(Data); Artifact(D,'track-bits.bin',Data); end
+          else Output := TMagStripeTrackCodec.DecodeBits(TMagStripeTrack(I),Bytes(R,A,'hex'));
+        end
+        else if A.Id = 'financial' then
+        begin
+          if Number(R,A,'track',0,1) = 0 then Financial := TMagStripeFinancialCodec.DecodeTrack1(string(Text(R,A,'payload')))
+          else Financial := TMagStripeFinancialCodec.DecodeTrack2(string(Text(R,A,'payload')));
+          Output := Financial.Pan+sLineBreak+Financial.Name;
+        end
+        else
+        begin
+          if A.Id = 'program' then TrackSet := [mstTrack1,mstTrack2,mstTrack3]
+          else case Number(R,A,'tracks',0,6) of
+            0: TrackSet := [mstTrack1]; 1: TrackSet := [mstTrack2]; 2: TrackSet := [mstTrack3];
+            3: TrackSet := [mstTrack1,mstTrack2]; 4: TrackSet := [mstTrack1,mstTrack3];
+            5: TrackSet := [mstTrack2,mstTrack3]; 6: TrackSet := [mstTrack1,mstTrack2,mstTrack3];
+          end;
+          if A.Id = 'hid' then MagTracks := TMagTekFrameCodec.DecodeHid(Bytes(R,A,'hex'),TrackSet,Number(R,A,'hasid',0,1) = 1)
+          else if A.Id = 'keyboard' then MagTracks := TMagTekFrameCodec.DecodeKeyboard(Bytes(R,A,'hex'),TrackSet)
+          else
+          begin
+            MagPort := string(Text(R,A,'port')); if Trim(MagPort) = '' then Fail;
+            I := Number(R,A,'profile',0,1); N := Number(R,A,'timeout',1,600000);
+            if A.Id = 'program' then
+            begin
+              MagTracks[mstTrack1] := string(Text(R,A,'track1')); MagTracks[mstTrack2] := string(Text(R,A,'track2')); MagTracks[mstTrack3] := string(Text(R,A,'track3'));
+              for J := 0 to 2 do begin if MagTracks[TMagStripeTrack(J)] = '' then Fail; TMagStripeTrackCodec.ValidatePayload(TMagStripeTrack(J),MagTracks[TMagStripeTrack(J)]); end;
+              Count := Number(R,A,'coercivity',0,1);
+            end;
+            Mag := TMagStripeReaderWriter.Create(nil);
+            try
+              Mag.Device := TMsr206MagStripeAdapter.Create(CreateWindowsMagStripeSerialPort(MagPort),TMsr206Profile(I)); Mag.TimeoutMs := N;
+              if A.Id = 'read' then MagTracks := Mag.ReadTracks(TrackSet)
+              else if A.Id = 'program' then
+              begin
+                if Count = 0 then MagReceipt := Mag.ProgramTracks(TrackSet,MagTracks,mscLow) else MagReceipt := Mag.ProgramTracks(TrackSet,MagTracks,mscHigh);
+                Output := 'Device status '+IntToHex(MagReceipt.DeviceStatus,2)+'; host read-back '+BoolToStr(MagReceipt.HostReadBackVerified,True); Exit;
+              end else Fail;
+            finally Mag.Free; end;
+          end;
+          for I := 0 to 2 do if TMagStripeTrack(I) in TrackSet then Output := Output+'Track '+IntToStr(I+1)+': '+MagTracks[TMagStripeTrack(I)]+sLineBreak;
+        end;
+      end;
+      dfDesfire:
+      begin
+        if A.Id = 'decode' then
+        begin Settings := TDesfireCodec.FileSettings(Number(R,A,'file',0,31),Bytes(R,A,'hex')); Output := 'File type '+IntToStr(Ord(Settings.FileType))+' communication '+IntToStr(Ord(Settings.Communication))+sLineBreak+'Bytes '+IntToStr(Settings.FileBytes)+' records '+IntToStr(Settings.CurrentRecords); end
+        else
+        begin
+          Desfire := TDesfireCardReader.Create(nil); Session := nil; Management := nil;
+          try
+            Desfire.Transport := T;
+            if A.Id = 'version' then begin Data := Desfire.ReadVersion.RawBytes; Output := BytesToHex(Data); Artifact(D,'version.bin',Data); end
+            else if A.Id = 'applications' then begin Applications := Desfire.ReadApplicationIds; for I := 0 to High(Applications) do Output := Output+IntToHex(Applications[I],6)+sLineBreak; end
+            else
+            begin
+              Aid := Cardinal(Number(R,A,'aid',0,$FFFFFF));
+              Desfire.Security := TDesfireSecurity(Number(R,A,'security',0,2));
+              Desfire.MinimumCommunication := TDesfireCommunication(Number(R,A,'minimum',0,2));
+              Key := Bytes(R,A,'key'); Desfire.AuthenticationKey := Key; Desfire.KeyNumber := Number(R,A,'keynumber',0,13);
+              NewP := Bytes(R,A,'rekey'); Desfire.ReauthenticationKey := NewP; Desfire.ReauthenticationKeyNumber := Number(R,A,'rekeynumber',0,13); Wipe(NewP);
+              if Desfire.Security <> dfsPublic then
+              begin
+                if not Supports(T,ICardAesProvider,Aes) then Aes := TCardWindowsAesProvider.Create;
+                Desfire.CryptoProvider := Aes; Aes := nil;
+              end;
+              if A.Id = 'files' then begin Files := Desfire.ReadFiles(Aid); for I := 0 to High(Files) do begin Output := Output+'File '+IntToStr(Files[I].FileNumber)+' type '+IntToStr(Ord(Files[I].FileType))+sLineBreak; Artifact(D,'settings-'+IntToStr(Files[I].FileNumber)+'.bin',Files[I].RawBytes); end; end
+              else if A.Id = 'read' then begin Data := Desfire.ReadData(Aid,Number(R,A,'file',0,31),Number(R,A,'offset',0,$FFFFFF),Number(R,A,'count',1,$FFFFFF)); Output := BytesToHex(Data); Artifact(D,'data.bin',Data); end
+              else if A.Id = 'value' then Output := IntToStr(Desfire.ReadValue(Aid,Number(R,A,'file',0,31)))
+              else if A.Id = 'records' then begin Data := Desfire.ReadRecords(Aid,Number(R,A,'file',0,31),Number(R,A,'offset',0,$FFFFFF),Number(R,A,'count',1,$FFFFFF)); Output := BytesToHex(Data); Artifact(D,'records.bin',Data); end
+              else if A.Id = 'write' then begin Desfire.WriteData(Aid,Number(R,A,'file',0,31),Number(R,A,'offset',0,$FFFFFF),Bytes(R,A,'data')); D.WriteVerified := True; Output := 'Standard data independently verified.'; end
+              else if (A.Id = 'backup') or (A.Id = 'credit') or (A.Id = 'debit') or (A.Id = 'limited') or (A.Id = 'append') or (A.Id = 'clear') then
+              begin
+                I := Number(R,A,'access',0,1); J := Number(R,A,'finish',0,1); Address := Number(R,A,'file',0,31);
+                Data := nil; N := 0; Count := 0;
+                if (A.Id = 'backup') or (A.Id = 'append') then begin Data := Bytes(R,A,'data'); if Length(Data) = 0 then Fail; end;
+                if A.Id = 'backup' then N := Number(R,A,'offset',0,$FFFFFF);
+                if (A.Id = 'credit') or (A.Id = 'debit') or (A.Id = 'limited') then Count := Number(R,A,'amount',1,High(Integer));
+                Session := Desfire.OpenSession(Aid,TDesfireSessionAccess(Ord(dsaFreshTransaction)+I));
+                if A.Id = 'backup' then Session.WriteBackup(Address,N,Data)
+                else if A.Id = 'credit' then Session.Credit(Address,Count)
+                else if A.Id = 'debit' then Session.Debit(Address,Count)
+                else if A.Id = 'limited' then Session.LimitedCredit(Address,Count)
+                else if A.Id = 'append' then Session.AppendRecord(Address,Data)
+                else Session.ClearRecords(Address);
+                if J = 0 then Session.Commit else Session.Abort;
+                D.WriteVerified := Session.VerificationSucceeded;
+                Output := 'Transaction outcome '+IntToStr(Ord(Session.Outcome))+'; independent verification '+BoolToStr(D.WriteVerified,True);
+              end
+              else
+              begin
+                { Parse all explicit scalar/input fields before acquiring the management session. }
+                Address := 0; N := 0; Count := 0; Definition := Default(TDesfireFileDefinition);
+                if (A.Id = 'createapp') or (A.Id = 'deleteapp') then Address := Number(R,A,'targetaid',1,$FFFFFF);
+                if (A.Id = 'keyversion') or (A.Id = 'changekey') then Address := Number(R,A,'targetkey',0,13);
+                if (A.Id = 'keysettings') or (A.Id = 'createapp') then N := Number(R,A,'settings',0,255);
+                if A.Id = 'createapp' then Count := Number(R,A,'keycount',0,255);
+                if (A.Id = 'deletefile') or (A.Id = 'fileaccess') or (A.Id = 'createfile') then Definition.FileNumber := Number(R,A,'file',0,31);
+                if (A.Id = 'fileaccess') or (A.Id = 'createfile') then
+                begin
+                  Definition.Communication := TDesfireCommunication(Number(R,A,'communication',0,2));
+                  Definition.ReadKey := Number(R,A,'readkey',0,15); Definition.WriteKey := Number(R,A,'writekey',0,15);
+                  Definition.ReadWriteKey := Number(R,A,'readwritekey',0,15); Definition.ChangeKey := Number(R,A,'changekey',0,15);
+                end;
+                if A.Id = 'changekey' then begin N := Number(R,A,'keyversion',0,255); P := Bytes(R,A,'newkey'); NewP := Bytes(R,A,'oldkey'); if Length(P) <> 16 then Fail; if (Length(NewP) <> 0) and (Length(NewP) <> 16) then Fail; end;
+                if A.Id = 'createfile' then
+                begin
+                  Definition.FileType := TDesfireFileType(Number(R,A,'type',0,4)); Definition.FileBytes := Number(R,A,'filebytes',0,$FFFFFF);
+                  Definition.LowerLimit := Number(R,A,'lower',Low(Integer),High(Integer)); Definition.UpperLimit := Number(R,A,'upper',Low(Integer),High(Integer)); Definition.InitialValue := Number(R,A,'initial',Low(Integer),High(Integer));
+                  Definition.LimitedCreditEnabled := Number(R,A,'limited',0,1) = 1; Definition.RecordBytes := Number(R,A,'recordbytes',0,$FFFFFF); Definition.MaxRecords := Number(R,A,'maxrecords',0,$FFFFFF);
+                end;
+                Management := Desfire.OpenManagementSession(Aid); Session := Management;
+                if A.Id = 'settings' then begin Data := Session.ReadApplicationSettings.RawBytes; Output := BytesToHex(Data); Artifact(D,'application-settings.bin',Data); end
+                else if A.Id = 'freememory' then Output := IntToStr(Management.ReadFreeMemory)
+                else if A.Id = 'keyversion' then Output := IntToStr(Management.ReadKeyVersion(Address))
+                else if A.Id = 'keysettings' then Management.ChangeKeySettings(N)
+                else if A.Id = 'fileaccess' then Management.ChangeFileAccess(Definition.FileNumber,Definition.Communication,Definition.ReadKey,Definition.WriteKey,Definition.ReadWriteKey,Definition.ChangeKey)
+                else if A.Id = 'changekey' then Management.ChangeAesKey(Address,N,P,NewP)
+                else if A.Id = 'createapp' then Session.CreateApplication(Address,N,Count)
+                else if A.Id = 'deleteapp' then Session.DeleteApplication(Address)
+                else if A.Id = 'deletefile' then Session.DeleteFile(Definition.FileNumber)
+                else if A.Id = 'createfile' then Session.CreateFile(Definition)
+                else Fail;
+                if Output = '' then begin D.WriteVerified := True; Output := 'Management verification '+BoolToStr(D.WriteVerified,True); end;
+              end;
+              if Session <> nil then
+                try Session.Close; except if D.WriteVerified then D.WriteUncertain := True; raise; end;
+            end;
+          except
+            if Session <> nil then try Session.Close; except end;
+            Management := nil; Session := nil; Desfire.Free; raise;
+          end;
+          Management := nil; Session := nil; Desfire.Free;
+        end;
+      end;
+      dfIso15693:
+      begin
+        IsoSession := TAcr1552Iso15693Session.Create(T,TIso15693AddressMode(Number(R,A,'mode',0,1)),TIso15693ResponseFormat(Number(R,A,'format',0,1)));
+        IsoReader := TIso15693CardReader.Create(nil); Type5 := TType5NdefCardReader.Create(nil);
+        try
+          IsoReader.Session := IsoSession; Type5.Session := IsoSession;
+          if A.Id = 'information' then begin IsoInfo := IsoReader.ReadInformation; Output := BytesToHex(IsoInfo.Uid)+' blocks '+IntToStr(IsoInfo.BlockCount)+' bytes per block '+IntToStr(IsoInfo.BlockSize); end
+          else if A.Id = 'read' then begin Data := IsoReader.ReadBlocks(Number(R,A,'block',0,65535),Number(R,A,'count',1,65536)); Output := BytesToHex(Data); Artifact(D,'blocks.bin',Data); end
+          else if A.Id = 'write' then begin IsoReader.WriteBlock(Number(R,A,'block',0,65535),Bytes(R,A,'data')); D.WriteVerified := True; Output := 'Physical block independently verified.'; end
+          else if A.Id = 'readndef' then begin Type5Snapshot := Type5.ReadMessage; Output := BytesToHex(Type5Snapshot.MessageBytes); Artifact(D,'ndef.bin',Type5Snapshot.MessageBytes); end
+          else if A.Id = 'writendef' then begin Ndef := TNdefCodec.Decode(Bytes(R,A,'ndef')); Type5.WriteMessage(Ndef); D.WriteVerified := True; Output := 'Type 5 NDEF independently verified.'; end
+          else if A.Id = 'clearndef' then begin Type5.ClearMessage; D.WriteVerified := True; Output := 'Empty Type 5 NDEF independently verified.'; end else Fail;
+        finally Type5.Free; IsoReader.Free; IsoSession := nil; end;
+      end;
+      dfUid:
+      begin
+        Data := Bytes(R,A,'uid');
+        if (A.Id = 'gen2') or (A.Id = 'fuid') then
+        begin
+          Contact := TContactlessCardReader.Create(nil);
+          try
+            Contact.Transport := T; Contact.Profile := TPcscStorageProfile.Create;
+            Key := Bytes(R,A,'key'); I := Number(R,A,'keytype',0,1); N := Number(R,A,'slot',0,255);
+            if A.Id = 'gen2' then Contact.ProgramClassicGen2Uid(TClassicGen2UidModel(Number(R,A,'size',0,1)),Data,TMifareClassicKeyType(I),Key,N)
+            else Contact.ProgramFuidUidOnce(Data,TMifareClassicKeyType(I),Key,N);
+          finally Contact.Free; end;
+        end
+        else
+        begin
+          RawUid := TRawUidProgrammer.Create(nil);
+          try
+            if (A.Id = 'gen3') or (A.Id = 'gen4') then RawUid.Reader := TAcr122RawReader.Create(T,$10,True)
+            else RawUid.Reader := TAcr122RawReader.Create(T);
+            if A.Id = 'gen1' then RawUid.ProgramClassicUid(TClassicRawUidProfile(Number(R,A,'profile',0,2)),Data)
+            else if A.Id = 'direct' then RawUid.ProgramType2DirectWriteUid(Data)
+            else if A.Id = 'gen3' then RawUid.ProgramGen3Uid(TGen3UidSize(Number(R,A,'size',0,1)),Data)
+            else if A.Id = 'gen4' then begin P := Bytes(R,A,'password'); RawUid.ProgramGen4Uid(TGen4UidLayout(Number(R,A,'layout',0,5)),Data,P); end
+            else if A.Id = 'uscuid' then RawUid.ProgramUscuidUid(TUscuidWakeupStyle(Number(R,A,'wakeup',0,1)),TUscuidUidLayout(Number(R,A,'layout',0,2)),Data)
+            else if A.Id = 'partial' then RawUid.ProgramPartialUscuidUid(TPartialUscuidProfile(Number(R,A,'profile',0,2)),Data)
+            else Fail;
+          finally RawUid.Free; end;
+        end;
+        D.WriteVerified := True; Output := 'Fresh RF UID independently verified: '+BytesToHex(Data);
+      end;
       dfClassic, dfType2:
       begin
         Contact := TContactlessCardReader.Create(nil);
@@ -503,12 +757,23 @@ begin
           end
           else
           begin
-            I := Number(R,A,'type2model',0,5);
+            I := Number(R,A,'type2model',0,Ord(High(TType2TagModel)));
             if A.Id = 'page' then Output := BytesToHex(Contact.ReadType2Page(TType2TagModel(I),Number(R,A,'page',0,255)))
             else if A.Id = 'memory' then begin UserMemory := Contact.ReadType2UserMemory(TType2TagModel(I)); Output := BytesToHex(UserMemory.Data); end
             else if A.Id = 'writepage' then begin Contact.WriteType2UserPage(TType2TagModel(I),Number(R,A,'page',0,255),Bytes(R,A,'data')); Output := 'Reader write status accepted; independent read-back has not been performed.'; end
             else if A.Id = 'readndef' then begin T2Snapshot := T2.ReadMessage(TType2TagModel(I)); Output := BytesToHex(T2Snapshot.MessageBytes); end
             else if A.Id = 'writendef' then begin Ndef := TNdefCodec.Decode(Bytes(R,A,'ndef')); T2.WriteMessage(TType2TagModel(I),Ndef); D.WriteVerified := True; Output := 'Type 2 NDEF independently verified.'; end
+            else if (A.Id = 'pwdpage') or (A.Id = 'pwdmemory') or (A.Id = 'pwdwrite') then
+            begin
+              P := Bytes(R,A,'password'); Key := Bytes(R,A,'pack');
+              PasswordReader := TType2PasswordCardReader.Create(nil);
+              try
+                PasswordReader.Reader := TAcr122RawReader.Create(T);
+                if A.Id = 'pwdpage' then begin Data := PasswordReader.ReadUserPage(TType2TagModel(I),Number(R,A,'page',4,225),P,Key); Output := BytesToHex(Data); Artifact(D,'page.bin',Data); end
+                else if A.Id = 'pwdmemory' then begin UserMemory := PasswordReader.ReadUserMemory(TType2TagModel(I),P,Key); Output := BytesToHex(UserMemory.Data); Artifact(D,'user-memory.bin',UserMemory.Data); end
+                else begin PasswordReader.WriteUserPage(TType2TagModel(I),Number(R,A,'page',4,225),P,Key,Bytes(R,A,'data')); D.WriteVerified := True; Output := 'Authenticated user page independently verified.'; end;
+              finally PasswordReader.Free; end;
+            end
             else if A.Id = 'clearndef' then begin T2.ClearMessage(TType2TagModel(I)); D.WriteVerified := True; Output := 'Type 2 empty NDEF independently verified.'; end
             else Fail;
           end;

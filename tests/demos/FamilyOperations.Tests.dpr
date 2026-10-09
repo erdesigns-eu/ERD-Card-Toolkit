@@ -17,7 +17,7 @@ uses
 {$ELSE}
   System.SysUtils,
 {$ENDIF}
-  ERD.Card.Bytes, ERD.Card.Transport, ERD.Card.Demo.Job, ERD.Card.SIM.Data, ERD.Card.Demo.Families,
+  ERD.Card.HID, ERD.Card.Bytes, ERD.Card.Transport, ERD.Card.Demo.Job, ERD.Card.SIM.Data, ERD.Card.Demo.Families,
   ERD.Card.Demo.FamilyOperations, ERD.Card.Reader.TWN4, ERD.Card.RFID.Input,
   ERD.Card.Memory, ERD.Card.Demo.Operations;
 
@@ -47,20 +47,46 @@ type
     function ReceiveByte(const Timeout: Cardinal): Byte;
     function NowMs: UInt64;
   end;
-  THardware = class(TInterfacedObject, ICardFamilyHardware)
+  THardware = class(TInterfacedObject, ICardFamilyHardware, ICardFamilyHidHardware)
   public
-    Acquires, Releases, Channels: Integer;
+    Acquires, Releases, Channels, HidFactories: Integer;
+    ReportDevice: IHidReportDevice;
     Transport: ICardTransport;
     Channel: ITwn4ByteChannel;
     FailRelease: Boolean;
+    function HidDevices: THidDevices;
+    function HidDevice(const APath: UnicodeString): IHidReportDevice;
     function AcquireReader(const AName: string): ICardTransport;
     procedure ReleaseReader;
     function CreateTwn4Channel(const APort: string): ITwn4ByteChannel;
   end;
 
+  TReports = class(TInterfacedObject,IHidReportDevice)
+  public
+    Opens,Closes,Receives,Sends: Integer;
+    RejectSend: Boolean;
+    function Open(const AWriteAccess: Boolean): THidDeviceInfo;
+    procedure Close;
+    function Receive(const K: THidReportKind; const Id: Byte; const Timeout: Cardinal): TBytes;
+    procedure Send(const K: THidReportKind; const Data: TBytes; const Timeout: Cardinal);
+  end;
+
 var Checks: Integer;
 procedure Check(const V: Boolean; const Why: string);
 begin Inc(Checks); if not V then raise Exception.Create(Why); end;
+
+function THardware.HidDevices: THidDevices;
+begin Result := nil; SetLength(Result,1); Result[0] := Default(THidDeviceInfo); Result[0].DevicePath := 'hid:test'; Result[0].VendorId := $1234; Result[0].InputBytes := 4; end;
+function THardware.HidDevice(const APath: UnicodeString): IHidReportDevice;
+begin Check(APath = 'hid:test','Exact native HID interface path'); Inc(HidFactories); Result := ReportDevice; end;
+function TReports.Open(const AWriteAccess: Boolean): THidDeviceInfo;
+begin Inc(Opens); Result := Default(THidDeviceInfo); Result.InputBytes := 4; Result.OutputBytes := 4; Result.FeatureBytes := 4; end;
+procedure TReports.Close;
+begin Inc(Closes); end;
+function TReports.Receive(const K: THidReportKind; const Id: Byte; const Timeout: Cardinal): TBytes;
+begin Check((Id = 7) and (Timeout = 123),'Exact HID ID and deadline'); Inc(Receives); Result := HexToBytes('07010203'); end;
+procedure TReports.Send(const K: THidReportKind; const Data: TBytes; const Timeout: Cardinal);
+begin Check(BytesEqual(Data,HexToBytes('07010203')) and (Timeout = 123),'Exact HID output and deadline'); Inc(Sends); if RejectSend then raise EHidError.Create('Private vendor failure'); end;
 
 constructor TScript.Create;
 begin inherited Create; FailAt := -1; end;
@@ -371,7 +397,7 @@ begin
       begin
         R := Request(F,Actions[I].Id); Put(R,F,'key','000102030405');
         if F = dfClassic then Put(R,F,'data','000102030405060708090A0B0C0D0E0F');
-        if F = dfType2 then begin Put(R,F,'data','00010203'); Put(R,F,'page','4'); end; Put(R,F,'ndef','D101055402656E4869');
+        if F = dfType2 then begin Put(R,F,'data','00010203'); Put(R,F,'page','4'); Put(R,F,'type2model','3'); Put(R,F,'password','01020304'); Put(R,F,'pack','0102'); end; Put(R,F,'ndef','D101055402656E4869');
         Reached := False; try CreateCardFamilyOperations(F,Hardware).Run(R,D); except on E: EReachedHardware do Reached := True; end;
         Check(Reached,'Valid storage action acquisition '+Actions[I].Id);
         Prev := H.Acquires;
@@ -483,9 +509,97 @@ begin
   end;
 end;
 
+procedure TestAdditionalFamilies;
+var F: TCardDemoFamily; A: TCardFamilyActions; I: Integer; R: TCardDemoRequest; D: TCardDemoResult;
+  H: THardware; Hardware: ICardFamilyHardware; S: TScript; T: ICardTransport; Reached, Failed: Boolean;
+begin
+  for F := dfIso15693 to dfUid do
+  begin
+    A := CardFamilyActions(F); H := THardware.Create; Hardware := H;
+    for I := 0 to High(A) do
+    begin
+      R := Request(F,A[I].Id); Put(R,F,'block','2'); Put(R,F,'data','00010203'); Put(R,F,'count','1'); Put(R,F,'ndef','D101055402656E4869');
+      Put(R,F,'uid','01020304'); Put(R,F,'key','000102030405'); Put(R,F,'password','01020304');
+      if A[I].Id = 'direct' then Put(R,F,'uid','01020304050607');
+      Reached := False;
+      try CreateCardFamilyOperations(F,Hardware).Run(R,D); except on E: EReachedHardware do Reached := True; end;
+      Check(Reached,'Additional explicit profile acquisition '+A[I].Id);
+      R.ReaderName := ''; Failed := False;
+      try CreateCardFamilyOperations(F,Hardware).Run(R,D); except on E: EArgumentException do Failed := True; end;
+      Check(Failed,'Exact reader selection before acquisition');
+    end;
+    Hardware := nil;
+  end;
+  H := THardware.Create; Hardware := H;
+  for I := 0 to 5 do
+  begin
+    case I of 0: R := Request(dfDesfire,'files'); 1: R := Request(dfDesfire,'read'); 2: R := Request(dfDesfire,'value'); 3: R := Request(dfDesfire,'records'); 4: R := Request(dfDesfire,'version'); 5: R := Request(dfDesfire,'applications'); end;
+    Put(R,dfDesfire,'aid','66051'); Put(R,dfDesfire,'offset','0'); Put(R,dfDesfire,'count','1'); Put(R,dfDesfire,'file','0');
+    Reached := False; try CreateCardFamilyOperations(dfDesfire,Hardware).Run(R,D); except on E: EReachedHardware do Reached := True; end;
+    Check(Reached,'DESFire public operation acquisition');
+  end;
+  A := CardFamilyActions(dfDesfire);
+  for I := 0 to High(A) do
+    if A[I].Pcsc and not (A[I].Id = 'version') and not (A[I].Id = 'applications') then
+    begin
+      R := Request(dfDesfire,A[I].Id); Put(R,dfDesfire,'aid','66051');
+      Put(R,dfDesfire,'security','1'); Put(R,dfDesfire,'minimum','1'); Put(R,dfDesfire,'key','000102030405060708090A0B0C0D0E0F');
+      Put(R,dfDesfire,'offset','0'); Put(R,dfDesfire,'count','1'); Put(R,dfDesfire,'file','0'); Put(R,dfDesfire,'data','01020304');
+      Put(R,dfDesfire,'amount','1'); Put(R,dfDesfire,'settings','15'); Put(R,dfDesfire,'keycount','129'); Put(R,dfDesfire,'targetaid','263430');
+      Put(R,dfDesfire,'readkey','0'); Put(R,dfDesfire,'writekey','0'); Put(R,dfDesfire,'readwritekey','0'); Put(R,dfDesfire,'changekey','0');
+      Put(R,dfDesfire,'filebytes','16'); Put(R,dfDesfire,'keyversion','1'); Put(R,dfDesfire,'newkey','101112131415161718191A1B1C1D1E1F');
+      Reached := False;
+      try CreateCardFamilyOperations(dfDesfire,Hardware).Run(R,D); except on E: EReachedHardware do Reached := True; end;
+      Check(Reached,'All explicit DESFire AES/action preflights '+A[I].Id);
+    end;
+  Hardware := nil;
+  S := TScript.Create; T := S; H := THardware.Create; Hardware := H; H.Transport := T;
+  S.Add('905A00000300000000','9100'); S.Add('906A000000','0302010605049100'); R := Request(dfDesfire,'applications'); CreateCardFamilyOperations(dfDesfire,Hardware).Run(R,D);
+  Check((D.Text = '010203'+sLineBreak+'040506'+sLineBreak) and (S.Position = 2) and (S.Ends = 1),'Literal DESFire application IDs');
+  Hardware := nil; T := nil;
+  R := Request(dfMagProfiles,'bits'); Put(R,dfMagProfiles,'track','1'); Put(R,dfMagProfiles,'payload','123');
+  CreateCardFamilyOperations(dfMagProfiles).Run(R,D); Check((Pos('123',string(D.Text)) = 1) and (Length(D.Artifacts) = 1),'Magstripe parity/LRC export');
+  R := Request(dfMagProfiles,'keyboard'); Put(R,dfMagProfiles,'hex','3B3132333F0D'); Put(R,dfMagProfiles,'tracks','1');
+  CreateCardFamilyOperations(dfMagProfiles).Run(R,D); Check(Pos('Track 2: 123',string(D.Text)) > 0,'Literal MagTek keyboard frame');
+  R := Request(dfUid,'gen4'); Put(R,dfUid,'uid','01020304'); Put(R,dfUid,'password','010203');
+  H := THardware.Create; Hardware := H; Failed := False;
+  try CreateCardFamilyOperations(dfUid,Hardware).Run(R,D); except on E: Exception do Failed := True; end;
+  Check(Failed and (H.Acquires = 0),'Wrong Gen4 credential size before hardware'); Hardware := nil;
+end;
+
+procedure TestNativeHidDemo;
+var H: THardware; Hardware: ICardFamilyHardware; P: TReports; R: TCardDemoRequest; D: TCardDemoResult; Failed: Boolean; I: Integer;
+begin
+  H := THardware.Create; Hardware := H; P := TReports.Create; H.ReportDevice := P;
+  R := Request(dfNativeHid,'devices'); CreateCardFamilyOperations(dfNativeHid,Hardware).Run(R,D);
+  Check((Pos('VID 1234',string(D.Text)) > 0) and (H.HidFactories = 0),'HID metadata without device selection');
+  for I := 0 to 1 do
+  begin
+    R := Request(dfNativeHid,'read'); Put(R,dfNativeHid,'path','hid:test'); Put(R,dfNativeHid,'kind',IntToStr(I)); Put(R,dfNativeHid,'reportid','7'); Put(R,dfNativeHid,'timeout','123');
+    CreateCardFamilyOperations(dfNativeHid,Hardware).Run(R,D);
+    Check((D.Text = '07010203') and (Length(D.Artifacts) = 1) and BytesEqual(D.Artifacts[0].Data,HexToBytes('07010203')),'Exact HID read/export result');
+  end;
+  R := Request(dfNativeHid,'send'); Put(R,dfNativeHid,'path','hid:test'); Put(R,dfNativeHid,'report','07010203'); Put(R,dfNativeHid,'timeout','123');
+  CreateCardFamilyOperations(dfNativeHid,Hardware).Run(R,D); Check(D.Success and not D.WriteVerified,'HID transfer does not invent card proof');
+  P.RejectSend := True; Failed := False;
+  try CreateCardFamilyOperations(dfNativeHid,Hardware).Run(R,D); except on E: EHidSendUncertain do Failed := True; end;
+  Check(Failed and D.WriteUncertain and not D.WriteVerified,'HID uncertain submission surfaced');
+  Check((P.Opens = 4) and (P.Closes = 4) and (P.Receives = 2) and (P.Sends = 2),'Native demo resource ownership');
+  for I := 0 to 2 do
+  begin
+    R := Request(dfNativeHid,'send'); Put(R,dfNativeHid,'path','hid:test'); Put(R,dfNativeHid,'report','07010203');
+    if I = 0 then R.MutationAcknowledged := False;
+    if I = 1 then Put(R,dfNativeHid,'path','');
+    if I = 2 then Put(R,dfNativeHid,'report','0');
+    Failed := False; try CreateCardFamilyOperations(dfNativeHid,Hardware).Run(R,D); except on E: Exception do Failed := True; end;
+    Check(Failed and (H.HidFactories = 4),'HID request validation before device factory');
+  end;
+  Hardware := nil;
+end;
+
 begin
   try
-    TestDocumentAndEmvDemos; TestExtendedSimDemo; TestStorageDemos; TestSimRoutes; TestOffline; TestPreflight; TestCounterAndSleRoutes;
+    TestNativeHidDemo; TestAdditionalFamilies; TestDocumentAndEmvDemos; TestExtendedSimDemo; TestStorageDemos; TestSimRoutes; TestOffline; TestPreflight; TestCounterAndSleRoutes;
     TestTwnRoutes(0,False); TestTwnRoutes(1,False); TestTwnRoutes(2,False); TestTwnRoutes(3,False); TestTwnRoutes(3,True);
     TestMemoryWrite(-1,False,False); TestMemoryWrite(6,False,False);
     TestMemoryWrite(7,False,False); TestMemoryWrite(-1,True,False); TestMemoryWrite(-1,False,True);

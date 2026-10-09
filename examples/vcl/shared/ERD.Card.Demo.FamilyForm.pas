@@ -22,8 +22,8 @@ type
     FCapture: TRfidKeyboardReader;
     FBusy: Boolean;
     FPreview: TImage;
-    procedure PreviewArtifact(Sender: TObject);
     FArtifacts: TCardDemoArtifacts; FArtifact: TComboBox; FSave: TButton;
+    procedure PreviewArtifact(Sender: TObject);
     procedure SaveArtifact(Sender: TObject);
     procedure ActionChanged(Sender: TObject);
     procedure RunClick(Sender: TObject);
@@ -237,6 +237,7 @@ begin
   FAcknowledge.Enabled := not Frozen and FActions[FAction.ItemIndex].Mutation;
   for I := 0 to High(FInputs) do FInputs[I].Enabled := not Frozen;
   FRun.Enabled := not AValue;
+  FArtifact.Enabled := not Frozen; FSave.Enabled := not Frozen and (Length(FArtifacts) > 0);
 end;
 
 procedure TCardFamilyForm.Complete(const AResult: TCardDemoResult);

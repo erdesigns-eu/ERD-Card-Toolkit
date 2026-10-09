@@ -359,9 +359,9 @@ end;
 
 procedure TestType2LayoutsAndPages;
 const
-  Totals: array[TType2TagModel] of Integer = (16, 20, 41, 45, 135, 231);
-  LastUsers: array[TType2TagModel] of Integer = (15, 15, 35, 39, 129, 225);
-  UserBytes: array[TType2TagModel] of Integer = (48, 48, 128, 144, 504, 888);
+  Totals: array[TType2TagModel] of Integer = (16, 20, 41, 45, 135, 231, 20, 41);
+  LastUsers: array[TType2TagModel] of Integer = (15, 15, 35, 39, 129, 225, 15, 35);
+  UserBytes: array[TType2TagModel] of Integer = (48, 48, 128, 144, 504, 888, 48, 128);
 var
   Reader: TContactlessCardReader;
   Script: TScript;
@@ -424,7 +424,7 @@ begin
       Check((Script.Position = Memory.PageCount) and (Script.Begins = 1) and (Script.Ends = 1), 'Whole memory uses one transaction, no PC/SC requests outside user pages');
     end;
   finally Reader.Free; end;
-  Writeln('PASS: six Type 2 layouts, protected pages, complete memory and exact four-byte page operations.');
+  Writeln('PASS: eight Type 2 layouts, protected pages, complete memory and exact four-byte page operations.');
 end;
 
 procedure TestType2FailuresAndCapabilities;

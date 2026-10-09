@@ -39,6 +39,7 @@ contains
   ERD.Card.SIM.Reader in '..\..\src\sim\ERD.Card.SIM.Reader.pas',
   ERD.Card.Reader.TWN4 in '..\..\src\readers\ERD.Card.Reader.TWN4.pas',
   ERD.Card.RFID.Input in '..\..\src\input\ERD.Card.RFID.Input.pas',
+  ERD.Card.HID in '..\..\src\input\ERD.Card.HID.pas',
   ERD.Card.RFID.HID in '..\..\src\input\ERD.Card.RFID.HID.pas',
   ERD.Card.APDU in '..\..\src\core\ERD.Card.APDU.pas',
   ERD.Card.Bytes in '..\..\src\core\ERD.Card.Bytes.pas',

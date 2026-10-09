@@ -1,70 +1,61 @@
-# VCL-voorbeelden: dekking en volgende uitbreiding
+# VCL-voorbeelden: huidige dekking
 
-Er zijn nu **vijftien runnable projecten**: SmartCardDemo, MagStripeDemo en de dertien
-familiedemo’s ReaderToolsDemo, RfidInputDemo, Twn4Demo, MemoryCardDemo,
-SleCounterDemo, Sle4404Demo, SimCardDemo, MifareClassicDemo, Type2Demo Type4NdefDemo, EmvDemo, BelgianEidDemo en IcaoDocumentDemo. De nieuwe projecten delen formulier-, invoer- en
-workerbasis. Hun Delphi/Windows/UI- en hardwaretests staan nog open. De overige
-projectnamen hieronder zijn gepland. Betalingen blijven buiten scope.
+Er zijn **twintig afzonderlijk uitvoerbare toepassingen** in
+`examples/vcl/CardDemos.groupproj`. Achttien familiedemo’s delen hun formulier,
+invoercontrole, achtergrondworker en expliciete bestands-export. Betalingen vallen
+buiten deze componentset.
 
-| Demo | Te demonstreren aanwezige functionaliteit | Huidige VCL-dekking |
-| --- | --- | --- |
-| SimCardDemo | Klassieke SIM en UICC/USIM, identiteiten, servicebits, PIN-status/proof, expliciete bestanden/records en contactwrites | Apart project aanwezig: alle componentmethoden, volledige AID/path-keuze, verwachte bytes, PIN als ASCII-hex, onzekerheidsbewijs, IAP/EXT-contactreads en offline record/name/SMS-tekst/UDH-codecs; fysieke SIM-tests open |
-| ReaderToolsDemo | PC/SC-lezers, verbinding/kaartstatus, ATR/protocol; offline APDU, ATR, BER-TLV, hex/bytes en catalogs | Apart project aanwezig: PC/SC-lijst/status, command/response-APDU, ATR/protocol/hints, TLV-boom/roundtrip, EMV-tagmetadata en NDEF-roundtrip |
-| MagStripeDemo | Track 1–3, framing/pariteit/LRC, financiële velden, MagTek-inputprofielen; MSR206/MSR605 statuswrites en MSR206-7HL geverifieerde writes | Offline tracks en MSR206-7HL lezen/schrijven aanwezig; overige profielen/decoders ontbreken |
-| BelgianEidDemo | Identiteit, adres, foto opslaan, beschikbare certificaten en ruwe handtekeningen exporteren | Apart project aanwezig: alle publieke sections, originele identiteit/adres/foto/signaturen, RAW/DER-certificaten en expliciete bestands-export; JPEG-preview |
-| IcaoDocumentDemo | BAC/PACE, MRZ/CAN, CardAccess/DG1/DG2/COM/SOD, alle foto's bekijken/opslaan en ruwe bestanden exporteren | Apart project aanwezig: expliciete BAC/PACE, alle ondersteunde documentsections, alle face-imagebestanden plus CardAccess/DG1/DG2/COM/SOD-export; JPEG-preview, JPEG2000-export |
-| EmvDemo | PSE/PPSE, expliciete applicatie/PDOL, GPO/AFL/records, beschikbare bankvelden, GET DATA en transactielogs; offline EMV/TLV-diagnostiek | Apart project aanwezig: PSE/PPSE, explicit AID/terminal values, GPO/AFL/records, GET DATA/logs, offline DOL/logdecoding en acquired-file-export |
-| MifareClassicDemo | Mini/1K/4K-layout, aangeleverde sleutel A/B, blokken lezen en ondersteunde datablokken geverifieerd schrijven | Apart project aanwezig: UID, offline trailerlayout, aangeleverde A/B-sleutel en slot, blokreads en datablokwrites met statusreceipt; onafhankelijke blokwrite-verificatie ontbreekt in dit PC/SC-profiel |
-| Type2Demo | Ultralight/EV1/NTAG-modellen, pagina's/geheugen lezen, gebruikerspagina's schrijven, ondersteunde PWD_AUTH/PACK-profielen en Type 2 NDEF | Apart project aanwezig: UID, fysieke pagina’s, volledig user-memorysnapshot, status-only paginawrites en geverifieerde NDEF-read/write/clear; PWD_AUTH/PACK-demo volgt |
-| Type4NdefDemo | Ondersteunde capability/file-selectie en publieke NDEF lezen/vervangen met terugleescontrole | Apart project aanwezig: offline/full CC, alle filedescriptors, expliciete mapping/FID, public NDEF-read/write/clear met controle |
-| Iso15693Demo | Expliciete readerbackend, systeeminformatie, UID/wire-volgorde, blokken/status lezen en schrijven, publiek Type 5 NDEF | Nog geen VCL-voorbeeld |
-| UidProgrammingDemo | Alle geïmplementeerde UID-profielen, expliciete kaart/readerkeuze, verwachte beginstaat, behoud van metadata, programmeeruitkomst en afzonderlijke RF-verificatie | Nog geen VCL-voorbeeld |
-| DesfireDemo | Publieke informatie; EV1/EV2 AES, bestanden/waarden/records, writes, backuptransacties/commit/abort, directories, applicatie/bestandbeheer en sleutel/toegangsbeheer | Alleen publieke versie in SmartCardDemo |
-| MemoryCardDemo | Alle aanwezige gewone SLE/I2C-modellen/dialecten, geheugen/protectie/retrypolicy, PIN, geverifieerde writes, ondersteunde PIN-vervanging en permanente bescherming | Apart project aanwezig: snapshot/range, retrystatus, aangeleverde PIN, geverifieerde writes, twee-wire PIN-vervanging en permanente bescherming met verwachte bytes |
-| SleCounterDemo | SLE4406/4436/5536/6636 met bekende vensters, bit/carry/backup-programmering en ruwe certificaatberekening | Apart project aanwezig: reads, alle ondersteunde programmeermodi met volledig verwacht venster, ruwe certificaten; codebuilder uitsluitend offline, credentialbytes worden niet getoond |
-| Sle4404Demo | Bekende layout/counters, publiek/beveiligd lezen, user-codebewijs, bitprogrammering, scratchpad- en applicatie-erases met beide codes | Apart project aanwezig: reads met/zonder code, codebewijs, bitprogrammering en beide erasevormen; bekende vensters/counteradressen/maskers vereist |
-| Twn4Demo | PRS/USB-CDC reader/version/tag inspection, supplied-key Classic and public Type 2 reads/verified writes, explicit CRC mode | Apart project aanwezig: versie/tag, Classic met sleutel A/B en publieke Type 2 reads/writes, expliciete port/CRC/deadline; PRS/CDC-firmware vereist |
-| RfidInputDemo | Keyboard-invoer; 8/9-byte toetsenbordreports en vaste ASCII-velden; ASCII/hex/decimaal, framing/deadlines en expliciete byteconversie | Apart project aanwezig: foreground keyboard, host-aangeleverde boot/ID/ASCII-reports, expliciete framing/encoding en offline numerieke conversie; geen native USB-opening |
+| Project | Aanwezige functies |
+| --- | --- |
+| SmartCardDemo | Bestaande gecombineerde PC/SC-, eID-, EMV-, contactless-, memory- en RFID-pagina’s |
+| MagStripeDemo | Tracks en MSR206-7HL reads/geverifieerde writes |
+| ReaderToolsDemo | PC/SC-lijst/status, APDU command/response, ATR/catalog, BER-TLV, EMV-tags en NDEF-codecs |
+| RfidInputDemo | Foreground keyboard, boot/ID/fixed-ASCII-reports, ASCII/hex/decimale profielen en byteconversie |
+| UsbHidDemo | Native HID-collecties/VID/PID/usage/lengtes, exact interfacepad, interrupt- en feature-reports lezen/verzenden/exporteren |
+| Twn4Demo | PRS/CDC versie/tag, supplied-key Classic en publieke Type 2 reads/geverifieerde writes |
+| MemoryCardDemo | Alle SLE/I²C-modellen, twee ACS-dialecten, snapshots/ranges, PIN, writes, PIN-vervanging en permanente bescherming |
+| SleCounterDemo | Publieke vensters, bit/carry/backup-programmering en ruwe certificaatberekening |
+| Sle4404Demo | Bekende layout/counters, supplied-code reads/proof, bitprogrammering, scratchpad- en applicatie-erases |
+| SimCardDemo | Classic SIM/UICC-USIM, bestanden/records/identiteiten/services, PIN/PUK-status, verify/change/unblock, ADN-contactwrites, PBR/IAP/EXT-contactreads, expliciete gekoppelde recordplannen, alpha/EMAIL/ANR/SMS/segmentcodecs |
+| MifareClassicDemo | UID, offline layout/trailers, supplied-key blokreads en status-only datawrites |
+| Type2Demo | Ultralight/EV1/NTAG210/212/213/215/216, UID/pagina/geheugen, publieke NDEF, ACR122 PWD_AUTH/PACK-page/memory/geverifieerde pagewrite |
+| Type4NdefDemo | Offline CC, mapping 1.0/2.0, file descriptors/FID, publieke NDEF read/write/clear |
+| Iso15693Demo | ACR1552 expliciete address/response-dialecten, UID/geometry, blokreads/geverifieerde writes en Type 5 NDEF read/write/clear |
+| UidProgrammingDemo | PC/SC Gen2/FUID; ACR122 Gen1a/Gen1b/unsealed UFUID, DirectWrite, Gen3, zes Gen4-layouts, USCUID/GDM en partial UFUID/ZUID/PFUID |
+| DesfireDemo | Public/EV1/EV2 AES, directories/data/values/records, standard writes, backup/value/record-transacties met commit/abort, applicatie/bestand/key/access-beheer |
+| MagStripeProfilesDemo | Track-bit/parity/LRC en financial decoders, MagTek keyboard/HID, MSR206/MSR605 reads en status-only all-track programming |
+| EmvDemo | PSE/PPSE, explicit AID/terminal values, GPO/AFL/all records, GET DATA, advertised logs, DOL/log decoders en exacte exports |
+| BelgianEidDemo | Alle publieke sections, identiteit/adres, JPEG, RAW/DER-certificaten en ruwe handtekeningen exporteren |
+| IcaoDocumentDemo | BAC/PACE met MRZ/CAN/curve/provider, alle documentsections/face images, CardAccess/DG1/DG2/COM/SOD-export, JPEG-preview en JPEG2000-export |
 
-Naast de kaartoperaties krijgen de bijbehorende **offline encoders/decoders**
-invoer en een zichtbaar resultaat: onder andere MRZ, NDEF-records, magstripe,
-EMV-tags, ATR-hints en de aangeboden numerieke RFID-conversies. Cryptoproviders
-worden expliciet ingesteld bij BAC/PACE en DESFire; beschikbare cryptoprimitieven
-kunnen met de bestaande onafhankelijke testvectoren offline worden getoond.
+## Gedrag dat je kunt overnemen
 
-## Gedeelde basis en uitvoervolgorde
+- Hardwarewerk draait op de gedeelde achtergrondworker; threadstart gebeurt pas
+  na constructie. Elke actie vereist concrete invoer en opent geen hardware bij
+  formulierconstructie.
+- Writes, PIN-pogingen en beheer vereisen een expliciete acknowledgement.
+  Kaart-/readerprofielen worden niet door programmeerpogingen gedetecteerd.
+- Credentialbuffers worden bij de threadgrens gekopieerd en lokaal gewist.
+  Foutmeldingen tonen geen kaartdata of keys. Een fout laat geen nieuwe exports achter.
+- Een vendorstatus wordt afzonderlijk benoemd; HID-transfer en MSR206/MSR605-status
+  zijn geen zelfstandig kaart-terugleesbewijs. Onzekere writes worden niet herhaald.
+- Foto’s/bestanden worden alleen na geslaagde acquisitie en een expliciete
+  Save-keuze opgeslagen. JPEG2000 blijft exact behouden zonder conversie.
 
-De bestaande workerbasis wordt gedeeld. Elke demo krijgt eigen invoer en een kleine
-kaartgerichte uitvoerlaag, zodat een ontwikkelaar het relevante voorbeeld kan
-kopiëren zonder een applicatie met alle kaartfamilies te hoeven meenemen.
+## Grenzen van deze voorbeelden
 
-1. **Code aanwezig:** reader/tools, RFID/TWN4 en gewone/SLE-counter/SLE4404-memorydemo's; native hertest nog nodig.
-2. Belgische eID, ICAO en volledige EMV-uitlezing.
-3. Classic/Type 2, Type 4 en ISO 15693/Type 5.
-4. Programmeerbare UID's en DESFire-transacties/administratie.
-5. Aanvullende magstripeprofielen en controle van de complete dekking.
+Generieke HID transporteert reports; een vendorprotocol bepaalt welke kaartfuncties
+ze betekenen. Keyboard-only EM4100/TK4100-readers krijgen daardoor geen geheugenwrite.
+Windows kan raw toegang tot keyboard-collecties weigeren. Foreground keyboard
+blijft daarvoor beschikbaar in RfidInputDemo.
 
-Alle aanwezige lees-, schrijf-, beveiligings-, beheer- en toolmogelijkheden horen
-in deze dekking. Een API zonder concrete hardwarebackend krijgt een voorbeeld met
-een expliciete aangeleverde bron of een offline fixture. Dat wordt zichtbaar
-vermeld; een decodervoorbeeld levert geen nieuwe hardwareondersteuning op.
-Ontbrekende chipprotocollen, betalingen en niet-geïmplementeerde authenticiteitstests
-worden niet als werkende demofuncties opgenomen.
+SIM gekoppelde writes gebruiken een expliciet, volledig recordplan; de demo wijst
+geen vrije contact-/EXT-/EMAIL-records automatisch toe. DESFire toont één behouden
+transactie per job; deze UI is geen sessie die tussen losse buttonclicks blijft leven.
+NDEF-demo’s wijzigen geen lockbits, formatting, passwords of toegangsrechten buiten
+de aangeboden familymethoden. Foto/certificaat-export voert geen passieve eID-
+of certificaattrustvalidatie uit.
 
-## Afwerkcriteria per demo
-
-- Native Delphi-project in de VCL-projectgroep en buildscript; BOM/CRLF en
-  configuratieconventies blijven gelijk aan de gerepareerde projecten.
-- Hardwareactie pas na expliciete reader-, kaart- en operatiekeuze; geen automatische
-  probe, write, PIN-poging of herhaling van een onzekere uitkomst.
-- Hardwarewerk op de gedeelde achtergrondbasis; credentials worden bij de
-  threadgrens gekopieerd en na gebruik lokaal gewist. Geen secrets in foutmeldingen.
-- Schrijf-/erase-/lock-/sleuteloperaties tonen hun specifieke gevolgen en vereisen
-  expliciete invoer; verwachte beginstaat en terugleesbewijs worden waar aangeboden
-  gebruikt. Status-only bewijs blijft als zodanig zichtbaar.
-- Publieke Delphi XML-documentatie, validatiescripts en relevante geïnjecteerde
-  uitvoertests; daarnaast echte Delphi/Windows/UI/hardware-smoketests.
-- Deze tabel onderscheidt aanwezige projecten van geplande projecten en benoemt
-  ontbrekende functies. Aanwezige source/projecten betekenen nog geen hardwarecertificatie.
-
-De bestaande demo's en hun huidige teststappen staan in [VCL_DEMOS.md](VCL_DEMOS.md).
+De projecten delen de gerepareerde BOM/CRLF- en MSBuild-conventies. Reproduceerbare
+bouw- en validatiecommando’s staan in [VCL_DEMOS.md](VCL_DEMOS.md) en
+[VALIDATION.md](VALIDATION.md).

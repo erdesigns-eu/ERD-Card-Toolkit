@@ -42,6 +42,16 @@ call :build_demo belgianeid BelgianEidDemo
 if errorlevel 1 exit /b %errorlevel%
 call :build_demo icaodocument IcaoDocumentDemo
 if errorlevel 1 exit /b %errorlevel%
+call :build_demo iso15693 Iso15693Demo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo uid UidProgrammingDemo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo desfire DesfireDemo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo magstripeprofiles MagStripeProfilesDemo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo usbhid UsbHidDemo
+if errorlevel 1 exit /b %errorlevel%
 exit /b %errorlevel%
 :build_demo
 rem Use the same resource generation and configuration as the IDE projects.

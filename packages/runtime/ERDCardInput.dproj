@@ -183,6 +183,7 @@
         <DCCReference Include="rtl.dcp"/>
         <DCCReference Include="ERDCardCore.dcp"/>
         <DCCReference Include="..\..\src\input\ERD.Card.RFID.Input.pas"/>
+        <DCCReference Include="..\..\src\input\ERD.Card.HID.pas"/>
         <DCCReference Include="..\..\src\input\ERD.Card.RFID.HID.pas"/>
 
         <BuildConfiguration Include="Base">

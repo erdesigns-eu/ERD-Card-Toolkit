@@ -173,7 +173,7 @@ begin
     'Replace Type 2 NDEF + verify'#13#10'Replace Type 4 NDEF + verify';
   OperationBox.ItemIndex := 0;
   ModelBox.Items.Text := 'Ultralight'#13#10'Ultralight EV1 48'#13#10+
-    'Ultralight EV1 128'#13#10'NTAG213'#13#10'NTAG215'#13#10'NTAG216';
+    'Ultralight EV1 128'#13#10'NTAG213'#13#10'NTAG215'#13#10'NTAG216'#13#10'NTAG210'#13#10'NTAG212';
   SecurityBox.Items.Text := 'BAC'#13#10'PACE ECDH-GM AES-128';
   PasswordKindBox.Items.Text := 'MRZ information'#13#10'CAN';
   CurveBox.Items.Text := 'NIST P-256 (12)'#13#10'brainpool P256 (13)';

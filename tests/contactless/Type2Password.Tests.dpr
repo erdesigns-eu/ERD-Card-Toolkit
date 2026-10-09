@@ -236,7 +236,7 @@ begin
     except on E: EType2DataError do Raised := True; end;
     Check(Raised and (Script.Begins = 0), 'Invalid credentials rejected before raw reader use');
   finally Reader.Free; end;
-  Writeln('PASS: five password models, page guards, credential sizes and bounded FAST_READ without wraparound.');
+  Writeln('PASS: seven password models, page guards, credential sizes and bounded FAST_READ without wraparound.');
 end;
 
 procedure TestReadsAndWrites;
@@ -248,7 +248,7 @@ begin
     Password := HexToBytes(PasswordHex);
     Pack := HexToBytes(PackHex);
     PageData := HexToBytes(PageHex);
-    for Model := ttmUltralightEv1_48 to ttmNtag216 do
+    for Model := ttmUltralightEv1_48 to High(TType2TagModel) do
     begin
       LastPage := TType2Layout.LastUserPage(Model);
       Script := TRawScript.Create;
@@ -275,7 +275,7 @@ begin
         (BytesToHex(PageData) = PageHex), 'All caller-owned credentials/data remain unchanged');
     end;
   finally Reader.Free; end;
-  Writeln('PASS: all five supplied-password read/write paths, PACK comparison, buffer ownership and local wiping.');
+  Writeln('PASS: all seven supplied-password read/write paths, PACK comparison, buffer ownership and local wiping.');
 end;
 
 procedure TestCompleteMemory;
@@ -284,7 +284,7 @@ var Reader: TType2PasswordCardReader; Script: TRawScript; Model: TType2TagModel;
 begin
   Reader := TType2PasswordCardReader.Create(nil);
   try
-    for Model := ttmUltralightEv1_48 to ttmNtag216 do
+    for Model := ttmUltralightEv1_48 to High(TType2TagModel) do
     begin
       Script := TRawScript.Create;
       Reader.Reader := Script;

@@ -174,7 +174,7 @@ begin
       if Tag = 1 then
       begin
         // Only the model's real dynamic lock bytes; the writer checks all three.
-        if AModel in [ttmUltralight, ttmUltralightEv1_48] then Fail;
+        if AModel in [ttmUltralight, ttmUltralightEv1_48, ttmNtag210] then Fail;
         if (Position < (TType2Layout.LastUserPage(AModel) + 1) * 4) or
           (Position + Reserved > (TType2Layout.LastUserPage(AModel) + 1) * 4 + 3) then Fail;
       end;
@@ -276,7 +276,7 @@ begin
   B := ReadPage(2);
   // CC/block-lock bits alone do not lock user pages. Refuse any static user-page lock.
   if ((B[2] and $F0) <> 0) or (B[3] <> 0) then Fail;
-  if not (AModel in [ttmUltralight, ttmUltralightEv1_48]) then
+  if not (AModel in [ttmUltralight, ttmUltralightEv1_48, ttmNtag210]) then
   begin
     B := ReadPage(TType2Layout.LastUserPage(AModel) + 1);
     // Conservative: also refuse dynamic block-lock/RFUI bits, without modifying them.
@@ -288,11 +288,13 @@ procedure TType2NdefCardReader.CheckWriteAccess(const AModel: TType2TagModel);
 var ConfigPage: Integer; B: TBytes;
 begin
   if AModel = ttmUltralight then Exit;
-  if AModel = ttmUltralightEv1_48 then ConfigPage := 16
+  if AModel in [ttmUltralightEv1_48,ttmNtag210] then ConfigPage := 16
   else ConfigPage := TType2Layout.LastUserPage(AModel) + 2;
   B := ReadPage(ConfigPage);
   // Require the entire user region to be publicly writable, without inheriting authentication.
   if B[3] <= TType2Layout.LastUserPage(AModel) then Fail;
+  // NTAG210/212 enable UID mirroring through MIRROR_PAGE, not the 213/215/216 MIRROR_CONF bits.
+  if (AModel in [ttmNtag210,ttmNtag212]) and (B[2] > 3) then Fail;
   if (AModel in [ttmNtag213, ttmNtag215, ttmNtag216]) and ((B[0] and $C0) <> 0) then Fail;
 end;
 

@@ -84,3 +84,5 @@ AliExpress reader checks, raw host integration and Delphi VCL execution remain p
 - [USB HID Usage Tables 1.5](https://www.usb.org/sites/default/files/hut1_5.pdf),
   keyboard/keypad usage page 07, including modifiers and rollover/error usages.
 - Executed framing/conversion/report checks: `tests/input/RfidInput.Tests.dpr`.
+
+Native Windows enumeration and report I/O are now provided separately by `ERD.Card.HID`; see [USB_HID.md](USB_HID.md). Existing host-fed decoders retain their explicit descriptor contracts.

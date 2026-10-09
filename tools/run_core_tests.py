@@ -50,7 +50,7 @@ def main():
             crt_path = Path(crt.stdout.strip())
             if crt_path.is_file():
                 command.append('-Fl' + str(crt_path.parent))
-    for project in ('tests/sim/SimCard.Tests.dpr', 'examples/sim/InspectSim.dpr', 'examples/readers/InspectTwn4.dpr', 'tests/readers/Twn4.Tests.dpr', 'tests/input/RfidInput.Tests.dpr', 'tests/memory/Sle4404.Tests.dpr', 'tests/memory/MemoryCounter.Tests.dpr', 'tests/memory/MemoryCard.Tests.dpr', 'examples/memory/InspectMemoryCard.dpr', 'examples/memory/InspectSle4404.dpr',
+    for project in ('tests/sim/SimCard.Tests.dpr', 'examples/sim/InspectSim.dpr', 'examples/readers/InspectTwn4.dpr', 'tests/readers/Twn4.Tests.dpr', 'tests/input/RfidInput.Tests.dpr', 'tests/input/Hid.Tests.dpr', 'tests/memory/Sle4404.Tests.dpr', 'tests/memory/MemoryCounter.Tests.dpr', 'tests/memory/MemoryCard.Tests.dpr', 'examples/memory/InspectMemoryCard.dpr', 'examples/memory/InspectSle4404.dpr',
                     'tests/core/CardCore.Tests.dpr', 'tests/core/ProtocolCore.Tests.dpr',
                     'tests/core/CardCatalogs.Tests.dpr',
                     'tests/demos/DemoJob.Tests.dpr', 'tests/demos/FamilyOperations.Tests.dpr',
@@ -85,7 +85,7 @@ def main():
     subprocess.run(command + ['-Fu' + str(REPO / 'tests/design'),
                               'tests/design/Registration.Tests.dpr'], cwd=REPO, check=True)
     suffix = '.exe' if os.name == 'nt' else ''
-    for project in ('SimCard.Tests', 'Twn4.Tests', 'RfidInput.Tests', 'Sle4404.Tests', 'MemoryCounter.Tests', 'MemoryCard.Tests', 'DemoJob.Tests', 'FamilyOperations.Tests', 'Registration.Tests', 'EacCrypto.Tests', 'IcaoDocument.Tests', 'DesfireManagement.Tests', 'CardCore.Tests', 'ProtocolCore.Tests', 'CardCatalogs.Tests', 'CardCrypto.Tests', 'Desfire.Tests', 'DesfireSession.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'Iso15693Type5.Tests', 'MagStripe.Tests', 'Msr206.Tests', 'Msr2067HL.Tests'):
+    for project in ('SimCard.Tests', 'Twn4.Tests', 'RfidInput.Tests', 'Hid.Tests', 'Sle4404.Tests', 'MemoryCounter.Tests', 'MemoryCard.Tests', 'DemoJob.Tests', 'FamilyOperations.Tests', 'Registration.Tests', 'EacCrypto.Tests', 'IcaoDocument.Tests', 'DesfireManagement.Tests', 'CardCore.Tests', 'ProtocolCore.Tests', 'CardCatalogs.Tests', 'CardCrypto.Tests', 'Desfire.Tests', 'DesfireSession.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'Iso15693Type5.Tests', 'MagStripe.Tests', 'Msr206.Tests', 'Msr2067HL.Tests'):
         result = subprocess.run([str(build / (project + suffix))], cwd=REPO,
                                 capture_output=True, text=True)
         print(result.stdout, end='', flush=True)
@@ -131,6 +131,31 @@ def main():
         native.check_returncode()
         if re.search(r'\b[1-9][0-9]* unfreed memory blocks', native.stderr):
             raise RuntimeError('Native PC/SC shim test leaked memory')
+        hid_build = REPO / 'dist/core/hid-native'
+        hid_build.mkdir(parents=True, exist_ok=True)
+        subprocess.run([gcc, '-std=c11', '-Wall', '-Wextra', '-Werror', '-shared', '-fPIC',
+                        'tests/input/native/hid_stub.c', '-o',
+                        str(hid_build / 'libhid.dll.so')], cwd=REPO, check=True)
+        for library in ('libkernel32.dll.so', 'libsetupapi.dll.so'):
+            target = hid_build / library
+            if target.is_symlink():
+                target.unlink()
+            target.symlink_to('libhid.dll.so')
+        hid_command = [arg for arg in command if not arg.startswith(('-FU', '-FE'))]
+        hid_command.extend(['-dMSWINDOWS', '-Fl' + str(hid_build),
+                            '-FU' + str(hid_build), '-FE' + str(hid_build),
+                            'tests/input/NativeHid.Tests.dpr'])
+        subprocess.run(hid_command, cwd=REPO, check=True)
+        hid_env = os.environ.copy()
+        hid_env['LD_LIBRARY_PATH'] = str(hid_build) + os.pathsep + hid_env.get('LD_LIBRARY_PATH', '')
+        hid_result = subprocess.run([str(hid_build / 'NativeHid.Tests')], cwd=REPO,
+                                    env=hid_env, capture_output=True, text=True)
+        print(hid_result.stdout, end='', flush=True)
+        if hid_result.stderr:
+            print(hid_result.stderr, file=sys.stderr, end='')
+        hid_result.check_returncode()
+        if re.search(r'\b[1-9][0-9]* unfreed memory blocks', hid_result.stderr):
+            raise RuntimeError('Native HID ABI shim test leaked memory')
         serial_build = REPO / 'dist/core/serial-native'
         serial_build.mkdir(parents=True, exist_ok=True)
         subprocess.run([gcc, '-std=c11', '-Wall', '-Wextra', '-Werror', '-shared', '-fPIC',

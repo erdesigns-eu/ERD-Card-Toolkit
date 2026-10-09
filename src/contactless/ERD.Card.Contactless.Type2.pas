@@ -35,7 +35,11 @@ type
     /// <summary>NTAG215: 135 total pages, 504 user bytes.</summary>
     ttmNtag215,
     /// <summary>NTAG216: 231 total pages, 888 user bytes.</summary>
-    ttmNtag216
+    ttmNtag216,
+    /// <summary>NTAG210: 20 total pages, 48 user bytes; enum appended to preserve existing ordinals.</summary>
+    ttmNtag210,
+    /// <summary>NTAG212: 41 total pages, 128 user bytes; enum appended to preserve existing ordinals.</summary>
+    ttmNtag212
   );
   /// <summary>Complete user-data snapshot; passwords, counters and configuration are excluded.</summary>
   /// <remarks>Ordinary record assignment shares Data. Copy the buffer before editing an assigned copy.
@@ -50,7 +54,7 @@ type
     /// <summary>Independent four-byte pages concatenated in ascending page order.</summary>
     Data: TBytes;
   end;
-  /// <summary>Stateless bounds for original Ultralight, Ultralight EV1 and NTAG213/215/216.</summary>
+  /// <summary>Stateless bounds for original Ultralight, Ultralight EV1 and NTAG210/212/213/215/216.</summary>
   TType2Layout = class
   public
     /// <summary>Returns physical page capacity, including protected/configuration regions.</summary>
@@ -92,6 +96,8 @@ begin
     ttmNtag213: Result := 45;
     ttmNtag215: Result := 135;
     ttmNtag216: Result := 231;
+    ttmNtag210: Result := 20;
+    ttmNtag212: Result := 41;
   else Fail; Result := 0; end;
 end;
 
@@ -103,6 +109,8 @@ begin
     ttmNtag213: Result := 39;
     ttmNtag215: Result := 129;
     ttmNtag216: Result := 225;
+    ttmNtag210: Result := 15;
+    ttmNtag212: Result := 35;
   else Fail; Result := 0; end;
 end;
 

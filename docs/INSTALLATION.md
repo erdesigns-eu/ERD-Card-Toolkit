@@ -72,7 +72,7 @@ its `DesignIntf` unit is a headless FPC test shim.
 
 The `ERD Cards` palette contains `TSmartCardReader`, `TBelgianEIDReader`,
 `TICAODocumentReader`, `TEMVCardReader`, `TMagStripeReaderWriter`, `TMemoryCardReaderWriter`, `TSleCounterCardReaderWriter` `TSle4404CardReaderWriter` and `TSimCardReaderWriter`.
-`ERD Input` contains `TRfidKeyboardReader`, `TRfidHidReportReader` and `TTwn4CardReaderWriter`.
+`ERD Input` contains `TRfidKeyboardReader`, `TRfidHidReportReader`, `TUsbHidReaderWriter` and `TTwn4CardReaderWriter`.
 `ERD Contactless` contains `TContactlessCardReader`, `TType2NdefCardReader`,
 `TType4NdefCardReader`, `TIso15693CardReader`, `TType5NdefCardReader`,
 `TDesfireCardReader`, `TType2PasswordCardReader` and `TRawUidProgrammer`.

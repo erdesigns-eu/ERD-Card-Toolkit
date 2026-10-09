@@ -127,6 +127,7 @@
         <DCCReference Include="..\..\src\readers\ERD.Card.Reader.TWN4.pas"/>
 
         <DCCReference Include="..\..\src\input\ERD.Card.RFID.Input.pas"/>
+        <DCCReference Include="..\..\src\input\ERD.Card.HID.pas"/>
         <DCCReference Include="..\..\src\input\ERD.Card.RFID.HID.pas"/>
 
         <DCCReference Include="vcl.dcp"/>

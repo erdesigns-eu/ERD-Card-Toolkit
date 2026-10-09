@@ -1,20 +1,20 @@
 # Library validation record
 
-The complete protocol/component/example suite was rebuilt and rerun in Linux on
-2026-10-09 after adding ordinary/counter memory, SLE4404, USB-HID RFID input and TWN4 memory,
-ten separate VCL family projects and SIM/USIM, the memory/RFID pages and standalone design bundle, starting from the
-maintainer's latest IDE changes (`951ea62`). The full run passed **2,154,137 assertions
-across 38 program runs**: 1,789,463 existing protocol assertions, 65,619 RFID
-input/profile, 60,114 SLE4404, 34,280 counter/profile, 2,955 ordinary-memory,
-85 demo-worker and 1,602 family-executor, 127,696 TWN4 and 21 registration assertions and 72,302 SIM/USIM assertions. All 34 Python regression tests,
-21 Pascal readers on 147 sources and distribution checks for twenty-five projects passed.
+The complete suite was rebuilt on Linux on 2026-10-09 after finishing SIM/USIM
+management, twenty VCL applications, native USB-HID report transport and
+NTAG210/212 profiles. The full run passed **2,159,328 assertions across 40 program
+configurations**. It includes 74,402 SIM/USIM, 1,857 family-executor, 88 worker,
+341 portable HID and 392 native HID ABI-shim assertions. All 34 Python regressions,
+21 Pascal readers on 166 selected sources and distribution checks for 33 projects,
+two groups and three DFM forms passed. The XML Help Insight reader inspected
+1,796 production declarations and 267 VCL declarations with zero findings.
 
 The maintainer confirmed warning-free compilation and installation of the prior
 packages in RAD Studio 12 (Studio 23.0), Debug/Win32. Both VCL demos subsequently
 reported EThread during startup; the shared post-construction StartWork fix was
 merged. The maintainer also intentionally removed the design package's runtime
 BPL dependencies after an installation failure. This follow-up keeps that choice
-and explicitly bundles all 46 registration/runtime source units. Fresh Delphi
+and explicitly bundles all 47 registration/runtime source units. Fresh Delphi
 builds and IDE installation of this new bundle/Memory/Input/TWN4/SIM packages, VCL execution,
 Help Insight and physical memory-card compatibility remain unverified.
 
@@ -34,15 +34,17 @@ Help Insight and physical memory-card compatibility remain unverified.
 | ICAO MRZ and DG1/DG2 data codecs | 297 assertions passed: published MRZ examples, synthetic FAC/CBEFF records and malformed inputs |
 | EMV data codecs, application reader and diagnostics | 1605 assertions in nine groups passed, including exact PSE/PPSE/GPO/AFL/GET DATA/log transcripts and resource limits |
 | TWN4 PRS/CDC memory | 127696 assertions passed: literal ASCII/CRC/tag/Classic/Type 2 chains, all byte-I/O failure boundaries and block/page read-back bits, stale/changed IDs/content, both key types, no-ops, pre/post-dispatch deadlines/reversal, ownership and cleanup; native TWN4 hardware not tested |
-| SIM / USIM | 72302 assertions: independent identity/alpha/ADN/SMS/service/PBR vectors, literal classic/UICC APDU chains, PIN budgets and proof, continuation/length bounds, caller ownership, full-file/record writes, every I/O failure and read-back bit, no replay and cleanup uncertainty |
+| SIM / USIM | 74402 assertions: independent identity/alpha/ADN/SMS/service/PBR vectors, literal classic/UICC APDU chains, PIN budgets and proof, continuation/length bounds, caller ownership, full-file/record writes, every I/O failure and read-back bit, no replay and cleanup uncertainty |
 | RFID input/report profiles | 65619 assertions passed: exhaustive two-byte decimal conversion plus independent wide/overflow vectors, literal boot/report-ID/ASCII fields, framing/deadlines/discard recovery, held keys/errors, event ownership and reentrancy; no physical USB opening |
+| Native HID report component | 341 assertions passed: endpoint/length/ID checks, read/output ownership, wiping, reentrancy, acquisition/release failures and uncertain submission |
+| Native HID API branch | 392 assertions through the isolated Linux C shim: Unicode SetupDi enumeration, descriptor buffers/sizes, input/output/features, pending I/O, timeout/cancel/drain, incomplete completion, inaccessible metadata and handle cleanup; no Windows driver execution |
 | SLE4404 | 60114 assertions passed: literal code/program/scratchpad/application erase transcripts, budgets/success proof, all I/O boundaries and read-back bits, chunking, stale state, owned caller buffers and release uncertainty; no physical card |
 | Contact memory profiles | 2955 assertions in nine groups passed: nineteen geometries, literal ACR38/ACR39/SLE/PIN/protection/page/bank transcripts, wrong/blocked retry counters, every write/PIN-chain I/O failure, every acknowledgement status/read-back data bit, no-op/locked ranges, release evidence, credential copies and acquisition recovery; no physical chip access |
 | SLE counter chips / capabilities | Full run: 34,280 assertions passed; four explicit models, all write modes/address boundaries, literal select/program/carry/backup/challenge/retrieval commands, every write-chain I/O failure, wrong statuses/lengths, all window data bits, stale preflight, zero-to-one refusal, release evidence, owned input arrays, failed acquisition recovery and mandatory carry dispatch; ACR39 counter support is not claimed |
-| Contactless Classic/Type 2 storage and programmable UID | 6365 assertions in twelve groups passed, including protected pages, complete snapshots, four/seven-byte Gen2 programming, separate factory FUID one-time writes and uncertain outcomes |
+| Contactless Classic/Type 2 storage and programmable UID | 6619 assertions in twelve groups passed, including protected pages, complete snapshots, four/seven-byte Gen2 programming, separate factory FUID one-time writes and uncertain outcomes |
 | Raw RF UID programming and ACR122U adapter | 8179 assertions in twenty-three groups passed, including Gen1a/Gen1b/unsealed UFUID, partial UFUID/ZUID/PFUID, Type 2 DirectWrite, Gen3, all six Gen4 layouts, partial writes, USCUID/GDM hidden/public sources, password-command wiping, bit framing and complete adapter-chain transcripts |
-| Password-authenticated Type 2 user memory | 2062 assertions in seven groups passed for both EV1 sizes and NTAG213/215/216, including retained-session PWD_AUTH/PACK, bounded snapshots, verified writes and concrete adapter integration |
-| NDEF codecs, RTDs and public Type 2 access | 36962 assertions in five groups passed: bounded framing/chunks, strict Unicode, factory CC/TLV mapping and guarded write failures |
+| Password-authenticated Type 2 user memory | 2388 assertions in seven groups passed for both EV1 sizes and NTAG210/212/213/215/216, including retained-session PWD_AUTH/PACK, bounded snapshots, verified writes and concrete adapter integration |
+| NDEF codecs, RTDs and public Type 2 access | 38481 assertions in five groups passed: bounded framing/chunks, strict Unicode, factory CC/TLV mapping and guarded write failures |
 | Public Type 4 NDEF files | 48480 assertions in four groups passed: mapping 1.0/2.0 CC/APDU transcripts, whole-file bounds, explicit file selection, MLe/MLc segmentation and every partial/later-command failure |
 | ISO 15693 memory and public Type 5 NDEF | 280409 assertions in five groups passed: literal addressed commands, concrete ACS adapter chains, all block sizes, 65535-byte TLV maximum, cross-block length fields, protected/partial writes and session cleanup |
 | Magstripe codecs, component and MagTek input adapters | 57326 assertions in four groups passed: published parity/LRC vectors, all track lengths and single-bit errors, financial fields, synthetic HID/keyboard frames and verified-write failure contracts |
@@ -53,13 +55,13 @@ Help Insight and physical memory-card compatibility remain unverified.
 | Native Windows CNG branches | 51 assertions passed: native argument/length/IV handling, every encrypt/decrypt call failure, handle cleanup and system RNG failure without fallback |
 | Console examples | All nineteen built; hardware-free help/inspection checks passed, including TWN4 offline framing/help and SLE4404 help/window and invalid-before-hardware checks, memory-model geometry and DESFire key/access administration offline help/plan, ICAO help/CardAccess inspection, DESFire management offline help/plan and invalid arguments, APDU/NDEF/Type 4/Type 5/DESFire valid/invalid cases, ATR known/unknown/bad-TCK and EMV known/private tags, magstripe parity and MSR206 frame/status cases |
 | Demo worker and offline operations | 85 assertions passed: nested credential deep copies/wiping, copied argument arrays, real worker/caller separation, request ownership, single delivery, join, nil executor, sanitized errors, verified-write evidence, offline operations and hardware preflight, suspended destruction, duplicate start and completed restart |
-| Family demo executors | 1602 assertions passed: offline APDU command/response, ATR, TLV, EMV metadata, NDEF and RFID conversion/report profiles; all valid device-action preflights; invalid choices, PIN lengths, expected ranges, acknowledgement and credentials in public fields refused before hardware; literal memory/counter/SLE4404 and TWN4 command chains; no replay; uncertain writes and completed proof across transaction/connection/CDC cleanup failures |
-| Palette registration / RTL streaming | 20 assertions passed: actual Register routine captures nineteen classes; inactive construction and FPC component stream round-trip for each; DesignIntf capture is not an IDE/ABI test |
-| Distribution / VCL source readers | Twenty-five MSBuild projects (all four Debug/Release × Win32/Win64 property combinations), two groups and three DFM forms passed: references, package ownership/order, explicit IDE package identity, native Base/configuration/platform activation, GenDll/GenPackage, named DCP dependencies, native integer-overflow/debug settings, BOM/CRLF/resources, runtime/design dependency separation, palette completeness, field/event bindings, form creation and Platform/Config output isolation; no Delphi/VCL execution |
+| Family demo executors | 1857 assertions passed: offline APDU command/response, ATR, TLV, EMV metadata, NDEF and RFID conversion/report profiles; all valid device-action preflights; invalid choices, PIN lengths, expected ranges, acknowledgement and credentials in public fields refused before hardware; literal memory/counter/SLE4404 and TWN4 command chains; no replay; uncertain writes and completed proof across transaction/connection/CDC cleanup failures |
+| Palette registration / RTL streaming | 22 assertions passed: actual Register routine captures twenty-one classes; inactive construction and FPC component stream round-trip for each; DesignIntf capture is not an IDE/ABI test |
+| Distribution / VCL source readers | Thirty-three MSBuild projects (all four Debug/Release × Win32/Win64 property combinations), two groups and three DFM forms passed: references, package ownership/order, explicit IDE package identity, native Base/configuration/platform activation, GenDll/GenPackage, named DCP dependencies, native integer-overflow/debug settings, BOM/CRLF/resources, runtime/design dependency separation, palette completeness, field/event bindings, form creation and Platform/Config output isolation; no Delphi/VCL execution |
 | FPC range/overflow/heap checks | Passed; no unfreed allocations in passing test programs |
 | Python checker regression tests | All 34 passed, including nineteen distribution-reader cases; coverage includes IDE package identity, native configuration inheritance, omitted empty IDE platform groups, owning-package dependencies, explicit standalone design copies without dependency-owned duplicates, group target order, named DCPs, resources, BOM/CRLF, compiler property types and bounded condition parsing |
-| Pascalcheck core profile | All 21 readers passed on 147 explicitly selected source files |
-| XML documentation | 1743 visible production API declarations and 235 VCL example declarations inspected; zero findings; exported test-vector declarations also pass the full profile |
+| Pascalcheck core profile | All 21 readers passed on 166 explicitly selected source files |
+| XML documentation | 1796 visible production API declarations and 267 VCL example declarations inspected; zero findings; exported test-vector declarations also pass the full profile |
 | Reference integrity | All 26 retained files match the original Git bytes and manifest hashes |
 | Patch whitespace | `git diff --check` passed |
 
@@ -85,10 +87,9 @@ constructor, a platform-dependent unreachable branch in the test handle factory,
 and unused test-result variable notes. None has been suppressed. Production TWN4/RFID/SLE4404/PCSC
 and eID/EMV/contactless units compile without additional FPC warnings in the tested branches.
 
-The suite reported 2,154,137 passing assertions across 38 program runs, including
-65,619 RFID, 60,114 SLE4404, 34,280 counter/profile, 2,955 memory-card,
-85 demo-worker and 1,602 family-executor, 127,696 TWN4 and 21 registration assertions and 72,302 SIM/USIM assertions.
-The full 21-reader profile covers 147 Pascal sources, including the VCL units.
+The current suite reports 2,159,328 passing assertions across 40 configurations.
+Native HID adds portable contract tests and an x64 Linux ABI shim for actual Windows
+imports, descriptor layouts, exact paths/report buffers and cancel/drain lifetime.
 Only the non-VCL workers/executors and inactive component registration/streaming
 were compiled/executed under FPC. The actual forms, MSBuild projects, package BPLs
 and batch scripts require [Delphi/Windows validation](INSTALLATION.md).
@@ -458,3 +459,25 @@ directory/GPO/GET DATA/log routes, raw export, offline codecs and Belgian
 preflight pass. Worker failures never publish exportable artifacts. Source and
 distribution readers cover 28 projects. This follows the existing native project
 settings; no Delphi compiler execution is implied.
+
+## Completed PR #28 expansion
+
+SIM/USIM now includes explicit PIN/PUK status, once-only PIN change/unblock receipts,
+linked contact reads and caller-ordered expected-state record plans for linked
+phonebook writes. Every target is compared before the first update; final independent
+read-back covers all records. Partial updates are uncertain and never replayed. No
+automatic record allocation or fabricated reset/new-PIN proof is reported.
+
+The twenty VCL applications include separate eID/ICAO/EMV, DESFire, UID, ISO 15693,
+protected Type 2, SIM/USIM, memory, TWN4, RFID/native HID and magstripe profile paths.
+Tests cover action preflight before acquisition, literal acquired responses and
+exports, native HID selection/submission uncertainty and background result ownership.
+The source-aware reader also caught and corrected a Delphi field-after-method
+ordering issue in the shared artifact form.
+
+NTAG210/212 tests extend model bounds, every excluded page, complete snapshots,
+PWD_AUTH/PACK, NDEF read/write/no-op/clear and explicit MIRROR_PAGE write refusal.
+The layouts/config pages come from NXP's published data sheet, retaining previous
+enum ordinals. All generated native projects use the established BOM/CRLF and
+Delphi Base/configuration/platform settings. See [VCL_COVERAGE.md](VCL_COVERAGE.md),
+[USB_HID.md](USB_HID.md) and [NTAG210_212.md](NTAG210_212.md) for exact boundaries.

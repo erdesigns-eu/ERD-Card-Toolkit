@@ -1,7 +1,7 @@
 # VCL read/write demos
 
-Eight applications demonstrate implemented APIs: the original SmartCardDemo and
-MagStripeDemo plus six separate family projects sharing a form/input/worker base.
+Twenty applications demonstrate implemented APIs: SmartCardDemo, MagStripeDemo
+and eighteen separate family projects sharing a form/input/worker/export base.
 The complete current/missing coverage is recorded in [VCL_COVERAGE.md](VCL_COVERAGE.md).
 
 Open `examples/vcl/CardDemos.groupproj` or any application's `.dproj` in RAD
@@ -258,8 +258,8 @@ of ISO APDU's (Type 4). Readerondersteuning voor dat profiel is vereist.
   uitsluitend readerstatus; lees zelf opnieuw voor een aparte controle.
 - Type 2: kies het werkelijke Ultralight/EV1/NTAG-model. Lees een fysieke pagina
   of volledige gebruikerszone. Paginawrites zijn status-only; NDEF vervangen
-  of wissen gebruikt de bestaande volledige terugleescontrole. PWD_AUTH/PACK
-  via raw RF is nog niet in dit voorbeeld opgenomen.
+  of wissen gebruikt de bestaande volledige terugleescontrole. De ACR122-acties doen een expliciete PWD_AUTH met vier passwordbytes en twee
+  verwachte PACK-bytes; authenticated writes worden teruggelezen.
 - Type 4: inspecteer offline CC `000F20003A00340406E10401000000`. Op hardware
   kies je mapping 1.0/2.0 expliciet; lees CC en selecteer de werkelijke FID
   (decimal 57604 voor E104). FID 0 werkt alleen met een ondubbelzinnige CC.
@@ -288,3 +288,34 @@ AID en terminal values `taghex=valuehex;...` zonder verzonnen PDOL-values.
 GPO initialiseert de uitlezing, geen betaling. FCI/GPO/records zijn exporteerbaar;
 GET DATA counter/logformat en advertised transactionlog blijven optioneel.
 Offline DOL en raw-logdecoding tonen exact tag/values zonder betalingsinterpretatie.
+
+## Iso15693Demo, UidProgrammingDemo en DesfireDemo
+
+ISO 15693 gebruikt het bestaande ACR1552 FF-FB-profiel. Kies ordinary/extended
+block addressing en native-flags/payload-only conform de readerfirmware. Raw writes
+reserveren blokken 0/1; Type 5 verzorgt gestructureerde NDEF-updates.
+
+UID-programmering vereist de werkelijk aanwezige variant en bestaande emulatielayout.
+Gen3/Gen4 gebruiken de ACR122 raw-backend met automatische RATS uit. Gen4 behoudt
+zijn configuratie; USCUID/partial-profielen veranderen geen personalization/fuses.
+FUID is een expliciete eenmalige programmeeractie.
+
+DESFire gebruikt public, EV1 AES of EV2 AES met de aangeleverde sleutel en minimum
+communication. Optioneel geef je de aparte sleutel voor verificatie in de secundaire
+context op. Een transactionele actie kiest expliciet fresh-reset of discard-pending
+en vervolgens commit of abort. Elke job behoudt één sessie; er is geen impliciete
+commit. Create/delete/access/key-acties hebben hun eigen expliciete invoer.
+
+## MagStripeProfilesDemo en UsbHidDemo
+
+MagStripeProfilesDemo ondersteunt offline track-bits/parity/LRC, financiële velden
+(geen betaling), MagTek unencrypted keyboard/HID en de exacte MSR206-3HL Rev G /
+MSR605 Rev B serial profielen. Programming vereist alle drie tracks en high/low
+coercivity. De uitkomst benoemt device status zonder host read-back.
+
+UsbHidDemo somt metadata-readable top-level collections op, ongeacht VID/PID.
+Kopieer het exacte pad, kies interrupt/feature en het descriptor-defined report ID.
+Verzenden vereist de volledige descriptorlengte inclusief byte-zero ID. Interrupt-I/O
+heeft een wait budget en cancel/drain; synchronous feature requests hebben driver-
+gestuurde duur. Een transfer is geen universeel commando om kaartgeheugen te wijzigen.
+Lees [USB_HID.md](USB_HID.md) voor native integratie en reportcontracten.

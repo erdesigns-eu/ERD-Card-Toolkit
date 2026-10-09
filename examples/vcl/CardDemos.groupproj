@@ -48,6 +48,21 @@
     <Projects Include="icaodocument\IcaoDocumentDemo.dproj">
             <Dependencies/>
         </Projects>
+    <Projects Include="iso15693\Iso15693Demo.dproj">
+            <Dependencies/>
+        </Projects>
+    <Projects Include="uid\UidProgrammingDemo.dproj">
+            <Dependencies/>
+        </Projects>
+    <Projects Include="desfire\DesfireDemo.dproj">
+            <Dependencies/>
+        </Projects>
+    <Projects Include="magstripeprofiles\MagStripeProfilesDemo.dproj">
+            <Dependencies/>
+        </Projects>
+    <Projects Include="usbhid\UsbHidDemo.dproj">
+            <Dependencies/>
+        </Projects>
   </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -190,6 +205,51 @@
     </Target>
     <Target Name="IcaoDocumentDemo:Make">
         <MSBuild Projects="icaodocument\IcaoDocumentDemo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Iso15693Demo">
+        <MSBuild Projects="iso15693\Iso15693Demo.dproj"/>
+    </Target>
+    <Target Name="Iso15693Demo:Clean">
+        <MSBuild Projects="iso15693\Iso15693Demo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Iso15693Demo:Make">
+        <MSBuild Projects="iso15693\Iso15693Demo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="UidProgrammingDemo">
+        <MSBuild Projects="uid\UidProgrammingDemo.dproj"/>
+    </Target>
+    <Target Name="UidProgrammingDemo:Clean">
+        <MSBuild Projects="uid\UidProgrammingDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="UidProgrammingDemo:Make">
+        <MSBuild Projects="uid\UidProgrammingDemo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DesfireDemo">
+        <MSBuild Projects="desfire\DesfireDemo.dproj"/>
+    </Target>
+    <Target Name="DesfireDemo:Clean">
+        <MSBuild Projects="desfire\DesfireDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DesfireDemo:Make">
+        <MSBuild Projects="desfire\DesfireDemo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="MagStripeProfilesDemo">
+        <MSBuild Projects="magstripeprofiles\MagStripeProfilesDemo.dproj"/>
+    </Target>
+    <Target Name="MagStripeProfilesDemo:Clean">
+        <MSBuild Projects="magstripeprofiles\MagStripeProfilesDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="MagStripeProfilesDemo:Make">
+        <MSBuild Projects="magstripeprofiles\MagStripeProfilesDemo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="UsbHidDemo">
+        <MSBuild Projects="usbhid\UsbHidDemo.dproj"/>
+    </Target>
+    <Target Name="UsbHidDemo:Clean">
+        <MSBuild Projects="usbhid\UsbHidDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="UsbHidDemo:Make">
+        <MSBuild Projects="usbhid\UsbHidDemo.dproj" Targets="Make"/>
     </Target>
     <Target Name="Build">
         <CallTarget Targets="MagStripeDemo;SmartCardDemo;ReaderToolsDemo;MemoryCardDemo;SleCounterDemo;Sle4404Demo;Twn4Demo;RfidInputDemo;SimCardDemo;MifareClassicDemo"/>

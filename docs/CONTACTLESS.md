@@ -269,3 +269,5 @@ Gen1b adds an explicit seven-bit40-only wakeup profile. The partial-USCUID API
 verifies documented UFUID/ZUID/PFUID configurations and their distinct read
 opcodes, with full read-back after fresh selection. See
 [GEN1B_PARTIAL_UID.md](GEN1B_PARTIAL_UID.md).
+
+NTAG210/212 layouts and mirror/configuration rules are documented in [NTAG210_212.md](NTAG210_212.md).
