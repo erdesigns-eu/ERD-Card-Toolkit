@@ -50,7 +50,11 @@ type
     /// <summary>Authenticated Ultralight C user-memory demonstration.</summary>
     dfUltralightC,
     /// <summary>Explicit FeliCa services and NFC Forum Type 3 NDEF demonstration.</summary>
-    dfFelica
+    dfFelica,
+    /// <summary>Authenticated ICODE SLIX2 user-memory and Type 5 demonstration.</summary>
+    dfSlix2,
+    /// <summary>Authenticated original ST25DV user-memory and Type 5 demonstration.</summary>
+    dfSt25Dv
   );
   /// <summary>One named form input; secrets are decoded to owned buffers, never stored as public arguments.</summary>
   TCardFamilyField = record
@@ -116,6 +120,8 @@ begin
     dfType2: Result := 'Type2Demo';
     dfUltralightC: Result := 'UltralightCDemo';
     dfFelica: Result := 'FelicaDemo';
+    dfSlix2: Result := 'Slix2Demo';
+    dfSt25Dv: Result := 'St25DvDemo';
     dfType4: Result := 'Type4NdefDemo';
     dfMobib: Result := 'MobibDemo';
     dfEmv: Result := 'EmvDemo';
@@ -1477,9 +1483,151 @@ begin
       Result[1].Fields[0].Name := 'hex'; Result[1].Fields[0].LabelText := 'Complete CardAccess (hex)';
       Result[1].Fields[0].DefaultText := ''; Result[1].Fields[0].Secret := False; Result[1].Fields[0].Choices := '';
     end;
+    dfSlix2:
+    begin
+      SetLength(Result,5);
+      Result[0].Id := 'information'; Result[0].LabelText := 'Authenticate and read identity / geometry';
+      Result[0].Mutation := True; Result[0].Pcsc := True;
+      SetLength(Result[0].Fields,4);
+      Result[0].Fields[0].Name := 'mode'; Result[0].Fields[0].LabelText := 'SLIX2 ordinary block addressing';
+      Result[0].Fields[0].DefaultText := '0'; Result[0].Fields[0].Secret := False; Result[0].Fields[0].Choices := 'Ordinary 8-bit';
+      Result[0].Fields[1].Name := 'format'; Result[0].Fields[1].LabelText := 'Actual ACR1552 firmware response format';
+      Result[0].Fields[1].DefaultText := '0'; Result[0].Fields[1].Secret := False; Result[0].Fields[1].Choices := 'Native flags|Payload only';
+      Result[0].Fields[2].Name := 'readpassword'; Result[0].Fields[2].LabelText := 'Supplied read password, 4 bytes in RF wire order; empty skips';
+      Result[0].Fields[2].DefaultText := ''; Result[0].Fields[2].Secret := True; Result[0].Fields[2].Choices := '';
+      Result[0].Fields[3].Name := 'writepassword'; Result[0].Fields[3].LabelText := 'Supplied write password, 4 bytes in RF wire order; empty skips';
+      Result[0].Fields[3].DefaultText := ''; Result[0].Fields[3].Secret := True; Result[0].Fields[3].Choices := '';
+      Result[1].Id := 'read'; Result[1].LabelText := 'Authenticate and read physical blocks';
+      Result[1].Mutation := True; Result[1].Pcsc := True;
+      SetLength(Result[1].Fields,7);
+      Result[1].Fields[0].Name := 'mode'; Result[1].Fields[0].LabelText := 'SLIX2 ordinary block addressing';
+      Result[1].Fields[0].DefaultText := '0'; Result[1].Fields[0].Secret := False; Result[1].Fields[0].Choices := 'Ordinary 8-bit';
+      Result[1].Fields[1].Name := 'format'; Result[1].Fields[1].LabelText := 'Actual ACR1552 firmware response format';
+      Result[1].Fields[1].DefaultText := '0'; Result[1].Fields[1].Secret := False; Result[1].Fields[1].Choices := 'Native flags|Payload only';
+      Result[1].Fields[2].Name := 'readpassword'; Result[1].Fields[2].LabelText := 'Supplied read password, 4 bytes in RF wire order; empty skips';
+      Result[1].Fields[2].DefaultText := ''; Result[1].Fields[2].Secret := True; Result[1].Fields[2].Choices := '';
+      Result[1].Fields[3].Name := 'writepassword'; Result[1].Fields[3].LabelText := 'Supplied write password, 4 bytes in RF wire order; empty skips';
+      Result[1].Fields[3].DefaultText := ''; Result[1].Fields[3].Secret := True; Result[1].Fields[3].Choices := '';
+      Result[1].Fields[4].Name := 'block'; Result[1].Fields[4].LabelText := 'First physical block (write: 2 or greater)';
+      Result[1].Fields[4].DefaultText := '2'; Result[1].Fields[4].Secret := False; Result[1].Fields[4].Choices := '';
+      Result[1].Fields[5].Name := 'count'; Result[1].Fields[5].LabelText := 'Number of complete blocks';
+      Result[1].Fields[5].DefaultText := '1'; Result[1].Fields[5].Secret := False; Result[1].Fields[5].Choices := '';
+      Result[1].Fields[6].Name := 'bulk'; Result[1].Fields[6].LabelText := 'Explicit multiple-block command selection';
+      Result[1].Fields[6].DefaultText := '0'; Result[1].Fields[6].Secret := False; Result[1].Fields[6].Choices := 'Single blocks|Read Multiple Blocks';
+      Result[2].Id := 'write'; Result[2].LabelText := 'Authenticate and write data block + verify';
+      Result[2].Mutation := True; Result[2].Pcsc := True;
+      SetLength(Result[2].Fields,6);
+      Result[2].Fields[0].Name := 'mode'; Result[2].Fields[0].LabelText := 'SLIX2 ordinary block addressing';
+      Result[2].Fields[0].DefaultText := '0'; Result[2].Fields[0].Secret := False; Result[2].Fields[0].Choices := 'Ordinary 8-bit';
+      Result[2].Fields[1].Name := 'format'; Result[2].Fields[1].LabelText := 'Actual ACR1552 firmware response format';
+      Result[2].Fields[1].DefaultText := '0'; Result[2].Fields[1].Secret := False; Result[2].Fields[1].Choices := 'Native flags|Payload only';
+      Result[2].Fields[2].Name := 'readpassword'; Result[2].Fields[2].LabelText := 'Supplied read password, 4 bytes in RF wire order; empty skips';
+      Result[2].Fields[2].DefaultText := ''; Result[2].Fields[2].Secret := True; Result[2].Fields[2].Choices := '';
+      Result[2].Fields[3].Name := 'writepassword'; Result[2].Fields[3].LabelText := 'Supplied write password, 4 bytes in RF wire order; empty skips';
+      Result[2].Fields[3].DefaultText := ''; Result[2].Fields[3].Secret := True; Result[2].Fields[3].Choices := '';
+      Result[2].Fields[4].Name := 'block'; Result[2].Fields[4].LabelText := 'First physical block (write: 2 or greater)';
+      Result[2].Fields[4].DefaultText := '2'; Result[2].Fields[4].Secret := False; Result[2].Fields[4].Choices := '';
+      Result[2].Fields[5].Name := 'data'; Result[2].Fields[5].LabelText := 'Replacement full block bytes (hex)';
+      Result[2].Fields[5].DefaultText := ''; Result[2].Fields[5].Secret := False; Result[2].Fields[5].Choices := '';
+      Result[3].Id := 'readndef'; Result[3].LabelText := 'Authenticate and parse Type 5 NDEF';
+      Result[3].Mutation := True; Result[3].Pcsc := True;
+      SetLength(Result[3].Fields,4);
+      Result[3].Fields[0].Name := 'mode'; Result[3].Fields[0].LabelText := 'SLIX2 ordinary block addressing';
+      Result[3].Fields[0].DefaultText := '0'; Result[3].Fields[0].Secret := False; Result[3].Fields[0].Choices := 'Ordinary 8-bit';
+      Result[3].Fields[1].Name := 'format'; Result[3].Fields[1].LabelText := 'Actual ACR1552 firmware response format';
+      Result[3].Fields[1].DefaultText := '0'; Result[3].Fields[1].Secret := False; Result[3].Fields[1].Choices := 'Native flags|Payload only';
+      Result[3].Fields[2].Name := 'readpassword'; Result[3].Fields[2].LabelText := 'Supplied read password, 4 bytes in RF wire order; empty skips';
+      Result[3].Fields[2].DefaultText := ''; Result[3].Fields[2].Secret := True; Result[3].Fields[2].Choices := '';
+      Result[3].Fields[3].Name := 'writepassword'; Result[3].Fields[3].LabelText := 'Supplied write password, 4 bytes in RF wire order; empty skips';
+      Result[3].Fields[3].DefaultText := ''; Result[3].Fields[3].Secret := True; Result[3].Fields[3].Choices := '';
+      Result[4].Id := 'writendef'; Result[4].LabelText := 'Authenticate and replace/clear NDEF + verify';
+      Result[4].Mutation := True; Result[4].Pcsc := True;
+      SetLength(Result[4].Fields,5);
+      Result[4].Fields[0].Name := 'mode'; Result[4].Fields[0].LabelText := 'SLIX2 ordinary block addressing';
+      Result[4].Fields[0].DefaultText := '0'; Result[4].Fields[0].Secret := False; Result[4].Fields[0].Choices := 'Ordinary 8-bit';
+      Result[4].Fields[1].Name := 'format'; Result[4].Fields[1].LabelText := 'Actual ACR1552 firmware response format';
+      Result[4].Fields[1].DefaultText := '0'; Result[4].Fields[1].Secret := False; Result[4].Fields[1].Choices := 'Native flags|Payload only';
+      Result[4].Fields[2].Name := 'readpassword'; Result[4].Fields[2].LabelText := 'Supplied read password, 4 bytes in RF wire order; empty skips';
+      Result[4].Fields[2].DefaultText := ''; Result[4].Fields[2].Secret := True; Result[4].Fields[2].Choices := '';
+      Result[4].Fields[3].Name := 'writepassword'; Result[4].Fields[3].LabelText := 'Supplied write password, 4 bytes in RF wire order; empty skips';
+      Result[4].Fields[3].DefaultText := ''; Result[4].Fields[3].Secret := True; Result[4].Fields[3].Choices := '';
+      Result[4].Fields[4].Name := 'ndef'; Result[4].Fields[4].LabelText := 'Complete NDEF bytes (hex; empty clears existing message)';
+      Result[4].Fields[4].DefaultText := ''; Result[4].Fields[4].Secret := False; Result[4].Fields[4].Choices := '';
+    end;
+    dfSt25Dv:
+    begin
+      SetLength(Result,5);
+      Result[0].Id := 'information'; Result[0].LabelText := 'Authenticate and read identity / geometry';
+      Result[0].Mutation := True; Result[0].Pcsc := True;
+      SetLength(Result[0].Fields,4);
+      Result[0].Fields[0].Name := 'mode'; Result[0].Fields[0].LabelText := 'Explicit block address dialect';
+      Result[0].Fields[0].DefaultText := '0'; Result[0].Fields[0].Secret := False; Result[0].Fields[0].Choices := 'Ordinary 8-bit|Extended 16-bit';
+      Result[0].Fields[1].Name := 'format'; Result[0].Fields[1].LabelText := 'Actual ACR1552 firmware response format';
+      Result[0].Fields[1].DefaultText := '0'; Result[0].Fields[1].Secret := False; Result[0].Fields[1].Choices := 'Native flags|Payload only';
+      Result[0].Fields[2].Name := 'identifier'; Result[0].Fields[2].LabelText := 'RF user password number (1..3)';
+      Result[0].Fields[2].DefaultText := '1'; Result[0].Fields[2].Secret := False; Result[0].Fields[2].Choices := '';
+      Result[0].Fields[3].Name := 'password'; Result[0].Fields[3].LabelText := 'Supplied RF password, 8 bytes in RF wire order';
+      Result[0].Fields[3].DefaultText := ''; Result[0].Fields[3].Secret := True; Result[0].Fields[3].Choices := '';
+      Result[1].Id := 'read'; Result[1].LabelText := 'Authenticate and read physical blocks';
+      Result[1].Mutation := True; Result[1].Pcsc := True;
+      SetLength(Result[1].Fields,7);
+      Result[1].Fields[0].Name := 'mode'; Result[1].Fields[0].LabelText := 'Explicit block address dialect';
+      Result[1].Fields[0].DefaultText := '0'; Result[1].Fields[0].Secret := False; Result[1].Fields[0].Choices := 'Ordinary 8-bit|Extended 16-bit';
+      Result[1].Fields[1].Name := 'format'; Result[1].Fields[1].LabelText := 'Actual ACR1552 firmware response format';
+      Result[1].Fields[1].DefaultText := '0'; Result[1].Fields[1].Secret := False; Result[1].Fields[1].Choices := 'Native flags|Payload only';
+      Result[1].Fields[2].Name := 'identifier'; Result[1].Fields[2].LabelText := 'RF user password number (1..3)';
+      Result[1].Fields[2].DefaultText := '1'; Result[1].Fields[2].Secret := False; Result[1].Fields[2].Choices := '';
+      Result[1].Fields[3].Name := 'password'; Result[1].Fields[3].LabelText := 'Supplied RF password, 8 bytes in RF wire order';
+      Result[1].Fields[3].DefaultText := ''; Result[1].Fields[3].Secret := True; Result[1].Fields[3].Choices := '';
+      Result[1].Fields[4].Name := 'block'; Result[1].Fields[4].LabelText := 'First physical block (write: 2 or greater)';
+      Result[1].Fields[4].DefaultText := '2'; Result[1].Fields[4].Secret := False; Result[1].Fields[4].Choices := '';
+      Result[1].Fields[5].Name := 'count'; Result[1].Fields[5].LabelText := 'Number of complete blocks';
+      Result[1].Fields[5].DefaultText := '1'; Result[1].Fields[5].Secret := False; Result[1].Fields[5].Choices := '';
+      Result[1].Fields[6].Name := 'bulk'; Result[1].Fields[6].LabelText := 'Explicit multiple-block command selection';
+      Result[1].Fields[6].DefaultText := '0'; Result[1].Fields[6].Secret := False; Result[1].Fields[6].Choices := 'Single blocks|Read Multiple Blocks';
+      Result[2].Id := 'write'; Result[2].LabelText := 'Authenticate and write data block + verify';
+      Result[2].Mutation := True; Result[2].Pcsc := True;
+      SetLength(Result[2].Fields,6);
+      Result[2].Fields[0].Name := 'mode'; Result[2].Fields[0].LabelText := 'Explicit block address dialect';
+      Result[2].Fields[0].DefaultText := '0'; Result[2].Fields[0].Secret := False; Result[2].Fields[0].Choices := 'Ordinary 8-bit|Extended 16-bit';
+      Result[2].Fields[1].Name := 'format'; Result[2].Fields[1].LabelText := 'Actual ACR1552 firmware response format';
+      Result[2].Fields[1].DefaultText := '0'; Result[2].Fields[1].Secret := False; Result[2].Fields[1].Choices := 'Native flags|Payload only';
+      Result[2].Fields[2].Name := 'identifier'; Result[2].Fields[2].LabelText := 'RF user password number (1..3)';
+      Result[2].Fields[2].DefaultText := '1'; Result[2].Fields[2].Secret := False; Result[2].Fields[2].Choices := '';
+      Result[2].Fields[3].Name := 'password'; Result[2].Fields[3].LabelText := 'Supplied RF password, 8 bytes in RF wire order';
+      Result[2].Fields[3].DefaultText := ''; Result[2].Fields[3].Secret := True; Result[2].Fields[3].Choices := '';
+      Result[2].Fields[4].Name := 'block'; Result[2].Fields[4].LabelText := 'First physical block (write: 2 or greater)';
+      Result[2].Fields[4].DefaultText := '2'; Result[2].Fields[4].Secret := False; Result[2].Fields[4].Choices := '';
+      Result[2].Fields[5].Name := 'data'; Result[2].Fields[5].LabelText := 'Replacement full block bytes (hex)';
+      Result[2].Fields[5].DefaultText := ''; Result[2].Fields[5].Secret := False; Result[2].Fields[5].Choices := '';
+      Result[3].Id := 'readndef'; Result[3].LabelText := 'Authenticate and parse Type 5 NDEF';
+      Result[3].Mutation := True; Result[3].Pcsc := True;
+      SetLength(Result[3].Fields,4);
+      Result[3].Fields[0].Name := 'mode'; Result[3].Fields[0].LabelText := 'Explicit block address dialect';
+      Result[3].Fields[0].DefaultText := '0'; Result[3].Fields[0].Secret := False; Result[3].Fields[0].Choices := 'Ordinary 8-bit|Extended 16-bit';
+      Result[3].Fields[1].Name := 'format'; Result[3].Fields[1].LabelText := 'Actual ACR1552 firmware response format';
+      Result[3].Fields[1].DefaultText := '0'; Result[3].Fields[1].Secret := False; Result[3].Fields[1].Choices := 'Native flags|Payload only';
+      Result[3].Fields[2].Name := 'identifier'; Result[3].Fields[2].LabelText := 'RF user password number (1..3)';
+      Result[3].Fields[2].DefaultText := '1'; Result[3].Fields[2].Secret := False; Result[3].Fields[2].Choices := '';
+      Result[3].Fields[3].Name := 'password'; Result[3].Fields[3].LabelText := 'Supplied RF password, 8 bytes in RF wire order';
+      Result[3].Fields[3].DefaultText := ''; Result[3].Fields[3].Secret := True; Result[3].Fields[3].Choices := '';
+      Result[4].Id := 'writendef'; Result[4].LabelText := 'Authenticate and replace/clear NDEF + verify';
+      Result[4].Mutation := True; Result[4].Pcsc := True;
+      SetLength(Result[4].Fields,5);
+      Result[4].Fields[0].Name := 'mode'; Result[4].Fields[0].LabelText := 'Explicit block address dialect';
+      Result[4].Fields[0].DefaultText := '0'; Result[4].Fields[0].Secret := False; Result[4].Fields[0].Choices := 'Ordinary 8-bit|Extended 16-bit';
+      Result[4].Fields[1].Name := 'format'; Result[4].Fields[1].LabelText := 'Actual ACR1552 firmware response format';
+      Result[4].Fields[1].DefaultText := '0'; Result[4].Fields[1].Secret := False; Result[4].Fields[1].Choices := 'Native flags|Payload only';
+      Result[4].Fields[2].Name := 'identifier'; Result[4].Fields[2].LabelText := 'RF user password number (1..3)';
+      Result[4].Fields[2].DefaultText := '1'; Result[4].Fields[2].Secret := False; Result[4].Fields[2].Choices := '';
+      Result[4].Fields[3].Name := 'password'; Result[4].Fields[3].LabelText := 'Supplied RF password, 8 bytes in RF wire order';
+      Result[4].Fields[3].DefaultText := ''; Result[4].Fields[3].Secret := True; Result[4].Fields[3].Choices := '';
+      Result[4].Fields[4].Name := 'ndef'; Result[4].Fields[4].LabelText := 'Complete NDEF bytes (hex; empty clears existing message)';
+      Result[4].Fields[4].DefaultText := ''; Result[4].Fields[4].Secret := False; Result[4].Fields[4].Choices := '';
+    end;
     dfIso15693:
     begin
-      SetLength(Result,6);
+      SetLength(Result,7);
       Result[0].Id := 'information'; Result[0].LabelText := 'Read UID / acquired geometry';
       Result[0].Mutation := False; Result[0].Pcsc := True;
       SetLength(Result[0].Fields,2);
@@ -1532,6 +1680,18 @@ begin
       Result[5].Fields[0].DefaultText := '0'; Result[5].Fields[0].Secret := False; Result[5].Fields[0].Choices := 'Ordinary 8-bit|Extended 16-bit';
       Result[5].Fields[1].Name := 'format'; Result[5].Fields[1].LabelText := 'Actual firmware response format';
       Result[5].Fields[1].DefaultText := '0'; Result[5].Fields[1].Secret := False; Result[5].Fields[1].Choices := 'Native flags|Payload only';
+      Result[6].Id := 'readmultiple'; Result[6].LabelText := 'Read physical blocks with native bulk commands';
+      Result[6].Mutation := False; Result[6].Pcsc := True;
+      SetLength(Result[6].Fields,4);
+      Result[6].Fields[0].Name := 'mode'; Result[6].Fields[0].LabelText := 'Explicit block address dialect';
+      Result[6].Fields[0].DefaultText := '0'; Result[6].Fields[0].Secret := False; Result[6].Fields[0].Choices := 'Ordinary 8-bit|Extended 16-bit';
+      Result[6].Fields[1].Name := 'format'; Result[6].Fields[1].LabelText := 'Actual ACR1552 firmware response format';
+      Result[6].Fields[1].DefaultText := '0'; Result[6].Fields[1].Secret := False; Result[6].Fields[1].Choices := 'Native flags|Payload only';
+      Result[6].Fields[2].Name := 'block'; Result[6].Fields[2].LabelText := 'First physical block (write: 2 or greater)';
+      Result[6].Fields[2].DefaultText := '2'; Result[6].Fields[2].Secret := False; Result[6].Fields[2].Choices := '';
+      Result[6].Fields[3].Name := 'count'; Result[6].Fields[3].LabelText := 'Number of complete blocks';
+      Result[6].Fields[3].DefaultText := '1'; Result[6].Fields[3].Secret := False; Result[6].Fields[3].Choices := '';
+
     end;
     dfUid:
     begin

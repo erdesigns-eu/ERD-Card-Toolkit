@@ -58,6 +58,10 @@ call :build_demo mobib MobibDemo
 if errorlevel 1 exit /b %errorlevel%
 call :build_demo usbhid UsbHidDemo
 if errorlevel 1 exit /b %errorlevel%
+call :build_demo slix2 Slix2Demo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo st25dv St25DvDemo
+if errorlevel 1 exit /b %errorlevel%
 exit /b %errorlevel%
 :build_demo
 rem Use the same resource generation and configuration as the IDE projects.

@@ -342,7 +342,7 @@ var Hid: TUsbHidReaderWriter; HidHardware: ICardFamilyHidHardware; Devices: THid
   Type2Configuration: TType2AuthenticationConfiguration;
   Ulc: TUltralightCCardReaderWriter; UlcConfiguration: TUltralightCConfiguration; Des: ICardDesProvider;
   PasswordReader: TType2PasswordCardReader; RawUid: TRawUidProgrammer;
-  IsoReader: TIso15693CardReader; Type5: TType5NdefCardReader; IsoSession: IIso15693Session; IsoInfo: TIso15693SystemInfo; Type5Snapshot: TType5NdefSnapshot;
+  IsoReader: TIso15693CardReader; Type5: TType5NdefCardReader; IsoSession: IIso15693Session; IsoInfo: TIso15693SystemInfo; IsoPasswords: TIso15693Passwords; OtherKey: TBytes; Type5Snapshot: TType5NdefSnapshot;
   Rule: TMobibProductRule; Evidence: TMobibRuleEvidence; Assessment: TMobibRuleAssessment;
   Subscription: TMobibSubscription; Reason: TMobibRuleReason; Stamp: TDateTime; HasStamp: Boolean;
   SamCla: Byte;
@@ -908,17 +908,40 @@ begin
           DesManagement := nil; ApplicationManagement := nil; Management := nil; Session := nil; Desfire.Free;
         end;
       end;
-      dfIso15693:
+      dfIso15693, dfSlix2, dfSt25Dv:
       begin
+        I:=Number(R,A,'mode',0,1); if (FFamily=dfSlix2) and (I<>0) then Fail;
         IsoSession := TAcr1552Iso15693Session.Create(T,TIso15693AddressMode(Number(R,A,'mode',0,1)),TIso15693ResponseFormat(Number(R,A,'format',0,1)));
+        if FFamily<>dfIso15693 then begin
+          IsoPasswords:=nil;
+          try
+            if FFamily=dfSlix2 then begin
+              Key:=Bytes(R,A,'readpassword'); OtherKey:=Bytes(R,A,'writepassword');
+              SetLength(IsoPasswords,Ord(Length(Key)>0)+Ord(Length(OtherKey)>0)); J:=0;
+              if Length(Key)>0 then begin IsoPasswords[J].Identifier:=1; IsoPasswords[J].Value:=Key; Inc(J); end;
+              if Length(OtherKey)>0 then begin IsoPasswords[J].Identifier:=2; IsoPasswords[J].Value:=OtherKey; end;
+              IsoSession:=TIso15693PasswordSession.Create(IsoSession,ippSlix2,IsoPasswords);
+            end else begin
+              SetLength(IsoPasswords,1); IsoPasswords[0].Identifier:=Number(R,A,'identifier',1,3);
+              Key:=Bytes(R,A,'password'); IsoPasswords[0].Value:=Key;
+              IsoSession:=TIso15693PasswordSession.Create(IsoSession,ippSt25Dv,IsoPasswords);
+            end;
+          finally
+            if Length(Key)>0 then FillChar(Key[0],Length(Key),0);
+            if Length(OtherKey)>0 then FillChar(OtherKey[0],Length(OtherKey),0); IsoPasswords:=nil;
+          end;
+        end;
         IsoReader := TIso15693CardReader.Create(nil); Type5 := TType5NdefCardReader.Create(nil);
         try
           IsoReader.Session := IsoSession; Type5.Session := IsoSession;
           if A.Id = 'information' then begin IsoInfo := IsoReader.ReadInformation; Output := BytesToHex(IsoInfo.Uid)+' blocks '+IntToStr(IsoInfo.BlockCount)+' bytes per block '+IntToStr(IsoInfo.BlockSize); end
-          else if A.Id = 'read' then begin Data := IsoReader.ReadBlocks(Number(R,A,'block',0,65535),Number(R,A,'count',1,65536)); Output := BytesToHex(Data); Artifact(D,'blocks.bin',Data); end
+          else if (A.Id = 'read') or (A.Id = 'readmultiple') then begin
+            IsoReader.UseMultipleBlockRead:=A.Id='readmultiple';
+            if FFamily<>dfIso15693 then IsoReader.UseMultipleBlockRead:=Number(R,A,'bulk',0,1)=1;
+            Data := IsoReader.ReadBlocks(Number(R,A,'block',0,65535),Number(R,A,'count',1,65536)); Output := BytesToHex(Data); Artifact(D,'blocks.bin',Data); end
           else if A.Id = 'write' then begin IsoReader.WriteBlock(Number(R,A,'block',0,65535),Bytes(R,A,'data')); D.WriteVerified := True; Output := 'Physical block independently verified.'; end
-          else if A.Id = 'readndef' then begin Type5Snapshot := Type5.ReadMessage; Output := BytesToHex(Type5Snapshot.MessageBytes); Artifact(D,'ndef.bin',Type5Snapshot.MessageBytes); end
-          else if A.Id = 'writendef' then begin Ndef := TNdefCodec.Decode(Bytes(R,A,'ndef')); Type5.WriteMessage(Ndef); D.WriteVerified := True; Output := 'Type 5 NDEF independently verified.'; end
+          else if A.Id = 'readndef' then begin Type5Snapshot := Type5.ReadMessage; Output := DescribeNdef(Type5Snapshot.Records); Artifact(D,'ndef.bin',Type5Snapshot.MessageBytes); end
+          else if A.Id = 'writendef' then begin Data:=Bytes(R,A,'ndef'); if Length(Data)=0 then Type5.ClearMessage else begin Ndef := TNdefCodec.Decode(Data); Type5.WriteMessage(Ndef); end; D.WriteVerified := True; Output := 'Type 5 NDEF independently verified.'; end
           else if A.Id = 'clearndef' then begin Type5.ClearMessage; D.WriteVerified := True; Output := 'Empty Type 5 NDEF independently verified.'; end else Fail;
         finally Type5.Free; IsoReader.Free; IsoSession := nil; end;
       end;

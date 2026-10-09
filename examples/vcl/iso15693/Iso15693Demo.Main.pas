@@ -11,6 +11,26 @@ type
   /// <summary>Independent Iso15693Demo form; all visual controls belong to its own editable DFM.</summary>
   TIso15693DemoForm = class(TForm)
   published
+    /// <summary>Read physical blocks with native bulk commands.</summary>
+    ActReadmultipleTab: TTabSheet;
+    /// <summary>Read physical blocks with native bulk commands inputs.</summary>
+    ActReadmultipleInputs: TScrollBox;
+    /// <summary>Explicit block address dialect label.</summary>
+    ActReadmultipleModeLabel: TLabel;
+    /// <summary>Explicit block address dialect.</summary>
+    ActReadmultipleModeBox: TComboBox;
+    /// <summary>Actual ACR1552 firmware response format label.</summary>
+    ActReadmultipleFormatLabel: TLabel;
+    /// <summary>Actual ACR1552 firmware response format.</summary>
+    ActReadmultipleFormatBox: TComboBox;
+    /// <summary>First physical block (write: 2 or greater) label.</summary>
+    ActReadmultipleBlockLabel: TLabel;
+    /// <summary>First physical block (write: 2 or greater).</summary>
+    ActReadmultipleBlockEdit: TEdit;
+    /// <summary>Number of complete blocks label.</summary>
+    ActReadmultipleCountLabel: TLabel;
+    /// <summary>Number of complete blocks.</summary>
+    ActReadmultipleCountEdit: TEdit;
     /// <summary>Reader discovery and transport guidance.</summary>
     HeaderPanel: TPanel;
     /// <summary>Native card offered/removed status, independent of operation output.</summary>
@@ -267,6 +287,14 @@ begin
       SetLength(FInputs,2);
       FInputs[0] := ActClearndefModeBox;
       FInputs[1] := ActClearndefFormatBox;
+    end;
+    6:
+    begin
+      SetLength(FInputs,4);
+      FInputs[0] := ActReadmultipleModeBox;
+      FInputs[1] := ActReadmultipleFormatBox;
+      FInputs[2] := ActReadmultipleBlockEdit;
+      FInputs[3] := ActReadmultipleCountEdit;
     end;
   else Exit; end;
   AcknowledgeCheck.Enabled := FActions[ActionPages.ActivePageIndex].Mutation;

@@ -187,6 +187,10 @@ if errorlevel 1 exit /b %errorlevel%
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\Iso15693Type5.Tests.exe"
 if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\contactless" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\contactless\Iso15693Profiles.Tests.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\Iso15693Profiles.Tests.exe"
+if errorlevel 1 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\emv" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" examples\core\InspectCardTools.dpr
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\InspectCardTools.exe" --help

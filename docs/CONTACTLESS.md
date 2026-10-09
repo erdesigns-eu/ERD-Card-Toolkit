@@ -23,7 +23,7 @@ hardware. Assign both a connected `ICardTransport` and an explicitly matching
 | NFC-EMV | Separate `TEMVCardReader` PPSE/AID/GPO/AFL path through ISO 7816 APDUs |
 | NDEF codecs and public Type 2 storage | `TNdefCodec`/`TNdefRecords`, CC/TLV mapping and `TType2NdefCardReader`; bounded framing, strict RTDs, lock/access preflight and verified length-last updates |
 | Public Type 4 NDEF files | `TType4NdefCardReader`: explicit mapping 1.0/2.0 ISO 7816 applications, CC/file descriptors, MLe/MLc-bounded reads and verified NLEN-last updates |
-| Addressed ISO 15693 memory | `TIso15693CardReader`, explicit 8/16-bit geometry, single-block security and guarded writes; ACR1552U-M/ACM1552U-Y/Z FF FB adapter |
+| Addressed ISO 15693 memory | `TIso15693CardReader`, explicit 8/16-bit geometry, single-block security and guarded writes, explicit native bulk reads, supplied-password SLIX2/original ST25DV user-memory sessions; ACR1552U-M/ACM1552U-Y/Z FF FB adapter |
 | Public Type 5 NDEF memory | `TType5NdefCardReader`: initialized E1/E2 CC/TLV mapping, lock preflight and verified length-last updates |
 | Native DESFire files | `TDesfireCardReader`: discovery, ordinary data/value/record reads and verified standard-data writes; explicit EV1/EV2 AES authentication, Plain/MACed/Full messaging and EV2 NonFirst; retained owned backup/value/record transactions, commit/abort, authenticated directories and ordinary application/file management |
 | Additional DESFire security/TMAC/key management, Plus, Type 1 NDEF, other programmable UID families | Separate profiles still pending |
@@ -211,7 +211,7 @@ Public Type 4 NDEF access is implemented separately in [TYPE4_NDEF.md](TYPE4_NDE
 including already formatted public DESFire NDEF files. Native DESFire access is a
 separate [component and EV1/EV2 AES profiles](DESFIRE.md), with maintained crypto backends.
 Further families include other Type 2
-security variants, authenticated ISO 15693 access, further programmable UID profiles and native
+security variants, additional ISO 15693 authentication/provisioning dialects, further programmable UID profiles and native
 DESFire LRP, TMAC receipts, EV2 key sets and extended configuration/rights.
 Basic EV1/EV2 AES and explicit DES/3DES key policy, rotation and ordinary-file access administration are
 implemented; see [DESFire](DESFIRE.md).
@@ -273,3 +273,8 @@ opcodes, with full read-back after fresh selection. See
 NTAG210/212 layouts and mirror/configuration rules are documented in [NTAG210_212.md](NTAG210_212.md).
 
 FeliCa unencrypted-service access and NFC Forum Type 3 version 1.0 NDEF are now available through separate components and an explicit PN532/ACR122 adapter; see [FELICA_TYPE3.md](FELICA_TYPE3.md). Supplied-password Type 2 management and NDEF are described in [TYPE2_MANAGEMENT.md](TYPE2_MANAGEMENT.md).
+
+Supplied-password NFC-V access for ICODE SLIX2 and original ST25DV04K/16K/64K
+is available through `TIso15693PasswordSession`, including the existing strict
+Type 5 reader/writer. It does not cover ST25TV/KC or password/protection
+provisioning. See [the profile and RF-session contract](ISO15693_TYPE5.md).
