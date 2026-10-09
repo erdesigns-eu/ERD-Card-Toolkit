@@ -426,6 +426,8 @@ end;
 procedure TestExtendedSimDemo;
 var R: TCardDemoRequest; D: TCardDemoResult; H: THardware; Hardware: ICardFamilyHardware; Failed: Boolean;
 begin
+  R := Request(dfSim,'email'); Put(R,dfSim,'hex','610062FFFF0102'); Put(R,dfSim,'footer','1');
+  CreateCardFamilyOperations(dfSim).Run(R,D); Check(D.Text = 'a@b','EMAIL demo explicit footer');
   R := Request(dfSim,'decode'); Put(R,dfSim,'kind','8');
   Put(R,dfSim,'hex','0300040B912143658709F100006201902143650005E8329BFD06'+StringOfChar('F',300));
   CreateCardFamilyOperations(dfSim).Run(R,D); Check(Pos('hello',string(D.Text)) > 0,'SMS text demo literal');

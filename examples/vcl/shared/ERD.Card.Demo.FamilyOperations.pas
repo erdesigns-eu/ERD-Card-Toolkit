@@ -210,7 +210,7 @@ var M: TMemoryCardReaderWriter; S: TSleCounterCardReaderWriter; L: TSle4404CardR
   Contact: TContactlessCardReader; T2: TType2NdefCardReader; T4: TType4NdefCardReader;
   CC: TType4CapabilityContainer; T4Snapshot: TType4NdefSnapshot; T2Snapshot: TType2NdefSnapshot; UserMemory: TType2UserMemory;
   Sim: TSimCardReaderWriter; SF: TSimFileAddress; SI: TSimFileInfo; PS: TSimPinStatus;
-  SR: TSimRecords; SC: TSimPhonebookEntries; SA: TSimApplications; SD: TSimApplicationInfo; SS: TSimServices; SP: TSimServiceProvider; SE: TSimPhonebookEntry; SMS: TSimSmsMessage; Linked: TSimLinkedContact; SM: TSimSmsRecord; PB: TSimPhonebookReferences;
+  SR: TSimRecords; SC: TSimPhonebookEntries; SA: TSimApplications; SD: TSimApplicationInfo; SS: TSimServices; SP: TSimServiceProvider; SE: TSimPhonebookEntry; Assembled: TSimAssembledSms; SMS: TSimSmsMessage; Linked: TSimLinkedContact; SM: TSimSmsRecord; PB: TSimPhonebookReferences;
   W: TTwn4CardReaderWriter; H: TRfidHidReportReader;
   Layout: TSle4404AccessLayout; Info: TTwn4TagInfo; Identifier: TRfidInputIdentifier;
   Field: TRfidHidAsciiField; P, NewP, Data, Key, Id, Wire: TBytes;
@@ -462,7 +462,19 @@ begin
       end;
       dfSim:
       begin
-        if A.Id = 'encodealpha' then Output := BytesToHex(TSimCodec.EncodeAlpha(Text(R,A,'name'),Number(R,A,'width',0,255)))
+        if A.Id = 'email' then Output := string(TSimCodec.DecodePhonebookEmail(Bytes(R,A,'hex'),Number(R,A,'footer',0,1) = 1))
+        else if A.Id = 'anr' then begin SE := TSimCodec.DecodePhonebookAnr(Bytes(R,A,'hex'),Number(R,A,'footer',0,1) = 1); Output := string(SE.Number)+'; unresolved EXT '+IntToStr(SE.ExtensionRecord); end
+        else if A.Id = 'smsjoin' then
+        begin
+          Lines := TStringList.Create;
+          try
+            Lines.StrictDelimiter := True; Lines.Delimiter := ';'; Lines.DelimitedText := string(Text(R,A,'records'));
+            if (Lines.Count < 1) or (Lines.Count > 255) then Fail; SetLength(SR,Lines.Count);
+            for I := 0 to Lines.Count-1 do SR[I] := HexToBytes(Lines[I]);
+            Assembled := TSimCodec.AssembleSms(SR); Output := 'Segments '+IntToStr(Length(Assembled.Segments))+sLineBreak+string(Assembled.Text)+sLineBreak+'Binary '+BytesToHex(Assembled.BinaryPayload);
+          finally Lines.Free; end;
+        end
+        else if A.Id = 'encodealpha' then Output := BytesToHex(TSimCodec.EncodeAlpha(Text(R,A,'name'),Number(R,A,'width',0,255)))
         else if A.Id = 'decode' then
         begin
           Data := Bytes(R,A,'hex');

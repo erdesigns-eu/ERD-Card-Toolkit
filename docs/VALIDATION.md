@@ -431,3 +431,13 @@ linked field and extension bytes remain owned; loops, out-of-range pointers and
 wrong ADN backlinks are refused. No linked writes, SMS sending or hardware
 validation is claimed. InspectSim's literal --sms-text output was separately
 checked; its check is now in the automated runner.
+
+## EMAIL/ANR and explicit SMS assembly
+
+Focused SIM tests pass 72,312 and the family-executor tests pass 1,604 after this
+follow-up. Literal out-of-order UCS-2 and binary messages assemble correctly;
+binary UDH is removed only from joined payloads, while exact segment bytes remain.
+Missing/duplicate segments, mixed recipients and DCS are refused; caller buffers
+remain independent. EMAIL and ANR have explicit footer layouts and ANR preserves
+unresolved CCP/EXT. Family actions expose the codecs; source and distribution
+checks pass. This batch changes no PIN/write protocol.

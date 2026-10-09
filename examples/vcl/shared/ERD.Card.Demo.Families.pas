@@ -539,7 +539,7 @@ begin
     end;
     dfSim:
     begin
-      SetLength(Result,20);
+      SetLength(Result,23);
       Result[0].Id := 'iccid'; Result[0].LabelText := 'Read ICCID';
       Result[0].Mutation := False; Result[0].Pcsc := True;
       SetLength(Result[0].Fields,4);
@@ -847,13 +847,32 @@ begin
       Result[18].Fields[0].DefaultText := '0'; Result[18].Fields[0].Secret := False; Result[18].Fields[0].Choices := 'ICCID|IMSI|Alpha|SPN|ADN|SMS|EF.DIR|USIM PBR|SMS text';
       Result[18].Fields[1].Name := 'hex'; Result[18].Fields[1].LabelText := 'Complete raw bytes (hex)';
       Result[18].Fields[1].DefaultText := ''; Result[18].Fields[1].Secret := False; Result[18].Fields[1].Choices := '';
-      Result[19].Id := 'encodealpha'; Result[19].LabelText := 'Offline GSM / UCS-2 name encoder';
+      Result[19].Id := 'smsjoin'; Result[19].LabelText := 'Offline complete SMS segment set';
       Result[19].Mutation := False; Result[19].Pcsc := False;
-      SetLength(Result[19].Fields,2);
-      Result[19].Fields[0].Name := 'name'; Result[19].Fields[0].LabelText := 'Name';
+      SetLength(Result[19].Fields,1);
+      Result[19].Fields[0].Name := 'records'; Result[19].Fields[0].LabelText := 'Complete EF.SMS records (hex), separated by semicolon';
       Result[19].Fields[0].DefaultText := ''; Result[19].Fields[0].Secret := False; Result[19].Fields[0].Choices := '';
-      Result[19].Fields[1].Name := 'width'; Result[19].Fields[1].LabelText := 'Exact field byte width';
-      Result[19].Fields[1].DefaultText := '16'; Result[19].Fields[1].Secret := False; Result[19].Fields[1].Choices := '';
+      Result[20].Id := 'email'; Result[20].LabelText := 'Offline EMAIL record';
+      Result[20].Mutation := False; Result[20].Pcsc := False;
+      SetLength(Result[20].Fields,2);
+      Result[20].Fields[0].Name := 'hex'; Result[20].Fields[0].LabelText := 'Exact EMAIL bytes (hex)';
+      Result[20].Fields[0].DefaultText := ''; Result[20].Fields[0].Secret := False; Result[20].Fields[0].Choices := '';
+      Result[20].Fields[1].Name := 'footer'; Result[20].Fields[1].LabelText := 'Actual linkage footer';
+      Result[20].Fields[1].DefaultText := '0'; Result[20].Fields[1].Secret := False; Result[20].Fields[1].Choices := 'Absent|Two bytes';
+      Result[21].Id := 'anr'; Result[21].LabelText := 'Offline ANR record';
+      Result[21].Mutation := False; Result[21].Pcsc := False;
+      SetLength(Result[21].Fields,2);
+      Result[21].Fields[0].Name := 'hex'; Result[21].Fields[0].LabelText := 'Exact ANR bytes (hex)';
+      Result[21].Fields[0].DefaultText := ''; Result[21].Fields[0].Secret := False; Result[21].Fields[0].Choices := '';
+      Result[21].Fields[1].Name := 'footer'; Result[21].Fields[1].LabelText := 'Actual linkage footer';
+      Result[21].Fields[1].DefaultText := '0'; Result[21].Fields[1].Secret := False; Result[21].Fields[1].Choices := 'Absent|Two bytes';
+      Result[22].Id := 'encodealpha'; Result[22].LabelText := 'Offline GSM / UCS-2 name encoder';
+      Result[22].Mutation := False; Result[22].Pcsc := False;
+      SetLength(Result[22].Fields,2);
+      Result[22].Fields[0].Name := 'name'; Result[22].Fields[0].LabelText := 'Name';
+      Result[22].Fields[0].DefaultText := ''; Result[22].Fields[0].Secret := False; Result[22].Fields[0].Choices := '';
+      Result[22].Fields[1].Name := 'width'; Result[22].Fields[1].LabelText := 'Exact field byte width';
+      Result[22].Fields[1].DefaultText := '16'; Result[22].Fields[1].Secret := False; Result[22].Fields[1].Choices := '';
     end;
     dfClassic:
     begin

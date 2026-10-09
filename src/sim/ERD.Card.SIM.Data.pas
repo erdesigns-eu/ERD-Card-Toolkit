@@ -232,6 +232,19 @@ type
     /// <summary>Original source application port.</summary>
     SourcePort: Word;
   end;
+  /// <summary>Owned decoded SMS segments in caller-selected message order.</summary>
+  TSimSmsMessages = array of TSimSmsMessage;
+  /// <summary>One explicitly assembled complete concatenated message; no cross-message grouping is guessed.</summary>
+  TSimAssembledSms = record
+    /// <summary>Decoded segments sorted by one-based sequence; exact original user data remains available.</summary>
+    Segments: TSimSmsMessages;
+    /// <summary>True for a complete GSM/UCS-2 text message, false for binary.</summary>
+    TextDecoded: Boolean;
+    /// <summary>Ordered complete text; empty for binary payloads.</summary>
+    Text: UnicodeString;
+    /// <summary>Owned joined binary payload excluding each UDH; empty for text messages.</summary>
+    BinaryPayload: TBytes;
+  end;
   /// <summary>One EF.DIR application entry; enumeration does not select it.</summary>
   TSimApplicationInfo = record
     /// <summary>Owned complete application identifier, five through sixteen bytes.</summary>
@@ -327,6 +340,21 @@ type
     /// <returns>Owned message segment with preserved UDH, concatenation and application-port metadata.</returns>
     /// <exception cref="ESimCardError">Malformed bounds, compressed/reserved DCS, enhanced validity, national-language shifts or unsupported TPDU are refused.</exception>
     class function DecodeSmsMessage(const AData: TBytes): TSimSmsMessage; static;
+    /// <summary>Assembles an explicitly supplied complete SMS segment set without guessing grouping or silently dropping duplicates.</summary>
+    /// <param name="ARecords">One through 255 exact EF.SMS records from the caller-selected message.</param>
+    /// <returns>Owned sorted segments and complete decoded text or binary payload.</returns>
+    /// <exception cref="ESimCardError">Missing, duplicate, mixed-direction/address/DCS/PID/UDH segments are refused.</exception>
+    class function AssembleSms(const ARecords: TSimRecords): TSimAssembledSms; static;
+    /// <summary>Decodes one USIM EMAIL field using an explicit linked-footer layout.</summary>
+    /// <param name="AData">Exact alpha record including footer when declared.</param>
+    /// <param name="AHasLinkFooter">True when final two bytes are ADN SFI/record references.</param>
+    /// <returns>Decoded GSM/UCS-2 email; original bytes are not modified.</returns>
+    class function DecodePhonebookEmail(const AData: TBytes; const AHasLinkFooter: Boolean): UnicodeString; static;
+    /// <summary>Decodes the inline number of one USIM ANR record; AAS/CCP/EXT remain explicit raw references.</summary>
+    /// <param name="AData">Fifteen-byte ANR body, optionally with two declared linkage bytes.</param>
+    /// <param name="AHasLinkFooter">True for the seventeen-byte linked layout.</param>
+    /// <returns>Inline number and unresolved CCP/EXT; Raw preserves the complete ANR.</returns>
+    class function DecodePhonebookAnr(const AData: TBytes; const AHasLinkFooter: Boolean): TSimPhonebookEntry; static;
     /// <summary>Creates a complete stored-SMS record from an explicit status and body.</summary>
     /// <param name="AStatus">Defined free/received/unsent/sent status, including status-report forms.</param>
     /// <param name="ABody">Already encoded SMSC/TPDU field, at most 175 bytes; not interpreted.</param>
@@ -963,6 +991,74 @@ begin
     Result.Contact.Number := Result.Contact.Number+SmsDigits(Data,2,N,$81);
     for J := 2+Data[1] to 11 do if Data[J] <> $FF then Fail;
     N := Length(Result.Extensions); SetLength(Result.Extensions,N+1); Result.Extensions[N] := Data; Pointer := Data[12];
+  end;
+end;
+
+class function TSimCodec.DecodePhonebookEmail(const AData: TBytes; const AHasLinkFooter: Boolean): UnicodeString;
+var N: Integer;
+begin
+  N := Length(AData); if AHasLinkFooter then Dec(N,2);
+  if (N < 0) or (Length(AData) > 255) then Fail;
+  Result := DecodeAlpha(Copy(AData,0,N));
+end;
+class function TSimCodec.DecodePhonebookAnr(const AData: TBytes; const AHasLinkFooter: Boolean): TSimPhonebookEntry;
+var N: Integer;
+begin
+  N := 15; if AHasLinkFooter then N := 17; if Length(AData) <> N then Fail;
+  Result := DecodeAdn(Copy(AData,1,14)); Result.Raw := CopyBytes(AData);
+end;
+
+function SmsGroupingHeader(const Header: TBytes): TBytes;
+var P,N,I,Offset: Integer;
+begin
+  Result := nil; P := 1;
+  while P < Length(Header) do
+  begin
+    N := Header[P+1]+2;
+    if (Header[P] = 0) or (Header[P] = 8) then
+    begin
+      Offset := Length(Result); SetLength(Result,Offset+1); Result[Offset] := Header[P];
+    end
+    else begin Offset := Length(Result); SetLength(Result,Offset+N); for I := 0 to N-1 do Result[Offset+I] := Header[P+I]; end;
+    Inc(P,N);
+  end;
+end;
+class function TSimCodec.AssembleSms(const ARecords: TSimRecords): TSimAssembledSms;
+var Message,First: TSimSmsMessage; Seen: array[0..254] of Boolean; I,N,Offset,Count,HeaderBytes: Integer;
+  GroupHeader: TBytes;
+begin
+  Result := Default(TSimAssembledSms); N := Length(ARecords);
+  if (N < 1) or (N > 255) then Fail;
+  FillChar(Seen,SizeOf(Seen),0); First := DecodeSmsMessage(ARecords[0]);
+  if not First.Concatenated then
+  begin
+    if N <> 1 then Fail; SetLength(Result.Segments,1); Result.Segments[0] := First;
+  end
+  else
+  begin
+    if First.SegmentCount <> N then Fail; SetLength(Result.Segments,N); GroupHeader := SmsGroupingHeader(First.Header);
+    for I := 0 to N-1 do
+    begin
+      Message := DecodeSmsMessage(ARecords[I]);
+      if not Message.Concatenated or (Message.SegmentCount <> N) or
+        (Message.ConcatenationReference <> First.ConcatenationReference) or
+        (Message.Incoming <> First.Incoming) or (Message.Address <> First.Address) or
+        (Message.ServiceCenter <> First.ServiceCenter) or (Message.DataCoding <> First.DataCoding) or
+        (Message.ProtocolId <> First.ProtocolId) or not BytesEqual(GroupHeader,SmsGroupingHeader(Message.Header)) then Fail;
+      Offset := Message.SegmentNumber-1; if Seen[Offset] then Fail; Seen[Offset] := True; Result.Segments[Offset] := Message;
+    end;
+  end;
+  Result.TextDecoded := First.TextDecoded;
+  for I := 0 to High(Result.Segments) do
+  begin
+    Message := Result.Segments[I];
+    if Message.TextDecoded then Result.Text := Result.Text+Message.Text
+    else
+    begin
+      HeaderBytes := Length(Message.Header); Count := Length(Message.UserData)-HeaderBytes;
+      Offset := Length(Result.BinaryPayload); SetLength(Result.BinaryPayload,Offset+Count);
+      if Count > 0 then Move(Message.UserData[HeaderBytes],Result.BinaryPayload[Offset],Count);
+    end;
   end;
 end;
 

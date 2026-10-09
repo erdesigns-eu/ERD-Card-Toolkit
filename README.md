@@ -28,7 +28,7 @@ Beoogd platform: **Delphi 10.4+, Windows Win32/Win64**.
 | SLE4404 | `TSle4404CardReaderWriter` | ACR38x CCID: publiek/beveiligd lezen, user-codecontrole, bitprogrammering en expliciete scratchpad/applicatie-erases met terugleescontrole; bekende layout vereist. |
 | USB-HID RFID | `TRfidKeyboardReader`, `TRfidHidReportReader` | Keyboard-input en host-aangeleverde 8/9-byte toetsenbordreports of vaste ASCII-velden; expliciete ASCII/hex/decimale profielen. |
 | ELATEC TWN4 | `TTwn4CardReaderWriter` | PRS/USB-CDC: tag-ID, Classic-blokken met aangeleverde sleutel en publieke Type 2-pagina’s lezen/geverifieerd schrijven; geschikte firmware vereist. |
-| SIM / USIM | `TSimCardReaderWriter` | ICCID/IMSI/SPN/servicebits, expliciete bestanden/records, PIN-budgetten, geverifieerde writes, standalone/gekoppelde USIM-contactuitlezing, EXT-nummers en SMS-tekst/UDH-codecs. |
+| SIM / USIM | `TSimCardReaderWriter` | ICCID/IMSI/SPN/servicebits, expliciete bestanden/records, PIN-budgetten, geverifieerde writes, standalone/gekoppelde USIM-contactuitlezing, EXT-nummers en SMS-tekst/UDH-codecs, expliciete segmentsets en EMAIL/ANR-codecs. |
 | Tools | Losse codecs en catalogs | APDU, ATR, BER-TLV, hex/bytes, MRZ, NDEF, magstripe-pariteit/LRC en ATR/EMV-metadata. |
 
 **Schrijfcontrole:** MSR206/MSR605-programmering levert apparaatstatus; MSR206-7HL

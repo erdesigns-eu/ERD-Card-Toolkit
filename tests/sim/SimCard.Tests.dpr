@@ -493,10 +493,41 @@ begin
   finally Reader.Free; T := nil; end;
 end;
 
+procedure TestAssembly;
+var Records: TSimRecords; Message: TSimAssembledSms; Anr: TSimPhonebookEntry; Failed: Boolean;
+begin
+  Check(TSimCodec.DecodePhonebookEmail(HexToBytes('610062FFFF0102'),True) = 'a@b','EMAIL with explicit footer');
+  Check(TSimCodec.DecodePhonebookEmail(HexToBytes('610062FFFF'),False) = 'a@b','EMAIL without footer');
+  Anr := TSimCodec.DecodePhonebookAnr(HexToBytes('FF04912143F5FFFFFFFFFFFFFFFFFF0102'),True);
+  Check((Anr.Number = '+12345') and (Length(Anr.Raw) = 17) and (Anr.ExtensionRecord = $FF),'ANR inline number and complete bytes');
+  SetLength(Records,2);
+  Records[1] := TSimCodec.EncodeSms(7,HexToBytes('0041000491214300080A0500037A020100480069'));
+  Records[0] := TSimCodec.EncodeSms(7,HexToBytes('0041000491214300080C0500037A0202004200790065'));
+  Message := TSimCodec.AssembleSms(Records);
+  Check(Message.TextDecoded and (Message.Text = 'HiBye') and (Message.Segments[0].SegmentNumber = 1),'Out-of-order literal SMS assembly');
+  Message.Segments[0].UserData[0] := 0; Check(Records[1][11] = 5,'Assembled buffers independently owned');
+  Records[0] := Copy(Records[1],0,Length(Records[1])); Failed := False;
+  try Message := TSimCodec.AssembleSms(Records); except on E: ESimCardError do Failed := True; end;
+  Check(Failed,'Duplicate SMS segments refused'); SetLength(Records,1); Failed := False;
+  try Message := TSimCodec.AssembleSms(Records); except on E: ESimCardError do Failed := True; end;
+  Check(Failed,'Incomplete SMS refused');
+  SetLength(Records,2); Records[1] := TSimCodec.EncodeSms(7,HexToBytes('0041000491214300080C0500037A0202004200790065'));
+  Records[1][9] := 4; Failed := False;
+  try Message := TSimCodec.AssembleSms(Records); except on E: ESimCardError do Failed := True; end;
+  Check(Failed,'Mixed DCS refused');
+  Records[0] := TSimCodec.EncodeSms(7,HexToBytes('004100049121430004080500037A0201DEAD'));
+  Records[1] := TSimCodec.EncodeSms(7,HexToBytes('004100049121430004080500037A0202BEEF'));
+  Message := TSimCodec.AssembleSms(Records);
+  Check(not Message.TextDecoded and BytesEqual(Message.BinaryPayload,HexToBytes('DEADBEEF')), 'Binary segment assembly strips UDH');
+  Records[1][6] := $22; Failed := False;
+  try Message := TSimCodec.AssembleSms(Records); except on E: ESimCardError do Failed := True; end;
+  Check(Failed,'Mixed recipient refused');
+end;
+
 var I: Integer;
 begin
   try
-    TestLinkedRead(-1,False); TestLinkedRead(-1,True); for I := 0 to 20 do TestLinkedRead(I,True);
+    TestAssembly; TestLinkedRead(-1,False); TestLinkedRead(-1,True); for I := 0 to 20 do TestLinkedRead(I,True);
     TestSmsText; TestLinkedContact; TestPbr; TestCodecs; TestIdentityReads; TestProtectedReadAndDirectory; TestGeometryAndStatusFailures;
     TestWholeFile(-1,False); TestWholeFile(-1,True);
     for I := 0 to 7 do TestWholeFile(I,True);
