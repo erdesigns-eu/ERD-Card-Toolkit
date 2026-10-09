@@ -1,23 +1,23 @@
-# Aangeleverde RFID-readers
+# Supplied RFID readers
 
-Onderzoek op 2026-10-08. Dit beschrijft documentatie en geïmplementeerde
-protocolprofielen; er zijn nog geen fysieke tests met deze modellen uitgevoerd.
+Research dated 2026-10-08. This describes documentation and implemented protocol
+profiles; no physical tests have been performed with these models yet.
 
-| Product | Wat is vastgesteld? | Lezen/schrijven via deze bibliotheek |
+| Product | What has been established? | Reading/writing through this library |
 | --- | --- | --- |
-| [AllesXL 125 kHz EM4100/TK4100 of 13,56 MHz S50/S70](https://allesxl.com/products/rfid-lezer-usb-poort-em4100-tk4100-125-khz-id-ic-13-56-mhz-s-2) | Producttekst zegt: kaart op de lezer leggen, kaartnummer verschijnt in Notepad/Word. Geen geheugen-/schrijfcommando's gedocumenteerd. | De nieuwe keyboard-invoercomponent kan het aangeboden nummer verwerken, met het werkelijk ingestelde format. Geen geheugen lezen/schrijven geclaimd. |
-| [ELATEC TWN4 via PPC](https://www.ppc.nl/merken/elatec1616581178/elatec-twn4-multitech-2/) | Configureerbare readerfamilie; de gelinkte pagina betreft een HF-variant. ELATEC Simple Protocol beschrijft expliciete geheugencommando's via PRS-firmware en USB-CDC/serieel. | Keyboard-invoer in keyboardmodus; nieuw TWN4-profiel voor Classic-blokken en publieke Ultralight/EV1/NTAG-pagina's via geschikte PRS/CDC-firmware. Niet universeel via keyboard HID. |
-| [Amazon EM4100, B0FVM3Z3K4](https://www.amazon.com.be/dp/B0FVM3Z3K4) | Amazon gaf HTTP 503; titel/URL noemt een EM4100-lezer. Geen verifieerbare schrijfinterface of commandomanual verkregen. | Keyboard-invoer is bruikbaar als dit apparaat werkelijk tekst typt. Geen bevestigde memory/writerondersteuning. |
-| [Amazon HVLOSNE, B0GWR2SDBX](https://www.amazon.com.be/dp/B0GWR2SDBX) | Amazon gaf HTTP 503; titel/URL is onvoldoende om interface, chipfuncties of commando's vast te stellen. | Exact apparaatgedrag/protocol blijft te controleren. Geen geheugen-/schrijffunctie geclaimd op basis van de productnaam. |
+| [AllesXL 125 kHz EM4100/TK4100 or 13.56 MHz S50/S70](https://allesxl.com/products/rfid-lezer-usb-poort-em4100-tk4100-125-khz-id-ic-13-56-mhz-s-2) | Product text says: place the card on the reader and the card number appears in Notepad/Word. No memory/write commands are documented. | The new keyboard-input component can process the offered number, using the actually configured format. No memory reading/writing is claimed. |
+| [ELATEC TWN4 via PPC](https://www.ppc.nl/merken/elatec1616581178/elatec-twn4-multitech-2/) | Configurable reader family; the linked page is for an HF variant. ELATEC Simple Protocol describes explicit memory commands through PRS firmware and USB-CDC/serial. | Keyboard input in keyboard mode; new TWN4 profile for Classic blocks and public Ultralight/EV1/NTAG pages through suitable PRS/CDC firmware. Not universal through keyboard HID. |
+| [Amazon EM4100, B0FVM3Z3K4](https://www.amazon.com.be/dp/B0FVM3Z3K4) | Amazon returned HTTP 503; the title/URL names an EM4100 reader. No verifiable write interface or command manual was obtained. | Keyboard input is usable if this device really types text. No confirmed memory/writer support. |
+| [Amazon HVLOSNE, B0GWR2SDBX](https://www.amazon.com.be/dp/B0GWR2SDBX) | Amazon returned HTTP 503; the title/URL is insufficient to establish the interface, chip functions or commands. | Exact device behavior/protocol still needs to be checked. No memory/write function is claimed based on the product name. |
 
-**HID is een transportklasse, geen standaard kaartgeheugenprotocol.** Standaard
-keyboard-outputreports bedienen bijvoorbeeld LED-status; het zijn geen card-write
-commando's. Een reader die alleen een nummer typt krijgt geen RF-schrijfvermogen
-door een extra encoder of HID-reportprofiel. EM4100/TK4100-identificatietags zijn
-geen algemeen beschrijfbaar gebruikersgeheugen; geschikte programmeerbare
-vervangers vereisen zowel een schrijvende reader als hun eigen chipprotocol.
+**HID is a transport class, not a standard card-memory protocol.** Standard
+keyboard output reports control LED status, for example; they are not card-write
+commands. A reader that only types a number does not gain RF write capability
+from an extra encoder or HID report profile. EM4100/TK4100 identification tags
+are not general writable user memory; suitable programmable replacements require
+both a writing reader and their own chip protocol.
 
-Er is geen automatische firmwarewisseling toegevoegd. Voor TWN4 moet de juiste
-PRS/CDC-configuratie al aanwezig zijn. Andere vendor-HID memory/writerprofielen
-kunnen worden toegevoegd zodra hun echte commandoprotocol beschikbaar is.
-Zie [keyboard/reportprofielen](RFID_HID.md) en [het concrete TWN4-profiel](TWN4.md).
+No automatic firmware switch has been added. For TWN4, the correct PRS/CDC
+configuration must already be present. Other vendor-HID memory/writer profiles
+can be added once their real command protocol is available. See
+[keyboard/report profiles](RFID_HID.md) and [the concrete TWN4 profile](TWN4.md).

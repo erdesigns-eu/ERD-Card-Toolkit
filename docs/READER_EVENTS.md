@@ -1,30 +1,33 @@
-# Reader- en kaart-events
+# Reader and card events
 
-Voor eventgedreven applicaties zijn er drie inactief aangemaakte palettecomponenten.
-Events, configuratie en Start/Stop horen op de hoofdthread. Geen constructor opent
-hardware, start een thread of maakt een verborgen Windows-window.
+Event-driven applications can use the inactive, non-visual palette components
+below. Configure events and properties, and call `Start`/`Stop`, on the main
+thread. No constructor opens hardware, starts a thread, or creates a hidden
+Windows window.
 
-| Component | Startpunt | Events |
+| Component | Entry point | Events |
 | --- | --- | --- |
-| `TSmartCardMonitor` (`ERD.Card.PCSC.Monitor`) | `Start`; geen readerselectie nodig | `OnReaderAdded`, `OnReaderRemoved`, `OnCardInserted`, `OnCardRemoved`, `OnStateChanged`, `OnError` |
-| `THidDeviceMonitor` (`ERD.Card.HID.Monitor`) | `Start`; native Windows-device-notificaties | `OnDeviceAdded`, `OnDeviceRemoved` met exact HID-interfacepad |
-| `TUsbHidInputMonitor` (`ERD.Card.HID.Monitor`) | `Device` instellen, daarna `Start` | `OnInputReport`, `OnError` |
+| `TSmartCardMonitor` (`ERD.Card.PCSC.Monitor`) | `Start`; no reader selection required | `OnReaderAdded`, `OnReaderRemoved`, `OnCardInserted`, `OnCardRemoved`, `OnStateChanged`, `OnError` |
+| `TSmartCardReader` (`ERD.Card.PCSC.Reader`) | Set `ReaderName`, then `StartEventMonitoring`; `StartMonitoring`/`PollChanges` remains available for manual polling | `OnReaderAdded`, `OnReaderRemoved`, `OnCardInserted`, `OnCardRemoved`, `OnCardStateChange`, `OnMonitorError` |
+| `THidDeviceMonitor` (`ERD.Card.HID.Monitor`) | `Start`; native Windows device notifications | `OnDeviceAdded`, `OnDeviceRemoved` with the exact HID interface path |
+| `TUsbHidInputMonitor` (`ERD.Card.HID.Monitor`) | Set `Device`, then `Start` | `OnInputReport`, `OnError` |
 
 ## PC/SC
 
-De monitor gebruikt een eigen PC/SC-context en één native `SCardGetStatusChangeW`
-voor alle readers plus de PnP-notificatiereader. De eindige 250-ms wachttijd maakt
-stoppen mogelijk als annulering net vóór een wait valt. Timeouts veroorzaken geen
-reader-inventorypolling. Alleen bij starten of een PnP-wijziging wordt de readerlijst
-opnieuw gelezen. Ook starten zonder aangesloten reader werkt.
+The monitor uses its own PC/SC context and one native `SCardGetStatusChangeW`
+wait for all readers plus the PnP notification reader. The finite 250 ms wait
+lets stopping complete if cancellation falls just before a wait. Timeouts do not
+cause reader-inventory polling. The reader list is read again only at startup or
+when PnP changes. Starting with no connected reader also works.
 
-`EmitInitialState=True` meldt bestaande readers en aangeboden kaarten bij starten.
-Met `False` vormt de eerste waarneming de uitgangssituatie, zonder initiële events.
-Een verdwenen reader veroorzaakt eerst kaartverwijdering als daarin een kaart zat.
-Kaartverwijdering levert de laatst bekende snapshot, inclusief ATR; `OnStateChanged`
-levert de nieuw waargenomen status. Ook een native tellerwijziging of een andere
-ATR bij blijvende present-status kan een waargenomen kaartvervanging melden.
-De monitor gebruikt geen kaartverbindingen of APDU's, wijzigt niets en kiest geen reader.
+`EmitInitialState=True` reports existing readers and presented cards at startup.
+With `False`, the first observation becomes the baseline without initial events.
+A reader that disappears first raises card removal when it contained a card.
+Card removal delivers the last known snapshot, including the ATR; `OnStateChanged`
+delivers the newly observed state. A native counter change, or a different ATR
+while the present status remains set, can also report an observed card
+replacement. The monitor does not use card connections or APDUs, changes
+nothing, and selects no reader.
 
 ```pascal
 FMonitor := TSmartCardMonitor.Create(Self);
@@ -32,16 +35,17 @@ FMonitor.OnReaderAdded := ReaderAdded;
 FMonitor.OnReaderRemoved := ReaderRemoved;
 FMonitor.OnCardInserted := CardInserted;
 FMonitor.OnCardRemoved := CardRemoved;
+FMonitor.OnStateChanged := StateChanged;
 FMonitor.OnError := MonitorError;
 FMonitor.Start;
 ```
 
-Handlers voor readers ontvangen `const AReaderName: UnicodeString`; handlers voor
-kaarten ontvangen `const ASnapshot: TPcscReaderSnapshot`, inclusief `ReaderName`,
-ruwe status en een onafhankelijk ATR-buffer. `OnError` ontvangt de oorspronkelijke
-unsigned PC/SC-status of `PcscInternalError` bij een ongeldig backendresultaat/volle queue.
+Reader handlers receive `const AReaderName: UnicodeString`; card handlers receive
+`const ASnapshot: TPcscReaderSnapshot`, including `ReaderName`, the raw state, and
+an independent ATR buffer. `OnError` receives the original unsigned PC/SC status
+or `PcscInternalError` for an invalid backend result or a full queue.
 
-Voor één geselecteerde reader kan ook de bestaande `TSmartCardReader` worden gebruikt:
+For one selected reader, the existing `TSmartCardReader` can also be used:
 
 ```pascal
 FReader.ReaderName := SelectedReader;
@@ -49,28 +53,30 @@ FReader.OnReaderAdded := ReaderAdded;
 FReader.OnReaderRemoved := ReaderRemoved;
 FReader.OnCardInserted := CardInserted;
 FReader.OnCardRemoved := CardRemoved;
+FReader.OnCardStateChange := CardStateChange;
 FReader.OnMonitorError := MonitorError;
 FReader.StartEventMonitoring;
 ```
 
-Reader-events omvatten de volledige inventory; kaart-/state-events gelden alleen voor
-`ReaderName`. `OnCardStateChange` wordt in deze modus automatisch afgeleverd.
-`StopMonitoring` stopt zowel automatische als handmatige observatie.
-De oudere `StartMonitoring`/`PollChanges`-modus blijft bestaan, maar vereist expliciete
-polling. Beide modi kunnen niet tegelijk actief zijn. Connecties en transacties blijven
-onafhankelijk: een event verbindt, herverbindt of leest de kaart niet automatisch.
+Reader events cover the full inventory; card and state events apply only to
+`ReaderName`. `OnCardStateChange` is delivered automatically in this mode.
+`StopMonitoring` stops both automatic and manual observation. The older
+`StartMonitoring`/`PollChanges` mode remains available, but requires explicit
+polling. The two modes cannot be active at the same time. Connections and
+transactions remain independent: an event does not connect, reconnect, or read
+the card automatically.
 
-## USB-HID en RFID
+## USB-HID and RFID
 
-`THidDeviceMonitor` registreert de Windows HID-interfaceklasse via
-`RegisterDeviceNotificationW` en een eigen verborgen window. Geen VID/PID-lijst of
-periodieke enumeratie is nodig. Start meldt alleen nieuwe gebeurtenissen; de bestaande
-inventory vraag je eenmaal op met `EnumerateWindowsHidDevices`. Een apparaat kan
-meerdere HID-collecties hebben en dus meerdere interface-events geven. Native
-hotplug-notificaties vereisen Delphi op Windows; de injecteerbare adapter is ook getest
-zonder Windows. Metadata worden niet verzonnen uit alleen een interfacepad.
+`THidDeviceMonitor` registers the Windows HID interface class through
+`RegisterDeviceNotificationW` and its own hidden window. No VID/PID list or
+periodic enumeration is needed. Starting reports only new events; request the
+existing inventory once with `EnumerateWindowsHidDevices`. A device can have
+multiple HID collections and therefore produce multiple interface events. Native
+hotplug notifications require Delphi on Windows; the injectable adapter is also
+tested without Windows. Metadata is not invented from an interface path alone.
 
-Voor doorlopende read-only input:
+For continuous read-only input:
 
 ```pascal
 FInput := TUsbHidInputMonitor.Create(Self);
@@ -80,45 +86,51 @@ FInput.OnError := InputError;
 FInput.Start;
 ```
 
-De worker opent de expliciet gekozen collectie één keer, leest complete interruptreports
-met een eindige wachttijd en sluit bij stoppen/falen. Reports bevatten de Windows-ID-byte;
-ze worden niet op een willekeurig ID gefilterd of als een kaartprotocol geïnterpreteerd.
-Alleen `EHidReceiveTimeout` na voltooide annulering is een normale vervolg-wachttoestand.
-Andere fouten stoppen de listener, sluiten de device en leveren één gesaniteerd `OnError`.
-Er worden geen output-/featurecommando's gestuurd of automatisch herhaald.
+The worker opens the explicitly chosen collection once, reads complete interrupt
+reports with a finite timeout, and closes on stop or failure. Reports contain the
+Windows ID byte; they are not filtered by an arbitrary ID or interpreted as a
+card protocol. Only `EHidReceiveTimeout` after completed cancellation is a normal
+follow-up wait condition. Other errors stop the listener, close the device, and
+deliver one sanitized `OnError`. No output or feature commands are sent or
+retried automatically.
 
-Een handler kan `TRfidHidReportReader.FeedReport(AReport, GetTickCount64)` aanroepen
-als de reports bij zijn expliciete decoderprofiel passen. De decoder meldt complete
-identifiers via `OnIdentifier`. Voor keyboard-wedge readers blijft
-`TRfidKeyboardReader.FeedCharacter` plus `OnIdentifier` bruikbaar. Windows kan
-keyboard-collecties exclusief bezetten; native reporttoegang is dan niet beschikbaar.
+A handler can call `TRfidHidReportReader.FeedReport(AReport, GetTickCount64)`
+when the reports match its explicit decoder profile. The decoder reports complete
+identifiers through `OnIdentifier`. For keyboard-wedge readers,
+`TRfidKeyboardReader.FeedCharacter` plus `OnIdentifier` remains usable. Windows
+can own keyboard collections exclusively; native report access is then
+unavailable.
 
-Een HID-apparaat verwijderen is geen fysieke kaartverwijdering. Gewone keyboard-/ID-
-readers leveren vaak alleen de gelezen ID; daaruit volgt geen aanwezigheidssensor.
-Kaartverwijdering kan alleen met een readerprotocol dat die informatie werkelijk geeft.
-PC/SC biedt kaart-events als de betreffende driver die toestand rapporteert.
+Removing a HID device is not physical card removal. Ordinary keyboard/ID readers
+often provide only the read ID; that does not imply a presence sensor. Card
+removal is available only with a reader protocol that actually supplies that
+information. PC/SC provides card events when the relevant driver reports that
+state.
 
-## Aflevering en levenscyclus
+## Delivery and lifecycle
 
-PC/SC- en inputreport-workers leveren hun events met `TThread.Queue` op de hoofdthread.
-Een VCL-message-loop verzorgt dat automatisch. Console-/servicehosts gebruiken de
-standaard RTL-dispatcher `CheckSynchronize`; er is geen eigen readerpolling nodig.
-HID-hotplug-events komen rechtstreeks via het owner-thread-window.
+PC/SC and input-report workers deliver their events on the main thread with
+`TThread.Queue`. A VCL message loop handles that automatically. Console and
+service hosts use the standard RTL dispatcher `CheckSynchronize`; no custom
+reader polling is needed. HID hotplug events arrive directly through the owner
+thread window.
 
-`Stop` is herhaalbaar: eerst worden pending callbacks ongeldig gemaakt, daarna wordt
-het wachten gestopt, de worker gejoined en zijn context/device vrijgegeven. Een handler
-mag de monitor stoppen of vrijgeven; overige events uit dezelfde batch worden dan
-weggegooid. Terminale workerfouten stoppen vóór het error-event. Herstarten is een
-expliciete applicatiekeuze. De queues bewaren maximaal 1024 meldingen; een volle queue
-wordt een terminale fout, zonder onbegrensd geheugen of stil verlies van gebeurtenissen.
-Eventhandler-exceptions worden niet verborgen; behandel fouten in je eigen handlers.
+`Stop` is repeatable: first pending callbacks are invalidated, then waiting is
+stopped, the worker is joined, and its context or device is released. A handler
+may stop or free the monitor; remaining events from the same batch are then
+discarded. Terminal worker failures stop before the error event. Restarting is
+an explicit application choice. The queues keep at most 1024 notifications; a
+full queue becomes a terminal error, without unbounded memory growth or silent
+event loss. Event-handler exceptions are not hidden; handle errors in your own
+handlers.
 
-Waarnemingen volgen de driver: zeer korte tussenliggende overgangen kunnen ontbreken.
-Gebruik kaart-events om werk te starten, maar voer blokkerende kaartoperaties in een
-worker uit. Alleen PC/SC en HID worden hier gemonitord; willekeurige COM-readers krijgen
-geen verzonnen kaartaanbiedingsprotocol.
+Observations follow the driver: very short intermediate transitions can be
+missed. Use card events to start work, but run blocking card operations in a
+worker. Only PC/SC and HID are monitored here; arbitrary COM readers do not get a
+fictional card-presentation protocol.
 
-ReaderToolsDemo en UsbHidDemo hebben elk eigen DFM-knoppen en een apart eventlog.
-ReaderToolsDemo werkt zijn readerkeuze bij via hotplug-events; UsbHidDemo ververst
-metadata na een hotplugmelding zodra zijn eventuele operatie/inputlistener is gestopt.
-Geen van beide verbindt of schrijft automatisch bij een event.
+ReaderToolsDemo and UsbHidDemo each have their own DFM buttons and a separate
+event log. ReaderToolsDemo updates its reader selection through hotplug events;
+UsbHidDemo refreshes metadata after a hotplug notification once any operation or
+input listener has stopped. Neither demo connects or writes automatically on an
+event.

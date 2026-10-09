@@ -110,6 +110,11 @@ These rules apply to every component and are worth knowing before you start:
 
 ## Getting started
 
+New to the library? [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) walks
+through a first VCL application step by step. It covers which components to drop,
+which events to handle, how to keep card I/O off the UI thread, and short recipes
+for every card family.
+
 ### Option 1: use the sources directly
 
 Add the `src` sub-directories you need to your project's unit search path. Most
@@ -472,11 +477,12 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 
 **Setup and project**
 
+- [Getting started: your first application](docs/GETTING_STARTED.md)
 - [Installation and packages](docs/INSTALLATION.md)
 - [VCL demos and smoke tests](docs/VCL_DEMOS.md) · [VCL coverage](docs/VCL_COVERAGE.md)
 - [Validation record](docs/VALIDATION.md) · [Hardware matrix](docs/HARDWARE_MATRIX.md)
 - [Component plan and roadmap](docs/COMPONENT_PLAN.md) · [Payments (deferred)](docs/PAYMENTS.md)
-- [API documentation standard](docs/API_DOCUMENTATION.md) · [Known Delphi issues](docs/DELPHI_PROBLEMEN.md) · [Legacy cleanup](docs/LEGACY_CLEANUP.md)
+- [API documentation standard](docs/API_DOCUMENTATION.md) · [Known Delphi issues](docs/DELPHI_ISSUES.md) · [Legacy cleanup](docs/LEGACY_CLEANUP.md)
 
 **Core and readers**
 
@@ -493,6 +499,3 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 - [Programmable UIDs](docs/PROGRAMMABLE_UID.md) · [Raw UID](docs/RAW_UID.md) · [Gen3/Gen4](docs/GEN3_GEN4_UID.md) · [USCUID/FUID](docs/USCUID_FUID.md) · [Gen1b/partial](docs/GEN1B_PARTIAL_UID.md)
 - [Contact memory cards](docs/MEMORY_CARDS.md) · [SLE4404](docs/SLE4404.md) · [SIM / USIM](docs/SIM.md)
 - [Magnetic stripe](docs/MAGSTRIPE.md) · [MSR206/MSR605](docs/MSR206.md) · [MSR206-7HL](docs/MSR206_7HL.md)
-
-Some guides (events, SIM, MOBIB, VCL coverage, RFID reader models, Delphi issues)
-are still partly in Dutch.

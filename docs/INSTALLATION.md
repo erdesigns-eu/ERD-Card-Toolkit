@@ -70,12 +70,14 @@ Add the matching DCP/DCU directories or source directories to the IDE library pa
 for projects that use installed components. Never add `tests/design` to this path:
 its `DesignIntf` unit is a headless FPC test shim.
 
-The `ERD Cards` palette contains `TSmartCardReader`, `TBelgianEIDReader`,
-`TICAODocumentReader`, `TEMVCardReader`, `TMagStripeReaderWriter`, `TMemoryCardReaderWriter`, `TSleCounterCardReaderWriter` `TSle4404CardReaderWriter` and `TSimCardReaderWriter`.
-`ERD Input` contains `TRfidKeyboardReader`, `TRfidHidReportReader`, `TUsbHidReaderWriter` and `TTwn4CardReaderWriter`.
-`ERD Contactless` contains `TContactlessCardReader`, `TType2NdefCardReader`,
-`TType4NdefCardReader`, `TIso15693CardReader`, `TType5NdefCardReader`,
-`TDesfireCardReader`, `TType2PasswordCardReader` and `TRawUidProgrammer`.
+The design package registers 25 components on three palette pages:
+
+| Palette page | Components |
+| --- | --- |
+| `ERD Cards` | `TSmartCardMonitor`, `TSmartCardReader`, `TBelgianEIDReader`, `TICAODocumentReader`, `TSimCardReaderWriter`, `TEMVCardReader`, `TMagStripeReaderWriter`, `TMemoryCardReaderWriter`, `TSleCounterCardReaderWriter`, `TSle4404CardReaderWriter` |
+| `ERD Input` | `THidDeviceMonitor`, `TUsbHidInputMonitor`, `TRfidKeyboardReader`, `TRfidHidReportReader`, `TUsbHidReaderWriter`, `TTwn4CardReaderWriter` |
+| `ERD Contactless` | `TCalypsoCardReader`, `TContactlessCardReader`, `TType2NdefCardReader`, `TType4NdefCardReader`, `TIso15693CardReader`, `TType5NdefCardReader`, `TDesfireCardReader`, `TType2PasswordCardReader`, `TRawUidProgrammer` |
+
 Default IDE component icons are used. The optional cryptographic backends are
 interface providers rather than palette components, so the design package does
 not depend on or load them.
@@ -100,7 +102,8 @@ dropped on a form is not made thread-safe by its presence on the palette.
 If you use runtime packages in a deployed application, enable its matching runtime
 package list and deploy those BPLs plus their transitive dependencies. The supplied
 VCL demos link source statically and do not need palette installation or ERD BPLs.
-See [VCL_DEMOS.md](VCL_DEMOS.md) for building and smoke testing them.
+See [VCL_DEMOS.md](VCL_DEMOS.md) for building and smoke testing them, and
+[GETTING_STARTED.md](GETTING_STARTED.md) for using the components in a new application.
 
 ## Retesting the reported IDE package crash
 
