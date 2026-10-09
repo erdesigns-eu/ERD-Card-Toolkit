@@ -18,7 +18,7 @@ Beoogd platform: **Delphi 10.4+, Windows Win32/Win64**.
 | EMV | `TEMVCardReader` | PSE/PPSE, PDOL-inspectie, AFL-records en expliciete extra SFI/recordscan; beschikbare PAN, vervaldatum, naam, IBAN, Track 2 en transactielogs. |
 | MIFARE Classic / Type 2 | `TContactlessCardReader`, `TType2PasswordCardReader` | Classic-blokken met aangeleverde sleutels; Ultralight/EV1/NTAG210/212/213/215/216-geheugen en ondersteunde wachtwoordprofielen. |
 | Programmeerbare UID | `TRawUidProgrammer` + UID-methoden van `TContactlessCardReader` | Expliciete Gen1/2/3/4-, UFUID/FUID-, USCUID/GDM- en DirectWrite-profielen. |
-| MOBIB / Calypso | `TCalypsoCardReader` | Logische bestanden/records, eigen FID-plannen, houder/events, versiegebonden abonnementen en tellers; native Calypso-authenticatie via een provisioned SAM (revision 1/2/3/3.2), plus eigen providers. Zie [MOBIB](docs/MOBIB_CALYPSO.md). |
+| MOBIB / Calypso | `TCalypsoCardReader` | Logische bestanden/records, eigen FID-plannen, houder/events, versiegebonden abonnementen en tellers; native activatie-/geldigheids-/zoneregels met expliciete operatorprofielen; native Calypso-authenticatie via een provisioned SAM (revision 1/2/3/3.2), plus eigen providers. Zie [MOBIB](docs/MOBIB_CALYPSO.md). |
 | DESFire | `TDesfireCardReader` | Bestanden lezen/schrijven, EV1/EV2 AES, transacties en applicatie/bestand/sleutel/toegangsbeheer. |
 | NDEF | `TType2NdefCardReader`, `TType4NdefCardReader`, `TType5NdefCardReader` | Publieke NDEF lezen en vervangen met terugleescontrole, binnen het gekozen kaartprofiel. |
 | ISO 15693 | `TIso15693CardReader` | Systeeminformatie en geadresseerde geheugenblokken lezen/schrijven. |
@@ -41,7 +41,7 @@ Lezerondersteuning en kaartondersteuning zijn afzonderlijk: het juiste protocolp
 ## Wat zit er nog niet in?
 
 - **Uitgebreide SIM-diensten:** geen eSIM-provisioning, telefonie/netwerkauthenticatie, SMS-verzending, automatische recordallocatie of nieuw-PIN-bewijs na een cardreset.
-- **Volledige MOBIB-dekking:** het expliciet gekozen netwerkprofiel 056/001 decodeert contractversies 0–4; onbekende versies/codes blijven herkenbaar onbekend. Operatorregels voor activatie, vervaldata en zones zijn niet volledig gepubliceerd. Native beveiligde reads gebruiken een provisioned SAM met geldige sleutels; software-only sleutelcryptografie, encrypted sessions en PKI ontbreken.
+- **Volledige MOBIB-dekking:** het expliciet gekozen netwerkprofiel 056/001 decodeert contractversies 0–4; onbekende versies/codes blijven herkenbaar onbekend. Activatie, vervaldata, kalenderduur, zones en rittentellers kunnen met `TMobibRuleEngine` worden beoordeeld. De juiste operatorprofielen en de koppeling naar aanvullende kaartvelden moeten expliciet worden aangeleverd; volledige ingebouwde De Lijn/STIB/TEC/NMBS-regelsets zijn niet beschikbaar. Native beveiligde reads gebruiken een provisioned SAM met geldige sleutels; software-only sleutelcryptografie, encrypted sessions en PKI ontbreken.
 - **Betalingen:** geen terminal/providerintegratie, betaaltransacties of directe NFC-betaalkernel.
 - **Overige contact-memorychips:** AT88SC/CryptoMemory en andere readerdialecten ontbreken nog. Voor SLE-counterchips ontbreken automatische tellerberekening en geverifieerde personalisatie/code-ontgrendeling.
 - **Universele vendorprotocollen:** native HID-report-I/O is aanwezig; kaartgeheugen/UID-commando’s vereisen het echte readerprotocol. Keyboard-only readers krijgen geen schrijfinterface.

@@ -68,7 +68,7 @@ uses
 {$ELSE}
   System.SysUtils, System.Classes,
 {$ENDIF}
-  ERD.Card.Contactless.Calypso.SAM, ERD.Card.MOBIB.Subscriptions, ERD.Card.MOBIB.Data, ERD.Card.Contactless.Calypso, ERD.Card.EMV.Data, ERD.Card.EMV.Reader, ERD.Card.EID.Data, ERD.Card.EID.Reader,
+  ERD.Card.MOBIB.Rules, ERD.Card.Contactless.Calypso.SAM, ERD.Card.MOBIB.Subscriptions, ERD.Card.MOBIB.Data, ERD.Card.Contactless.Calypso, ERD.Card.EMV.Data, ERD.Card.EMV.Reader, ERD.Card.EID.Data, ERD.Card.EID.Reader,
   ERD.Card.EID.DocumentReader, ERD.Card.EID.ICAO, ERD.Card.Crypto.EAC, ERD.Card.Crypto.EAC.OpenSSL,
   ERD.Card.EID.Access, ERD.Card.Bytes, ERD.Card.APDU, ERD.Card.ATR, ERD.Card.ATR.Catalog,
   ERD.Card.TLV, ERD.Card.EMV.Tags, ERD.Card.Ndef,
@@ -270,6 +270,45 @@ begin Result := EnumerateWindowsHidDevices; end;
 function TNativeHardware.HidDevice(const APath: UnicodeString): IHidReportDevice;
 begin Result := CreateWindowsHidReportDevice(APath); end;
 
+function RuleTimestamp(const Value: UnicodeString; out Stamp: TDateTime): Boolean;
+var Y,M,D,H,N,S,I: Integer; DatePart,TimePart: TDateTime; V:string;
+begin
+ Stamp:=0; V:=Trim(string(Value)); Result:=V<>''; if not Result then Exit;
+ if (Length(V)<>19) or (V[5]<>'-') or (V[8]<>'-') or (V[11]<>' ') or (V[14]<>':') or (V[17]<>':') then Fail;
+ for I:=1 to 19 do if not (I in [5,8,11,14,17]) and not (V[I] in ['0'..'9']) then Fail;
+ if not TryStrToInt(Copy(V,1,4),Y) or not TryStrToInt(Copy(V,6,2),M) or not TryStrToInt(Copy(V,9,2),D) or
+  not TryStrToInt(Copy(V,12,2),H) or not TryStrToInt(Copy(V,15,2),N) or not TryStrToInt(Copy(V,18,2),S) then Fail;
+ if (Y<1900) or (Y>9999) or (M<1) or (M>12) or (D<1) or (D>31) or
+  (H<0) or (H>23) or (N<0) or (N>59) or (S<0) or (S>59) then Fail;
+ if not TryEncodeDate(Y,M,D,DatePart) or not TryEncodeTime(H,N,S,0,TimePart) then Fail;
+ Stamp:=DatePart+TimePart;
+end;
+function RuleZones(const Value: UnicodeString): TMobibZones;
+var List:TStringList; I,N:Integer;
+begin
+ Result:=nil; if Trim(Value)='' then Exit;
+ List:=TStringList.Create;
+ try
+  List.StrictDelimiter:=True; List.Delimiter:=';'; List.DelimitedText:=string(Value);
+  if (List.Count<1) or (List.Count>64) then Fail; SetLength(Result,List.Count);
+  for I:=0 to List.Count-1 do begin
+   if not TryStrToInt(Trim(List[I]),N) or (N<0) or (N>65535) then Fail;
+   Result[I]:=Word(N);
+  end;
+ finally List.Free; end;
+end;
+function RuleCheckName(const Value:TMobibRuleCheck):string;
+begin
+ case Value of mrcNotRequired:Result:='Not required';mrcUnknown:Result:='Unknown';mrcPass:Result:='Pass';mrcFail:Result:='Fail';end;
+end;
+function RuleReasonName(const Value:TMobibRuleReason):string;
+const Names:array[TMobibRuleReason] of string=(
+ 'Profile mismatch','Clock basis mismatch','Missing activation','Not activated',
+ 'Missing contract start','Missing first validation','Missing sale date','Missing exclusive end',
+ 'Missing/unmapped duration','Invalid date window','Before validity start','Expired',
+ 'Missing contract zones','Missing journey zones','Outside permitted zones','Missing trip counter','No remaining trips');
+begin Result:=Names[Value];end;
+
 procedure TFamilyOperations.Execute(const R: TCardDemoRequest; const A: TCardFamilyAction;
   const T: ICardTransport; const C: ITwn4ByteChannel; var D: TCardDemoResult);
 var Hid: TUsbHidReaderWriter; HidHardware: ICardFamilyHidHardware; Devices: THidDevices; Path: UnicodeString;
@@ -280,6 +319,8 @@ var Hid: TUsbHidReaderWriter; HidHardware: ICardFamilyHidHardware; Devices: THid
   Aes: ICardAesProvider; Aid: Cardinal; Settings: TDesfireFileSettings;
   PasswordReader: TType2PasswordCardReader; RawUid: TRawUidProgrammer;
   IsoReader: TIso15693CardReader; Type5: TType5NdefCardReader; IsoSession: IIso15693Session; IsoInfo: TIso15693SystemInfo; Type5Snapshot: TType5NdefSnapshot;
+  Rule: TMobibProductRule; Evidence: TMobibRuleEvidence; Assessment: TMobibRuleAssessment;
+  Subscription: TMobibSubscription; Reason: TMobibRuleReason; Stamp: TDateTime; HasStamp: Boolean;
   SamCla: Byte;
   SamTransport: ICardTransport; SamProvider: ICalypsoSecureSessionProvider;
   Subscriptions: TMobibSubscriptions;
@@ -480,6 +521,47 @@ begin
       end;
       dfMobib:
       begin
+        if A.Id = 'rules' then begin
+          Rule := Default(TMobibProductRule); Evidence := Default(TMobibRuleEvidence);
+          Rule.OperatorId := string(Text(R,A,'operator')); Rule.Source := string(Text(R,A,'source'));
+          Rule.CountryCode := 56; Rule.NetworkCode := 1; Rule.MaxVersion := 4;
+          Id := Bytes(R,A,'tariff'); if Length(Id) <> 2 then Fail; Rule.Tariff := (Word(Id[0]) shl 8) or Id[1];
+          Rule.ClockBasis := TMobibClockBasis(Number(R,A,'clock',0,1));
+          Rule.ActivationSource := TMobibActivationSource(Number(R,A,'activation',0,3));
+          Rule.DurationUnit := TMobibDurationUnit(Number(R,A,'duration',0,5)+1);
+          Rule.DurationAmount := Cardinal(Number(R,A,'amount',0,1000000));
+          Rule.EndFromMidnight := Number(R,A,'midnight',0,1)=1;
+          if Trim(Text(R,A,'zones'))='*' then Rule.ZoneMode := mzmUnrestricted
+          else if Trim(Text(R,A,'zones'))='' then Rule.ZoneMode := mzmContractSet
+          else begin Rule.ZoneMode := mzmPolicySet; Rule.Zones := RuleZones(Text(R,A,'zones')); end;
+          Rule.RequireRemainingTrip := Number(R,A,'requiretrips',0,1)=0;
+          Evidence.OperatorId := Rule.OperatorId; Evidence.CountryCode := 56; Evidence.NetworkCode := 1;
+          Evidence.ClockBasis := Rule.ClockBasis; if not RuleTimestamp(Text(R,A,'now'),Evidence.Now) then Fail;
+          Evidence.ActivationState := TMobibActivationState(Number(R,A,'state',0,2));
+          Evidence.HasEnd := RuleTimestamp(Text(R,A,'end'),Evidence.EndTime);
+          HasStamp := RuleTimestamp(Text(R,A,'anchor'),Stamp);
+          case Rule.ActivationSource of
+            mavExplicitStart: begin Evidence.HasStart := HasStamp; Evidence.Start := Stamp; end;
+            mavActivation: begin Evidence.HasActivationTime := HasStamp; Evidence.ActivationTime := Stamp; end;
+            mavFirstValidation: begin Evidence.HasFirstValidation := HasStamp; Evidence.FirstValidation := Stamp; end;
+            mavSaleDate: if HasStamp then Fail;
+          end;
+          Evidence.JourneyZones := RuleZones(Text(R,A,'journeyzones')); Evidence.HasJourneyZones := Length(Evidence.JourneyZones)>0;
+          Count := 0; HasStamp := Trim(Text(R,A,'trips'))<>'';
+          if HasStamp then Count := Number(R,A,'trips',0,$FFFFFF);
+          Subscription := TMobibSubscriptionCodec.Decode(Bytes(R,A,'contract'),Byte(Number(R,A,'record',1,255)),HasStamp,Cardinal(Count));
+          Assessment := TMobibRuleEngine.Evaluate(Rule,Subscription,Evidence);
+          case Assessment.Verdict of
+            mrvUnknown: Output := 'Unknown under supplied policy';
+            mrvEligible: Output := 'Eligible under supplied policy';
+            mrvIneligible: Output := 'Ineligible under supplied policy';
+          end;
+          Output := Output+sLineBreak+'Manual rule source: '+Rule.Source+sLineBreak+'Read-only assessment; no issuer authorization.'+sLineBreak;
+          Output := Output+'Profile: '+RuleCheckName(Assessment.Profile)+'; activation: '+RuleCheckName(Assessment.Activation)+'; validity: '+RuleCheckName(Assessment.Validity)+'; zones: '+RuleCheckName(Assessment.Zones)+'; trips: '+RuleCheckName(Assessment.Trips)+sLineBreak;
+          if Assessment.HasStart then Output := Output+'Inclusive start: '+FormatDateTime('yyyy-mm-dd hh:nn:ss',Assessment.Start)+sLineBreak;
+          if Assessment.HasEnd then Output := Output+'Exclusive end: '+FormatDateTime('yyyy-mm-dd hh:nn:ss',Assessment.EndTime)+sLineBreak;
+          for Reason := Low(TMobibRuleReason) to High(TMobibRuleReason) do if Reason in Assessment.Reasons then Output := Output+RuleReasonName(Reason)+sLineBreak;
+        end else begin
         Calypso := TCalypsoCardReader.Create(nil);
         try
           Calypso.Transport := T; Calypso.Dialect := TCalypsoDialect(Number(R,A,'dialect',0,1));
@@ -545,6 +627,7 @@ begin
             end;
           end;
         finally Calypso.Free; end;
+        end;
       end;
       dfEmv:
       begin

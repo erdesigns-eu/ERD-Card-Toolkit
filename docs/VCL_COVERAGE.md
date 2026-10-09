@@ -27,7 +27,7 @@ buiten deze componentset.
 | DesfireDemo | Public/EV1/EV2 AES, directories/data/values/records, standard writes, backup/value/record-transacties met commit/abort, applicatie/bestand/key/access-beheer |
 | MagStripeProfilesDemo | Track-bit/parity/LRC en financial decoders, MagTek keyboard/HID, MSR206/MSR605 reads en status-only all-track programming |
 | EmvDemo | PSE/PPSE, PDOL-inspectie, explicit AID/terminal values, GPO/AFL-records plus begrensde extra SFI/recordscan, zichtbare raw records/statussen, GET DATA, advertised logs, DOL/log decoders en exacte exports |
-| MobibDemo | Calypso legacy-94/revision-3-00, MOBIB-bestandenprofiel en eigen FID-plan, expliciete FID/recorduitlezing, houder/events, abonnementversies 0–4 met tarief/prijs/duur/tellertoewijzing, native SAM-authenticatie met twee readerkeuzes, raw data/status/truncatie en exacte exports; geen gegokte operatorregels |
+| MobibDemo | Calypso legacy-94/revision-3-00, MOBIB-bestandenprofiel en eigen FID-plan, expliciete FID/recorduitlezing, houder/events, abonnementversies 0–4 met tarief/prijs/duur/tellertoewijzing, native SAM-authenticatie met twee readerkeuzes, offline activatie-/geldigheids-/zonebeoordeling met expliciet sourced profiel, raw data/status/truncatie en exacte exports; geen impliciete issuerregels |
 | BelgianEidDemo | Alle publieke sections, identiteit/adres, JPEG, RAW/DER-certificaten en ruwe handtekeningen exporteren |
 | IcaoDocumentDemo | BAC/PACE met MRZ/CAN/curve/provider, alle documentsections/face images, CardAccess/DG1/DG2/COM/SOD-export, JPEG-preview en JPEG2000-export |
 

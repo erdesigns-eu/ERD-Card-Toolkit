@@ -338,7 +338,7 @@ are reported, while unexpected failures abort. This does not guarantee every
 issuer record is accessible. The range can be increased within component bounds.
 
 MobibDemo is a separate designer form with its own PC/SC dropdown, explicit
-Calypso dialect/record length and bound. Its three actions read the MOBIB
+Calypso dialect/record length and bound. Its three hardware actions read the MOBIB
 file plan (editable FIDs), one caller-specified logical file, or one authenticated
 logical file through a separately selected provisioned SAM. The SAM dropdown
 is populated from the same in-demo PC/SC discovery. Both connections run in the worker. An explicit layout
@@ -352,3 +352,14 @@ for the concrete files, status behavior, parsed fields, secure-provider integrat
 
 The project group's Build/Make/Clean aggregates cover all twenty-one applications,
 including the new project; the standalone build script includes it too.
+
+
+MobibDemo also has a fourth independent DFM page for offline operator-rule
+assessment. It accepts complete decoded-layout contract bytes, exact policy
+tariff/operator/source, explicit clock and time, activation evidence, inclusive
+start/exclusive end or fixed elapsed/calendar duration, allowed/requested zones
+and an acquired trip counter. No reader connection is acquired for this action.
+Blank zone policy means unknown contract zones; `*` explicitly means unrestricted.
+It prints each independent check and reason plus resolved dates, without claiming
+issuer authorization. See [MOBIB_CALYPSO.md](MOBIB_CALYPSO.md) for the native API,
+clock domains, contract-duration mappings and application-supplied rule profiles.

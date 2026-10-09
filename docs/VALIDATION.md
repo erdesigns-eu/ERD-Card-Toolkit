@@ -582,3 +582,47 @@ All **36 Python regressions** and **21 source-aware Pascal checkers** pass on
 21 independent DFM forms**, including the new SAM selector and package source
 closure. English public XML documentation coverage: **1,929 production and
 2,461 VCL declarations**, zero findings. Native project BOM/CRLF conventions remain intact.
+
+
+## Native MOBIB operator-rule assessment
+
+`TMobibRuleEngine` now evaluates explicitly supplied product policies against
+versioned subscriptions and acquired evidence. Exact operator/network/tariff/
+version matching precedes all policy checks. Inclusive start and exclusive end
+can come from explicit validity dates, known activation, contract-specific first
+use or an explicitly sale-based policy. UTC elapsed minutes/hours, operator-local
+calendar days/months/years, midnight-aligned ends and explicit contract-duration
+unit maps are implemented. Gregorian target-month clamping handles leap years.
+
+Fixed or decoded-contract zone sets require every requested journey zone to
+match. An optional remaining-trip condition assesses starting a new journey.
+Independent checks retain unknown evidence separately from proved failures;
+known matched failures dominate unknown conditions, including a future start
+without an end or a past end without a start. Unmatched profiles never evaluate
+as eligible. The engine never acquires a reader, reads a system clock, infers
+card-field meanings or installs an implicit issuer profile.
+
+**1,282 rule-engine assertions** cover temporal boundaries, activation states,
+missing versus invalid evidence, all four duration codes, a Gregorian 400-year
+month-clamping sweep, leap-year and midnight cases, clock-domain mismatch,
+profile identity/version matching, zone subsets, missing/zero trips, invalid
+configuration, nonfinite dates and independent failure precedence.
+
+MobibDemo adds a fourth, independent designer page for offline policy assessment,
+with explicit rule source, acquired timestamps, duration semantics, journey zones
+and counters. Blank zone policy remains unknown; unrestricted zones require an
+explicit `*`. **2,051 family-executor assertions** include actual rule evaluation,
+readable source/check/reason/date output, no card/SAM acquisition, malformed
+civil-date rejection and rejection of nondecimal timestamp fields.
+
+Final full FPC suite: **2,162,713 assertions across 46 configurations**.
+All **36 Python regressions** and **21 source-aware Pascal checkers** pass on
+**179 sources**. Distribution checks pass for **34 projects, two groups and
+21 independent DFM forms**, with runtime/design package source closure and native
+BOM/CRLF conventions preserved. Public English XML documentation covers
+**2,036 production and 2,499 VCL declarations**, with zero findings.
+
+These are native policy mechanics with application-supplied, sourced rules.
+Complete automatic De Lijn/STIB/TEC/NMBS card-field mappings and issuer product
+profiles are not claimed. Public product terms alone do not define the missing
+card bytes; operator-specific activation/zone decoders must supply that evidence.

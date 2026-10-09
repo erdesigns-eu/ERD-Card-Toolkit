@@ -186,13 +186,118 @@ of beveiligde tellers blijven afwezig. De prijs is eurocenten van de aankoop,
 geen elektronisch saldo. `HasSaleDate`, `HasDuration`, `HasCounter` en
 `HasRemainingTrips` onderscheiden een echte nul van ontbrekende informatie.
 
-Dit vult de eerder ontbrekende getypeerde abonnementgegevens aan, maar vormt
-geen universele issuer-entitlement-engine. De openbare layout geeft geen
-betrouwbare activatie-/einddatum of volledige De Lijn/STIB/TEC/NMBS-productcatalogus.
-Daarom wordt een aankoopdatum niet tot startdatum gemaakt en worden duurunits,
-zones en operatorregels niet gegokt. De applicatie kan aanvullende officiële
-operatorregels toepassen op de bewaarde velden/bytes. Kaartauthenticatie bewijst
-ook niet op zichzelf dat een abonnement vandaag geldig is.
+## Native operatorregels: activatie, geldigheid en zones
+
+`ERD.Card.MOBIB.Rules` bevat `TMobibRuleEngine`. Dit is uitvoerbare, offline
+Delphi-logica; het hoeft geen externe SDK aan te roepen om de voorwaarden te
+beoordelen. Een applicatie geeft een **expliciet productprofiel**
+(`TMobibProductRule`) en de beschikbare gegevens (`TMobibRuleEvidence`) door.
+
+| Voorwaarde | Ondersteuning |
+| --- | --- |
+| Activatie | Expliciete start, bekende activatietijd, contractgebonden eerste gebruik, of aankoopdatum wanneer het profiel dat expliciet voorschrijft |
+| Geldigheid | Inclusieve start en exclusieve eindtijd; vaste eindtijd of berekende duur |
+| Duur | UTC-minuten/uren; lokale kalenderdagen/maanden/jaren; optioneel een expliciete mapping van de vier contractduurcodes |
+| Kalendergrenzen | Maand/jaren tellen met dag-clamping: 31 januari + één maand eindigt op 28/29 februari; 29 februari + één jaar op 28 februari |
+| Dagtickets | Optioneel de eindtijd berekenen vanaf lokale middernacht; de echte activatiestart blijft behouden |
+| Zones | Expliciet onbeperkt, een vast operatorprofiel-set of een gedecodeerde contract-set; **alle** gevraagde reiszones moeten erin passen |
+| Ritten | Optioneel een positieve resterende-rittenteller vereisen om een nieuwe reis te starten |
+
+Het profiel matcht exact op operator-id, land, netwerk, tariefcode en ondersteunde
+contractversies. `Source` bevat verplicht de bron-/specificatieversie. Netwerk
+056/001 is op zichzelf geen bewijs dat de operator De Lijn of STIB is.
+Er is geen globale impliciete regelkeuze op grond van een productnaam.
+
+`Evaluate` levert afzonderlijke checks en `mrvUnknown`, `mrvEligible` of
+`mrvIneligible`. Een ontbrekende activatietijd, onbekende zone-set of niet-gemapte
+duurcode blijft **onbekend**. Bekend niet-geactiveerd, een verlopen datum,
+verkeerde reiszone of nul resterende ritten geeft een echte afwijzing. Bekende
+fouten domineren ontbrekende informatie: een bekende verlopen einddatum wijst
+af, ook wanneer de startdatum ontbreekt. De redenen blijven afzonderlijk zichtbaar.
+Een tegenstrijdig/ongeldig datumvenster blijft onbekend; inconsistente caller-
+configuratie geeft `EMobibRuleError` zonder kaartdata in de melding.
+
+De aanroeper kiest de klokbasis en levert `Now` expliciet. Verstreken uren zijn
+**UTC**, zodat een zomertijdwissel geen uur toevoegt of verwijdert. Kalenderdagen
+gebruiken **operator-lokale burgerlijke tijd**. De engine converteert niet heimelijk
+tussen tijdzones. Een kalendermaand is geen vaste hoeveelheid dagen; een aankoop-
+datum is geen automatische activatiedatum. Een inclusieve einddag uit een officiële
+layout moet de aanroeper expliciet tot de volgende lokale middernacht omzetten.
+
+Voorbeeld van een **applicatieprofiel**, met gegevens uit de eigen officiële
+operatorspecificatie/decoder; dit voorbeeld is geen ingebouwd vervoerderprofiel:
+
+```pascal
+Rule := Default(TMobibProductRule);
+Rule.OperatorId := OperatorIdFromConfiguration;
+Rule.Source := OperatorSpecificationRevision;
+Rule.CountryCode := 56;
+Rule.NetworkCode := 1;
+Rule.Tariff := TariffFromSpecification;
+Rule.MinVersion := 0;
+Rule.MaxVersion := 4;
+Rule.ClockBasis := mcbOperatorLocal;
+Rule.ActivationSource := mavExplicitStart;
+Rule.DurationUnit := mduCalendarMonths;
+Rule.DurationAmount := 1;
+Rule.ZoneMode := mzmContractSet;
+Rule.RequireRemainingTrip := False;
+
+Evidence := Default(TMobibRuleEvidence);
+Evidence.OperatorId := Rule.OperatorId;
+Evidence.CountryCode := ParsedMobib.CountryCode;
+Evidence.NetworkCode := ParsedMobib.NetworkCode;
+Evidence.ClockBasis := mcbOperatorLocal;
+Evidence.Now := ExplicitOperatorLocalTime;
+Evidence.HasStart := HasDecodedContractStart;
+Evidence.Start := DecodedContractStart;
+Evidence.HasContractZones := HasDecodedContractZones;
+Evidence.ContractZones := DecodedContractZones;
+Evidence.HasJourneyZones := True;
+Evidence.JourneyZones := RequestedJourneyZones;
+
+Assessment := TMobibRuleEngine.Evaluate(Rule, Subscription, Evidence);
+```
+
+`mduExplicitEnd` kan rechtstreeks aangeleverde start/einddata beoordelen, ook
+wanneer een operator ingewikkeldere kalenderregels gebruikt. `mduContractField`
+vereist een expliciete `ContractUnits[0..3]`-mapping; de bestaande twee-bit
+unitcodes worden niet universeel als dagen/maanden uitgelegd. Een mapping mag
+`mduUnknown` bevatten voor niet-bekende codes. Zone-id's zijn expliciete codes;
+een numeriek tussenliggende zone is niet automatisch toegestaan.
+
+### Wat ontbreekt bij automatische operatorprofielen?
+
+De gepubliceerde MOBIB-contractlayout beschrijft tarief, verkoopdatum, prijs en
+sommige duurvelden. Hij beschrijft niet volledig welke bytes bij iedere
+De Lijn/STIB/TEC/NMBS-generatie activatie, einddatum en zonecodes bevatten.
+Publieke commerciële ticketvoorwaarden vullen die kaartveld-layout niet aan.
+Daarom zijn **geen universele officiële operatorprofielen geïnstalleerd**.
+
+De applicatie kan geldige profielen aanleveren en bekende extra velden aan de
+engine doorgeven. Beveiligde bytes kunnen via de SAM-reader worden verworven;
+een operatorgebonden decoder moet hun betekenis volgens de juiste specificatie
+vaststellen. De algemene eventlijst wordt niet gebruikt als vervanging voor de
+eerste validatie van een bepaald contract. Een onbekend veld blijft beschikbaar
+in de raw snapshot zodat een gedocumenteerde decoder het kan verwerken.
+
+`Eligible` betekent dat de aangeleverde voorwaarden passen bij de aangeleverde
+informatie. Het is geen cryptografische authenticiteit, issuer-autorisatie of
+volledige vervoersrechtelijke uitspraak. Overstaprechten, routes, uitzonderingen,
+groepstarieven en backendblokkeringen worden niet uit afwezige gegevens afgeleid.
+Er wordt geen kaart gewijzigd en er wordt geen toegangspoort aangestuurd.
+
+### VCL-voorbeeld
+
+MobibDemo heeft een vierde **eigen DFM-pagina** voor deze offline beoordeling:
+contractbytes, tarief/bron/operator, klokbasis, evaluatietijd, startbron, activatie-
+status, begin/einde, duur, zone-sets en verworven teller. Timestamps gebruiken
+`YYYY-MM-DD hh:mm:ss`; zone-id's zijn gescheiden door `;`.
+
+Bij toegestane zones betekent `*` **expliciet onbeperkt**; een leeg veld betekent
+onbekende contractzones. Een ontbrekend veld wordt dus niet stilzwijgend onbeperkt.
+De pagina toont de gebruikte bron, alle checks, opgeloste datums en afzonderlijke
+redenen. Zij opent geen kaart- of SAM-verbinding en voert geen commando's uit.
 
 ## Protocolbronnen en validatie
 
@@ -216,3 +321,10 @@ transportfouten en cleanup. Abonnementtests omvatten alle 32 presence-bitmaps,
 versies 0–4, onbekende versies, nulwaarden, truncatie en absolute tellertoewijzing.
 De synthetische MAC-waarden testen protocolorkestratie, niet het cryptografische
 binnenwerk van fysieke SAM-hardware; ze certificeren geen fysieke kaartgeneratie.
+
+De regels-engine heeft onafhankelijke boundary-fixtures, een volledige
+Gregorian-400-jaarcontrole voor maandclamping, schrikkeljaar-/middernachtgevallen,
+UTC versus lokale klokvalidatie, exacte profielmatches, alle contractduurcodes,
+zone-subsets, ontbrekende versus nul-tellers en fouten die ontbrekende gegevens
+domineren. De VCL-executor wordt met een geïnjecteerde hardwaregrens getest;
+de offline regels-pagina opent aantoonbaar geen reader.

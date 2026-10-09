@@ -1114,7 +1114,7 @@ begin
     end;
     dfMobib:
     begin
-      SetLength(Result,3);
+      SetLength(Result,4);
       Result[0].Id := 'snapshot'; Result[0].LabelText := 'Read public MOBIB files and records';
       Result[0].Pcsc := True; Result[0].Mutation := False;
       Result[1].Id := 'file'; Result[1].LabelText := 'Read explicit Calypso logical file';
@@ -1163,6 +1163,45 @@ begin
       Result[2].Fields[9].DefaultText := ''; Result[2].Fields[9].Secret := False; Result[2].Fields[9].Choices := '';
       Result[2].Fields[10].Name := 'samclass'; Result[2].Fields[10].LabelText := 'SAM APDU class';
       Result[2].Fields[10].DefaultText := ''; Result[2].Fields[10].Secret := False; Result[2].Fields[10].Choices := '80|94';
+      Result[3].Id := 'rules'; Result[3].LabelText := 'Offline activation / validity / zone assessment with explicit policy';
+      Result[3].Pcsc := False; Result[3].Mutation := False;
+      SetLength(Result[3].Fields,18);
+      Result[3].Fields[0].Name := 'contract'; Result[3].Fields[0].LabelText := 'Complete MOBIB contract record (hex)';
+      Result[3].Fields[0].DefaultText := ''; Result[3].Fields[0].Secret := False; Result[3].Fields[0].Choices := '';
+      Result[3].Fields[1].Name := 'record'; Result[3].Fields[1].LabelText := 'Absolute contract record number';
+      Result[3].Fields[1].DefaultText := '1'; Result[3].Fields[1].Secret := False; Result[3].Fields[1].Choices := '';
+      Result[3].Fields[2].Name := 'tariff'; Result[3].Fields[2].LabelText := 'Policy tariff code (hex)';
+      Result[3].Fields[2].DefaultText := ''; Result[3].Fields[2].Secret := False; Result[3].Fields[2].Choices := '';
+      Result[3].Fields[3].Name := 'operator'; Result[3].Fields[3].LabelText := 'Explicit operator identifier';
+      Result[3].Fields[3].DefaultText := ''; Result[3].Fields[3].Secret := False; Result[3].Fields[3].Choices := '';
+      Result[3].Fields[4].Name := 'source'; Result[3].Fields[4].LabelText := 'Rule source/specification revision (manual profile; no installed issuer rules)';
+      Result[3].Fields[4].DefaultText := ''; Result[3].Fields[4].Secret := False; Result[3].Fields[4].Choices := '';
+      Result[3].Fields[5].Name := 'clock'; Result[3].Fields[5].LabelText := 'Timestamp basis';
+      Result[3].Fields[5].DefaultText := ''; Result[3].Fields[5].Secret := False; Result[3].Fields[5].Choices := 'UTC elapsed time|Operator-local calendar time';
+      Result[3].Fields[6].Name := 'now'; Result[3].Fields[6].LabelText := 'Evaluation timestamp: YYYY-MM-DD hh:mm:ss';
+      Result[3].Fields[6].DefaultText := ''; Result[3].Fields[6].Secret := False; Result[3].Fields[6].Choices := '';
+      Result[3].Fields[7].Name := 'activation'; Result[3].Fields[7].LabelText := 'Policy validity-start source';
+      Result[3].Fields[7].DefaultText := ''; Result[3].Fields[7].Secret := False; Result[3].Fields[7].Choices := 'Explicit contract start|Known activation|Contract first validation|Sale date by explicit policy';
+      Result[3].Fields[8].Name := 'state'; Result[3].Fields[8].LabelText := 'Acquired activation state';
+      Result[3].Fields[8].DefaultText := ''; Result[3].Fields[8].Secret := False; Result[3].Fields[8].Choices := 'Unknown|Explicitly not activated|Activated';
+      Result[3].Fields[9].Name := 'anchor'; Result[3].Fields[9].LabelText := 'Acquired start/activation/first-use timestamp; blank = unknown';
+      Result[3].Fields[9].DefaultText := ''; Result[3].Fields[9].Secret := False; Result[3].Fields[9].Choices := '';
+      Result[3].Fields[10].Name := 'end'; Result[3].Fields[10].LabelText := 'Acquired exclusive end timestamp; blank = unknown';
+      Result[3].Fields[10].DefaultText := ''; Result[3].Fields[10].Secret := False; Result[3].Fields[10].Choices := '';
+      Result[3].Fields[11].Name := 'duration'; Result[3].Fields[11].LabelText := 'Policy duration';
+      Result[3].Fields[11].DefaultText := ''; Result[3].Fields[11].Secret := False; Result[3].Fields[11].Choices := 'Explicit end|UTC minutes|UTC hours|Calendar days|Calendar months|Calendar years';
+      Result[3].Fields[12].Name := 'amount'; Result[3].Fields[12].LabelText := 'Fixed duration amount; zero for explicit-end mode';
+      Result[3].Fields[12].DefaultText := '0'; Result[3].Fields[12].Secret := False; Result[3].Fields[12].Choices := '';
+      Result[3].Fields[13].Name := 'midnight'; Result[3].Fields[13].LabelText := 'Calendar end calculated from start-day midnight';
+      Result[3].Fields[13].DefaultText := ''; Result[3].Fields[13].Secret := False; Result[3].Fields[13].Choices := 'No|Yes';
+      Result[3].Fields[14].Name := 'zones'; Result[3].Fields[14].LabelText := 'Allowed zones: semicolon IDs; * = explicitly unrestricted; blank = unknown';
+      Result[3].Fields[14].DefaultText := ''; Result[3].Fields[14].Secret := False; Result[3].Fields[14].Choices := '';
+      Result[3].Fields[15].Name := 'journeyzones'; Result[3].Fields[15].LabelText := 'All requested journey zone IDs (semicolon-separated)';
+      Result[3].Fields[15].DefaultText := ''; Result[3].Fields[15].Secret := False; Result[3].Fields[15].Choices := '';
+      Result[3].Fields[16].Name := 'requiretrips'; Result[3].Fields[16].LabelText := 'New journey requires remaining trips';
+      Result[3].Fields[16].DefaultText := ''; Result[3].Fields[16].Secret := False; Result[3].Fields[16].Choices := 'Yes|No';
+      Result[3].Fields[17].Name := 'trips'; Result[3].Fields[17].LabelText := 'Acquired associated trip counter; blank = unknown';
+      Result[3].Fields[17].DefaultText := ''; Result[3].Fields[17].Secret := False; Result[3].Fields[17].Choices := '';
     end;
     dfEmv:
     begin

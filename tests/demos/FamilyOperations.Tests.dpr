@@ -543,6 +543,35 @@ begin
 end;
 
 
+procedure TestMobibRulesDemo;
+var R:TCardDemoRequest;D:TCardDemoResult;H:THardware;Hardware:ICardFamilyHardware;Failed:Boolean;
+begin
+ H:=THardware.Create;Hardware:=H;R:=Request(dfMobib,'rules');R.ReaderName:='';
+ Put(R,dfMobib,'contract','000000140180000000000000000E740000000000000000000000000000');Put(R,dfMobib,'tariff','2803');
+ Put(R,dfMobib,'operator','test-operator');Put(R,dfMobib,'source','Synthetic fixture v1');
+ Put(R,dfMobib,'now','2026-03-29 10:00:00');Put(R,dfMobib,'anchor','2026-03-29 10:00:00');
+ Put(R,dfMobib,'duration','2');Put(R,dfMobib,'amount','24');Put(R,dfMobib,'zones','1;2');
+ Put(R,dfMobib,'journeyzones','1');Put(R,dfMobib,'trips','7');
+ CreateCardFamilyOperations(dfMobib,Hardware).Run(R,D);
+ Check(D.Success and (Pos('Eligible under supplied policy',string(D.Text))>0),'Offline rule assessment');
+ Check(Pos('Exclusive end: 2026-03-30 10:00:00',string(D.Text))>0,'Explicit UTC window visible');
+ Check(Pos('Synthetic fixture v1',string(D.Text))>0,'Rule provenance visible');
+ Check((H.Acquires=0) and (H.SamAcquires=0),'Offline rules open neither reader');
+ Put(R,dfMobib,'journeyzones','3');Put(R,dfMobib,'anchor','');
+ CreateCardFamilyOperations(dfMobib,Hardware).Run(R,D);
+ Check(Pos('Ineligible under supplied policy',string(D.Text))>0,'Known zone failure dominates missing start');
+ Check((Pos('Outside permitted zones',string(D.Text))>0) and (Pos('Missing contract start',string(D.Text))>0),'Both independent reasons visible');
+ Put(R,dfMobib,'zones','');CreateCardFamilyOperations(dfMobib,Hardware).Run(R,D);
+ Check(Pos('Unknown under supplied policy',string(D.Text))>0,'Missing operator zones not unrestricted');
+ Put(R,dfMobib,'now','2026-02-30 10:00:00');Failed:=False;
+ try CreateCardFamilyOperations(dfMobib,Hardware).Run(R,D);except on E:EArgumentException do Failed:=True;end;
+ Check(Failed and (H.Acquires=0),'Invalid date rejected offline');
+ Put(R,dfMobib,'now','2026-+1-30 10:00:00');Failed:=False;
+ try CreateCardFamilyOperations(dfMobib,Hardware).Run(R,D);except on E:EArgumentException do Failed:=True;end;
+ Check(Failed and (H.Acquires=0),'Nondecimal ISO date rejected offline');
+ Hardware:=nil;
+end;
+
 procedure TestNativeSamDemo;
 var R: TCardDemoRequest; D: TCardDemoResult; H: THardware; Hardware: ICardFamilyHardware;
  Card,Sam:TScript; CT,ST:ICardTransport; I:Integer; Failed:Boolean;
@@ -681,7 +710,7 @@ end;
 
 begin
   try
-    TestMobibParsedDemo; TestNativeSamDemo; TestRecordAcquisitionDemos; TestNativeHidDemo; TestAdditionalFamilies; TestDocumentAndEmvDemos; TestExtendedSimDemo; TestStorageDemos; TestSimRoutes; TestOffline; TestPreflight; TestCounterAndSleRoutes;
+    TestMobibParsedDemo; TestNativeSamDemo; TestMobibRulesDemo; TestRecordAcquisitionDemos; TestNativeHidDemo; TestAdditionalFamilies; TestDocumentAndEmvDemos; TestExtendedSimDemo; TestStorageDemos; TestSimRoutes; TestOffline; TestPreflight; TestCounterAndSleRoutes;
     TestTwnRoutes(0,False); TestTwnRoutes(1,False); TestTwnRoutes(2,False); TestTwnRoutes(3,False); TestTwnRoutes(3,True);
     TestMemoryWrite(-1,False,False); TestMemoryWrite(6,False,False);
     TestMemoryWrite(7,False,False); TestMemoryWrite(-1,True,False); TestMemoryWrite(-1,False,True);

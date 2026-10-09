@@ -134,6 +134,7 @@
         <DCCReference Include="designide.dcp"/>
         <DCCReference Include="..\..\src\core\ERD.Card.APDU.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Bytes.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Rules.pas" />
         <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Subscriptions.pas" />
         <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Data.pas" />
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Calypso.SAM.pas" />

@@ -35,6 +35,7 @@ requires
   designide;
 
 contains
+  ERD.Card.MOBIB.Rules in '..\..\src\contactless\ERD.Card.MOBIB.Rules.pas',
   ERD.Card.MOBIB.Subscriptions in '..\..\src\contactless\ERD.Card.MOBIB.Subscriptions.pas',
   ERD.Card.MOBIB.Data in '..\..\src\contactless\ERD.Card.MOBIB.Data.pas',
   ERD.Card.Contactless.Calypso.SAM in '..\..\src\contactless\ERD.Card.Contactless.Calypso.SAM.pas',

@@ -561,6 +561,350 @@ object MobibDemoForm: TMobibDemoForm
         end
       end
     end
+    object ActRulesTab: TTabSheet
+      Left = 4
+      Top = 44
+      Width = 1072
+      Height = 438
+      Caption = 'Offline activation / validity / zone assessment with explicit policy'
+      Tag = 3
+      object ActRulesInputs: TScrollBox
+        Left = 0
+        Top = 0
+        Width = 1072
+        Height = 438
+        Align = alClient
+        BorderStyle = bsNone
+        TabOrder = 0
+        object ActRulesContractLabel: TLabel
+          Left = 16
+          Top = 8
+          Width = 940
+          Height = 18
+          Caption = 'Complete MOBIB contract record (hex)'
+        end
+        object ActRulesContractEdit: TEdit
+          Left = 16
+          Top = 30
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 0
+          MaxLength = 262144
+        end
+        object ActRulesRecordLabel: TLabel
+          Left = 16
+          Top = 70
+          Width = 940
+          Height = 18
+          Caption = 'Absolute contract record number'
+        end
+        object ActRulesRecordEdit: TEdit
+          Left = 16
+          Top = 92
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 1
+          MaxLength = 262144
+          Text = '1'
+        end
+        object ActRulesTariffLabel: TLabel
+          Left = 16
+          Top = 132
+          Width = 940
+          Height = 18
+          Caption = 'Policy tariff code (hex)'
+        end
+        object ActRulesTariffEdit: TEdit
+          Left = 16
+          Top = 154
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 2
+          MaxLength = 262144
+        end
+        object ActRulesOperatorLabel: TLabel
+          Left = 16
+          Top = 194
+          Width = 940
+          Height = 18
+          Caption = 'Explicit operator identifier'
+        end
+        object ActRulesOperatorEdit: TEdit
+          Left = 16
+          Top = 216
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 3
+          MaxLength = 262144
+        end
+        object ActRulesSourceLabel: TLabel
+          Left = 16
+          Top = 256
+          Width = 940
+          Height = 18
+          Caption = 'Rule source/specification revision (manual profile; no installed issuer rules)'
+        end
+        object ActRulesSourceEdit: TEdit
+          Left = 16
+          Top = 278
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 4
+          MaxLength = 262144
+        end
+        object ActRulesClockLabel: TLabel
+          Left = 16
+          Top = 318
+          Width = 940
+          Height = 18
+          Caption = 'Timestamp basis'
+        end
+        object ActRulesClockBox: TComboBox
+          Left = 16
+          Top = 340
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 5
+          Style = csDropDownList
+          ItemIndex = -1
+          Items.Strings = (
+            'UTC elapsed time'
+            'Operator-local calendar time'
+          )
+        end
+        object ActRulesNowLabel: TLabel
+          Left = 16
+          Top = 380
+          Width = 940
+          Height = 18
+          Caption = 'Evaluation timestamp: YYYY-MM-DD hh:mm:ss'
+        end
+        object ActRulesNowEdit: TEdit
+          Left = 16
+          Top = 402
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 6
+          MaxLength = 262144
+        end
+        object ActRulesActivationLabel: TLabel
+          Left = 16
+          Top = 442
+          Width = 940
+          Height = 18
+          Caption = 'Policy validity-start source'
+        end
+        object ActRulesActivationBox: TComboBox
+          Left = 16
+          Top = 464
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 7
+          Style = csDropDownList
+          ItemIndex = -1
+          Items.Strings = (
+            'Explicit contract start'
+            'Known activation'
+            'Contract first validation'
+            'Sale date by explicit policy'
+          )
+        end
+        object ActRulesStateLabel: TLabel
+          Left = 16
+          Top = 504
+          Width = 940
+          Height = 18
+          Caption = 'Acquired activation state'
+        end
+        object ActRulesStateBox: TComboBox
+          Left = 16
+          Top = 526
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 8
+          Style = csDropDownList
+          ItemIndex = -1
+          Items.Strings = (
+            'Unknown'
+            'Explicitly not activated'
+            'Activated'
+          )
+        end
+        object ActRulesAnchorLabel: TLabel
+          Left = 16
+          Top = 566
+          Width = 940
+          Height = 18
+          Caption = 'Acquired start/activation/first-use timestamp; blank = unknown'
+        end
+        object ActRulesAnchorEdit: TEdit
+          Left = 16
+          Top = 588
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 9
+          MaxLength = 262144
+        end
+        object ActRulesEndLabel: TLabel
+          Left = 16
+          Top = 628
+          Width = 940
+          Height = 18
+          Caption = 'Acquired exclusive end timestamp; blank = unknown'
+        end
+        object ActRulesEndEdit: TEdit
+          Left = 16
+          Top = 650
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 10
+          MaxLength = 262144
+        end
+        object ActRulesDurationLabel: TLabel
+          Left = 16
+          Top = 690
+          Width = 940
+          Height = 18
+          Caption = 'Policy duration'
+        end
+        object ActRulesDurationBox: TComboBox
+          Left = 16
+          Top = 712
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 11
+          Style = csDropDownList
+          ItemIndex = -1
+          Items.Strings = (
+            'Explicit end'
+            'UTC minutes'
+            'UTC hours'
+            'Calendar days'
+            'Calendar months'
+            'Calendar years'
+          )
+        end
+        object ActRulesAmountLabel: TLabel
+          Left = 16
+          Top = 752
+          Width = 940
+          Height = 18
+          Caption = 'Fixed duration amount; zero for explicit-end mode'
+        end
+        object ActRulesAmountEdit: TEdit
+          Left = 16
+          Top = 774
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 12
+          MaxLength = 262144
+          Text = '0'
+        end
+        object ActRulesMidnightLabel: TLabel
+          Left = 16
+          Top = 814
+          Width = 940
+          Height = 18
+          Caption = 'Calendar end calculated from start-day midnight'
+        end
+        object ActRulesMidnightBox: TComboBox
+          Left = 16
+          Top = 836
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 13
+          Style = csDropDownList
+          ItemIndex = -1
+          Items.Strings = (
+            'No'
+            'Yes'
+          )
+        end
+        object ActRulesZonesLabel: TLabel
+          Left = 16
+          Top = 876
+          Width = 940
+          Height = 18
+          Caption = 'Allowed zones: semicolon IDs; * = explicitly unrestricted; blank = unknown'
+        end
+        object ActRulesZonesEdit: TEdit
+          Left = 16
+          Top = 898
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 14
+          MaxLength = 262144
+        end
+        object ActRulesJourneyzonesLabel: TLabel
+          Left = 16
+          Top = 938
+          Width = 940
+          Height = 18
+          Caption = 'All requested journey zone IDs (semicolon-separated)'
+        end
+        object ActRulesJourneyzonesEdit: TEdit
+          Left = 16
+          Top = 960
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 15
+          MaxLength = 262144
+        end
+        object ActRulesRequiretripsLabel: TLabel
+          Left = 16
+          Top = 1000
+          Width = 940
+          Height = 18
+          Caption = 'New journey requires remaining trips'
+        end
+        object ActRulesRequiretripsBox: TComboBox
+          Left = 16
+          Top = 1022
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 16
+          Style = csDropDownList
+          ItemIndex = -1
+          Items.Strings = (
+            'Yes'
+            'No'
+          )
+        end
+        object ActRulesTripsLabel: TLabel
+          Left = 16
+          Top = 1062
+          Width = 940
+          Height = 18
+          Caption = 'Acquired associated trip counter; blank = unknown'
+        end
+        object ActRulesTripsEdit: TEdit
+          Left = 16
+          Top = 1084
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 17
+          MaxLength = 262144
+        end
+      end
+    end
   end
   object ExportDialog: TSaveDialog
     Options = [ofOverwritePrompt, ofPathMustExist]

@@ -135,6 +135,82 @@ type
     ActSamfileSamclassLabel: TLabel;
     /// <summary>SAM APDU class.</summary>
     ActSamfileSamclassBox: TComboBox;
+    /// <summary>Offline activation / validity / zone assessment with explicit policy page.</summary>
+    ActRulesTab: TTabSheet;
+    /// <summary>Offline activation / validity / zone assessment with explicit policy inputs.</summary>
+    ActRulesInputs: TScrollBox;
+    /// <summary>Complete MOBIB contract record (hex) label.</summary>
+    ActRulesContractLabel: TLabel;
+    /// <summary>Complete MOBIB contract record (hex).</summary>
+    ActRulesContractEdit: TEdit;
+    /// <summary>Absolute contract record number label.</summary>
+    ActRulesRecordLabel: TLabel;
+    /// <summary>Absolute contract record number.</summary>
+    ActRulesRecordEdit: TEdit;
+    /// <summary>Policy tariff code (hex) label.</summary>
+    ActRulesTariffLabel: TLabel;
+    /// <summary>Policy tariff code (hex).</summary>
+    ActRulesTariffEdit: TEdit;
+    /// <summary>Explicit operator identifier label.</summary>
+    ActRulesOperatorLabel: TLabel;
+    /// <summary>Explicit operator identifier.</summary>
+    ActRulesOperatorEdit: TEdit;
+    /// <summary>Rule source/specification revision (manual profile; no installed issuer rules) label.</summary>
+    ActRulesSourceLabel: TLabel;
+    /// <summary>Rule source/specification revision (manual profile; no installed issuer rules).</summary>
+    ActRulesSourceEdit: TEdit;
+    /// <summary>Timestamp basis label.</summary>
+    ActRulesClockLabel: TLabel;
+    /// <summary>Timestamp basis.</summary>
+    ActRulesClockBox: TComboBox;
+    /// <summary>Evaluation timestamp: YYYY-MM-DD hh:mm:ss label.</summary>
+    ActRulesNowLabel: TLabel;
+    /// <summary>Evaluation timestamp: YYYY-MM-DD hh:mm:ss.</summary>
+    ActRulesNowEdit: TEdit;
+    /// <summary>Policy validity-start source label.</summary>
+    ActRulesActivationLabel: TLabel;
+    /// <summary>Policy validity-start source.</summary>
+    ActRulesActivationBox: TComboBox;
+    /// <summary>Acquired activation state label.</summary>
+    ActRulesStateLabel: TLabel;
+    /// <summary>Acquired activation state.</summary>
+    ActRulesStateBox: TComboBox;
+    /// <summary>Acquired start/activation/first-use timestamp; blank = unknown label.</summary>
+    ActRulesAnchorLabel: TLabel;
+    /// <summary>Acquired start/activation/first-use timestamp; blank = unknown.</summary>
+    ActRulesAnchorEdit: TEdit;
+    /// <summary>Acquired exclusive end timestamp; blank = unknown label.</summary>
+    ActRulesEndLabel: TLabel;
+    /// <summary>Acquired exclusive end timestamp; blank = unknown.</summary>
+    ActRulesEndEdit: TEdit;
+    /// <summary>Policy duration label.</summary>
+    ActRulesDurationLabel: TLabel;
+    /// <summary>Policy duration.</summary>
+    ActRulesDurationBox: TComboBox;
+    /// <summary>Fixed duration amount; zero for explicit-end mode label.</summary>
+    ActRulesAmountLabel: TLabel;
+    /// <summary>Fixed duration amount; zero for explicit-end mode.</summary>
+    ActRulesAmountEdit: TEdit;
+    /// <summary>Calendar end calculated from start-day midnight label.</summary>
+    ActRulesMidnightLabel: TLabel;
+    /// <summary>Calendar end calculated from start-day midnight.</summary>
+    ActRulesMidnightBox: TComboBox;
+    /// <summary>Allowed zones: semicolon IDs; * = explicitly unrestricted; blank = unknown label.</summary>
+    ActRulesZonesLabel: TLabel;
+    /// <summary>Allowed zones: semicolon IDs; * = explicitly unrestricted; blank = unknown.</summary>
+    ActRulesZonesEdit: TEdit;
+    /// <summary>All requested journey zone IDs (semicolon-separated) label.</summary>
+    ActRulesJourneyzonesLabel: TLabel;
+    /// <summary>All requested journey zone IDs (semicolon-separated).</summary>
+    ActRulesJourneyzonesEdit: TEdit;
+    /// <summary>New journey requires remaining trips label.</summary>
+    ActRulesRequiretripsLabel: TLabel;
+    /// <summary>New journey requires remaining trips.</summary>
+    ActRulesRequiretripsBox: TComboBox;
+    /// <summary>Acquired associated trip counter; blank = unknown label.</summary>
+    ActRulesTripsLabel: TLabel;
+    /// <summary>Acquired associated trip counter; blank = unknown.</summary>
+    ActRulesTripsEdit: TEdit;
     /// <summary>Select this form’s own action page.</summary>
     /// <param name="Sender">VCL event sender.</param>
     procedure ActionChanged(Sender: TObject);
@@ -252,6 +328,28 @@ begin
       FInputs[8] := ActSamfileKifEdit;
       FInputs[9] := ActSamfileKvcEdit;
       FInputs[10] := ActSamfileSamclassBox;
+    end;
+    3:
+    begin
+      SetLength(FInputs,18);
+      FInputs[0] := ActRulesContractEdit;
+      FInputs[1] := ActRulesRecordEdit;
+      FInputs[2] := ActRulesTariffEdit;
+      FInputs[3] := ActRulesOperatorEdit;
+      FInputs[4] := ActRulesSourceEdit;
+      FInputs[5] := ActRulesClockBox;
+      FInputs[6] := ActRulesNowEdit;
+      FInputs[7] := ActRulesActivationBox;
+      FInputs[8] := ActRulesStateBox;
+      FInputs[9] := ActRulesAnchorEdit;
+      FInputs[10] := ActRulesEndEdit;
+      FInputs[11] := ActRulesDurationBox;
+      FInputs[12] := ActRulesAmountEdit;
+      FInputs[13] := ActRulesMidnightBox;
+      FInputs[14] := ActRulesZonesEdit;
+      FInputs[15] := ActRulesJourneyzonesEdit;
+      FInputs[16] := ActRulesRequiretripsBox;
+      FInputs[17] := ActRulesTripsEdit;
     end;
   else Exit; end;
   AcknowledgeCheck.Enabled := FActions[ActionPages.ActivePageIndex].Mutation;

@@ -191,6 +191,7 @@
         <DCCReference Include="..\..\src\contactless\ERD.Card.Ndef.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Ndef.Records.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Type2.Ndef.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Rules.pas" />
         <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Subscriptions.pas" />
         <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Data.pas" />
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Calypso.SAM.pas" />
