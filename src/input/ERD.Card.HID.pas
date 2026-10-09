@@ -17,6 +17,9 @@ uses
 type
   /// <summary>HID device, descriptor, report, timeout or ownership failure; messages exclude report contents.</summary>
   EHidError = class(Exception);
+  /// <summary>Interrupt input timed out and cancellation completed; no complete report was delivered.</summary>
+  /// <remarks>Only this error permits a continuous input listener to wait again; feature requests never use it.</remarks>
+  EHidReceiveTimeout = class(EHidError);
   /// <summary>An output/feature submission was attempted and completion cannot be established.</summary>
   /// <remarks>Do not automatically replay a vendor command. A successful HID transfer is not card read-back.</remarks>
   EHidSendUncertain = class(EHidError);
@@ -293,13 +296,27 @@ begin
     begin
       if GetLastError <> ERROR_IO_PENDING then Fail;
       Pending := True; Waited := WaitForSingleObject(O.hEvent,Timeout);
-      if Waited <> WAIT_OBJECT_0 then Fail;
+      if (Waited = 258) and not Writing then
+      begin
+        HidCancel(FHandle,@O);
+        Ok := GetOverlappedResult(FHandle,O,Done,True);
+        Pending := False;
+        if not Ok then
+        begin
+          if GetLastError = 995 then raise EHidReceiveTimeout.Create('HID input wait timed out.');
+          Fail;
+        end;
+      end
+      else
+      begin
+        if Waited <> WAIT_OBJECT_0 then Fail;
       Ok := GetOverlappedResult(FHandle,O,Done,False);
       if not Ok then
       begin
         Pending := GetLastError = ERROR_IO_INCOMPLETE; Fail;
       end;
       Pending := False;
+      end;
     end;
     if Done <> Cardinal(Length(Data)) then Fail;
   finally

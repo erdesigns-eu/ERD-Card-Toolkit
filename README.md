@@ -11,7 +11,7 @@ Beoogd platform: **Delphi 10.4+, Windows Win32/Win64**.
 
 | Onderdeel | Componenten | Aanwezige functionaliteit |
 | --- | --- | --- |
-| Kaartlezers | `TSmartCardReader` | PC/SC-lezerselectie, verbindingen, kaartdetectie, ATR en commandotransport. |
+| Kaartlezers | `TSmartCardReader`, `TSmartCardMonitor` | PC/SC-lezerselectie, verbindingen, ATR en commandotransport; events bij reader-hotplug en kaartaanbieding/verwijdering, zonder applicatiepolling. |
 | Magstripe | `TMagStripeReaderWriter` | Tracks 1–3 lezen/schrijven; MSR206/MSR605 en MSR206-7HL-profielen; MagTek-inputadapters. |
 | Belgische eID | `TBelgianEIDReader` | Identiteit, adres, JPEG-foto, beschikbare certificaten en ruwe handtekeningen. |
 | ICAO-documenten | `TICAODocumentReader` | BAC/PACE-toegang; DG1-identiteit, DG2-foto’s en volledige COM/SOD-bestanden. |
@@ -26,7 +26,7 @@ Beoogd platform: **Delphi 10.4+, Windows Win32/Win64**.
 | SLE-counterchips | `TSleCounterCardReaderWriter` | SLE4406/4436/5536/6636 via ACR38x CCID: publiek lezen, bit/carry/backup-programmering met controle en ruwe certificaatberekening; expliciet leesvenster vereist. |
 | SLE4404 | `TSle4404CardReaderWriter` | ACR38x CCID: publiek/beveiligd lezen, user-codecontrole, bitprogrammering en expliciete scratchpad/applicatie-erases met terugleescontrole; bekende layout vereist. |
 | RFID-invoer | `TRfidKeyboardReader`, `TRfidHidReportReader` | Keyboard-input en host-aangeleverde 8/9-byte toetsenbordreports of vaste ASCII-velden; expliciete ASCII/hex/decimale profielen. |
-| Native USB-HID | `TUsbHidReaderWriter` | Windows HID-collecties vinden en een gekozen interface openen; input/output/feature-reports, expliciete IDs en lengtes, timeout/annulering voor interrupt-I/O. |
+| Native USB-HID | `TUsbHidReaderWriter`, `THidDeviceMonitor`, `TUsbHidInputMonitor` | Windows HID-collecties vinden en een gekozen interface openen; input/output/feature-reports, expliciete IDs en lengtes, timeout/annulering voor interrupt-I/O; native reader-hotplug en doorlopende inputreport-events. |
 | ELATEC TWN4 | `TTwn4CardReaderWriter` | PRS/USB-CDC: tag-ID, Classic-blokken met aangeleverde sleutel en publieke Type 2-pagina’s lezen/geverifieerd schrijven; geschikte firmware vereist. |
 | SIM / USIM | `TSimCardReaderWriter` | ICCID/IMSI/SPN/servicebits, expliciete bestanden/records, PIN-budgetten, geverifieerde writes, standalone/gekoppelde USIM-contactuitlezing, EXT-nummers en SMS-tekst/UDH-codecs, expliciete segmentsets, EMAIL/ANR-codecs, PIN/PUK-commandobeheer en geverifieerde gekoppelde writeplannen. |
 | Tools | Losse codecs en catalogs | APDU, ATR, BER-TLV, hex/bytes, MRZ, NDEF, magstripe-pariteit/LRC en ATR/EMV-metadata. |
@@ -50,12 +50,27 @@ Lezerondersteuning en kaartondersteuning zijn afzonderlijk: het juiste protocolp
 - **Alle MIFARE/DESFire-varianten:** onder andere MIFARE Plus, DESFire D40/3DES, LRP, TMAC en uitgebreid sleutelset/configuratiebeheer ontbreken.
 - **Universele UID-programmering of lezerdekking:** alleen de beschreven programmeerbare kaart- en lezerprofielen zijn geïmplementeerd; gewone kaart-UID’s zijn niet algemeen schrijfbaar.
 
+## Events gebruiken
+
+`TSmartCardMonitor` meldt `OnReaderAdded`, `OnReaderRemoved`, `OnCardInserted`,
+`OnCardRemoved`, `OnStateChanged` en `OnError`. Koppel handlers en roep `Start` aan;
+`Stop` annuleert de monitor. VCL levert events op de hoofdthread, zonder `PollChanges`.
+Ook `TSmartCardReader.StartEventMonitoring` biedt deze events, met kaartfiltering op
+`ReaderName`. Uitlezen of schrijven start je vervolgens expliciet vanuit je applicatie.
+
+`THidDeviceMonitor` meldt aangesloten/verwijderde USB-HID-collecties.
+`TUsbHidInputMonitor.OnInputReport` levert ontvangen reports; de bestaande
+RFID-inputcomponenten geven gedecodeerde scans via `OnIdentifier`.
+Keyboard-only readers melden doorgaans geen fysieke kaartverwijdering.
+Zie [events en levenscyclus](docs/READER_EVENTS.md).
+
 ## Packages en voorbeelden
 
-- **12 runtime packages** en **1 zelfstandig design-time package** met **22 palette-componenten**. Runtimecomponenten hebben geen VCL/design-time-afhankelijkheid; het palette bevat zijn benodigde sources expliciet en vereist geen ERD-runtime-BPL's.
+- **12 runtime packages** en **1 zelfstandig design-time package** met **25 palette-componenten**. Runtimecomponenten hebben geen VCL/design-time-afhankelijkheid; het palette bevat zijn benodigde sources expliciet en vereist geen ERD-runtime-BPL's.
 - **SmartCardDemo:** offline NDEF, UID, Belgische eID/foto, ICAO/foto, EMV-applicatiedetectie, DESFire-versie, Type 2/4 NDEF-vervanging en een contact-memorypagina met PIN, geverifieerde writes, counter/SLE4404-reads, expliciete ACS-profielcapabilities en een RFID-keyboardinvoertab.
 - **MagStripeDemo:** offline trackcontrole, swipes lezen en geverifieerd schrijven via MSR206-7HL.
 - **Negentien losse familiedemo’s**, elk met een eigen `TForm` en `.Main.dfm`, met alle visuele controls in de designer; alleen niet-visuele kaart- en workercode wordt gedeeld: tools, RFID, native HID, TWN4, drie contact-memoryfamilies, SIM/USIM, Classic, Type 2, Type 4, ISO 15693/Type 5, UID-programmering, DESFire, aanvullende magstripeprofielen, EMV, MOBIB/Calypso, Belgische eID en ICAO-documenten. Elke demo toont zelf een keuzelijst met beschikbare PC/SC-lezers, HID-apparaten of COM-poorten en een verversknop. Geen andere app nodig om lezernamen op te zoeken. Zie [de concrete dekking](docs/VCL_COVERAGE.md).
+- **ReaderToolsDemo en UsbHidDemo:** eigen DFM-knoppen voor native events en een apart eventlog; HID biedt ook doorlopende read-only input van de geselecteerde reader.
 - eID/ICAO-demo’s tonen JPEG-foto’s en exporteren originele foto-, certificaat- en databestanden. DESFire toont ook transacties en beheer; Type 2 ook PWD_AUTH/PACK.
 
 De VCL-demo’s voeren kaartoperaties op een achtergrondthread uit en linken de source

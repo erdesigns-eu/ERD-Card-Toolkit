@@ -18,7 +18,7 @@ object ReaderToolsDemoForm: TReaderToolsDemoForm
     Top = 0
     Width = 1080
     Align = alTop
-    Height = 94
+    Height = 202
     BevelOuter = bvNone
     TabOrder = 0
     object GuidanceLabel: TLabel
@@ -55,6 +55,36 @@ object ReaderToolsDemoForm: TReaderToolsDemoForm
       Caption = 'Refresh devices'
       TabOrder = 1
       OnClick = RefreshReadersClick
+    end
+    object WatchButton: TButton
+      Left = 16
+      Top = 88
+      Width = 144
+      Height = 29
+      Caption = 'Watch reader events'
+      TabOrder = 2
+      OnClick = WatchClick
+    end
+    object StopWatchButton: TButton
+      Left = 164
+      Top = 88
+      Width = 144
+      Height = 29
+      Caption = 'Stop observation'
+      Enabled = False
+      TabOrder = 3
+      OnClick = StopWatchClick
+    end
+    object EventsMemo: TMemo
+      Left = 320
+      Top = 88
+      Width = 736
+      Height = 102
+      Anchors = [akLeft, akTop, akRight]
+      ReadOnly = True
+      ScrollBars = ssBoth
+      WordWrap = False
+      TabOrder = 4
     end
   end
   object BottomPanel: TPanel

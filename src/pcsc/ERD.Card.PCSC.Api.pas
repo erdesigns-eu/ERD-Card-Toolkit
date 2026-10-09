@@ -55,6 +55,8 @@ const
   PcscStateMute: Cardinal = $0200;
   /// <summary>The inserted card has not been powered.</summary>
   PcscStateUnpowered: Cardinal = $0400;
+  /// <summary>Windows PC/SC pseudo-reader waking status waits on reader arrival/removal.</summary>
+  PcscPnpNotification: UnicodeString = '\\?PnP?\Notification';
   /// <summary>The Windows SCARD_READERSTATE ATR buffer size, including alignment bytes.</summary>
   PcscMaxAtrBytes = 36;
 
@@ -99,6 +101,20 @@ type
     State: Cardinal;
     /// <summary>Uninterpreted ATR bytes, possibly a reader-generated contactless identifier.</summary>
     Atr: TBytes;
+  end;
+  /// <summary>Owned snapshots/current states for a bounded multi-reader status wait.</summary>
+  TPcscReaderSnapshots = array of TPcscReaderSnapshot;
+  /// <summary>Optional native multi-reader status wait; supports the PC/SC PnP notification pseudo-reader.</summary>
+  IPcscMonitorApi = interface
+    ['{40801DA5-2D15-41E1-A147-0D8DE2E4A1CA}']
+    /// <summary>Waits for any selected reader/PnP transition on a dedicated monitor context.</summary>
+    /// <param name="AContext">Live monitor context, independently cancellable.</param>
+    /// <param name="ACurrent">One to 1025 unique exact reader names; normalized states except the raw PnP state.</param>
+    /// <param name="ATimeoutMs">Finite timeout; timeout does not trigger reader-list polling.</param>
+    /// <param name="ASnapshots">Owned ordered snapshots matching names; normalized reader states, raw PnP state; cleared on failure.</param>
+    /// <returns>Native success, timeout, cancellation or error; no APDU or card connection is opened.</returns>
+    function WaitReaders(const AContext: TPcscHandle; const ACurrent: TPcscReaderSnapshots;
+      const ATimeoutMs: Cardinal; out ASnapshots: TPcscReaderSnapshots): Cardinal;
   end;
   /// <summary>A PC/SC failure preserving the unsigned 32-bit native status code.</summary>
   EPcscError = class(ECardTransportError)

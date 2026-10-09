@@ -626,3 +626,42 @@ These are native policy mechanics with application-supplied, sourced rules.
 Complete automatic De Lijn/STIB/TEC/NMBS card-field mappings and issuer product
 profiles are not claimed. Public product terms alone do not define the missing
 card bytes; operator-specific activation/zone decoders must supply that evidence.
+
+
+## Reader/card and USB-HID events
+
+Automatic PC/SC observation uses a separate multi-reader/PnP wait context, not
+application reader-list polling. Reader inventory changes, card insertion/removal,
+same-ATR replacement counters and raw state changes reach the main thread.
+`TSmartCardReader.StartEventMonitoring` forwards selected-reader card events and
+all reader arrivals/removals; legacy manual observation remains compatible.
+
+Native Windows HID arrival/removal uses device-interface notification registration.
+Continuous HID input uses one explicit read-only device acquisition and complete
+interrupt reports. Only completed input timeout cancellation is nonterminal;
+uncertain writes remain unreplayed. No generic HID card-memory protocol or inferred
+physical card-removal event has been added.
+
+**82 asynchronous event/lifecycle assertions** cover empty inventory startup,
+reader hotplug, card offers/removal, replacement with an identical ATR, selected
+reader filtering, initial-state suppression, main-thread callbacks, callback
+stop/free, cancellation/release ownership, whole-inventory validation before publishing, malformed backend states, terminal
+failures, HID notification acquisition rollback, continuous report reception,
+timeouts, queue ordering/overflow/replacement and invalidation. The full existing
+FPC regression suite passes; focused event tests were rerun after final inventory
+validation changes. The native PC/SC ABI shim now passes **51 assertions**,
+including multi-record layouts, exact Unicode/PnP inputs, high counter bits,
+invalid batch outputs and no native calls on duplicate/empty inputs. The native
+HID ABI shim passes **448 assertions**, including explicit timeout classification
+versus uncertain writes and other failures. These shims do not use Windows drivers.
+The Windows hidden-window hotplug implementation is not executed by FPC on Linux;
+its injectable registration/event lifecycle is covered by the event tests.
+
+All **36 Python regressions** and **21 source-aware Pascal checkers** pass on
+**183 sources**. Distribution checks pass for **34 projects, two groups and
+21 independent DFM forms**. Runtime/design package source closure, native
+BOM/CRLF conventions and the standalone design package are preserved.
+Inactive registration/RTL streaming passes for **25 palette components**.
+Public English XML documentation covers **2,098 production and 2,511 VCL
+API declarations**, with zero findings. ReaderToolsDemo and UsbHidDemo retain
+separate own DFM forms and now include explicit event controls/logs.

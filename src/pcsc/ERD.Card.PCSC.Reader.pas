@@ -13,7 +13,7 @@ uses
   System.Classes, System.SysUtils,
 {$ENDIF}
   ERD.Card.Transport,
-  ERD.Card.PCSC.Api;
+  ERD.Card.PCSC.Api, ERD.Card.PCSC.Monitor;
 
 type
   /// <summary>A caller-thread notification containing the latest independent reader snapshot.</summary>
@@ -28,9 +28,9 @@ type
   /// to one caller/control thread. Retained Transport interfaces serialize exchanges
   /// and remain valid after the component is freed, but its connection is then closed.
   /// Transactions belong to their initiating thread. Monitoring uses a separate
-  /// context and publishes only the latest state; PollChanges dispatches events on
-  /// its caller's thread. No queued callbacks, automatic reconnects or command retries
-  /// occur. Native transmit/transaction calls may block; stop monitoring does not
+  /// context. StartMonitoring retains the legacy latest-state/PollChanges mode;
+  /// StartEventMonitoring delivers ordered main-thread events automatically through
+  /// the RTL dispatcher. No automatic reconnects or command retries occur. Native transmit/transaction calls may block; stop monitoring does not
   /// cancel card commands. The optional ERDCardDesign package registers this inactive component.
   /// </remarks>
   TSmartCardReader = class(TComponent)
@@ -39,6 +39,17 @@ type
     FSession: TObject;
     FTransport: ICardTransport;
     FWatcher: TThread;
+    FEventMonitor: TSmartCardMonitor;
+    FOnCardInserted, FOnCardRemoved: TPcscCardEvent;
+    FOnReaderAdded, FOnReaderRemoved: TPcscReaderEvent;
+    FOnMonitorError: TPcscMonitorErrorEvent;
+    procedure EventInserted(Sender: TObject; const ASnapshot: TPcscReaderSnapshot);
+    procedure EventRemoved(Sender: TObject; const ASnapshot: TPcscReaderSnapshot);
+    procedure EventState(Sender: TObject; const ASnapshot: TPcscReaderSnapshot);
+    procedure EventReaderAdded(Sender: TObject; const AReaderName: UnicodeString);
+    procedure EventReaderRemoved(Sender: TObject; const AReaderName: UnicodeString);
+    procedure EventError(Sender: TObject; const AStatusCode: Cardinal);
+  private
     FReaderName: UnicodeString;
     FShareMode: TPcscShareMode;
     FProtocols: Cardinal;
@@ -97,6 +108,11 @@ type
     /// <exception cref="ECardTransportError">The name is invalid or monitoring already exists.</exception>
     /// <exception cref="EPcscError">Creating the independent monitor context failed.</exception>
     procedure StartMonitoring;
+    /// <summary>Starts main-thread events for the selected reader's cards and all reader arrivals/removals.</summary>
+    /// <remarks>Uses native PnP waits without PollChanges. VCL dispatches automatically; other hosts use CheckSynchronize.
+    /// Configure on the main thread while monitoring is stopped. Initially present readers/cards are reported.</remarks>
+    /// <exception cref="EPcscError">Native context acquisition or multi-reader support fails.</exception>
+    procedure StartEventMonitoring;
     /// <summary>Cancels and joins the monitor, then releases its context; safe to repeat.</summary>
     /// <remarks>A finite 250 ms wait bounds a missed cancellation race; backend timeouts must be honored.</remarks>
     procedure StopMonitoring;
@@ -112,7 +128,7 @@ type
     property Connected: Boolean read GetConnected;
     /// <summary>The negotiated protocol, or pcpNone when disconnected.</summary>
     property Protocol: TPcscProtocol read GetProtocol;
-    /// <summary>Whether a monitor is allocated; call PollChanges to observe terminal failures.</summary>
+    /// <summary>Whether manual or automatic observation is active; automatic failures use OnMonitorError.</summary>
     property Monitoring: Boolean read GetMonitoring;
   published
     /// <summary>The exact Unicode reader name; configure only while disconnected and not monitoring.</summary>
@@ -123,8 +139,18 @@ type
     property Protocols: Cardinal read FProtocols write SetProtocols default 3;
     /// <summary>The receive capacity from 2 through CardMaxResponseBytes; configure only while inactive.</summary>
     property MaxResponseBytes: Integer read FMaxResponseBytes write SetMaxResponseBytes default CardMaxResponseBytes;
-    /// <summary>A PollChanges caller-thread event; configure its handler while monitoring is stopped.</summary>
+    /// <summary>State change from PollChanges or main-thread StartEventMonitoring; configure while stopped.</summary>
     property OnCardStateChange: TCardStateChangeEvent read FOnCardStateChange write SetOnCardStateChange;
+    /// <summary>Selected reader card insertion/replacement, delivered by StartEventMonitoring on the main thread.</summary>
+    property OnCardInserted: TPcscCardEvent read FOnCardInserted write FOnCardInserted;
+    /// <summary>Selected reader card removal or reader loss, retaining the previous ATR.</summary>
+    property OnCardRemoved: TPcscCardEvent read FOnCardRemoved write FOnCardRemoved;
+    /// <summary>Any PC/SC reader arrival; exact name, without changing the selected reader.</summary>
+    property OnReaderAdded: TPcscReaderEvent read FOnReaderAdded write FOnReaderAdded;
+    /// <summary>Any PC/SC reader disappearance, delivered after its card removal.</summary>
+    property OnReaderRemoved: TPcscReaderEvent read FOnReaderRemoved write FOnReaderRemoved;
+    /// <summary>Terminal automatic monitor failure; monitoring is already stopped before this handler.</summary>
+    property OnMonitorError: TPcscMonitorErrorEvent read FOnMonitorError write FOnMonitorError;
   end;
 
 implementation
@@ -665,7 +691,7 @@ end;
 
 function TSmartCardReader.GetMonitoring: Boolean;
 begin
-  Result := FWatcher <> nil;
+  Result := (FWatcher <> nil) or ((FEventMonitor <> nil) and FEventMonitor.Active);
 end;
 
 function TSmartCardReader.ListReaders: TPcscReaderNames;
@@ -698,6 +724,42 @@ begin
   Result := TPcscSession(FSession).ReadAtr;
 end;
 
+procedure TSmartCardReader.StartEventMonitoring;
+begin
+  ValidateName(FReaderName);
+  if Monitoring then raise ECardTransportError.Create('Monitoring already exists.');
+  FreeAndNil(FEventMonitor);
+  FEventMonitor := TSmartCardMonitor.CreateWithApi(nil, FApi);
+  try
+    FEventMonitor.OnReaderAdded := EventReaderAdded;
+    FEventMonitor.OnReaderRemoved := EventReaderRemoved;
+    FEventMonitor.OnCardInserted := EventInserted;
+    FEventMonitor.OnCardRemoved := EventRemoved;
+    FEventMonitor.OnStateChanged := EventState;
+    FEventMonitor.OnError := EventError;
+    FEventMonitor.Start;
+  except FreeAndNil(FEventMonitor); raise; end;
+end;
+
+procedure TSmartCardReader.EventInserted(Sender: TObject; const ASnapshot: TPcscReaderSnapshot);
+begin
+  if (ASnapshot.ReaderName = FReaderName) and Assigned(FOnCardInserted) then FOnCardInserted(Self, ASnapshot);
+end;
+procedure TSmartCardReader.EventRemoved(Sender: TObject; const ASnapshot: TPcscReaderSnapshot);
+begin
+  if (ASnapshot.ReaderName = FReaderName) and Assigned(FOnCardRemoved) then FOnCardRemoved(Self, ASnapshot);
+end;
+procedure TSmartCardReader.EventState(Sender: TObject; const ASnapshot: TPcscReaderSnapshot);
+begin
+  if (ASnapshot.ReaderName = FReaderName) and Assigned(FOnCardStateChange) then FOnCardStateChange(Self, ASnapshot);
+end;
+procedure TSmartCardReader.EventReaderAdded(Sender: TObject; const AReaderName: UnicodeString);
+begin if Assigned(FOnReaderAdded) then FOnReaderAdded(Self, AReaderName); end;
+procedure TSmartCardReader.EventReaderRemoved(Sender: TObject; const AReaderName: UnicodeString);
+begin if Assigned(FOnReaderRemoved) then FOnReaderRemoved(Self, AReaderName); end;
+procedure TSmartCardReader.EventError(Sender: TObject; const AStatusCode: Cardinal);
+begin if Assigned(FOnMonitorError) then FOnMonitorError(Self, AStatusCode); end;
+
 procedure TSmartCardReader.StartMonitoring;
 var
   Context: TPcscHandle;
@@ -729,6 +791,7 @@ begin
   Watcher := FWatcher;
   FWatcher := nil;
   Watcher.Free;
+  FreeAndNil(FEventMonitor);
 end;
 
 function TSmartCardReader.PollChanges(out ASnapshot: TPcscReaderSnapshot): Boolean;

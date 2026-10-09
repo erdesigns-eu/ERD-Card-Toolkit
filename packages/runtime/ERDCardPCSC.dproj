@@ -180,6 +180,7 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="..\..\src\pcsc\ERD.Card.PCSC.Monitor.pas"/>
         <DCCReference Include="rtl.dcp"/>
         <DCCReference Include="ERDCardCore.dcp"/>
         <DCCReference Include="..\..\src\pcsc\ERD.Card.PCSC.Api.pas"/>

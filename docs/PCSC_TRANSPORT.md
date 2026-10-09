@@ -86,6 +86,16 @@ through an asynchronous ISO ATR parser.
 
 ## Monitoring and events
 
+For new VCL applications, use `TSmartCardMonitor.Start` or
+`TSmartCardReader.StartEventMonitoring` for automatic main-thread reader/card events.
+The native adapter waits for all readers and `\\?PnP?\Notification` on one dedicated
+context. Reader discovery runs only at startup or an inventory notification, never
+on every timeout. Card removal precedes reader removal; observed event counters can
+also identify replacement with an identical ATR. Errors stop observation before
+`OnError`/`OnMonitorError`. See [READER_EVENTS.md](READER_EVENTS.md) for configuration,
+lifetime guarantees, sample usage and HID differences.
+
+The following describes the retained **manual compatibility mode**.
 Call StartMonitoring after configuring the reader name. It creates a distinct context
 and worker that waits in finite 250 ms intervals; it does not connect to a card.
 StopMonitoring requests cancellation, joins that worker and then releases its context.

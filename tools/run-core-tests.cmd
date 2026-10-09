@@ -64,6 +64,11 @@ if errorlevel 1 exit /b %errorlevel%
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\ProtocolCore.Tests.exe"
 if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\pcsc;src\input" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\transport\CardEvents.Tests.dpr
+if errorlevel 1 exit /b 1
+"%CARD_BUILD%\CardEvents.Tests.exe"
+if errorlevel 1 exit /b 1
+
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\pcsc" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\transport\CardTransport.Tests.dpr
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\CardTransport.Tests.exe"

@@ -26,7 +26,7 @@ uses
   ERD.Card.Transport;
 
 type
-  TSystemPcscApi = class(TInterfacedObject, IPcscApi)
+  TSystemPcscApi = class(TInterfacedObject, IPcscApi, IPcscMonitorApi)
   public
     function Establish(out AContext: TPcscHandle): Cardinal;
     function Release(const AContext: TPcscHandle): Cardinal;
@@ -43,6 +43,8 @@ type
     function WaitStatus(const AContext: TPcscHandle; const AReaderName: UnicodeString;
       const ACurrentState: Cardinal; const ATimeoutMs: Cardinal;
       out ASnapshot: TPcscReaderSnapshot): Cardinal;
+    function WaitReaders(const AContext: TPcscHandle; const ACurrent: TPcscReaderSnapshots;
+      const ATimeoutMs: Cardinal; out ASnapshots: TPcscReaderSnapshots): Cardinal;
     function Cancel(const AContext: TPcscHandle): Cardinal;
   end;
 
@@ -336,6 +338,41 @@ begin
   if State.AtrSize <> 0 then Move(State.Atr[0], ASnapshot.Atr[0], Integer(State.AtrSize));
 {$ELSE}
   Result := PcscUnsupportedFeature;
+{$ENDIF}
+end;
+
+function TSystemPcscApi.WaitReaders(const AContext: TPcscHandle;
+  const ACurrent: TPcscReaderSnapshots; const ATimeoutMs: Cardinal;
+  out ASnapshots: TPcscReaderSnapshots): Cardinal;
+{$IFDEF MSWINDOWS}
+var States:array of TNativeReaderState; I,J:Integer;
+{$ENDIF}
+begin
+ ASnapshots:=nil;
+{$IFDEF MSWINDOWS}
+ if not NativeLayoutValid then Exit(PcscInternalError);
+ if (Length(ACurrent)<1) or (Length(ACurrent)>1025) or (ATimeoutMs=High(Cardinal)) then Exit(PcscInvalidParameter);
+ SetLength(States,Length(ACurrent));
+ for I:=0 to High(ACurrent) do begin
+  if (ACurrent[I].ReaderName='') or (Pos(#0,ACurrent[I].ReaderName)<>0) then Exit(PcscInvalidParameter);
+  for J:=0 to I-1 do if ACurrent[J].ReaderName=ACurrent[I].ReaderName then Exit(PcscInvalidParameter);
+  States[I].ReaderName:=PWideChar(ACurrent[I].ReaderName);
+  if ACurrent[I].ReaderName=PcscPnpNotification then States[I].CurrentState:=ACurrent[I].State
+  else States[I].CurrentState:=ACurrent[I].State and not PcscStateChanged;
+ end;
+ Result:=NativeWaitStatus(AContext,ATimeoutMs,@States[0],Length(States));
+ if Result<>PcscSuccess then Exit;
+ for I:=0 to High(States) do if States[I].AtrSize>PcscMaxAtrBytes then Exit(PcscInternalError);
+ SetLength(ASnapshots,Length(States));
+ for I:=0 to High(States) do begin
+  ASnapshots[I].ReaderName:=ACurrent[I].ReaderName;
+  if ACurrent[I].ReaderName=PcscPnpNotification then ASnapshots[I].State:=States[I].EventState
+  else ASnapshots[I].State:=States[I].EventState and not PcscStateChanged;
+  SetLength(ASnapshots[I].Atr,States[I].AtrSize);
+  if States[I].AtrSize>0 then Move(States[I].Atr[0],ASnapshots[I].Atr[0],States[I].AtrSize);
+ end;
+{$ELSE}
+ Result:=PcscUnsupportedFeature;
 {$ENDIF}
 end;
 

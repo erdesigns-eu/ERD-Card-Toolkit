@@ -50,7 +50,7 @@ def main():
             crt_path = Path(crt.stdout.strip())
             if crt_path.is_file():
                 command.append('-Fl' + str(crt_path.parent))
-    for project in ('tests/sim/SimCard.Tests.dpr', 'examples/sim/InspectSim.dpr', 'examples/readers/InspectTwn4.dpr', 'tests/readers/Twn4.Tests.dpr', 'tests/input/RfidInput.Tests.dpr', 'tests/input/Hid.Tests.dpr', 'tests/memory/Sle4404.Tests.dpr', 'tests/memory/MemoryCounter.Tests.dpr', 'tests/memory/MemoryCard.Tests.dpr', 'examples/memory/InspectMemoryCard.dpr', 'examples/memory/InspectSle4404.dpr',
+    for project in ('tests/transport/CardEvents.Tests.dpr', 'tests/sim/SimCard.Tests.dpr', 'examples/sim/InspectSim.dpr', 'examples/readers/InspectTwn4.dpr', 'tests/readers/Twn4.Tests.dpr', 'tests/input/RfidInput.Tests.dpr', 'tests/input/Hid.Tests.dpr', 'tests/memory/Sle4404.Tests.dpr', 'tests/memory/MemoryCounter.Tests.dpr', 'tests/memory/MemoryCard.Tests.dpr', 'examples/memory/InspectMemoryCard.dpr', 'examples/memory/InspectSle4404.dpr',
                     'tests/core/CardCore.Tests.dpr', 'tests/core/ProtocolCore.Tests.dpr',
                     'tests/core/CardCatalogs.Tests.dpr',
                     'tests/demos/Controller.Tests.dpr', 'tests/demos/DemoJob.Tests.dpr', 'tests/demos/FamilyOperations.Tests.dpr',
@@ -85,7 +85,7 @@ def main():
     subprocess.run(command + ['-Fu' + str(REPO / 'tests/design'),
                               'tests/design/Registration.Tests.dpr'], cwd=REPO, check=True)
     suffix = '.exe' if os.name == 'nt' else ''
-    for project in ('SimCard.Tests', 'Twn4.Tests', 'RfidInput.Tests', 'Hid.Tests', 'Sle4404.Tests', 'MemoryCounter.Tests', 'MemoryCard.Tests', 'Controller.Tests', 'DemoJob.Tests', 'FamilyOperations.Tests', 'Registration.Tests', 'EacCrypto.Tests', 'IcaoDocument.Tests', 'DesfireManagement.Tests', 'CardCore.Tests', 'ProtocolCore.Tests', 'CardCatalogs.Tests', 'CardCrypto.Tests', 'Desfire.Tests', 'DesfireSession.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'MobibCodec.Tests', 'Calypso.Tests', 'CalypsoSam.Tests', 'MobibSubscriptions.Tests', 'MobibRules.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'Iso15693Type5.Tests', 'MagStripe.Tests', 'Msr206.Tests', 'Msr2067HL.Tests'):
+    for project in ('CardEvents.Tests', 'SimCard.Tests', 'Twn4.Tests', 'RfidInput.Tests', 'Hid.Tests', 'Sle4404.Tests', 'MemoryCounter.Tests', 'MemoryCard.Tests', 'Controller.Tests', 'DemoJob.Tests', 'FamilyOperations.Tests', 'Registration.Tests', 'EacCrypto.Tests', 'IcaoDocument.Tests', 'DesfireManagement.Tests', 'CardCore.Tests', 'ProtocolCore.Tests', 'CardCatalogs.Tests', 'CardCrypto.Tests', 'Desfire.Tests', 'DesfireSession.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'MobibCodec.Tests', 'Calypso.Tests', 'CalypsoSam.Tests', 'MobibSubscriptions.Tests', 'MobibRules.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'Iso15693Type5.Tests', 'MagStripe.Tests', 'Msr206.Tests', 'Msr2067HL.Tests'):
         result = subprocess.run([str(build / (project + suffix))], cwd=REPO,
                                 capture_output=True, text=True)
         print(result.stdout, end='', flush=True)

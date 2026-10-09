@@ -123,6 +123,9 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="..\..\src\input\ERD.Card.HID.Monitor.pas"/>
+        <DCCReference Include="..\..\src\pcsc\ERD.Card.PCSC.Monitor.pas"/>
+        <DCCReference Include="..\..\src\core\ERD.Card.Events.pas"/>
         <DCCReference Include="rtl.dcp"/>
         <DCCReference Include="..\..\src\readers\ERD.Card.Reader.TWN4.pas"/>
 
