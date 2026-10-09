@@ -53,6 +53,24 @@ function C0:TLegacyWirePairs;
 /// <summary>Independent synthetic A0 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function A0:TLegacyWirePairs;
+/// <summary>Independent synthetic K0policy transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function K0policy:TLegacyWirePairs;
+/// <summary>Independent synthetic K0access transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function K0access:TLegacyWirePairs;
+/// <summary>Independent synthetic K0current transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function K0current:TLegacyWirePairs;
+/// <summary>Independent synthetic K0other transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function K0other:TLegacyWirePairs;
+/// <summary>Independent synthetic K0root transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function K0root:TLegacyWirePairs;
+/// <summary>Independent synthetic K0free transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function K0free:TLegacyWirePairs;
 /// <summary>Independent synthetic D1M0W0 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function D1M0W0:TLegacyWirePairs;
@@ -95,6 +113,24 @@ function C1:TLegacyWirePairs;
 /// <summary>Independent synthetic A1 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function A1:TLegacyWirePairs;
+/// <summary>Independent synthetic K1policy transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function K1policy:TLegacyWirePairs;
+/// <summary>Independent synthetic K1access transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function K1access:TLegacyWirePairs;
+/// <summary>Independent synthetic K1current transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function K1current:TLegacyWirePairs;
+/// <summary>Independent synthetic K1other transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function K1other:TLegacyWirePairs;
+/// <summary>Independent synthetic K1root transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function K1root:TLegacyWirePairs;
+/// <summary>Independent synthetic K1free transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function K1free:TLegacyWirePairs;
 /// <summary>Independent synthetic D2M0W0 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function D2M0W0:TLegacyWirePairs;
@@ -137,6 +173,24 @@ function C2:TLegacyWirePairs;
 /// <summary>Independent synthetic A2 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function A2:TLegacyWirePairs;
+/// <summary>Independent synthetic K2policy transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function K2policy:TLegacyWirePairs;
+/// <summary>Independent synthetic K2access transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function K2access:TLegacyWirePairs;
+/// <summary>Independent synthetic K2current transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function K2current:TLegacyWirePairs;
+/// <summary>Independent synthetic K2other transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function K2other:TLegacyWirePairs;
+/// <summary>Independent synthetic K2root transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function K2root:TLegacyWirePairs;
+/// <summary>Independent synthetic K2free transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function K2free:TLegacyWirePairs;
 /// <summary>Independent synthetic D3M0W0 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function D3M0W0:TLegacyWirePairs;
@@ -179,6 +233,24 @@ function C3:TLegacyWirePairs;
 /// <summary>Independent synthetic A3 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function A3:TLegacyWirePairs;
+/// <summary>Independent synthetic K3policy transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function K3policy:TLegacyWirePairs;
+/// <summary>Independent synthetic K3access transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function K3access:TLegacyWirePairs;
+/// <summary>Independent synthetic K3current transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function K3current:TLegacyWirePairs;
+/// <summary>Independent synthetic K3other transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function K3other:TLegacyWirePairs;
+/// <summary>Independent synthetic K3root transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function K3root:TLegacyWirePairs;
+/// <summary>Independent synthetic K3free transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function K3free:TLegacyWirePairs;
 /// <summary>Independent synthetic Uread transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function Uread:TLegacyWirePairs;
@@ -188,6 +260,27 @@ function Umemory:TLegacyWirePairs;
 /// <summary>Independent synthetic Uwrite transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function Uwrite:TLegacyWirePairs;
+/// <summary>Independent synthetic UCread transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function UCread:TLegacyWirePairs;
+/// <summary>Independent synthetic UCconfig transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function UCconfig:TLegacyWirePairs;
+/// <summary>Independent synthetic UCkey transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function UCkey:TLegacyWirePairs;
+/// <summary>Independent synthetic UCnoop transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function UCnoop:TLegacyWirePairs;
+/// <summary>Independent synthetic UCsamekey transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function UCsamekey:TLegacyWirePairs;
+/// <summary>Independent synthetic UClockedconfig transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function UClockedconfig:TLegacyWirePairs;
+/// <summary>Independent synthetic UClockedkey transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function UClockedkey:TLegacyWirePairs;
 implementation
 function D0M0W0:TLegacyWirePairs;
 begin
@@ -642,6 +735,77 @@ begin
  Result[28].Command:='90DA00000301EFCD00';Result[28].Response:='A5F42E57D8BA2D309100';
  Result[29].Command:='906A000000';Result[29].Response:='5634120BA934E9AD473C949100';
 end;
+function K0policy:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,6);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='901A0000010000';Result[1].Response:='C0489F69BEC54FA291AF';
+ Result[2].Command:='90AF000010A55F1267F8000613831E17D57181DE6F00';Result[2].Response:='29E6705DFB2FCEA89100';
+ Result[3].Command:='9045000000';Result[3].Response:='0F0255E65244BCF7D38F9100';
+ Result[4].Command:='9054000008455AFA47B53A626200';Result[4].Response:='9414EDDB2F4C66759100';
+ Result[5].Command:='9045000000';Result[5].Response:='EF02BED3C5DA62CDEBF59100';
+end;
+function K0access:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,7);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='901A0000010000';Result[1].Response:='C0489F69BEC54FA291AF';
+ Result[2].Command:='90AF000010A55F1267F8000613831E17D57181DE6F00';Result[2].Response:='29E6705DFB2FCEA89100';
+ Result[3].Command:='9045000000';Result[3].Response:='0F0255E65244BCF7D38F9100';
+ Result[4].Command:='90F50000010000';Result[4].Response:='00030000200000FB551612688C0F669100';
+ Result[5].Command:='905F000009005C840A2BF658434000';Result[5].Response:='6FB6E35F95F0E0B59100';
+ Result[6].Command:='90F50000010000';Result[6].Response:='000110E1200000E667841BB852C5E99100';
+end;
+function K0current:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,9);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='901A0000010000';Result[1].Response:='C0489F69BEC54FA291AF';
+ Result[2].Command:='90AF000010A55F1267F8000613831E17D57181DE6F00';Result[2].Response:='29E6705DFB2FCEA89100';
+ Result[3].Command:='9045000000';Result[3].Response:='0F0255E65244BCF7D38F9100';
+ Result[4].Command:='90C400001900C17E59CBA990AF7AE6E720CB0AF4DE3A86F5631A30EF7BB600';Result[4].Response:='9100';
+ Result[5].Command:='901A0000010000';Result[5].Response:='88F094765001615391AF';
+ Result[6].Command:='90AF000010D0543E2A1D8E11953759A64D5030F61900';Result[6].Response:='CDF4CC5AE96278929100';
+ Result[7].Command:='90640000010000';Result[7].Response:='4228E4CE22253A75DB9100';
+ Result[8].Command:='9045000000';Result[8].Response:='0F02DA67001371E499209100';
+end;
+function K0other:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,9);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='901A0000010000';Result[1].Response:='C0489F69BEC54FA291AF';
+ Result[2].Command:='90AF000010A55F1267F8000613831E17D57181DE6F00';Result[2].Response:='29E6705DFB2FCEA89100';
+ Result[3].Command:='9045000000';Result[3].Response:='0F0255E65244BCF7D38F9100';
+ Result[4].Command:='90C40000190168FFFB197C99FA3098D47CA6FAD22C3173536ACEEC272D6900';Result[4].Response:='41B372A640F9B1E29100';
+ Result[5].Command:='901A0000010100';Result[5].Response:='88F094765001615391AF';
+ Result[6].Command:='90AF000010D0543E2A1D8E11953759A64D5030F61900';Result[6].Response:='CDF4CC5AE96278929100';
+ Result[7].Command:='90640000010100';Result[7].Response:='42C951633CDD35697B9100';
+ Result[8].Command:='9045000000';Result[8].Response:='0F022D61456E29128FDE9100';
+end;
+function K0root:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,9);
+ Result[0].Command:='905A00000300000000';Result[0].Response:='9100';
+ Result[1].Command:='901A0000010000';Result[1].Response:='C0489F69BEC54FA291AF';
+ Result[2].Command:='90AF000010A55F1267F8000613831E17D57181DE6F00';Result[2].Response:='29E6705DFB2FCEA89100';
+ Result[3].Command:='9045000000';Result[3].Response:='0F0255E65244BCF7D38F9100';
+ Result[4].Command:='90C400001900C17E59CBA990AF7AE6E720CB0AF4DE3A86F5631A30EF7BB600';Result[4].Response:='9100';
+ Result[5].Command:='901A0000010000';Result[5].Response:='88F094765001615391AF';
+ Result[6].Command:='90AF000010D0543E2A1D8E11953759A64D5030F61900';Result[6].Response:='CDF4CC5AE96278929100';
+ Result[7].Command:='90640000010000';Result[7].Response:='4228E4CE22253A75DB9100';
+ Result[8].Command:='9045000000';Result[8].Response:='0F02DA67001371E499209100';
+end;
+function K0free:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,7);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='901A0000010000';Result[1].Response:='C0489F69BEC54FA291AF';
+ Result[2].Command:='90AF000010A55F1267F8000613831E17D57181DE6F00';Result[2].Response:='29E6705DFB2FCEA89100';
+ Result[3].Command:='9045000000';Result[3].Response:='0F0255E65244BCF7D38F9100';
+ Result[4].Command:='90F50000010000';Result[4].Response:='00030E0E20000028C048C0CD1364189100';
+ Result[5].Command:='905F000004000110E100';Result[5].Response:='85453326A162C4BD9100';
+ Result[6].Command:='90F50000010000';Result[6].Response:='000110E1200000E8BACC1B4782D4AD9100';
+end;
 function D1M0W0:TLegacyWirePairs;
 begin
  Result:=nil;SetLength(Result,6);
@@ -1095,6 +1259,77 @@ begin
  Result[28].Command:='90DA00000301EFCD00';Result[28].Response:='AFCD08EC2365E42D9100';
  Result[29].Command:='906A000000';Result[29].Response:='563412C8EA3CDB267BDFC39100';
 end;
+function K1policy:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,6);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='901A0000010000';Result[1].Response:='C0489F69BEC54FA24FB6B1A32A7E422591AF';
+ Result[2].Command:='90AF000020B0CF98B7C6608F7B1ADE6431E091CC2C61C857C07C04856BE6D522015DE2E27500';Result[2].Response:='4A50EF9039792F1F21C71AA745EC26909100';
+ Result[3].Command:='9045000000';Result[3].Response:='0F42AD566429E37242849100';
+ Result[4].Command:='90540000085F39207E304E16D300';Result[4].Response:='E65ABF4AF781A4079100';
+ Result[5].Command:='9045000000';Result[5].Response:='EF423E35758A7D0BAB129100';
+end;
+function K1access:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,7);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='901A0000010000';Result[1].Response:='C0489F69BEC54FA24FB6B1A32A7E422591AF';
+ Result[2].Command:='90AF000020B0CF98B7C6608F7B1ADE6431E091CC2C61C857C07C04856BE6D522015DE2E27500';Result[2].Response:='4A50EF9039792F1F21C71AA745EC26909100';
+ Result[3].Command:='9045000000';Result[3].Response:='0F42AD566429E37242849100';
+ Result[4].Command:='90F50000010000';Result[4].Response:='000300002000002041973478E7FAB89100';
+ Result[5].Command:='905F00000900C77DD809E830266100';Result[5].Response:='682AE4D0BB8531949100';
+ Result[6].Command:='90F50000010000';Result[6].Response:='000110E1200000EA08BF05C5E5F0CD9100';
+end;
+function K1current:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,9);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='901A0000010000';Result[1].Response:='C0489F69BEC54FA24FB6B1A32A7E422591AF';
+ Result[2].Command:='90AF000020B0CF98B7C6608F7B1ADE6431E091CC2C61C857C07C04856BE6D522015DE2E27500';Result[2].Response:='4A50EF9039792F1F21C71AA745EC26909100';
+ Result[3].Command:='9045000000';Result[3].Response:='0F42AD566429E37242849100';
+ Result[4].Command:='90C400002100A859467BBF24B0ECB84A6DB9F51B8D30D3F87271C19ECF74E614ABCA49AA3D5600';Result[4].Response:='9100';
+ Result[5].Command:='901A0000010000';Result[5].Response:='8D6E32FED01C972DA8AE411C50C0BA2791AF';
+ Result[6].Command:='90AF0000207D6F52BA6E8732E360BDAD1C30C9A5732C63C4D342D7ACFD19E384CAE21F002D00';Result[6].Response:='CD80D3A5029AC98AE1F4D14D6C38E8199100';
+ Result[7].Command:='90640000010000';Result[7].Response:='42256AF6B7BA1642E69100';
+ Result[8].Command:='9045000000';Result[8].Response:='0F421C09ACFD1BDE27799100';
+end;
+function K1other:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,9);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='901A0000010000';Result[1].Response:='C0489F69BEC54FA24FB6B1A32A7E422591AF';
+ Result[2].Command:='90AF000020B0CF98B7C6608F7B1ADE6431E091CC2C61C857C07C04856BE6D522015DE2E27500';Result[2].Response:='4A50EF9039792F1F21C71AA745EC26909100';
+ Result[3].Command:='9045000000';Result[3].Response:='0F42AD566429E37242849100';
+ Result[4].Command:='90C400002101B4AAA206DCDA2C7818A44EDCFC503EC4967C33CBDCE092584D7762151AB07E3800';Result[4].Response:='9580C392360CCAF59100';
+ Result[5].Command:='901A0000010100';Result[5].Response:='8D6E32FED01C972DA8AE411C50C0BA2791AF';
+ Result[6].Command:='90AF0000207D6F52BA6E8732E360BDAD1C30C9A5732C63C4D342D7ACFD19E384CAE21F002D00';Result[6].Response:='CD80D3A5029AC98AE1F4D14D6C38E8199100';
+ Result[7].Command:='90640000010100';Result[7].Response:='428421D27E30AA347F9100';
+ Result[8].Command:='9045000000';Result[8].Response:='0F42B3C828D5B7EBF8929100';
+end;
+function K1root:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,9);
+ Result[0].Command:='905A00000300000000';Result[0].Response:='9100';
+ Result[1].Command:='901A0000010000';Result[1].Response:='C0489F69BEC54FA24FB6B1A32A7E422591AF';
+ Result[2].Command:='90AF000020B0CF98B7C6608F7B1ADE6431E091CC2C61C857C07C04856BE6D522015DE2E27500';Result[2].Response:='4A50EF9039792F1F21C71AA745EC26909100';
+ Result[3].Command:='9045000000';Result[3].Response:='0F42AD566429E37242849100';
+ Result[4].Command:='90C400002140A859467BBF24B0ECB84A6DB9F51B8D30D3F87271C19ECF74EF56DFDFE023D79600';Result[4].Response:='9100';
+ Result[5].Command:='901A0000010000';Result[5].Response:='8D6E32FED01C972DA8AE411C50C0BA2791AF';
+ Result[6].Command:='90AF0000207D6F52BA6E8732E360BDAD1C30C9A5732C63C4D342D7ACFD19E384CAE21F002D00';Result[6].Response:='CD80D3A5029AC98AE1F4D14D6C38E8199100';
+ Result[7].Command:='90640000010000';Result[7].Response:='42256AF6B7BA1642E69100';
+ Result[8].Command:='9045000000';Result[8].Response:='0F421C09ACFD1BDE27799100';
+end;
+function K1free:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,7);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='901A0000010000';Result[1].Response:='C0489F69BEC54FA24FB6B1A32A7E422591AF';
+ Result[2].Command:='90AF000020B0CF98B7C6608F7B1ADE6431E091CC2C61C857C07C04856BE6D522015DE2E27500';Result[2].Response:='4A50EF9039792F1F21C71AA745EC26909100';
+ Result[3].Command:='9045000000';Result[3].Response:='0F42AD566429E37242849100';
+ Result[4].Command:='90F50000010000';Result[4].Response:='00030E0E200000002E4350E84CCCCB9100';
+ Result[5].Command:='905F000004000110E100';Result[5].Response:='A3A08CF023B62A5A9100';
+ Result[6].Command:='90F50000010000';Result[6].Response:='000110E1200000D2262B2EF5F135679100';
+end;
 function D2M0W0:TLegacyWirePairs;
 begin
  Result:=nil;SetLength(Result,6);
@@ -1540,6 +1775,77 @@ begin
  Result[27].Command:='906A000000';Result[27].Response:='56341201EFCD9100';
  Result[28].Command:='90DA00000301EFCD00';Result[28].Response:='9100';
  Result[29].Command:='906A000000';Result[29].Response:='5634129100';
+end;
+function K2policy:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,6);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='900A0000010000';Result[1].Response:='EDD076666F6AE13091AF';
+ Result[2].Command:='90AF000010285089A5EBE5BC9E273DF193EC99F16400';Result[2].Response:='32146EB46D7FA6549100';
+ Result[3].Command:='9045000000';Result[3].Response:='0F029100';
+ Result[4].Command:='90540000087639CB24414963D200';Result[4].Response:='9100';
+ Result[5].Command:='9045000000';Result[5].Response:='EF029100';
+end;
+function K2access:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,7);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='900A0000010000';Result[1].Response:='EDD076666F6AE13091AF';
+ Result[2].Command:='90AF000010285089A5EBE5BC9E273DF193EC99F16400';Result[2].Response:='32146EB46D7FA6549100';
+ Result[3].Command:='9045000000';Result[3].Response:='0F029100';
+ Result[4].Command:='90F50000010000';Result[4].Response:='000300002000009100';
+ Result[5].Command:='905F00000900DD6734B9D97997F700';Result[5].Response:='9100';
+ Result[6].Command:='90F50000010000';Result[6].Response:='000110E12000009100';
+end;
+function K2current:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,9);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='900A0000010000';Result[1].Response:='EDD076666F6AE13091AF';
+ Result[2].Command:='90AF000010285089A5EBE5BC9E273DF193EC99F16400';Result[2].Response:='32146EB46D7FA6549100';
+ Result[3].Command:='9045000000';Result[3].Response:='0F029100';
+ Result[4].Command:='90C400001900AEC21DBAB4C397BA418038F4740902C440E2AEB2899BF39900';Result[4].Response:='9100';
+ Result[5].Command:='900A0000010000';Result[5].Response:='F7F05F6E52E9319591AF';
+ Result[6].Command:='90AF000010B5EEC6AF5053F6714FAAE6F1702FC72E00';Result[6].Response:='6BA75D47DC7E99269100';
+ Result[7].Command:='90640000010000';Result[7].Response:='429100';
+ Result[8].Command:='9045000000';Result[8].Response:='0F029100';
+end;
+function K2other:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,9);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='900A0000010000';Result[1].Response:='EDD076666F6AE13091AF';
+ Result[2].Command:='90AF000010285089A5EBE5BC9E273DF193EC99F16400';Result[2].Response:='32146EB46D7FA6549100';
+ Result[3].Command:='9045000000';Result[3].Response:='0F029100';
+ Result[4].Command:='90C400001901F6C1680CF2145FB9FA9CC1A27295EAFB85CD7284AEC1E7E600';Result[4].Response:='9100';
+ Result[5].Command:='900A0000010100';Result[5].Response:='F7F05F6E52E9319591AF';
+ Result[6].Command:='90AF000010B5EEC6AF5053F6714FAAE6F1702FC72E00';Result[6].Response:='6BA75D47DC7E99269100';
+ Result[7].Command:='90640000010100';Result[7].Response:='429100';
+ Result[8].Command:='9045000000';Result[8].Response:='0F029100';
+end;
+function K2root:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,9);
+ Result[0].Command:='905A00000300000000';Result[0].Response:='9100';
+ Result[1].Command:='900A0000010000';Result[1].Response:='EDD076666F6AE13091AF';
+ Result[2].Command:='90AF000010285089A5EBE5BC9E273DF193EC99F16400';Result[2].Response:='32146EB46D7FA6549100';
+ Result[3].Command:='9045000000';Result[3].Response:='0F029100';
+ Result[4].Command:='90C400001900AEC21DBAB4C397BA418038F4740902C440E2AEB2899BF39900';Result[4].Response:='9100';
+ Result[5].Command:='900A0000010000';Result[5].Response:='F7F05F6E52E9319591AF';
+ Result[6].Command:='90AF000010B5EEC6AF5053F6714FAAE6F1702FC72E00';Result[6].Response:='6BA75D47DC7E99269100';
+ Result[7].Command:='90640000010000';Result[7].Response:='429100';
+ Result[8].Command:='9045000000';Result[8].Response:='0F029100';
+end;
+function K2free:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,7);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='900A0000010000';Result[1].Response:='EDD076666F6AE13091AF';
+ Result[2].Command:='90AF000010285089A5EBE5BC9E273DF193EC99F16400';Result[2].Response:='32146EB46D7FA6549100';
+ Result[3].Command:='9045000000';Result[3].Response:='0F029100';
+ Result[4].Command:='90F50000010000';Result[4].Response:='00030E0E2000009100';
+ Result[5].Command:='905F000004000110E100';Result[5].Response:='9100';
+ Result[6].Command:='90F50000010000';Result[6].Response:='000110E12000009100';
 end;
 function D3M0W0:TLegacyWirePairs;
 begin
@@ -1987,6 +2293,77 @@ begin
  Result[28].Command:='90DA00000301EFCD00';Result[28].Response:='9100';
  Result[29].Command:='906A000000';Result[29].Response:='5634129100';
 end;
+function K3policy:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,6);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='900A0000010000';Result[1].Response:='C0489F69BEC54FA291AF';
+ Result[2].Command:='90AF0000104A37C9D6B574D003B00B25A069581CC700';Result[2].Response:='FE5F5CE1966AAE2A9100';
+ Result[3].Command:='9045000000';Result[3].Response:='0F029100';
+ Result[4].Command:='9054000008E0546AAC48C9ACEB00';Result[4].Response:='9100';
+ Result[5].Command:='9045000000';Result[5].Response:='EF029100';
+end;
+function K3access:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,7);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='900A0000010000';Result[1].Response:='C0489F69BEC54FA291AF';
+ Result[2].Command:='90AF0000104A37C9D6B574D003B00B25A069581CC700';Result[2].Response:='FE5F5CE1966AAE2A9100';
+ Result[3].Command:='9045000000';Result[3].Response:='0F029100';
+ Result[4].Command:='90F50000010000';Result[4].Response:='000300002000009100';
+ Result[5].Command:='905F00000900E71E36BD863A13E800';Result[5].Response:='9100';
+ Result[6].Command:='90F50000010000';Result[6].Response:='000110E12000009100';
+end;
+function K3current:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,9);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='900A0000010000';Result[1].Response:='C0489F69BEC54FA291AF';
+ Result[2].Command:='90AF0000104A37C9D6B574D003B00B25A069581CC700';Result[2].Response:='FE5F5CE1966AAE2A9100';
+ Result[3].Command:='9045000000';Result[3].Response:='0F029100';
+ Result[4].Command:='90C400001900AD525B7533D1B90341764E7A8039E6A2F9EAC1700F0FCBB100';Result[4].Response:='9100';
+ Result[5].Command:='900A0000010000';Result[5].Response:='88F094765001615391AF';
+ Result[6].Command:='90AF0000107181797DF59FA260072EC7FEDF94163700';Result[6].Response:='EFB8BB646FA214E59100';
+ Result[7].Command:='90640000010000';Result[7].Response:='429100';
+ Result[8].Command:='9045000000';Result[8].Response:='0F029100';
+end;
+function K3other:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,9);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='900A0000010000';Result[1].Response:='C0489F69BEC54FA291AF';
+ Result[2].Command:='90AF0000104A37C9D6B574D003B00B25A069581CC700';Result[2].Response:='FE5F5CE1966AAE2A9100';
+ Result[3].Command:='9045000000';Result[3].Response:='0F029100';
+ Result[4].Command:='90C400001901584484B346B59227824EBEF04B354732135C4BA7D54F16B600';Result[4].Response:='9100';
+ Result[5].Command:='900A0000010100';Result[5].Response:='88F094765001615391AF';
+ Result[6].Command:='90AF0000107181797DF59FA260072EC7FEDF94163700';Result[6].Response:='EFB8BB646FA214E59100';
+ Result[7].Command:='90640000010100';Result[7].Response:='429100';
+ Result[8].Command:='9045000000';Result[8].Response:='0F029100';
+end;
+function K3root:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,9);
+ Result[0].Command:='905A00000300000000';Result[0].Response:='9100';
+ Result[1].Command:='900A0000010000';Result[1].Response:='C0489F69BEC54FA291AF';
+ Result[2].Command:='90AF0000104A37C9D6B574D003B00B25A069581CC700';Result[2].Response:='FE5F5CE1966AAE2A9100';
+ Result[3].Command:='9045000000';Result[3].Response:='0F029100';
+ Result[4].Command:='90C400001900AD525B7533D1B90341764E7A8039E6A2F9EAC1700F0FCBB100';Result[4].Response:='9100';
+ Result[5].Command:='900A0000010000';Result[5].Response:='88F094765001615391AF';
+ Result[6].Command:='90AF0000107181797DF59FA260072EC7FEDF94163700';Result[6].Response:='EFB8BB646FA214E59100';
+ Result[7].Command:='90640000010000';Result[7].Response:='429100';
+ Result[8].Command:='9045000000';Result[8].Response:='0F029100';
+end;
+function K3free:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,7);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='900A0000010000';Result[1].Response:='C0489F69BEC54FA291AF';
+ Result[2].Command:='90AF0000104A37C9D6B574D003B00B25A069581CC700';Result[2].Response:='FE5F5CE1966AAE2A9100';
+ Result[3].Command:='9045000000';Result[3].Response:='0F029100';
+ Result[4].Command:='90F50000010000';Result[4].Response:='00030E0E2000009100';
+ Result[5].Command:='905F000004000110E100';Result[5].Response:='9100';
+ Result[6].Command:='90F50000010000';Result[6].Response:='000110E12000009100';
+end;
 function Uread:TLegacyWirePairs;
 begin
  Result:=nil;SetLength(Result,3);
@@ -2016,5 +2393,70 @@ begin
  Result[1].Command:='AFA55F1267F8000613831E17D57181DE6F77E0';Result[1].Response:='0029E6705DFB2FCEA807B5';
  Result[2].Command:='A227AABBCCDD7F5C';Result[2].Response:='0A';
  Result[3].Command:='302424CF';Result[3].Response:='909192939495969798999A9BAABBCCDD5151';
+end;
+function UCread:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,3);
+ Result[0].Command:='1A004176';Result[0].Response:='AFC0489F69BEC54FA2B0B9';
+ Result[1].Command:='AFA55F1267F8000613831E17D57181DE6F77E0';Result[1].Response:='0029E6705DFB2FCEA807B5';
+ Result[2].Command:='30284805';Result[2].Response:='000000BD0000000030AABBCCF1DDEEFFD40B';
+end;
+function UCconfig:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,8);
+ Result[0].Command:='1A004176';Result[0].Response:='AFC0489F69BEC54FA2B0B9';
+ Result[1].Command:='AFA55F1267F8000613831E17D57181DE6F77E0';Result[1].Response:='0029E6705DFB2FCEA807B5';
+ Result[2].Command:='30284805';Result[2].Response:='000000BD0000000030AABBCCF1DDEEFFD40B';
+ Result[3].Command:='A22BF0DDEEFFF0E3';Result[3].Response:='0A';
+ Result[4].Command:='A22A04AABBCCF94F';Result[4].Response:='0A';
+ Result[5].Command:='1A004176';Result[5].Response:='AFC0489F69BEC54FA2B0B9';
+ Result[6].Command:='AFA55F1267F8000613831E17D57181DE6F77E0';Result[6].Response:='0029E6705DFB2FCEA807B5';
+ Result[7].Command:='30284805';Result[7].Response:='000000BD0000000004AABBCCF0DDEEFF39EC';
+end;
+function UCkey:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,9);
+ Result[0].Command:='1A004176';Result[0].Response:='AFC0489F69BEC54FA2B0B9';
+ Result[1].Command:='AFA55F1267F8000613831E17D57181DE6F77E0';Result[1].Response:='0029E6705DFB2FCEA807B5';
+ Result[2].Command:='30284805';Result[2].Response:='000000BD0000000030AABBCCF1DDEEFFD40B';
+ Result[3].Command:='A22CFEDCBA989C84';Result[3].Response:='0A';
+ Result[4].Command:='A22D765432100CC7';Result[4].Response:='0A';
+ Result[5].Command:='A22EEFCDAB89061F';Result[5].Response:='0A';
+ Result[6].Command:='A22F67452301965C';Result[6].Response:='0A';
+ Result[7].Command:='1A004176';Result[7].Response:='AF88F0947650016153C9A0';
+ Result[8].Command:='AFD0543E2A1D8E11953759A64D5030F619AF82';Result[8].Response:='00CDF4CC5AE9627892AB09';
+end;
+function UCnoop:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,6);
+ Result[0].Command:='1A004176';Result[0].Response:='AFC0489F69BEC54FA2B0B9';
+ Result[1].Command:='AFA55F1267F8000613831E17D57181DE6F77E0';Result[1].Response:='0029E6705DFB2FCEA807B5';
+ Result[2].Command:='30284805';Result[2].Response:='000000BD0000000030AABBCCF1DDEEFFD40B';
+ Result[3].Command:='1A004176';Result[3].Response:='AFC0489F69BEC54FA2B0B9';
+ Result[4].Command:='AFA55F1267F8000613831E17D57181DE6F77E0';Result[4].Response:='0029E6705DFB2FCEA807B5';
+ Result[5].Command:='30284805';Result[5].Response:='000000BD0000000030AABBCCF1DDEEFFD40B';
+end;
+function UCsamekey:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,5);
+ Result[0].Command:='1A004176';Result[0].Response:='AFC0489F69BEC54FA2B0B9';
+ Result[1].Command:='AFA55F1267F8000613831E17D57181DE6F77E0';Result[1].Response:='0029E6705DFB2FCEA807B5';
+ Result[2].Command:='30284805';Result[2].Response:='000000BD0000000030AABBCCF1DDEEFFD40B';
+ Result[3].Command:='1A004176';Result[3].Response:='AFC0489F69BEC54FA2B0B9';
+ Result[4].Command:='AFA55F1267F8000613831E17D57181DE6F77E0';Result[4].Response:='0029E6705DFB2FCEA807B5';
+end;
+function UClockedconfig:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,3);
+ Result[0].Command:='1A004176';Result[0].Response:='AFC0489F69BEC54FA2B0B9';
+ Result[1].Command:='AFA55F1267F8000613831E17D57181DE6F77E0';Result[1].Response:='0029E6705DFB2FCEA807B5';
+ Result[2].Command:='30284805';Result[2].Response:='006000BD0000000030AABBCCF1DDEEFFBFDD';
+end;
+function UClockedkey:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,3);
+ Result[0].Command:='1A004176';Result[0].Response:='AFC0489F69BEC54FA2B0B9';
+ Result[1].Command:='AFA55F1267F8000613831E17D57181DE6F77E0';Result[1].Response:='0029E6705DFB2FCEA807B5';
+ Result[2].Command:='30284805';Result[2].Response:='008000BD0000000030AABBCCF1DDEEFFA134';
 end;
 end.

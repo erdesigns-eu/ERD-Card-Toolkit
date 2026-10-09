@@ -17,6 +17,9 @@ profile or a password/PACK profile.
 | `ReadUserPage(Page, Key)` | Exactly four bytes from physical user page 4–39 |
 | `ReadUserMemory(Key)` | All 144 user bytes, pages 4–39 in order |
 | `WriteUserPageVerified(Page, Data, Key)` | Four independently read-back bytes after ACK and successful RF-session release |
+| `ReadConfiguration(Key)` | Owned pages 40–43 snapshot, AUTH0/AUTH1 and lock flags; no key-page reads |
+| `ConfigureAuthenticationVerified(FirstPage, ProtectReads, ExpectedPages, Key)` | Preserved reserved bytes, exact pages 42/43 preimage and lock checks, fresh same-UID authentication and configuration readback |
+| `ChangeKeyVerified(CurrentKey, NewKey)` | Key pages 44–47 programmed once; new key proved after same-UID RF reset and successful release |
 
 Authentication uses a supplied 16-byte K1/K2 key in cryptographic byte order,
 a fresh eight-byte system nonce, `1A 00` / `AF` frames with CRC-A and mutual nonce
@@ -24,15 +27,25 @@ verification. A single exclusive RF session retains authentication until readbac
 and release. Memory commands remain plaintext after authentication; Ultralight C
 does not encrypt those memory exchanges.
 
-The component excludes manufacturer/static locks/OTP (pages 0–3) and dynamic
-locks, counter, authentication configuration and key storage (pages 40–47).
-READs at the user-region tail start at page 36, avoiding the configuration pages.
-Card lock/access policy still applies. Configuration and key changes are not
-implemented. No operation retries authentication or a write. After write dispatch,
+Generic user-page writes exclude pages outside 4–39. Dedicated configuration
+and key APIs explicitly handle pages 42–47. No method programs manufacturer,
+static/dynamic locks, OTP or the counter. User-region tail READs start at page 36.
+Configuration updates preserve reserved bytes and existing locks/counter bytes;
+AUTH1 is written before AUTH0. First protected page is 3–48; 48 disables protection.
+`ProtectReads=True` protects both reads and writes; false protects writes only.
+Supply the exact eight bytes `AuthenticationPages` from `ReadConfiguration` as
+preimage. Read protection is never disabled automatically.
+
+Key pages cannot be read back. The API reverses each eight-byte subkey for EEPROM
+storage, writes all four pages once and resets the RF field before proving the new
+key. One exclusive session covers programming and fresh activation; the same UID
+must be selected. A no-op still obtains fresh authentication proof. Partial key
+programming can leave the card requiring device-specific recovery; the component
+never retries, rolls back or claims verification after a failure. No operation retries authentication or a write. After write dispatch,
 failed ACK, readback, integrity or release raises `EContactlessWriteUncertain`.
 
 Use `examples/vcl/ultralightc/UltralightCDemo.dproj`: it owns its own editable
-form/DFM, reader combobox, presence label and three operation pages. Enter a key
+form/DFM, reader combobox, presence label and six operation pages. Enter a key
 and explicitly acknowledge the authentication attempt or write.
 
 ## DESFire profiles
@@ -74,11 +87,25 @@ The optional `IDesfireApplicationManagement` interface adds explicit application
 key-storage selection; see [DESFIRE_APPLICATIONS.md](DESFIRE_APPLICATIONS.md).
 Creation initializes card-default credentials, not caller-supplied keys.
 
-EV2 NonFirst, AES key rotation and key/access-policy changes remain AES-specific.
-DES/3DES key rotation, key-type conversion of existing applications, policy/access
-changes, EV2 key sets, LRP, SDM and TMAC extensions are not implemented by these
-profiles. DesfireDemo exposes the new choices on file, transaction and ordinary
-management pages; AES key/access mutation pages retain the existing choices.
+`ChangeKeySettings` and `ChangeFileAccess` support all explicit authenticated
+AES/DES/3DES profiles. Acquired policy, key count and ordinary-file access are
+checked before mutation. Free-change EV1/D40 settings use the native Plain command
+policy; protected changes use Full messaging.
+
+Open `OpenDesManagementSession(Aid)` for `IDesfireDesManagement`.
+`ChangeDesKey(KeyNumber, NewVersion, OldVersion, NewKey, OldKey)` retains the selected
+DES/2K3DES/3K3DES type. New material must match that profile's key size. Supply an
+empty OldKey for the authenticated key; otherwise supply the target's stored bytes
+and explicit old first-subkey version. Second/third-subkey stored version bits in
+OldKey are preserved, not inferred. New first-subkey version bits are encoded from
+NewVersion; new 2K3DES second-subkey version bits are complementary. Eight-byte DES
+is duplicated only for the native payload. Fresh authentication with the new key
+and an exact key-version check must succeed before verification is reported.
+Failures after ChangeKey dispatch remain uncertain and never generate a retry.
+
+EV2 NonFirst and `ChangeAesKey` remain AES-specific. Existing application key-type
+conversion, EV2 key sets, LRP, SDM and TMAC are outside these profiles. DesfireDemo
+has DES/3DES policy/access choices and a dedicated key rotation tab.
 
 ## Native cryptography
 
@@ -110,7 +137,11 @@ Coverage includes a published NIST TDEA CMAC vector, a two-key EDE block vector,
 all four DESFire profiles and three communication modes, complete transaction
 verification, AF chains in both directions, every one-shot I/O failure boundary,
 protected response bit corruption, Ultralight C mutual authentication/CRC and
-user-page bounds, failed RNG and failed session release. Native CNG ABI tests
+user-page bounds, failed RNG and failed session release. Management transcripts
+cover all four DES profiles, current/other/PICC key rotation, protected/free file
+settings and key policy. ULC tests cover fresh key proof, configuration preimages,
+lock checks, reserved-byte preservation, response-bit corruption, every I/O
+failure, same-UID reactivation and release failure. Native CNG ABI tests
 exercise DES buffers, wrong returned lengths, IV ownership and native failure
 cleanup through the existing OpenSSL-backed C shim. These scripts supplement
 compiler/device evidence; they are not a Delphi compiler.
@@ -122,6 +153,7 @@ no external implementation is copied, compiled or linked:
   [message composition](https://github.com/nfc-tools/libfreefare/blob/c2b0cfa4b9fb0e4be88604f00b7a2405618d5abc/libfreefare/mifare_desfire_crypto.c),
   [session-key nonce slices](https://github.com/nfc-tools/libfreefare/blob/c2b0cfa4b9fb0e4be88604f00b7a2405618d5abc/libfreefare/mifare_desfire_key.c)
   and [Ultralight C frames](https://github.com/nfc-tools/libfreefare/blob/c2b0cfa4b9fb0e4be88604f00b7a2405618d5abc/libfreefare/mifare_ultralight.c).
+- [NXP MF0ICU2 Ultralight C datasheet](https://www.nxp.com/docs/en/data-sheet/MF0ICU2.pdf), revision 3.5, 30 January 2026, memory/configuration/key storage and RF-reset activation rules.
 - [NIST SP 800-38B](https://csrc.nist.gov/pubs/sp/800/38/b/upd1/final), 64-bit CMAC
   subkey polynomial and TDEA known-answer example.
 - [Microsoft BCryptEncrypt](https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/nf-bcrypt-bcryptencrypt)

@@ -1002,7 +1002,7 @@ begin
     end;
     dfUltralightC:
     begin
-      SetLength(Result,3);
+      SetLength(Result,6);
       Result[0].Id := 'page'; Result[0].LabelText := 'Authenticate + read user page';
       Result[0].Mutation := True; Result[0].Pcsc := True;
       SetLength(Result[0].Fields,2);
@@ -1024,6 +1024,30 @@ begin
       Result[2].Fields[1].DefaultText := ''; Result[2].Fields[1].Secret := False; Result[2].Fields[1].Choices := '';
       Result[2].Fields[2].Name := 'key'; Result[2].Fields[2].LabelText := '16-byte supplied 2K3DES key (hex)';
       Result[2].Fields[2].DefaultText := ''; Result[2].Fields[2].Secret := True; Result[2].Fields[2].Choices := '';
+      Result[3].Id := 'configuration'; Result[3].LabelText := 'Read authentication configuration';
+      Result[3].Mutation := True; Result[3].Pcsc := True;
+      SetLength(Result[3].Fields,1);
+      Result[3].Fields[0].Name := 'key'; Result[3].Fields[0].LabelText := 'Supplied 16-byte current key (hex)';
+      Result[3].Fields[0].DefaultText := ''; Result[3].Fields[0].Secret := True; Result[3].Fields[0].Choices := '';
+      Result[4].Id := 'configure'; Result[4].LabelText := 'Configure authentication + fresh RF proof';
+      Result[4].Mutation := True; Result[4].Pcsc := True;
+      SetLength(Result[4].Fields,4);
+      Result[4].Fields[0].Name := 'firstpage'; Result[4].Fields[0].LabelText := 'First protected page (3..48; 48 = disabled)';
+      Result[4].Fields[0].DefaultText := '4'; Result[4].Fields[0].Secret := False; Result[4].Fields[0].Choices := '';
+      Result[4].Fields[1].Name := 'protectreads'; Result[4].Fields[1].LabelText := 'Protection scope';
+      Result[4].Fields[1].DefaultText := '0'; Result[4].Fields[1].Secret := False; Result[4].Fields[1].Choices := 'Writes only|Reads and writes';
+      Result[4].Fields[2].Name := 'before'; Result[4].Fields[2].LabelText := 'Exact pages 42/43 preimage (8 bytes, hex)';
+      Result[4].Fields[2].DefaultText := ''; Result[4].Fields[2].Secret := False; Result[4].Fields[2].Choices := '';
+      Result[4].Fields[3].Name := 'key'; Result[4].Fields[3].LabelText := 'Supplied 16-byte current key (hex)';
+      Result[4].Fields[3].DefaultText := ''; Result[4].Fields[3].Secret := True; Result[4].Fields[3].Choices := '';
+      Result[5].Id := 'changekey'; Result[5].LabelText := 'Replace key + fresh RF proof';
+      Result[5].Mutation := True; Result[5].Pcsc := True;
+      SetLength(Result[5].Fields,2);
+      Result[5].Fields[0].Name := 'key'; Result[5].Fields[0].LabelText := 'Supplied 16-byte current key (hex)';
+      Result[5].Fields[0].DefaultText := ''; Result[5].Fields[0].Secret := True; Result[5].Fields[0].Choices := '';
+      Result[5].Fields[1].Name := 'newkey'; Result[5].Fields[1].LabelText := 'New 16-byte key (hex)';
+      Result[5].Fields[1].DefaultText := ''; Result[5].Fields[1].Secret := True; Result[5].Fields[1].Choices := '';
+
     end;
     dfType2:
     begin
@@ -1447,7 +1471,7 @@ begin
     end;
     dfDesfire:
     begin
-      SetLength(Result,24);
+      SetLength(Result,25);
       Result[0].Id := 'version'; Result[0].LabelText := 'Read public native version';
       Result[0].Mutation := False; Result[0].Pcsc := True;
       SetLength(Result[0].Fields,0);
@@ -1768,7 +1792,7 @@ begin
       Result[16].Fields[0].Name := 'aid'; Result[16].Fields[0].LabelText := 'Explicit native AID (decimal; 0 = PICC)';
       Result[16].Fields[0].DefaultText := '0'; Result[16].Fields[0].Secret := False; Result[16].Fields[0].Choices := '';
       Result[16].Fields[1].Name := 'security'; Result[16].Fields[1].LabelText := 'Explicit security profile';
-      Result[16].Fields[1].DefaultText := '0'; Result[16].Fields[1].Secret := False; Result[16].Fields[1].Choices := 'Public|EV2 AES|EV1 AES';
+      Result[16].Fields[1].DefaultText := '0'; Result[16].Fields[1].Secret := False; Result[16].Fields[1].Choices := 'Public|EV2 AES|EV1 AES|EV1 2K3DES|EV1 3K3DES|D40 DES|D40 2K3DES';
       Result[16].Fields[2].Name := 'minimum'; Result[16].Fields[2].LabelText := 'Minimum communication';
       Result[16].Fields[2].DefaultText := '1'; Result[16].Fields[2].Secret := False; Result[16].Fields[2].Choices := 'Plain|MAC|Full';
       Result[16].Fields[3].Name := 'keynumber'; Result[16].Fields[3].LabelText := 'Supplied authentication key number';
@@ -1787,7 +1811,7 @@ begin
       Result[17].Fields[0].Name := 'aid'; Result[17].Fields[0].LabelText := 'Explicit native AID (decimal; 0 = PICC)';
       Result[17].Fields[0].DefaultText := '0'; Result[17].Fields[0].Secret := False; Result[17].Fields[0].Choices := '';
       Result[17].Fields[1].Name := 'security'; Result[17].Fields[1].LabelText := 'Explicit security profile';
-      Result[17].Fields[1].DefaultText := '0'; Result[17].Fields[1].Secret := False; Result[17].Fields[1].Choices := 'Public|EV2 AES|EV1 AES';
+      Result[17].Fields[1].DefaultText := '0'; Result[17].Fields[1].Secret := False; Result[17].Fields[1].Choices := 'Public|EV2 AES|EV1 AES|EV1 2K3DES|EV1 3K3DES|D40 DES|D40 2K3DES';
       Result[17].Fields[2].Name := 'minimum'; Result[17].Fields[2].LabelText := 'Minimum communication';
       Result[17].Fields[2].DefaultText := '1'; Result[17].Fields[2].Secret := False; Result[17].Fields[2].Choices := 'Plain|MAC|Full';
       Result[17].Fields[3].Name := 'keynumber'; Result[17].Fields[3].LabelText := 'Supplied authentication key number';
@@ -1949,7 +1973,34 @@ begin
       Result[23].Fields[0].Name := 'file'; Result[23].Fields[0].LabelText := 'Native file number';
       Result[23].Fields[0].DefaultText := '0'; Result[23].Fields[0].Secret := False; Result[23].Fields[0].Choices := '';
       Result[23].Fields[1].Name := 'hex'; Result[23].Fields[1].LabelText := 'Complete native settings bytes (hex)';
-      Result[23].Fields[1].DefaultText := ''; Result[23].Fields[1].Secret := False; Result[23].Fields[1].Choices := '';
+      Result[23].Fields[1].DefaultText := ''; Result[23].Fields[1].Secret := False; Result[23].Fields[1].Choices := '';      Result[24].Id := 'changedeskey'; Result[24].LabelText := 'Change DES/3DES key + fresh authentication proof';
+      Result[24].Mutation := True; Result[24].Pcsc := True;
+      SetLength(Result[24].Fields,12);
+      Result[24].Fields[0].Name := 'aid'; Result[24].Fields[0].LabelText := 'Explicit native AID (decimal; 0 = PICC)';
+      Result[24].Fields[0].DefaultText := '0'; Result[24].Fields[0].Secret := False; Result[24].Fields[0].Choices := '';
+      Result[24].Fields[1].Name := 'security'; Result[24].Fields[1].LabelText := 'Explicit security profile';
+      Result[24].Fields[1].DefaultText := '0'; Result[24].Fields[1].Secret := False; Result[24].Fields[1].Choices := 'Public|EV2 AES|EV1 AES|EV1 2K3DES|EV1 3K3DES|D40 DES|D40 2K3DES';
+      Result[24].Fields[2].Name := 'minimum'; Result[24].Fields[2].LabelText := 'Minimum communication';
+      Result[24].Fields[2].DefaultText := '1'; Result[24].Fields[2].Secret := False; Result[24].Fields[2].Choices := 'Plain|MAC|Full';
+      Result[24].Fields[3].Name := 'keynumber'; Result[24].Fields[3].LabelText := 'Supplied authentication key number';
+      Result[24].Fields[3].DefaultText := '0'; Result[24].Fields[3].Secret := False; Result[24].Fields[3].Choices := '';
+      Result[24].Fields[4].Name := 'key'; Result[24].Fields[4].LabelText := 'Supplied authentication key (hex; 8/16/24 bytes by profile)';
+      Result[24].Fields[4].DefaultText := ''; Result[24].Fields[4].Secret := True; Result[24].Fields[4].Choices := '';
+      Result[24].Fields[5].Name := 'rekeynumber'; Result[24].Fields[5].LabelText := 'Secondary proof-context key number';
+      Result[24].Fields[5].DefaultText := '0'; Result[24].Fields[5].Secret := False; Result[24].Fields[5].Choices := '';
+      Result[24].Fields[6].Name := 'rekey'; Result[24].Fields[6].LabelText := 'Optional explicit secondary-context AES key (hex)';
+      Result[24].Fields[6].DefaultText := ''; Result[24].Fields[6].Secret := True; Result[24].Fields[6].Choices := '';
+      Result[24].Fields[7].Name := 'targetkey'; Result[24].Fields[7].LabelText := 'Target key number';
+      Result[24].Fields[7].DefaultText := '0'; Result[24].Fields[7].Secret := False; Result[24].Fields[7].Choices := '';
+      Result[24].Fields[8].Name := 'keyversion'; Result[24].Fields[8].LabelText := 'New key version';
+      Result[24].Fields[8].DefaultText := ''; Result[24].Fields[8].Secret := False; Result[24].Fields[8].Choices := '';
+      Result[24].Fields[9].Name := 'newkey'; Result[24].Fields[9].LabelText := 'New key (8/16/24 bytes for selected profile, hex)';
+      Result[24].Fields[9].DefaultText := ''; Result[24].Fields[9].Secret := True; Result[24].Fields[9].Choices := '';
+      Result[24].Fields[10].Name := 'oldkey'; Result[24].Fields[10].LabelText := 'Old stored target key including second/third subkey version bits; empty if current (hex)';
+      Result[24].Fields[10].DefaultText := ''; Result[24].Fields[10].Secret := True; Result[24].Fields[10].Choices := '';
+      Result[24].Fields[11].Name := 'oldversion'; Result[24].Fields[11].LabelText := 'Old first-subkey version (decimal; ignored for current key)';
+      Result[24].Fields[11].DefaultText := '0'; Result[24].Fields[11].Secret := False; Result[24].Fields[11].Choices := '';
+
     end;
     dfMagProfiles:
     begin

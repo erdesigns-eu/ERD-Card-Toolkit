@@ -69,9 +69,10 @@ verified, a later pre-mutation failure does not undo that verified operation.
 A retained session owns its engine and credentials independently of its creating
 component. Closing it emits no implicit commit, abort or formatting command.
 
-DES/3DES key rotation, changes to existing application key type, key policy and
-file access policy remain separate work. The existing AES mutation methods retain
-their explicit AES guards. Extended ISO directories, application/file extensions,
+DES/3DES key rotation is available through `OpenDesManagementSession` and
+`IDesfireDesManagement.ChangeDesKey`; key policy and ordinary-file access changes
+work across the explicit authenticated profiles. `ChangeAesKey` retains its AES
+guard. Conversion of an existing application key type remains separate work. Extended ISO directories, application/file extensions,
 SDM, TMAC, LRP and key-set administration are outside these APIs.
 
 ## VCL demo
@@ -79,7 +80,7 @@ SDM, TMAC, LRP and key-set administration are outside these APIs.
 DesfireDemo retains its own editable form and DFM. Application creation has
 separate **key count** and **key-storage type** inputs; type has no preselection.
 DES/3DES choices are available for native metadata and application/file
-create-delete pages. AES key/access mutation pages retain the AES choices.
+create-delete pages. Key policy and file-access pages also offer DES/3DES; a separate key rotation tab accepts stored old-key version bits and explicit new versions.
 Reader inventory and card presence continue to arrive through native events.
 
 Independent synthetic fixtures cover the four DES/3DES profiles, all three

@@ -3037,6 +3037,10 @@ object DesfireDemoForm: TDesfireDemoForm
             'Public'
             'EV2 AES'
             'EV1 AES'
+            'EV1 2K3DES'
+            'EV1 3K3DES'
+            'D40 DES'
+            'D40 2K3DES'
           )
           Text = 'Public'
         end
@@ -3201,6 +3205,10 @@ object DesfireDemoForm: TDesfireDemoForm
             'Public'
             'EV2 AES'
             'EV1 AES'
+            'EV1 2K3DES'
+            'EV1 3K3DES'
+            'D40 DES'
+            'D40 2K3DES'
           )
           Text = 'Public'
         end
@@ -4627,6 +4635,242 @@ object DesfireDemoForm: TDesfireDemoForm
           Anchors = [akLeft, akTop, akRight]
           TabOrder = 1
           MaxLength = 262144
+        end
+      end
+    end
+    object ActChangedeskeyTab: TTabSheet
+      Left = 4
+      Top = 44
+      Width = 1072
+      Height = 438
+      Caption = 'Change DES/3DES key + fresh authentication proof'
+      Tag = 24
+      object ActChangedeskeyInputs: TScrollBox
+        Left = 0
+        Top = 0
+        Width = 1072
+        Height = 438
+        Align = alClient
+        BorderStyle = bsNone
+        TabOrder = 0
+        object ActChangedeskeyAidLabel: TLabel
+          Left = 16
+          Top = 8
+          Width = 940
+          Height = 18
+          Caption = 'Explicit native AID (decimal; 0 = PICC)'
+        end
+        object ActChangedeskeyAidEdit: TEdit
+          Left = 16
+          Top = 30
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 0
+          MaxLength = 262144
+          Text = '0'
+        end
+        object ActChangedeskeySecurityLabel: TLabel
+          Left = 16
+          Top = 70
+          Width = 940
+          Height = 18
+          Caption = 'Explicit security profile'
+        end
+        object ActChangedeskeySecurityBox: TComboBox
+          Left = 16
+          Top = 92
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 1
+          Style = csDropDownList
+          ItemIndex = 0
+          Items.Strings = (
+            'Public'
+            'EV2 AES'
+            'EV1 AES'
+            'EV1 2K3DES'
+            'EV1 3K3DES'
+            'D40 DES'
+            'D40 2K3DES'
+          )
+          Text = 'Public'
+        end
+        object ActChangedeskeyMinimumLabel: TLabel
+          Left = 16
+          Top = 132
+          Width = 940
+          Height = 18
+          Caption = 'Minimum communication'
+        end
+        object ActChangedeskeyMinimumBox: TComboBox
+          Left = 16
+          Top = 154
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 2
+          Style = csDropDownList
+          ItemIndex = 1
+          Items.Strings = (
+            'Plain'
+            'MAC'
+            'Full'
+          )
+          Text = 'MAC'
+        end
+        object ActChangedeskeyKeynumberLabel: TLabel
+          Left = 16
+          Top = 194
+          Width = 940
+          Height = 18
+          Caption = 'Supplied authentication key number'
+        end
+        object ActChangedeskeyKeynumberEdit: TEdit
+          Left = 16
+          Top = 216
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 3
+          MaxLength = 262144
+          Text = '0'
+        end
+        object ActChangedeskeyKeyLabel: TLabel
+          Left = 16
+          Top = 256
+          Width = 940
+          Height = 18
+          Caption = 'Supplied authentication key (hex; 8/16/24 bytes by profile)'
+        end
+        object ActChangedeskeyKeyEdit: TEdit
+          Left = 16
+          Top = 278
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 4
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+        object ActChangedeskeyRekeynumberLabel: TLabel
+          Left = 16
+          Top = 318
+          Width = 940
+          Height = 18
+          Caption = 'Secondary proof-context key number'
+        end
+        object ActChangedeskeyRekeynumberEdit: TEdit
+          Left = 16
+          Top = 340
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 5
+          MaxLength = 262144
+          Text = '0'
+        end
+        object ActChangedeskeyRekeyLabel: TLabel
+          Left = 16
+          Top = 380
+          Width = 940
+          Height = 18
+          Caption = 'Optional explicit secondary-context AES key (hex)'
+        end
+        object ActChangedeskeyRekeyEdit: TEdit
+          Left = 16
+          Top = 402
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 6
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+        object ActChangedeskeyTargetkeyLabel: TLabel
+          Left = 16
+          Top = 442
+          Width = 940
+          Height = 18
+          Caption = 'Target key number'
+        end
+        object ActChangedeskeyTargetkeyEdit: TEdit
+          Left = 16
+          Top = 464
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 7
+          MaxLength = 262144
+          Text = '0'
+        end
+        object ActChangedeskeyKeyversionLabel: TLabel
+          Left = 16
+          Top = 504
+          Width = 940
+          Height = 18
+          Caption = 'New key version'
+        end
+        object ActChangedeskeyKeyversionEdit: TEdit
+          Left = 16
+          Top = 526
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 8
+          MaxLength = 262144
+        end
+        object ActChangedeskeyNewkeyLabel: TLabel
+          Left = 16
+          Top = 566
+          Width = 940
+          Height = 18
+          Caption = 'New key (8/16/24 bytes for selected profile, hex)'
+        end
+        object ActChangedeskeyNewkeyEdit: TEdit
+          Left = 16
+          Top = 588
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 9
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+        object ActChangedeskeyOldkeyLabel: TLabel
+          Left = 16
+          Top = 628
+          Width = 940
+          Height = 18
+          Caption = 'Old stored target key including second/third subkey version bits; empty if current (hex)'
+        end
+        object ActChangedeskeyOldkeyEdit: TEdit
+          Left = 16
+          Top = 650
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 10
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+        object ActChangedeskeyOldversionLabel: TLabel
+          Left = 16
+          Top = 690
+          Width = 940
+          Height = 18
+          Caption = 'Old first-subkey version (decimal; ignored for current key)'
+        end
+        object ActChangedeskeyOldversionEdit: TEdit
+          Left = 16
+          Top = 712
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 11
+          MaxLength = 262144
+          Text = '0'
         end
       end
     end

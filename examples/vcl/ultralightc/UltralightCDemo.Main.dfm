@@ -284,6 +284,180 @@ object UltralightCDemoForm: TUltralightCDemoForm
         end
       end
     end
+    object ActConfigurationTab: TTabSheet
+      Left = 4
+      Top = 44
+      Width = 1072
+      Height = 438
+      Caption = 'Read authentication configuration'
+      Tag = 3
+      object ActConfigurationInputs: TScrollBox
+        Left = 0
+        Top = 0
+        Width = 1072
+        Height = 438
+        Align = alClient
+        BorderStyle = bsNone
+        TabOrder = 0
+        object ActConfigurationKeyLabel: TLabel
+          Left = 16
+          Top = 8
+          Width = 940
+          Height = 18
+          Caption = 'Supplied 16-byte current key (hex)'
+        end
+        object ActConfigurationKeyEdit: TEdit
+          Left = 16
+          Top = 30
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 0
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+      end
+    end
+    object ActConfigureTab: TTabSheet
+      Left = 4
+      Top = 44
+      Width = 1072
+      Height = 438
+      Caption = 'Configure authentication + fresh RF proof'
+      Tag = 4
+      object ActConfigureInputs: TScrollBox
+        Left = 0
+        Top = 0
+        Width = 1072
+        Height = 438
+        Align = alClient
+        BorderStyle = bsNone
+        TabOrder = 0
+        object ActConfigureFirstpageLabel: TLabel
+          Left = 16
+          Top = 8
+          Width = 940
+          Height = 18
+          Caption = 'First protected page (3..48; 48 = disabled)'
+        end
+        object ActConfigureFirstpageEdit: TEdit
+          Left = 16
+          Top = 30
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 0
+          MaxLength = 262144
+          Text = '4'
+        end
+        object ActConfigureProtectreadsLabel: TLabel
+          Left = 16
+          Top = 70
+          Width = 940
+          Height = 18
+          Caption = 'Protection scope'
+        end
+        object ActConfigureProtectreadsBox: TComboBox
+          Left = 16
+          Top = 92
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 1
+          Style = csDropDownList
+          ItemIndex = 0
+          Items.Strings = (
+            'Writes only'
+            'Reads and writes'
+          )
+          Text = 'Writes only'
+        end
+        object ActConfigureBeforeLabel: TLabel
+          Left = 16
+          Top = 132
+          Width = 940
+          Height = 18
+          Caption = 'Exact pages 42/43 preimage (8 bytes, hex)'
+        end
+        object ActConfigureBeforeEdit: TEdit
+          Left = 16
+          Top = 154
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 2
+          MaxLength = 262144
+        end
+        object ActConfigureKeyLabel: TLabel
+          Left = 16
+          Top = 194
+          Width = 940
+          Height = 18
+          Caption = 'Supplied 16-byte current key (hex)'
+        end
+        object ActConfigureKeyEdit: TEdit
+          Left = 16
+          Top = 216
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 3
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+      end
+    end
+    object ActChangekeyTab: TTabSheet
+      Left = 4
+      Top = 44
+      Width = 1072
+      Height = 438
+      Caption = 'Replace key + fresh RF proof'
+      Tag = 5
+      object ActChangekeyInputs: TScrollBox
+        Left = 0
+        Top = 0
+        Width = 1072
+        Height = 438
+        Align = alClient
+        BorderStyle = bsNone
+        TabOrder = 0
+        object ActChangekeyKeyLabel: TLabel
+          Left = 16
+          Top = 8
+          Width = 940
+          Height = 18
+          Caption = 'Supplied 16-byte current key (hex)'
+        end
+        object ActChangekeyKeyEdit: TEdit
+          Left = 16
+          Top = 30
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 0
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+        object ActChangekeyNewkeyLabel: TLabel
+          Left = 16
+          Top = 70
+          Width = 940
+          Height = 18
+          Caption = 'New 16-byte key (hex)'
+        end
+        object ActChangekeyNewkeyEdit: TEdit
+          Left = 16
+          Top = 92
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 1
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+      end
+    end
   end
   object ExportDialog: TSaveDialog
     Options = [ofOverwritePrompt, ofPathMustExist]

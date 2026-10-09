@@ -317,10 +317,10 @@ procedure TFamilyOperations.Execute(const R: TCardDemoRequest; const A: TCardFam
 var Hid: TUsbHidReaderWriter; HidHardware: ICardFamilyHidHardware; Devices: THidDevices; Path: UnicodeString;
   Mag: TMagStripeReaderWriter; MagTracks: TMagStripeTracks; TrackSet: TMagStripeTrackSet;
   MagReceipt: TMagStripeProgrammingReceipt; Financial: TMagStripeFinancialData; MagPort: string;
-  Desfire: TDesfireCardReader; Session: IDesfireSession; Management: IDesfireManagement; ApplicationManagement: IDesfireApplicationManagement;
+  Desfire: TDesfireCardReader; Session: IDesfireSession; Management: IDesfireManagement; ApplicationManagement: IDesfireApplicationManagement; DesManagement: IDesfireDesManagement;
   Definition: TDesfireFileDefinition; Files: TDesfireFiles; Applications: TDesfireApplicationIds;
   Aes: ICardAesProvider; Aid: Cardinal; Settings: TDesfireFileSettings;
-  Ulc: TUltralightCCardReaderWriter; Des: ICardDesProvider;
+  Ulc: TUltralightCCardReaderWriter; UlcConfiguration: TUltralightCConfiguration; Des: ICardDesProvider;
   PasswordReader: TType2PasswordCardReader; RawUid: TRawUidProgrammer;
   IsoReader: TIso15693CardReader; Type5: TType5NdefCardReader; IsoSession: IIso15693Session; IsoInfo: TIso15693SystemInfo; Type5Snapshot: TType5NdefSnapshot;
   Rule: TMobibProductRule; Evidence: TMobibRuleEvidence; Assessment: TMobibRuleAssessment;
@@ -844,7 +844,7 @@ begin
                 { Parse all explicit scalar/input fields before acquiring the management session. }
                 Address := 0; N := 0; Count := 0; J := 0; Definition := Default(TDesfireFileDefinition);
                 if (A.Id = 'createapp') or (A.Id = 'deleteapp') then Address := Number(R,A,'targetaid',1,$FFFFFF);
-                if (A.Id = 'keyversion') or (A.Id = 'changekey') then Address := Number(R,A,'targetkey',0,13);
+                if (A.Id = 'keyversion') or (A.Id = 'changekey') or (A.Id = 'changedeskey') then Address := Number(R,A,'targetkey',0,13);
                 if (A.Id = 'keysettings') or (A.Id = 'createapp') then N := Number(R,A,'settings',0,255);
                 if A.Id = 'createapp' then begin Count := Number(R,A,'keycount',1,14); J := Number(R,A,'applicationkeytype',0,Ord(High(TDesfireApplicationKeyType))); end;
                 if (A.Id = 'deletefile') or (A.Id = 'fileaccess') or (A.Id = 'createfile') then Definition.FileNumber := Number(R,A,'file',0,31);
@@ -855,18 +855,21 @@ begin
                   Definition.ReadWriteKey := Number(R,A,'readwritekey',0,15); Definition.ChangeKey := Number(R,A,'changekey',0,15);
                 end;
                 if A.Id = 'changekey' then begin N := Number(R,A,'keyversion',0,255); P := Bytes(R,A,'newkey'); NewP := Bytes(R,A,'oldkey'); if Length(P) <> 16 then Fail; if (Length(NewP) <> 0) and (Length(NewP) <> 16) then Fail; end;
+                if A.Id = 'changedeskey' then begin N := Number(R,A,'keyversion',0,255); J := Number(R,A,'oldversion',0,255); P := Bytes(R,A,'newkey'); NewP := Bytes(R,A,'oldkey'); end;
                 if A.Id = 'createfile' then
                 begin
                   Definition.FileType := TDesfireFileType(Number(R,A,'type',0,4)); Definition.FileBytes := Number(R,A,'filebytes',0,$FFFFFF);
                   Definition.LowerLimit := Number(R,A,'lower',Low(Integer),High(Integer)); Definition.UpperLimit := Number(R,A,'upper',Low(Integer),High(Integer)); Definition.InitialValue := Number(R,A,'initial',Low(Integer),High(Integer));
                   Definition.LimitedCreditEnabled := Number(R,A,'limited',0,1) = 1; Definition.RecordBytes := Number(R,A,'recordbytes',0,$FFFFFF); Definition.MaxRecords := Number(R,A,'maxrecords',0,$FFFFFF);
                 end;
-                Management := Desfire.OpenManagementSession(Aid); Session := Management;
+                if A.Id = 'changedeskey' then begin DesManagement := Desfire.OpenDesManagementSession(Aid); Management := DesManagement; end
+                else Management := Desfire.OpenManagementSession(Aid); Session := Management;
                 if A.Id = 'settings' then begin Data := Session.ReadApplicationSettings.RawBytes; Output := BytesToHex(Data); Artifact(D,'application-settings.bin',Data); end
                 else if A.Id = 'freememory' then Output := IntToStr(Management.ReadFreeMemory)
                 else if A.Id = 'keyversion' then Output := IntToStr(Management.ReadKeyVersion(Address))
                 else if A.Id = 'keysettings' then Management.ChangeKeySettings(N)
                 else if A.Id = 'fileaccess' then Management.ChangeFileAccess(Definition.FileNumber,Definition.Communication,Definition.ReadKey,Definition.WriteKey,Definition.ReadWriteKey,Definition.ChangeKey)
+                else if A.Id = 'changedeskey' then DesManagement.ChangeDesKey(Address,N,J,P,NewP)
                 else if A.Id = 'changekey' then Management.ChangeAesKey(Address,N,P,NewP)
                 else if A.Id = 'createapp' then begin if not Supports(Management,IDesfireApplicationManagement,ApplicationManagement) then Fail; ApplicationManagement.CreateApplicationWithKeyType(Address,N,Count,TDesfireApplicationKeyType(J)); ApplicationManagement := nil; end
                 else if A.Id = 'deleteapp' then Session.DeleteApplication(Address)
@@ -880,9 +883,9 @@ begin
             end;
           except
             if Session <> nil then try Session.Close; except end;
-            ApplicationManagement := nil; Management := nil; Session := nil; Desfire.Free; raise;
+            DesManagement := nil; ApplicationManagement := nil; Management := nil; Session := nil; Desfire.Free; raise;
           end;
-          ApplicationManagement := nil; Management := nil; Session := nil; Desfire.Free;
+          DesManagement := nil; ApplicationManagement := nil; Management := nil; Session := nil; Desfire.Free;
         end;
       end;
       dfIso15693:
@@ -940,8 +943,23 @@ begin
           else if A.Id = 'memory' then Data := Ulc.ReadUserMemory(Key)
           else if A.Id = 'write' then
           begin Data := Ulc.WriteUserPageVerified(Number(R,A,'page',4,39),Bytes(R,A,'data'),Key); D.WriteVerified := True; end
+          else if A.Id = 'configuration' then UlcConfiguration := Ulc.ReadConfiguration(Key)
+          else if A.Id = 'configure' then
+          begin UlcConfiguration := Ulc.ConfigureAuthenticationVerified(Number(R,A,'firstpage',3,48),Number(R,A,'protectreads',0,1)=1,Bytes(R,A,'before'),Key); D.WriteVerified := True; end
+          else if A.Id = 'changekey' then
+          begin P := Bytes(R,A,'newkey'); D.WriteVerified := Ulc.ChangeKeyVerified(Key,P); Output := 'New key verified after same-UID RF activation.'; end
           else Fail;
-          Output := BytesToHex(Data); Artifact(D,'user-memory.bin',Data);
+          if (A.Id = 'configuration') or (A.Id = 'configure') then
+          begin
+            Data := UlcConfiguration.RawPages; Artifact(D,'configuration-pages-40-43.bin',Data);
+            Output := 'First protected page: '+IntToStr(UlcConfiguration.FirstProtectedPage)+sLineBreak+
+              'Protect reads: '+BoolToStr(UlcConfiguration.ProtectReads,True)+sLineBreak+
+              'AUTH0 locked: '+BoolToStr(UlcConfiguration.Auth0Locked,True)+sLineBreak+
+              'AUTH1 locked: '+BoolToStr(UlcConfiguration.Auth1Locked,True)+sLineBreak+
+              'Key locked: '+BoolToStr(UlcConfiguration.KeyLocked,True)+sLineBreak+
+              'Pages 42/43 preimage: '+BytesToHex(UlcConfiguration.AuthenticationPages);
+          end
+          else if A.Id <> 'changekey' then begin Output := BytesToHex(Data); Artifact(D,'user-memory.bin',Data); end;
         finally Ulc.Free; end;
       end;
       dfClassic, dfType2:

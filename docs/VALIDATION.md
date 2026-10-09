@@ -705,3 +705,33 @@ Inactive registration/RTL streaming passes for **25 palette components**.
 Public English XML documentation covers **2,098 production and 2,511 VCL
 API declarations**, with zero findings. ReaderToolsDemo and UsbHidDemo retain
 separate own DFM forms and now include explicit event controls/logs.
+
+## DES/3DES key and Ultralight C configuration management
+
+`LegacyMifare.Tests.dpr` now checks 42,422 assertions against independent fixed
+native-3DES transcripts. Coverage includes all four DESFire profiles, policy and
+protected/free file-access updates, current/other/PICC key rotation, CRC/version
+bit composition, fresh authentication and exact version checks. Every I/O boundary
+and protected replacement-response bit is exercised; invalid replacement inputs
+send no mutation and preserve an otherwise active session.
+
+Ultralight C coverage includes configuration snapshots, exact preimages, preserved
+reserved bytes, locked configuration/key rejection, storage key byte order,
+no-op fresh proof, every exchange failure and response bit, replacement-card UID
+rejection and failed release after verification. One exclusive session covers both
+RF activations; partial programming is explicitly uncertain and never replayed.
+
+Family demo validation covers six Ultralight C actions and the separate DES/3DES
+rotation page. Each retains its own DFM, reader combobox, native presence events
+and masked credential fields. Distribution validation checks their bindings and
+project source closure. Existing AES rotation and ordinary DES application/file
+management remain regression coverage.
+
+Validation completed for this change: the full `run_core_tests.py` suite passed,
+including both native crypto backends and existing AES regressions. The final key
+management tests passed again with 42,422 assertions through OpenSSL and the CNG
+ABI shim after secret-buffer cleanup changes. Family demos passed 2,167 assertions,
+Python tool regressions passed all 36 tests, all 21 Pascal checkers were clean, and
+distribution validation reported zero findings across 35 projects and 22 DFM forms.
+Fixture regeneration produced identical committed transcripts. These checks do
+not substitute for Delphi compilation or physical-card evidence.
