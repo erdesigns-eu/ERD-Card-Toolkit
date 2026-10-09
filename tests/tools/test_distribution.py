@@ -105,6 +105,22 @@ class DistributionTests(unittest.TestCase):
             dfm.unlink()
             self.assertTrue(any('designer DFM' in e for e in distribution.check_program(program)))
 
+    def test_group_aggregate_covers_every_project(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name in ['A', 'B']:
+                (root / (name + '.dproj')).touch()
+            path = root / 'Example.groupproj'
+            source = ('<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">'
+                      '<ItemGroup><Projects Include="A.dproj"/><Projects Include="B.dproj"/></ItemGroup>'
+                      '<Target Name="Build"><CallTarget Targets="A;B"/></Target></Project>')
+            path.write_bytes(b'\xef\xbb\xbf' + source.encode())
+            self.assertEqual(distribution.check_project(path), [])
+            path.write_bytes(b'\xef\xbb\xbf' + source.replace('Targets="A;B"', 'Targets="A"').encode())
+            self.assertTrue(any('does not cover' in e for e in distribution.check_project(path)))
+            path.write_bytes(b'\xef\xbb\xbf' + source.replace('</Project>', '<Target Name="Build"/></Project>').encode())
+            self.assertTrue(any('duplicate group' in e for e in distribution.check_project(path)))
+
     def test_package_duplicate_ownership_and_design_dependency(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -63,6 +63,26 @@ type
     ActApplicationValuesLabel: TLabel;
     /// <summary>Supplied terminal tag=value hex pairs, semicolon-separated.</summary>
     ActApplicationValuesEdit: TEdit;
+    /// <summary>Record acquisition mode label.</summary>
+    ActApplicationScanLabel: TLabel;
+    /// <summary>Record acquisition mode.</summary>
+    ActApplicationScanBox: TComboBox;
+    /// <summary>First scan SFI label.</summary>
+    ActApplicationFirstsfiLabel: TLabel;
+    /// <summary>First scan SFI.</summary>
+    ActApplicationFirstsfiEdit: TEdit;
+    /// <summary>Last scan SFI label.</summary>
+    ActApplicationLastsfiLabel: TLabel;
+    /// <summary>Last scan SFI.</summary>
+    ActApplicationLastsfiEdit: TEdit;
+    /// <summary>First scan record label.</summary>
+    ActApplicationFirstrecordLabel: TLabel;
+    /// <summary>First scan record.</summary>
+    ActApplicationFirstrecordEdit: TEdit;
+    /// <summary>Last scan record label.</summary>
+    ActApplicationLastrecordLabel: TLabel;
+    /// <summary>Last scan record.</summary>
+    ActApplicationLastrecordEdit: TEdit;
     /// <summary>Read optional GET DATA object page.</summary>
     ActGetdataTab: TTabSheet;
     /// <summary>Read optional GET DATA object inputs.</summary>
@@ -103,6 +123,14 @@ type
     ActLogdecodeHexLabel: TLabel;
     /// <summary>Exact raw record (hex).</summary>
     ActLogdecodeHexEdit: TEdit;
+    /// <summary>Inspect application PDOL before GPO page.</summary>
+    ActPdolTab: TTabSheet;
+    /// <summary>Inspect application PDOL before GPO inputs.</summary>
+    ActPdolInputs: TScrollBox;
+    /// <summary>Explicit application AID (hex) label.</summary>
+    ActPdolAidLabel: TLabel;
+    /// <summary>Explicit application AID (hex).</summary>
+    ActPdolAidEdit: TEdit;
     /// <summary>Select this form’s own action page.</summary>
     /// <param name="Sender">VCL event sender.</param>
     procedure ActionChanged(Sender: TObject);
@@ -196,9 +224,14 @@ begin
     end;
     1:
     begin
-      SetLength(FInputs,2);
+      SetLength(FInputs,7);
       FInputs[0] := ActApplicationAidEdit;
       FInputs[1] := ActApplicationValuesEdit;
+      FInputs[2] := ActApplicationScanBox;
+      FInputs[3] := ActApplicationFirstsfiEdit;
+      FInputs[4] := ActApplicationLastsfiEdit;
+      FInputs[5] := ActApplicationFirstrecordEdit;
+      FInputs[6] := ActApplicationLastrecordEdit;
     end;
     2:
     begin
@@ -221,6 +254,11 @@ begin
       SetLength(FInputs,2);
       FInputs[0] := ActLogdecodeFormatEdit;
       FInputs[1] := ActLogdecodeHexEdit;
+    end;
+    6:
+    begin
+      SetLength(FInputs,1);
+      FInputs[0] := ActPdolAidEdit;
     end;
   else Exit; end;
   AcknowledgeCheck.Enabled := FActions[ActionPages.ActivePageIndex].Mutation;

@@ -146,6 +146,17 @@ type
   end;
   /// <summary>Read records in AFL order.</summary>
   TEmvRecords = array of TEmvRecord;
+  /// <summary>Outcome of one additional caller-requested record probe.</summary>
+  TEmvRecordProbe = record
+    /// <summary>Requested short file identifier, 1..30.</summary>
+    Sfi: Byte;
+    /// <summary>Requested absolute record, 1..255.</summary>
+    Number: Byte;
+    /// <summary>Card status: 9000 read, 6A82/6A83 absent, 6982/6985 access or state restricted.</summary>
+    StatusWord: Word;
+  end;
+  /// <summary>Additional probes in ascending SFI and record order; advertised records are not probed twice.</summary>
+  TEmvRecordProbes = array of TEmvRecordProbe;
   /// <summary>Complete data result from one selected application.</summary>
   /// <remarks>Fields are optional; an IBAN is not guaranteed. Ordinary record assignment
   /// shares arrays. No issuer lookup, account ownership or cryptographic authenticity
@@ -163,6 +174,8 @@ type
     Afl: TEmvAfl;
     /// <summary>All successfully requested records; no partial result is returned on failure.</summary>
     Records: TEmvRecords;
+    /// <summary>Optional extra range-scan outcomes; empty for a normal AFL-only read.</summary>
+    Probes: TEmvRecordProbes;
     /// <summary>Primitive fields from FCI, GPO and BER record templates, retaining unknown and repeated tags.</summary>
     Fields: TEmvValues;
     /// <summary>PAN digits from tag 5A or Track 2 tag 57, preserving leading zeroes; empty when absent.</summary>

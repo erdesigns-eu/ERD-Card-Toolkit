@@ -1,6 +1,6 @@
 # VCL-voorbeelden: huidige dekking
 
-Er zijn **twintig afzonderlijk uitvoerbare toepassingen** in
+Er zijn **eenentwintig afzonderlijk uitvoerbare toepassingen** in
 `examples/vcl/CardDemos.groupproj`. Elke toepassing heeft een eigen `TForm`, `.Main.pas` en `.Main.dfm`.
 Alle visuele controls staan in dat eigen DFM, inclusief actiepagina’s, invoervelden,
 readerkeuze en timers. Er is geen gedeeld formulier of gedeelde form-ancestor.
@@ -26,7 +26,8 @@ buiten deze componentset.
 | UidProgrammingDemo | PC/SC Gen2/FUID; ACR122 Gen1a/Gen1b/unsealed UFUID, DirectWrite, Gen3, zes Gen4-layouts, USCUID/GDM en partial UFUID/ZUID/PFUID |
 | DesfireDemo | Public/EV1/EV2 AES, directories/data/values/records, standard writes, backup/value/record-transacties met commit/abort, applicatie/bestand/key/access-beheer |
 | MagStripeProfilesDemo | Track-bit/parity/LRC en financial decoders, MagTek keyboard/HID, MSR206/MSR605 reads en status-only all-track programming |
-| EmvDemo | PSE/PPSE, explicit AID/terminal values, GPO/AFL/all records, GET DATA, advertised logs, DOL/log decoders en exacte exports |
+| EmvDemo | PSE/PPSE, PDOL-inspectie, explicit AID/terminal values, GPO/AFL-records plus begrensde extra SFI/recordscan, zichtbare raw records/statussen, GET DATA, advertised logs, DOL/log decoders en exacte exports |
+| MobibDemo | Calypso legacy-94/revision-3-00, MOBIB-bestandenprofiel en eigen FID-plan, expliciete FID/recorduitlezing, bekende legacy houder/events/contractdatum/tellers, raw data/status/truncatie en exacte exports; geen volledige abonnementregels |
 | BelgianEidDemo | Alle publieke sections, identiteit/adres, JPEG, RAW/DER-certificaten en ruwe handtekeningen exporteren |
 | IcaoDocumentDemo | BAC/PACE met MRZ/CAN/curve/provider, alle documentsections/face images, CardAccess/DG1/DG2/COM/SOD-export, JPEG-preview en JPEG2000-export |
 

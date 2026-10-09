@@ -133,6 +133,18 @@ def check_project(path):
         for ref in refs:
             if not local_path(path.parent, ref.get('Include', '')).is_file():
                 errors.append(f'{path.name}: missing group project {ref.get("Include")}')
+        names = [local_path(path.parent, ref.get('Include', '')).stem for ref in refs]
+        targets = [t.get('Name', '') for t in root.findall('m:Target', NS)]
+        if len(names) != len(set(names)) or len(targets) != len(set(targets)):
+            errors.append(f'{path.name}: duplicate group project/target')
+        for operation, suffix in [('Build', ''), ('Clean', ':Clean'), ('Make', ':Make')]:
+            call = root.find(f"m:Target[@Name='{operation}']/m:CallTarget", NS)
+            if call is not None and call.get('Targets', '').split(';') != [name + suffix for name in names]:
+                errors.append(f'{path.name}: {operation} does not cover projects in group order')
+        if path.name == 'CardDemos.groupproj':
+            included = {local_path(path.parent, ref.get('Include', '')).resolve() for ref in refs}
+            if included != {p.resolve() for p in path.parent.glob('*/*.dproj')}:
+                errors.append(f'{path.name}: demo group does not include every shipped demo')
         return errors
     main = root.findtext('.//m:MainSource', namespaces=NS)
     source = local_path(path.parent, main or '')

@@ -771,8 +771,60 @@ begin
   Writeln('PASS: cyclic logs, absent/empty distinction, capacity and primary-error preservation.');
 end;
 
+
+procedure TestPdolSelection;
+var R: TEMVCardReader; S: TScript; Data: TBytes;
+begin
+ R := TEMVCardReader.Create(nil);
+ try
+  S := TScript.Create; R.Transport := S; S.Add(SelectHex,Fci('9F0206')+'9000');
+  Data := R.ReadProcessingOptionsDol(HexToBytes(AidHex));
+  Check((BytesToHex(Data) = '9F0206') and (S.Position = 1) and (S.Ends = 1),'Inspect PDOL without GPO');
+  S := TScript.Create; R.Transport := S; S.Add(SelectHex,Fci+'9000');
+  Data := R.ReadProcessingOptionsDol(HexToBytes(AidHex));
+  Check((Length(Data) = 0) and (S.Position = 1),'Absent PDOL requires no synthetic inputs');
+ finally R.Free; end;
+end;
+
+procedure TestExtraRecordScan;
+var R: TEMVCardReader; S: TScript; D: TEmvApplicationData; Raised: Boolean; I: Integer;
+begin
+ R := TEMVCardReader.Create(nil);
+ try
+  S := TScript.Create; R.Transport := S;
+  S.Add(SelectHex,Fci+'9000'); S.Add('80A8000002830000','80060000080101009000');
+  S.Add('00B2010C00','70035A01129000');
+  S.Add('00B2020C00','6A83'); S.Add('00B2030C00','70045F3401019000');
+  S.Add('00B2011400','6982'); S.Add('00B2021400','6985'); S.Add('00B2031400','6A82');
+  D := R.ReadApplicationWithRecordScan(HexToBytes(AidHex),nil,1,2,1,3);
+  Check((S.Position = 8) and (S.Begins = 1) and (S.Ends = 1),'Single GPO/transaction and no duplicate AFL read');
+  Check((Length(D.Records) = 2) and (D.Records[1].Number = 3),'Scan continues after missing record');
+  Check((Length(D.Probes) = 5) and (D.Probes[0].StatusWord = $6A83) and
+   (D.Probes[2].StatusWord = $6982) and (D.Probes[3].StatusWord = $6985),'Probe absence/restriction evidence');
+  Check(BytesToHex(D.Records[1].RawData) = '70045F340101','Owned extra bytes');
+  Check(Length(D.Fields) >= 2,'Extra record fields collected');
+  for I := 0 to 2 do begin
+   S := TScript.Create; R.Transport := S; Raised := False;
+   try
+    case I of
+     0: D := R.ReadApplicationWithRecordScan(HexToBytes(AidHex),nil,0,10,1,6);
+     1: D := R.ReadApplicationWithRecordScan(HexToBytes(AidHex),nil,1,30,1,255);
+     2: D := R.ReadApplicationWithRecordScan(HexToBytes(AidHex),nil,2,1,1,6);
+    end;
+   except on E: EEmvDataError do Raised := True; end;
+   Check(Raised and (S.Position = 0) and (S.Begins = 0),'Bad scan range rejected before I/O');
+  end;
+  S := TScript.Create; R.Transport := S;
+  S.Add(SelectHex,Fci+'9000'); S.Add('80A8000002830000','800200009000'); S.Add('00B2010C00','6F00'); Raised := False;
+  try D := R.ReadApplicationWithRecordScan(HexToBytes(AidHex),nil,1,1,1,1);
+  except on E: EEmvStatusError do Raised := E.StatusWord = $6F00; end;
+  Check(Raised and (S.Position = 3) and (S.Ends = 1),'Unexpected probe failure preserved and released');
+ finally R.Free; end;
+end;
+
 begin
   try
+    TestPdolSelection; TestExtraRecordScan;
     TestDol;
     TestAflAndFields;
     TestApplicationRead;
@@ -782,7 +834,7 @@ begin
     TestLogCodec;
     TestDataObjects;
     TestTransactionLogs;
-    Writeln('PASS: ', Checks, ' assertions across nine EMV test groups.');
+    Writeln('PASS: ', Checks, ' assertions across eleven EMV test groups.');
   except
     on E: Exception do begin Writeln('FAIL: ', E.ClassName, ': ', E.Message); Halt(1); end;
   end;

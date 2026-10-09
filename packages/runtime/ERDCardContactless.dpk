@@ -11,6 +11,8 @@ requires
   ERDCardCore;
 
 contains
+  ERD.Card.MOBIB.Data in '..\..\src\contactless\ERD.Card.MOBIB.Data.pas',
+  ERD.Card.Contactless.Calypso in '..\..\src\contactless\ERD.Card.Contactless.Calypso.pas',
   ERD.Card.Contactless.DESFire.EV1 in '..\..\src\contactless\ERD.Card.Contactless.DESFire.EV1.pas',
   ERD.Card.Contactless.DESFire in '..\..\src\contactless\ERD.Card.Contactless.DESFire.pas',
   ERD.Card.Contactless.DESFire.EV2 in '..\..\src\contactless\ERD.Card.Contactless.DESFire.EV2.pas',

@@ -1,7 +1,7 @@
 # VCL read/write demos
 
 Twenty applications demonstrate implemented APIs: SmartCardDemo, MagStripeDemo
-and eighteen family projects. Each application owns a direct TForm class and
+and nineteen family projects. Each application owns a direct TForm class and
 its own designer-editable Main.dfm, including all action inputs and a reader dropdown.
 Only nonvisual operation, metadata and worker/controller units are shared.
 The complete current/missing coverage is recorded in [VCL_COVERAGE.md](VCL_COVERAGE.md).
@@ -324,3 +324,25 @@ Verzenden vereist de volledige descriptorlengte inclusief byte-zero ID. Interrup
 heeft een wait budget en cancel/drain; synchronous feature requests hebben driver-
 gestuurde duur. Een transfer is geen universeel commando om kaartgeheugen te wijzigen.
 Lees [USB_HID.md](USB_HID.md) voor native integratie en reportcontracten.
+
+
+## EMV records and MOBIB
+
+EmvDemo now prints every acquired SFI/record and its raw bytes in the output,
+besides offering individual record exports. Use the application-read page, an
+explicit AID and required terminal values. The new PDOL-inspection page selects
+that AID without GPO and lists the requested tag lengths. For the old CardStudio
+style range sweep, select **AFL plus explicit range**, initially SFI 1–10 and
+records 1–6. Existing AFL records are not repeated; holes and access restrictions
+are reported, while unexpected failures abort. This does not guarantee every
+issuer record is accessible. The range can be increased within component bounds.
+
+MobibDemo is a separate designer form with its own PC/SC dropdown, explicit
+Calypso dialect/record length and bound. Its two actions read the MOBIB
+file plan (editable FIDs) or one caller-specified logical file. An explicit layout
+selector enables known legacy holder/events/contract-date/counter decoding. It displays every actual raw
+record and exports it through the own save dialog. See [MOBIB_CALYPSO.md](MOBIB_CALYPSO.md)
+for the concrete files, status behavior, parsed fields, secure-provider integration and remaining issuer-specific schemas.
+
+The project group's Build/Make/Clean aggregates cover all twenty-one applications,
+including the new project; the standalone build script includes it too.

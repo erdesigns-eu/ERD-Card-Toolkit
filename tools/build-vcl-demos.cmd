@@ -50,6 +50,8 @@ call :build_demo desfire DesfireDemo
 if errorlevel 1 exit /b %errorlevel%
 call :build_demo magstripeprofiles MagStripeProfilesDemo
 if errorlevel 1 exit /b %errorlevel%
+call :build_demo mobib MobibDemo
+if errorlevel 1 exit /b %errorlevel%
 call :build_demo usbhid UsbHidDemo
 if errorlevel 1 exit /b %errorlevel%
 exit /b %errorlevel%

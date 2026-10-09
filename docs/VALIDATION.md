@@ -511,3 +511,34 @@ assertions). All 35 Python regressions and 21 Pascal readers pass on 167 sources
 Distribution checks pass for 33 projects, two groups and twenty DFM resources;
 Help Insight checks cover 1,796 production and 2,367 VCL public declarations with
 zero findings. The Linux checks do not compile or render VCL forms in Delphi.
+
+## EMV record scan, parsed MOBIB and secure-provider boundary
+
+The EMV reader now supports inspecting an application's PDOL without GPO, and
+an explicit bounded extra record sweep after the standard AFL reads. Demo output
+prints each actual record and additional absence/access status, retaining the
+individual exports. Tests cover gaps, skipped duplicate AFL records, exact APDUs,
+required terminal inputs, bounds and unexpected-error cleanup.
+
+`TCalypsoCardReader` adds legacy/revision-3 logical-file and absolute-record reads,
+a standard MOBIB profile and caller-defined file plans. `TMobibCodec` provides
+explicitly matched legacy country/network decoding for holder, events, known
+contract dates and 24-bit counter slots, preserving independently owned raw files.
+`MobibDemo` has its own designer DFM, reader dropdown, layout and FID-plan fields.
+
+A required secure read can use `ICalypsoSecureSessionProvider` and
+`ICalypsoSecureReadSession`: one provider-backed read-only session, authenticated
+transport dispatch, verified completion before snapshot delivery and abort on
+failure. Missing providers fail before I/O; failed verification cannot downgrade
+to a public read. The tests use provider fixtures and do not implement or validate
+Calypso cryptography, real issuer keys or physical SAM hardware. A real SDK/SAM
+adapter and legitimate credentials remain required for protected data.
+
+Final full FPC suite: **2,160,336 assertions across 43 configurations**, including
+1,650 EMV, 192 Calypso, 545 MOBIB codec and 1,935 family-executor assertions.
+All **36 Python regressions** and **21 source-aware Pascal checkers** pass on
+**173 sources**. Distribution readers validate **34 projects, two groups and
+21 independent DFMs**. Aggregate Build/Make/Clean now covers every shipped demo,
+with regressions preventing omissions and duplicate targets. XML Help Insight
+coverage: **1,892 production and 2,434 VCL declarations**, zero findings.
+These headless tests/readers do not replace Delphi compilation or real-card testing.

@@ -233,6 +233,96 @@ object EmvDemoForm: TEmvDemoForm
           TabOrder = 1
           MaxLength = 262144
         end
+        object ActApplicationScanLabel: TLabel
+          Left = 16
+          Top = 132
+          Width = 940
+          Height = 18
+          Caption = 'Record acquisition mode'
+        end
+        object ActApplicationScanBox: TComboBox
+          Left = 16
+          Top = 154
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 2
+          Style = csDropDownList
+          ItemIndex = 0
+          Items.Strings = (
+            'AFL only'
+            'AFL plus explicit range'
+          )
+          Text = 'AFL only'
+        end
+        object ActApplicationFirstsfiLabel: TLabel
+          Left = 16
+          Top = 194
+          Width = 940
+          Height = 18
+          Caption = 'First scan SFI'
+        end
+        object ActApplicationFirstsfiEdit: TEdit
+          Left = 16
+          Top = 216
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 3
+          MaxLength = 262144
+          Text = '1'
+        end
+        object ActApplicationLastsfiLabel: TLabel
+          Left = 16
+          Top = 256
+          Width = 940
+          Height = 18
+          Caption = 'Last scan SFI'
+        end
+        object ActApplicationLastsfiEdit: TEdit
+          Left = 16
+          Top = 278
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 4
+          MaxLength = 262144
+          Text = '10'
+        end
+        object ActApplicationFirstrecordLabel: TLabel
+          Left = 16
+          Top = 318
+          Width = 940
+          Height = 18
+          Caption = 'First scan record'
+        end
+        object ActApplicationFirstrecordEdit: TEdit
+          Left = 16
+          Top = 340
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 5
+          MaxLength = 262144
+          Text = '1'
+        end
+        object ActApplicationLastrecordLabel: TLabel
+          Left = 16
+          Top = 380
+          Width = 940
+          Height = 18
+          Caption = 'Last scan record'
+        end
+        object ActApplicationLastrecordEdit: TEdit
+          Left = 16
+          Top = 402
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 6
+          MaxLength = 262144
+          Text = '6'
+        end
       end
     end
     object ActGetdataTab: TTabSheet
@@ -403,6 +493,39 @@ object EmvDemoForm: TEmvDemoForm
           Height = 25
           Anchors = [akLeft, akTop, akRight]
           TabOrder = 1
+          MaxLength = 262144
+        end
+      end
+    end
+    object ActPdolTab: TTabSheet
+      Left = 4
+      Top = 44
+      Width = 1072
+      Height = 438
+      Caption = 'Inspect application PDOL before GPO'
+      Tag = 6
+      object ActPdolInputs: TScrollBox
+        Left = 0
+        Top = 0
+        Width = 1072
+        Height = 438
+        Align = alClient
+        BorderStyle = bsNone
+        TabOrder = 0
+        object ActPdolAidLabel: TLabel
+          Left = 16
+          Top = 8
+          Width = 940
+          Height = 18
+          Caption = 'Explicit application AID (hex)'
+        end
+        object ActPdolAidEdit: TEdit
+          Left = 16
+          Top = 30
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 0
           MaxLength = 262144
         end
       end

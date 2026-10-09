@@ -57,7 +57,7 @@ uses
 {$ELSE}
   System.SysUtils, System.Classes,
 {$ENDIF}
-  ERD.Card.EMV.Data, ERD.Card.EMV.Reader, ERD.Card.EID.Data, ERD.Card.EID.Reader,
+  ERD.Card.MOBIB.Data, ERD.Card.Contactless.Calypso, ERD.Card.EMV.Data, ERD.Card.EMV.Reader, ERD.Card.EID.Data, ERD.Card.EID.Reader,
   ERD.Card.EID.DocumentReader, ERD.Card.EID.ICAO, ERD.Card.Crypto.EAC, ERD.Card.Crypto.EAC.OpenSSL,
   ERD.Card.EID.Access, ERD.Card.Bytes, ERD.Card.APDU, ERD.Card.ATR, ERD.Card.ATR.Catalog,
   ERD.Card.TLV, ERD.Card.EMV.Tags, ERD.Card.Ndef,
@@ -257,6 +257,7 @@ var Hid: TUsbHidReaderWriter; HidHardware: ICardFamilyHidHardware; Devices: THid
   Aes: ICardAesProvider; Aid: Cardinal; Settings: TDesfireFileSettings;
   PasswordReader: TType2PasswordCardReader; RawUid: TRawUidProgrammer;
   IsoReader: TIso15693CardReader; Type5: TType5NdefCardReader; IsoSession: IIso15693Session; IsoInfo: TIso15693SystemInfo; Type5Snapshot: TType5NdefSnapshot;
+  CalypsoIds: array of Word; ChosenMobibLayout: TMobibLayout; ParsedMobib: TMobibData; Calypso: TCalypsoCardReader; Mobib: TMobibSnapshot; TransitFile: TCalypsoFile;
   Emv: TEMVCardReader; Belgian: TBelgianEIDReader; Icao: TICAODocumentReader;
   Directory: TEmvDirectoryData; Application: TEmvApplicationData; ObjectData: TEmvDataObjectResult; Log: TEmvTransactionLogData;
   Values: TEmvValues; Dol: TEmvDolEntries; Eid: TBelgianEidData; Sections: TEidSections; Document: TIcaoDocumentData; PaceInfos: TIcaoPaceInfos;
@@ -451,6 +452,51 @@ begin
           end else Fail;
         finally W.Free; end;
       end;
+      dfMobib:
+      begin
+        Calypso := TCalypsoCardReader.Create(nil);
+        try
+          Calypso.Transport := T; Calypso.Dialect := TCalypsoDialect(Number(R,A,'dialect',0,1));
+          Calypso.RecordBytes := Number(R,A,'le',1,256); N := Number(R,A,'limit',1,255);
+          if A.Id = 'snapshot' then begin
+            ChosenMobibLayout := TMobibLayout(Number(R,A,'layout',0,1));
+            Lines := TStringList.Create;
+            try
+              Lines.StrictDelimiter := True; Lines.Delimiter := ';'; Lines.DelimitedText := string(Text(R,A,'files'));
+              if (Lines.Count < 1) or (Lines.Count > 64) then Fail; SetLength(CalypsoIds,Lines.Count);
+              for I := 0 to Lines.Count-1 do begin
+                Id := HexToBytes(Trim(Lines[I])); if Length(Id) <> 2 then Fail;
+                CalypsoIds[I] := (Word(Id[0]) shl 8) or Id[1];
+              end;
+              ParsedMobib := TMobibCodec.Decode(Calypso.ReadMobibFiles(CalypsoIds,N),ChosenMobibLayout);
+            finally Lines.Free; end;
+            Mobib := ParsedMobib.Raw; Artifact(D,'ticketing-select.bin',Mobib.TicketingSelection);
+            Output := 'Layout matched '+BoolToStr(ParsedMobib.LayoutMatched,True)+sLineBreak;
+            if ParsedMobib.HasNetwork then Output := Output+'Country '+IntToStr(ParsedMobib.CountryCode)+' network '+IntToStr(ParsedMobib.NetworkCode)+sLineBreak;
+            if ParsedMobib.Holder.Present then begin
+              Output := Output+'Holder '+string(ParsedMobib.Holder.Name)+' number '+string(ParsedMobib.Holder.Number)+' gender code '+IntToStr(ParsedMobib.Holder.GenderCode)+sLineBreak;
+              if ParsedMobib.Holder.HasBirthDate then Output := Output+'Birth date '+FormatDateTime('yyyy-mm-dd',ParsedMobib.Holder.BirthDate)+sLineBreak;
+            end;
+            for I := 0 to High(ParsedMobib.Events) do Output := Output+'Event '+IntToStr(ParsedMobib.Events[I].RecordNumber)+' '+FormatDateTime('yyyy-mm-dd',ParsedMobib.Events[I].Date)+' minutes '+IntToStr(ParsedMobib.Events[I].Minutes)+' transport '+IntToStr(ParsedMobib.Events[I].TransportCode)+' location '+IntToStr(ParsedMobib.Events[I].LocationId)+' bus route '+IntToStr(ParsedMobib.Events[I].BusRoute)+' count '+IntToStr(ParsedMobib.Events[I].CouponCount)+sLineBreak;
+            for I := 0 to High(ParsedMobib.Contracts) do Output := Output+'Contract '+IntToStr(ParsedMobib.Contracts[I].RecordNumber)+' purchase '+FormatDateTime('yyyy-mm-dd',ParsedMobib.Contracts[I].PurchaseDate)+sLineBreak;
+            for I := 0 to High(ParsedMobib.Counters) do Output := Output+'Counter record '+IntToStr(ParsedMobib.Counters[I].RecordNumber)+' slot '+IntToStr(ParsedMobib.Counters[I].Slot)+' value '+IntToStr(ParsedMobib.Counters[I].Value)+sLineBreak;
+            if ParsedMobib.HasContractCount then Output := Output+'Contract count '+IntToStr(ParsedMobib.ContractCount)+sLineBreak;
+          end else if A.Id = 'file' then begin
+            Id := Bytes(R,A,'fid'); if (Length(Id) <> 2) or ((Id[0] = 0) and (Id[1] = 0)) then Fail;
+            SetLength(Mobib.Files,1); Mobib.Files[0] := Calypso.ReadFile((Word(Id[0]) shl 8) or Id[1],N);
+          end else Fail;
+          for I := 0 to High(Mobib.Files) do begin
+            TransitFile := Mobib.Files[I];
+            Output := Output+'File '+IntToHex(TransitFile.LogicalId,4)+' SELECT SW='+IntToHex(TransitFile.SelectionStatus,4)+
+              ' last record SW='+IntToHex(TransitFile.LastRecordStatus,4)+' bound reached='+BoolToStr(TransitFile.Truncated,True)+sLineBreak;
+            Artifact(D,'file-'+IntToHex(TransitFile.LogicalId,4)+'-select.bin',TransitFile.SelectionData);
+            for J := 0 to High(TransitFile.Records) do begin
+              Output := Output+'  Record '+IntToStr(TransitFile.Records[J].Number)+': '+BytesToHex(TransitFile.Records[J].Data)+sLineBreak;
+              Artifact(D,'file-'+IntToHex(TransitFile.LogicalId,4)+'-record-'+IntToStr(TransitFile.Records[J].Number)+'.bin',TransitFile.Records[J].Data);
+            end;
+          end;
+        finally Calypso.Free; end;
+      end;
       dfEmv:
       begin
         Emv := TEMVCardReader.Create(nil);
@@ -474,12 +520,28 @@ begin
                 Parts := TStringList.Create; Lines.StrictDelimiter := True; Lines.Delimiter := ';'; Parts.StrictDelimiter := True; Parts.Delimiter := '=';
                 Lines.DelimitedText := string(Text(R,A,'values')); if Lines.Count > 128 then Fail; SetLength(Values,Lines.Count);
                 for I := 0 to Lines.Count-1 do begin Parts.DelimitedText := Lines[I]; if Parts.Count <> 2 then Fail; Values[I].Tag := HexToBytes(Parts[0]); Values[I].Value := HexToBytes(Parts[1]); end;
-                Data := TEmvCodec.BuildDolData(nil,Values); Application := Emv.ReadApplication(Id,Values);
+                Data := TEmvCodec.BuildDolData(nil,Values);
+                if Number(R,A,'scan',0,1) = 0 then Application := Emv.ReadApplication(Id,Values)
+                else Application := Emv.ReadApplicationWithRecordScan(Id,Values,Number(R,A,'firstsfi',1,30),Number(R,A,'lastsfi',1,30),Number(R,A,'firstrecord',1,255),Number(R,A,'lastrecord',1,255));
               finally Parts.Free; Lines.Free; end;
               Output := 'Name '+string(Application.CardholderName)+' PAN '+string(Application.Pan)+' expiry '+string(Application.ExpiryDate)+' IBAN '+string(Application.Iban)+sLineBreak;
               Artifact(D,'application-fci.bin',Application.Fci); Artifact(D,'gpo.bin',Application.Gpo);
-              for I := 0 to High(Application.Records) do Artifact(D,'record-'+IntToStr(Application.Records[I].Sfi)+'-'+IntToStr(Application.Records[I].Number)+'.bin',Application.Records[I].RawData);
+              Output := Output+'Records actually read: '+IntToStr(Length(Application.Records))+sLineBreak;
+              for I := 0 to High(Application.Records) do
+              begin
+                Output := Output+'SFI '+IntToStr(Application.Records[I].Sfi)+' record '+IntToStr(Application.Records[I].Number)+': '+BytesToHex(Application.Records[I].RawData)+sLineBreak;
+                Artifact(D,'record-'+IntToStr(Application.Records[I].Sfi)+'-'+IntToStr(Application.Records[I].Number)+'.bin',Application.Records[I].RawData);
+              end;
+              for I := 0 to High(Application.Probes) do
+                Output := Output+'Probe SFI '+IntToStr(Application.Probes[I].Sfi)+' record '+IntToStr(Application.Probes[I].Number)+' SW='+IntToHex(Application.Probes[I].StatusWord,4)+sLineBreak;
               for I := 0 to High(Application.Fields) do Output := Output+BytesToHex(Application.Fields[I].Tag)+'='+BytesToHex(Application.Fields[I].Value)+sLineBreak;
+            end
+            else if A.Id = 'pdol' then begin
+              Data := Emv.ReadProcessingOptionsDol(Id); Dol := TEmvCodec.DecodeDol(Data);
+              Output := 'PDOL '+BytesToHex(Data)+sLineBreak;
+              for I := 0 to High(Dol) do Output := Output+BytesToHex(Dol[I].Tag)+' requires '+IntToStr(Dol[I].Size)+' bytes'+sLineBreak;
+              if Length(Dol) = 0 then Output := Output+'No terminal values requested.'+sLineBreak;
+              Artifact(D,'pdol.bin',Data);
             end
             else if A.Id = 'getdata' then begin ObjectData := Emv.ReadDataObject(Id,TEmvDataObject(Number(R,A,'object',0,3))); Output := 'Present '+BoolToStr(ObjectData.Present,True)+' status '+IntToHex(ObjectData.StatusWord,4)+' value '+BytesToHex(ObjectData.Value); Artifact(D,'get-data.bin',ObjectData.RawData); end
             else if A.Id = 'log' then begin Log := Emv.ReadTransactionLog(Id); Output := 'Log advertised '+BoolToStr(Log.Supported,True)+sLineBreak; Artifact(D,'log-format.bin',Log.LogFormat); for I := 0 to High(Log.Records) do begin Artifact(D,'log-'+IntToStr(Log.Records[I].Number)+'.bin',Log.Records[I].RawData); for J := 0 to High(Log.Records[I].Fields) do Output := Output+BytesToHex(Log.Records[I].Fields[J].Tag)+'='+BytesToHex(Log.Records[I].Fields[J].Value)+sLineBreak; end; end

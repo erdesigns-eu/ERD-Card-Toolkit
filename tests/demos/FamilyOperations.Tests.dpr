@@ -509,6 +509,52 @@ begin
   end;
 end;
 
+
+procedure TestRecordAcquisitionDemos;
+var R: TCardDemoRequest; D: TCardDemoResult; H: THardware; Hardware: ICardFamilyHardware;
+ S: TScript; T: ICardTransport; Failed: Boolean;
+begin
+ S := TScript.Create; T := S; H := THardware.Create; Hardware := H; H.Transport := T;
+ S.Add('00A4040007A000000003101000','6F0B8407A0000000031010A5009000');
+ S.Add('80A8000002830000','80060000080101009000'); S.Add('00B2010C00','70035A01129000');
+ S.Add('00B2020C00','6A83'); S.Add('00B2030C00','70045F3401019000');
+ R := Request(dfEmv,'application'); Put(R,dfEmv,'aid','A0000000031010'); Put(R,dfEmv,'scan','1');
+ Put(R,dfEmv,'firstsfi','1'); Put(R,dfEmv,'lastsfi','1'); Put(R,dfEmv,'lastrecord','3');
+ CreateCardFamilyOperations(dfEmv,Hardware).Run(R,D);
+ Check(D.Success and (S.Position = 5) and (Length(D.Artifacts) = 4),'EMV demo actually reads and exports both records');
+ Check((Pos('SFI 1 record 3: 70045F340101',string(D.Text)) > 0) and
+  (Pos('record 2 SW=6A83',string(D.Text)) > 0),'EMV demo displays raw records and missing probe status');
+ S := TScript.Create; T := S; H.Transport := T;
+ S.Add('94A4000002200100','9000'); S.Add('94B201041D','ABCD9000'); S.Add('94B202041D','6A83');
+ R := Request(dfMobib,'file'); Put(R,dfMobib,'dialect','0');
+ CreateCardFamilyOperations(dfMobib,Hardware).Run(R,D);
+ Check(D.Success and (S.Position = 3) and (Length(D.Artifacts) = 1),'MOBIB demo acquires real records');
+ Check((Pos('Record 1: ABCD',string(D.Text)) > 0) and (D.Artifacts[0].Name = 'file-2001-record-1.bin'),'MOBIB raw display/export');
+ R := Request(dfMobib,'file'); Put(R,dfMobib,'dialect','0'); Put(R,dfMobib,'fid','00'); Failed := False;
+ try CreateCardFamilyOperations(dfMobib,Hardware).Run(R,D); except on E: EArgumentException do Failed := True; end;
+ Check(Failed and (H.Acquires = 2),'MOBIB invalid FID rejected before acquisition');
+end;
+
+
+procedure TestMobibParsedDemo;
+const Ids: array[0..7] of Word = ($2001,$2002,$2010,$2020,$2069,$2050,$2040,$3F1C);
+var R: TCardDemoRequest; D: TCardDemoResult; H: THardware; Hardware: ICardFamilyHardware;
+ S: TScript; T: ICardTransport; I: Integer;
+begin
+ S := TScript.Create; T := S; H := THardware.Create; Hardware := H; H.Transport := T;
+ S.Add('94A4000002200000','9000');
+ for I := 0 to High(Ids) do begin
+  if I = 0 then begin
+   S.Add('94A4000002200100','9000'); S.Add('94B201041D','00082B00080000000000000000000000000000000000000000000000009000'); S.Add('94B202041D','6A83');
+  end else S.Add('94A4000002'+IntToHex(Ids[I],4)+'00','6A82');
+ end;
+ R := Request(dfMobib,'snapshot'); Put(R,dfMobib,'dialect','0'); Put(R,dfMobib,'layout','1');
+ CreateCardFamilyOperations(dfMobib,Hardware).Run(R,D);
+ Check(D.Success and (S.Position = 11) and (S.Begins = 1) and (S.Ends = 1),'Parsed MOBIB demo executes complete file plan');
+ Check((Pos('Layout matched True',string(D.Text)) > 0) and (Pos('Country 56 network 1',string(D.Text)) > 0),'Parsed MOBIB demo displays network and match state');
+ Check((Length(D.Artifacts) = 1) and (D.Artifacts[0].Name = 'file-2001-record-1.bin'),'Parsed view retains original export');
+end;
+
 procedure TestAdditionalFamilies;
 var F: TCardDemoFamily; A: TCardFamilyActions; I: Integer; R: TCardDemoRequest; D: TCardDemoResult;
   H: THardware; Hardware: ICardFamilyHardware; S: TScript; T: ICardTransport; Reached, Failed: Boolean;
@@ -599,7 +645,7 @@ end;
 
 begin
   try
-    TestNativeHidDemo; TestAdditionalFamilies; TestDocumentAndEmvDemos; TestExtendedSimDemo; TestStorageDemos; TestSimRoutes; TestOffline; TestPreflight; TestCounterAndSleRoutes;
+    TestMobibParsedDemo; TestRecordAcquisitionDemos; TestNativeHidDemo; TestAdditionalFamilies; TestDocumentAndEmvDemos; TestExtendedSimDemo; TestStorageDemos; TestSimRoutes; TestOffline; TestPreflight; TestCounterAndSleRoutes;
     TestTwnRoutes(0,False); TestTwnRoutes(1,False); TestTwnRoutes(2,False); TestTwnRoutes(3,False); TestTwnRoutes(3,True);
     TestMemoryWrite(-1,False,False); TestMemoryWrite(6,False,False);
     TestMemoryWrite(7,False,False); TestMemoryWrite(-1,True,False); TestMemoryWrite(-1,False,True);

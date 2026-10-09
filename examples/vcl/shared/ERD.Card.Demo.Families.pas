@@ -44,7 +44,9 @@ type
     /// <summary>MagProfiles family demonstration.</summary>
     dfMagProfiles,
     /// <summary>NativeHid family demonstration.</summary>
-    dfNativeHid
+    dfNativeHid,
+    /// <summary>Public Calypso / MOBIB file-record demonstration.</summary>
+    dfMobib
   );
   /// <summary>One named form input; secrets are decoded to owned buffers, never stored as public arguments.</summary>
   TCardFamilyField = record
@@ -109,6 +111,7 @@ begin
     dfClassic: Result := 'MifareClassicDemo';
     dfType2: Result := 'Type2Demo';
     dfType4: Result := 'Type4NdefDemo';
+    dfMobib: Result := 'MobibDemo';
     dfEmv: Result := 'EmvDemo';
     dfBelgian: Result := 'BelgianEidDemo';
     dfIcao: Result := 'IcaoDocumentDemo';
@@ -1109,9 +1112,36 @@ begin
       Result[4].Fields[1].Name := 'fileid'; Result[4].Fields[1].LabelText := 'Explicit NDEF file FID (decimal); 0 only if unambiguous';
       Result[4].Fields[1].DefaultText := '0'; Result[4].Fields[1].Secret := False; Result[4].Fields[1].Choices := '';
     end;
+    dfMobib:
+    begin
+      SetLength(Result,2);
+      Result[0].Id := 'snapshot'; Result[0].LabelText := 'Read public MOBIB files and records';
+      Result[0].Pcsc := True; Result[0].Mutation := False;
+      Result[1].Id := 'file'; Result[1].LabelText := 'Read explicit Calypso logical file';
+      Result[1].Pcsc := True; Result[1].Mutation := False;
+      SetLength(Result[0].Fields,5); SetLength(Result[1].Fields,4);
+      Result[0].Fields[0].Name := 'dialect'; Result[0].Fields[0].LabelText := 'Explicit Calypso dialect';
+      Result[0].Fields[0].DefaultText := ''; Result[0].Fields[0].Secret := False; Result[0].Fields[0].Choices := 'Legacy CLA 94 / LFI 00|Revision 3 CLA 00 / path 09';
+      Result[0].Fields[1].Name := 'le'; Result[0].Fields[1].LabelText := 'Initial expected record bytes';
+      Result[0].Fields[1].DefaultText := '29'; Result[0].Fields[1].Secret := False; Result[0].Fields[1].Choices := '';
+      Result[0].Fields[2].Name := 'limit'; Result[0].Fields[2].LabelText := 'Maximum records per file';
+      Result[0].Fields[2].DefaultText := '16'; Result[0].Fields[2].Secret := False; Result[0].Fields[2].Choices := '';
+      Result[1].Fields[0].Name := 'dialect'; Result[1].Fields[0].LabelText := 'Explicit Calypso dialect';
+      Result[1].Fields[0].DefaultText := ''; Result[1].Fields[0].Secret := False; Result[1].Fields[0].Choices := 'Legacy CLA 94 / LFI 00|Revision 3 CLA 00 / path 09';
+      Result[1].Fields[1].Name := 'le'; Result[1].Fields[1].LabelText := 'Initial expected record bytes';
+      Result[1].Fields[1].DefaultText := '29'; Result[1].Fields[1].Secret := False; Result[1].Fields[1].Choices := '';
+      Result[1].Fields[2].Name := 'limit'; Result[1].Fields[2].LabelText := 'Maximum records per file';
+      Result[1].Fields[2].DefaultText := '16'; Result[1].Fields[2].Secret := False; Result[1].Fields[2].Choices := '';
+      Result[1].Fields[3].Name := 'fid'; Result[1].Fields[3].LabelText := 'Logical file identifier (hex)';
+      Result[1].Fields[3].DefaultText := '2001'; Result[1].Fields[3].Secret := False; Result[1].Fields[3].Choices := '';
+      Result[0].Fields[3].Name := 'layout'; Result[0].Fields[3].LabelText := 'Explicit MOBIB data layout';
+      Result[0].Fields[3].DefaultText := ''; Result[0].Fields[3].Secret := False; Result[0].Fields[3].Choices := 'Raw bytes only|Legacy MOBIB 056/001';
+      Result[0].Fields[4].Name := 'files'; Result[0].Fields[4].LabelText := 'Logical file IDs (hex), semicolon-separated; edit to include additional known files';
+      Result[0].Fields[4].DefaultText := '2001;2002;2010;2020;2069;2050;2040;3F1C'; Result[0].Fields[4].Secret := False; Result[0].Fields[4].Choices := '';
+    end;
     dfEmv:
     begin
-      SetLength(Result,6);
+      SetLength(Result,7);
       Result[0].Id := 'discover'; Result[0].LabelText := 'Discover chosen PSE / PPSE';
       Result[0].Mutation := False; Result[0].Pcsc := True;
       SetLength(Result[0].Fields,1);
@@ -1119,11 +1149,21 @@ begin
       Result[0].Fields[0].DefaultText := '0'; Result[0].Fields[0].Secret := False; Result[0].Fields[0].Choices := 'Contact PSE|Contactless PPSE';
       Result[1].Id := 'application'; Result[1].LabelText := 'GPO + AFL + complete records';
       Result[1].Mutation := True; Result[1].Pcsc := True;
-      SetLength(Result[1].Fields,2);
+      SetLength(Result[1].Fields,7);
       Result[1].Fields[0].Name := 'aid'; Result[1].Fields[0].LabelText := 'Explicit application AID (hex)';
       Result[1].Fields[0].DefaultText := ''; Result[1].Fields[0].Secret := False; Result[1].Fields[0].Choices := '';
       Result[1].Fields[1].Name := 'values'; Result[1].Fields[1].LabelText := 'Supplied terminal tag=value hex pairs, semicolon-separated';
       Result[1].Fields[1].DefaultText := ''; Result[1].Fields[1].Secret := False; Result[1].Fields[1].Choices := '';
+      Result[1].Fields[2].Name := 'scan'; Result[1].Fields[2].LabelText := 'Record acquisition mode';
+      Result[1].Fields[2].DefaultText := '0'; Result[1].Fields[2].Secret := False; Result[1].Fields[2].Choices := 'AFL only|AFL plus explicit range';
+      Result[1].Fields[3].Name := 'firstsfi'; Result[1].Fields[3].LabelText := 'First scan SFI';
+      Result[1].Fields[3].DefaultText := '1'; Result[1].Fields[3].Secret := False; Result[1].Fields[3].Choices := '';
+      Result[1].Fields[4].Name := 'lastsfi'; Result[1].Fields[4].LabelText := 'Last scan SFI';
+      Result[1].Fields[4].DefaultText := '10'; Result[1].Fields[4].Secret := False; Result[1].Fields[4].Choices := '';
+      Result[1].Fields[5].Name := 'firstrecord'; Result[1].Fields[5].LabelText := 'First scan record';
+      Result[1].Fields[5].DefaultText := '1'; Result[1].Fields[5].Secret := False; Result[1].Fields[5].Choices := '';
+      Result[1].Fields[6].Name := 'lastrecord'; Result[1].Fields[6].LabelText := 'Last scan record';
+      Result[1].Fields[6].DefaultText := '6'; Result[1].Fields[6].Secret := False; Result[1].Fields[6].Choices := '';
       Result[2].Id := 'getdata'; Result[2].LabelText := 'Read optional GET DATA object';
       Result[2].Mutation := False; Result[2].Pcsc := True;
       SetLength(Result[2].Fields,2);
@@ -1148,6 +1188,11 @@ begin
       Result[5].Fields[0].DefaultText := ''; Result[5].Fields[0].Secret := False; Result[5].Fields[0].Choices := '';
       Result[5].Fields[1].Name := 'hex'; Result[5].Fields[1].LabelText := 'Exact raw record (hex)';
       Result[5].Fields[1].DefaultText := ''; Result[5].Fields[1].Secret := False; Result[5].Fields[1].Choices := '';
+      Result[6].Id := 'pdol'; Result[6].LabelText := 'Inspect application PDOL before GPO';
+      Result[6].Mutation := False; Result[6].Pcsc := True;
+      SetLength(Result[6].Fields,1);
+      Result[6].Fields[0].Name := 'aid'; Result[6].Fields[0].LabelText := 'Explicit application AID (hex)';
+      Result[6].Fields[0].DefaultText := ''; Result[6].Fields[0].Secret := False; Result[6].Fields[0].Choices := '';
     end;
     dfBelgian:
     begin

@@ -15,9 +15,10 @@ Beoogd platform: **Delphi 10.4+, Windows Win32/Win64**.
 | Magstripe | `TMagStripeReaderWriter` | Tracks 1–3 lezen/schrijven; MSR206/MSR605 en MSR206-7HL-profielen; MagTek-inputadapters. |
 | Belgische eID | `TBelgianEIDReader` | Identiteit, adres, JPEG-foto, beschikbare certificaten en ruwe handtekeningen. |
 | ICAO-documenten | `TICAODocumentReader` | BAC/PACE-toegang; DG1-identiteit, DG2-foto’s en volledige COM/SOD-bestanden. |
-| EMV | `TEMVCardReader` | Applicaties en records uitlezen; beschikbare PAN, vervaldatum, naam, IBAN, Track 2 en transactielogs. |
+| EMV | `TEMVCardReader` | PSE/PPSE, PDOL-inspectie, AFL-records en expliciete extra SFI/recordscan; beschikbare PAN, vervaldatum, naam, IBAN, Track 2 en transactielogs. |
 | MIFARE Classic / Type 2 | `TContactlessCardReader`, `TType2PasswordCardReader` | Classic-blokken met aangeleverde sleutels; Ultralight/EV1/NTAG210/212/213/215/216-geheugen en ondersteunde wachtwoordprofielen. |
 | Programmeerbare UID | `TRawUidProgrammer` + UID-methoden van `TContactlessCardReader` | Expliciete Gen1/2/3/4-, UFUID/FUID-, USCUID/GDM- en DirectWrite-profielen. |
+| MOBIB / Calypso | `TCalypsoCardReader` | Logische bestanden/records, eigen FID-plannen, bekende legacy houder-/event-/contractdatum-/countervelden en raw data; koppeling voor een externe beveiligde SDK/SAM-provider. Zie [MOBIB](docs/MOBIB_CALYPSO.md). |
 | DESFire | `TDesfireCardReader` | Bestanden lezen/schrijven, EV1/EV2 AES, transacties en applicatie/bestand/sleutel/toegangsbeheer. |
 | NDEF | `TType2NdefCardReader`, `TType4NdefCardReader`, `TType5NdefCardReader` | Publieke NDEF lezen en vervangen met terugleescontrole, binnen het gekozen kaartprofiel. |
 | ISO 15693 | `TIso15693CardReader` | Systeeminformatie en geadresseerde geheugenblokken lezen/schrijven. |
@@ -40,6 +41,7 @@ Lezerondersteuning en kaartondersteuning zijn afzonderlijk: het juiste protocolp
 ## Wat zit er nog niet in?
 
 - **Uitgebreide SIM-diensten:** geen eSIM-provisioning, telefonie/netwerkauthenticatie, SMS-verzending, automatische recordallocatie of nieuw-PIN-bewijs na een cardreset.
+- **Volledige MOBIB-dekking:** bekende legacy velden zijn geparsed; overige generatie-/vervoerderlayouts, abonnementregels en volledige contractsemantiek ontbreken. Beveiligde reads vereisen een externe SDK/SAM-provider met geldige toegang; een native MAC/SAM-engine ontbreekt.
 - **Betalingen:** geen terminal/providerintegratie, betaaltransacties of directe NFC-betaalkernel.
 - **Overige contact-memorychips:** AT88SC/CryptoMemory en andere readerdialecten ontbreken nog. Voor SLE-counterchips ontbreken automatische tellerberekening en geverifieerde personalisatie/code-ontgrendeling.
 - **Universele vendorprotocollen:** native HID-report-I/O is aanwezig; kaartgeheugen/UID-commando’s vereisen het echte readerprotocol. Keyboard-only readers krijgen geen schrijfinterface.
@@ -50,10 +52,10 @@ Lezerondersteuning en kaartondersteuning zijn afzonderlijk: het juiste protocolp
 
 ## Packages en voorbeelden
 
-- **12 runtime packages** en **1 zelfstandig design-time package** met **21 palette-componenten**. Runtimecomponenten hebben geen VCL/design-time-afhankelijkheid; het palette bevat zijn benodigde sources expliciet en vereist geen ERD-runtime-BPL's.
+- **12 runtime packages** en **1 zelfstandig design-time package** met **22 palette-componenten**. Runtimecomponenten hebben geen VCL/design-time-afhankelijkheid; het palette bevat zijn benodigde sources expliciet en vereist geen ERD-runtime-BPL's.
 - **SmartCardDemo:** offline NDEF, UID, Belgische eID/foto, ICAO/foto, EMV-applicatiedetectie, DESFire-versie, Type 2/4 NDEF-vervanging en een contact-memorypagina met PIN, geverifieerde writes, counter/SLE4404-reads, expliciete ACS-profielcapabilities en een RFID-keyboardinvoertab.
 - **MagStripeDemo:** offline trackcontrole, swipes lezen en geverifieerd schrijven via MSR206-7HL.
-- **Achttien losse familiedemo’s**, elk met een eigen `TForm` en `.Main.dfm`, met alle visuele controls in de designer; alleen niet-visuele kaart- en workercode wordt gedeeld: tools, RFID, native HID, TWN4, drie contact-memoryfamilies, SIM/USIM, Classic, Type 2, Type 4, ISO 15693/Type 5, UID-programmering, DESFire, aanvullende magstripeprofielen, EMV, Belgische eID en ICAO-documenten. Elke demo toont zelf een keuzelijst met beschikbare PC/SC-lezers, HID-apparaten of COM-poorten en een verversknop. Geen andere app nodig om lezernamen op te zoeken. Zie [de concrete dekking](docs/VCL_COVERAGE.md).
+- **Negentien losse familiedemo’s**, elk met een eigen `TForm` en `.Main.dfm`, met alle visuele controls in de designer; alleen niet-visuele kaart- en workercode wordt gedeeld: tools, RFID, native HID, TWN4, drie contact-memoryfamilies, SIM/USIM, Classic, Type 2, Type 4, ISO 15693/Type 5, UID-programmering, DESFire, aanvullende magstripeprofielen, EMV, MOBIB/Calypso, Belgische eID en ICAO-documenten. Elke demo toont zelf een keuzelijst met beschikbare PC/SC-lezers, HID-apparaten of COM-poorten en een verversknop. Geen andere app nodig om lezernamen op te zoeken. Zie [de concrete dekking](docs/VCL_COVERAGE.md).
 - eID/ICAO-demo’s tonen JPEG-foto’s en exporteren originele foto-, certificaat- en databestanden. DESFire toont ook transacties en beheer; Type 2 ook PWD_AUTH/PACK.
 
 De VCL-demo’s voeren kaartoperaties op een achtergrondthread uit en linken de source
