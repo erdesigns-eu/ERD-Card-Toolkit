@@ -35,6 +35,9 @@ requires
   designide;
 
 contains
+  ERD.Card.Contactless.UltralightC in '..\..\src\contactless\ERD.Card.Contactless.UltralightC.pas',
+  ERD.Card.Contactless.DESFire.DES in '..\..\src\contactless\ERD.Card.Contactless.DESFire.DES.pas',
+  ERD.Card.Crypto.DES in '..\..\src\core\ERD.Card.Crypto.DES.pas',
   ERD.Card.HID.Monitor in '..\..\src\input\ERD.Card.HID.Monitor.pas',
   ERD.Card.PCSC.Monitor in '..\..\src\pcsc\ERD.Card.PCSC.Monitor.pas',
   ERD.Card.Events in '..\..\src\core\ERD.Card.Events.pas',

@@ -123,6 +123,9 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.UltralightC.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.DESFire.DES.pas"/>
+        <DCCReference Include="..\..\src\core\ERD.Card.Crypto.DES.pas"/>
         <DCCReference Include="..\..\src\input\ERD.Card.HID.Monitor.pas"/>
         <DCCReference Include="..\..\src\pcsc\ERD.Card.PCSC.Monitor.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Events.pas"/>

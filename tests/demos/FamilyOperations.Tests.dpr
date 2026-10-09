@@ -231,6 +231,38 @@ begin
   finally K.Free; end;
 end;
 
+procedure TestLegacyProfilePreflight;
+var H:THardware;Hardware:ICardFamilyHardware;R:TCardDemoRequest;D:TCardDemoResult;
+ A:TCardFamilyActions;I,Profile,Before:Integer;Reached,Rejected:Boolean;Key:string;
+begin
+ H:=THardware.Create;Hardware:=H;A:=CardFamilyActions(dfUltralightC);
+ for I:=0 to High(A) do
+ begin
+  Check(A[I].Mutation and A[I].Pcsc,'ULC explicit acknowledgement and PC/SC reader');
+  R:=Request(dfUltralightC,A[I].Id);Put(R,dfUltralightC,'key','0123456789ABCDEFFEDCBA9876543210');Put(R,dfUltralightC,'data','AABBCCDD');Put(R,dfUltralightC,'page','4');
+  Reached:=False;
+  try CreateCardFamilyOperations(dfUltralightC,Hardware).Run(R,D);except on E:EReachedHardware do Reached:=True;end;
+  Check(Reached,'ULC valid supplied-key action reaches acquisition');Before:=H.Acquires;
+  R.MutationAcknowledged:=False;Rejected:=False;
+  try CreateCardFamilyOperations(dfUltralightC,Hardware).Run(R,D);except on E:EArgumentException do Rejected:=True;end;
+  Check(Rejected and (H.Acquires=Before),'ULC credential attempt acknowledgement before hardware');
+  R.MutationAcknowledged:=True;Put(R,dfUltralightC,'key','00');Rejected:=False;
+  try CreateCardFamilyOperations(dfUltralightC,Hardware).Run(R,D);except on E:Exception do Rejected:=True;end;
+  Check(Rejected and (H.Acquires=Before),'ULC wrong key size rejected before hardware');
+ end;
+ for Profile:=3 to 6 do
+ begin
+  Key:='0123456789ABCDEFFEDCBA9876543210';if Profile=4 then Key:=Key+'0011223344556677' else if Profile=5 then Key:='0123456789ABCDEF';
+  R:=Request(dfDesfire,'read');Put(R,dfDesfire,'aid','66051');Put(R,dfDesfire,'security',IntToStr(Profile));Put(R,dfDesfire,'minimum','1');Put(R,dfDesfire,'key',Key);
+  Put(R,dfDesfire,'file','0');Put(R,dfDesfire,'count','4');Put(R,dfDesfire,'offset','0');Reached:=False;
+  try CreateCardFamilyOperations(dfDesfire,Hardware).Run(R,D);except on E:EReachedHardware do Reached:=True;end;
+  Check(Reached,'Explicit DES profile uses optional provider capability in preflight');Before:=H.Acquires;
+  Put(R,dfDesfire,'key','00');Rejected:=False;
+  try CreateCardFamilyOperations(dfDesfire,Hardware).Run(R,D);except on E:Exception do Rejected:=True;end;
+  Check(Rejected and (H.Acquires=Before),'DES profile exact key size checked before reader acquisition');
+ end;
+ Check(H.Releases=0,'Rejected/failed hardware acquisitions are never released');Hardware:=nil;
+end;
 procedure TestPreflight;
 var F: TCardDemoFamily; A: TCardFamilyActions; I,J: Integer; R: TCardDemoRequest;
   D: TCardDemoResult; H: THardware; Hardware: ICardFamilyHardware; O: ICardDemoOperations;
@@ -710,7 +742,7 @@ end;
 
 begin
   try
-    TestMobibParsedDemo; TestNativeSamDemo; TestMobibRulesDemo; TestRecordAcquisitionDemos; TestNativeHidDemo; TestAdditionalFamilies; TestDocumentAndEmvDemos; TestExtendedSimDemo; TestStorageDemos; TestSimRoutes; TestOffline; TestPreflight; TestCounterAndSleRoutes;
+    TestMobibParsedDemo; TestNativeSamDemo; TestMobibRulesDemo; TestRecordAcquisitionDemos; TestNativeHidDemo; TestAdditionalFamilies; TestDocumentAndEmvDemos; TestExtendedSimDemo; TestStorageDemos; TestSimRoutes; TestOffline; TestLegacyProfilePreflight; TestPreflight; TestCounterAndSleRoutes;
     TestTwnRoutes(0,False); TestTwnRoutes(1,False); TestTwnRoutes(2,False); TestTwnRoutes(3,False); TestTwnRoutes(3,True);
     TestMemoryWrite(-1,False,False); TestMemoryWrite(6,False,False);
     TestMemoryWrite(7,False,False); TestMemoryWrite(-1,True,False); TestMemoryWrite(-1,False,True);

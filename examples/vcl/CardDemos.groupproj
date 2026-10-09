@@ -64,6 +64,7 @@
             <Dependencies/>
         </Projects>
         <Projects Include="mobib\MobibDemo.dproj"><Dependencies/></Projects>
+    <Projects Include="ultralightc\UltralightCDemo.dproj"><Dependencies/></Projects>
   </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -255,14 +256,17 @@
     <Target Name="MobibDemo"><MSBuild Projects="mobib\MobibDemo.dproj"/></Target>
     <Target Name="MobibDemo:Clean"><MSBuild Projects="mobib\MobibDemo.dproj" Targets="Clean"/></Target>
     <Target Name="MobibDemo:Make"><MSBuild Projects="mobib\MobibDemo.dproj" Targets="Make"/></Target>
+    <Target Name="UltralightCDemo"><MSBuild Projects="ultralightc\UltralightCDemo.dproj"/></Target>
+    <Target Name="UltralightCDemo:Clean"><MSBuild Projects="ultralightc\UltralightCDemo.dproj" Targets="Clean"/></Target>
+    <Target Name="UltralightCDemo:Make"><MSBuild Projects="ultralightc\UltralightCDemo.dproj" Targets="Make"/></Target>
     <Target Name="Build">
-        <CallTarget Targets="MagStripeDemo;SmartCardDemo;ReaderToolsDemo;MemoryCardDemo;SleCounterDemo;Sle4404Demo;Twn4Demo;RfidInputDemo;SimCardDemo;MifareClassicDemo;Type2Demo;Type4NdefDemo;EmvDemo;BelgianEidDemo;IcaoDocumentDemo;Iso15693Demo;UidProgrammingDemo;DesfireDemo;MagStripeProfilesDemo;UsbHidDemo;MobibDemo"/>
+        <CallTarget Targets="MagStripeDemo;SmartCardDemo;ReaderToolsDemo;MemoryCardDemo;SleCounterDemo;Sle4404Demo;Twn4Demo;RfidInputDemo;SimCardDemo;MifareClassicDemo;Type2Demo;Type4NdefDemo;EmvDemo;BelgianEidDemo;IcaoDocumentDemo;Iso15693Demo;UidProgrammingDemo;DesfireDemo;MagStripeProfilesDemo;UsbHidDemo;MobibDemo;UltralightCDemo"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="MagStripeDemo:Clean;SmartCardDemo:Clean;ReaderToolsDemo:Clean;MemoryCardDemo:Clean;SleCounterDemo:Clean;Sle4404Demo:Clean;Twn4Demo:Clean;RfidInputDemo:Clean;SimCardDemo:Clean;MifareClassicDemo:Clean;Type2Demo:Clean;Type4NdefDemo:Clean;EmvDemo:Clean;BelgianEidDemo:Clean;IcaoDocumentDemo:Clean;Iso15693Demo:Clean;UidProgrammingDemo:Clean;DesfireDemo:Clean;MagStripeProfilesDemo:Clean;UsbHidDemo:Clean;MobibDemo:Clean"/>
+        <CallTarget Targets="MagStripeDemo:Clean;SmartCardDemo:Clean;ReaderToolsDemo:Clean;MemoryCardDemo:Clean;SleCounterDemo:Clean;Sle4404Demo:Clean;Twn4Demo:Clean;RfidInputDemo:Clean;SimCardDemo:Clean;MifareClassicDemo:Clean;Type2Demo:Clean;Type4NdefDemo:Clean;EmvDemo:Clean;BelgianEidDemo:Clean;IcaoDocumentDemo:Clean;Iso15693Demo:Clean;UidProgrammingDemo:Clean;DesfireDemo:Clean;MagStripeProfilesDemo:Clean;UsbHidDemo:Clean;MobibDemo:Clean;UltralightCDemo:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="MagStripeDemo:Make;SmartCardDemo:Make;ReaderToolsDemo:Make;MemoryCardDemo:Make;SleCounterDemo:Make;Sle4404Demo:Make;Twn4Demo:Make;RfidInputDemo:Make;SimCardDemo:Make;MifareClassicDemo:Make;Type2Demo:Make;Type4NdefDemo:Make;EmvDemo:Make;BelgianEidDemo:Make;IcaoDocumentDemo:Make;Iso15693Demo:Make;UidProgrammingDemo:Make;DesfireDemo:Make;MagStripeProfilesDemo:Make;UsbHidDemo:Make;MobibDemo:Make"/>
+        <CallTarget Targets="MagStripeDemo:Make;SmartCardDemo:Make;ReaderToolsDemo:Make;MemoryCardDemo:Make;SleCounterDemo:Make;Sle4404Demo:Make;Twn4Demo:Make;RfidInputDemo:Make;SimCardDemo:Make;MifareClassicDemo:Make;Type2Demo:Make;Type4NdefDemo:Make;EmvDemo:Make;BelgianEidDemo:Make;IcaoDocumentDemo:Make;Iso15693Demo:Make;UidProgrammingDemo:Make;DesfireDemo:Make;MagStripeProfilesDemo:Make;UsbHidDemo:Make;MobibDemo:Make;UltralightCDemo:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

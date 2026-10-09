@@ -1,11 +1,14 @@
-# Native DESFire files and EV1/EV2 AES secure messaging
+# Native DESFire files and AES/DES secure messaging
 
 `TDesfireCardReader` is an RTL-only nonvisual component for native ISO-wrapped
 DESFire commands over a connected `ICardTransport` with `ICardTransaction`.
 It supplies application/file discovery, data/value/record reading, verified
 standard-data writing and retained transaction/management sessions. Explicit EV1 and EV2 AES profiles include mutual
 authentication and Plain, MACed and Full messaging. EV2 additionally supports an
-optional NonFirst switch to a second application key. No constructor opens a reader.
+optional NonFirst switch to a second application key. Explicit EV1 2K3DES/3K3DES
+and D40 DES/2K3DES profiles cover ordinary file access and transactions; see
+[LEGACY_MIFARE_SECURITY.md](LEGACY_MIFARE_SECURITY.md). AES administration
+remains separate. No constructor opens a reader.
 
 Source use requires `src/core` and `src/contactless`, plus `src/crypto` for a
 concrete provider and `src/pcsc` for Windows readers. The existing contactless
@@ -22,6 +25,8 @@ package. All exported declarations carry Delphi XML documentation.
 | Ordinary file settings | Standard, backup, signed value, linear/cyclic records; strict geometry/access parsing | Extended access rights, SDM, transaction-MAC and generation-specific file types |
 | Public file access | Plaintext free-access reads and verified standard-data range writes | No key guessing or automatic authentication fallback |
 | EV1 AES | `AuthenticateAES` (`AA`), fresh CSPRNG nonce, mutual verification, AES session key and chained IV | Native EV1 AES dialect; D40/DES/2K3DES/3K3DES are separate profiles |
+| EV1 3DES | Explicit `1A` authentication, 16/24-byte keys, nonce sizes 8/16, chained eight-byte CMAC and CRC32 encryption | DES/3DES key rotation and management are outside this profile |
+| D40 legacy | Explicit `0A` authentication, 8/16-byte keys, reset-IV legacy inverse send, four-byte CBC-MAC and CRC16 encryption | Plain legacy metadata/acks have no transmitted MAC; no security downgrade |
 | EV2 AES | `AuthenticateEV2First`, fresh CSPRNG nonce, mutual nonce/capability-echo verification, session ENC/MAC keys and TI | Explicit AES profile, no LRP negotiation |
 | EV2 NonFirst | Optional `77` authentication with a second explicit key after verified settings; new session keys, retained TI/counter | One key switch within each acquired data/value/record operation; key-set management is separate |
 | Secure file access | Plain/MACed/Full data/value/record reads and standard-data range writes; authenticated settings | Physical EV1/EV2/EV3/Light, firmware and reader compatibility remain unvalidated |
@@ -501,7 +506,7 @@ is redistributed or linked into this library:
 - [Microsoft CNG functions](https://learn.microsoft.com/en-us/windows/win32/seccng/cng-functions)
   and [OpenSSL EVP](https://docs.openssl.org/3.5/man3/EVP_EncryptInit/).
 
-Next security/access additions are legacy D40 and EV1 DES/2K3DES/3K3DES, EV2 key sets,
+Next security/access additions are DES/3DES administration and key rotation, EV2 key sets,
 LRP and generation-specific extensions, TMAC receipts, extended/SDM rights and
 configuration, ISO creation, originality and hardware profiles. Basic AES key policy,
 rotation and ordinary access administration are implemented. Broad support is built per implemented/tested operation, never inferred

@@ -33,7 +33,7 @@ object SmartCardForm: TSmartCardDemoForm
     Left = 0
     Top = 0
     Width = 1000
-    Height = 344
+    Height = 368
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 0
@@ -61,9 +61,18 @@ object SmartCardForm: TSmartCardDemoForm
       TabOrder = 1
       OnClick = ReadersClick
     end
+    object EventStatusLabel: TLabel
+      Left = 16
+      Top = 44
+      Width = 964
+      Height = 22
+      AutoSize = False
+      Anchors = [akLeft, akTop, akRight]
+      Caption = 'Reader events inactive.'
+    end
     object OperationPages: TPageControl
       Left = 8
-      Top = 48
+      Top = 72
       Width = 984
       Height = 296
       ActivePage = CardTab

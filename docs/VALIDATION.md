@@ -1,10 +1,30 @@
 # Library validation record
 
-> This page records a specific validation run; the figures below are what that run
-> measured. The repository has grown since then (21 VCL applications, 34 MSBuild
-> projects, 21 DFM forms, 25 palette components and 36 Python regressions), and
-> those additions are not reflected in the counts below until the next full run.
-> To reproduce the Delphi-free checks, see [Building and testing](../README.md#building-and-testing).
+## Latest run: Ultralight C, DES/3DES and demo events (2026-10-09)
+
+The complete `tools/run_core_tests.py` run passed after adding native DES providers,
+Ultralight C user memory and DESFire EV1 2K3DES/3K3DES plus D40 DES/2K3DES.
+The new fixed-transcript suite passed **20,646 assertions** through OpenSSL and
+again through the production CNG adapter with the Linux native ABI shim. It covers
+all communication modes, complete retained transactions, both AF directions,
+every transaction I/O boundary, response corruption, RNG and release failures.
+The CNG native suite passed **72 assertions**, including its new 3DES paths.
+
+Reader/card/HID and nonvisual demo-bridge tests passed **96 assertions**. A later
+focused family-executor run passed **2,086 assertions**, including the new valid
+and invalid credential/acknowledgement preflights before hardware acquisition.
+The existing AES, document, SIM, memory, UID, NDEF, EMV and transport regressions
+passed. All **36 Python regressions** passed. The source readers selected **191
+Pascal sources**; all **21 checkers**, including XML documentation, passed.
+Distribution checks passed for **35 projects, two groups and 22 independent DFM
+forms**. The palette now registers **26 components**, with the standalone design
+package retaining its explicit source closure and no ERD runtime BPL dependencies.
+
+Every PC/SC demo uses native reader/card notifications. Each has its own form and
+DFM; the shared event bridge is nonvisual. The new UltralightCDemo is independent.
+Delphi-native BOM/CRLF formats remain checked by the distribution reader.
+These Linux/compiler/shim checks are supplemental validation, not a Delphi build
+or a claim of physical reader/card compatibility. Earlier run records follow.
 
 The complete suite was rebuilt on Linux on 2026-10-09 after finishing SIM/USIM
 management, twenty VCL applications, native USB-HID report transport and

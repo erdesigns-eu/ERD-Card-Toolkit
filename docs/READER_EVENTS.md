@@ -134,3 +134,10 @@ event log. ReaderToolsDemo updates its reader selection through hotplug events;
 UsbHidDemo refreshes metadata after a hotplug notification once any operation or
 input listener has stopped. Neither demo connects or writes automatically on an
 event.
+
+All PC/SC family demos and SmartCardDemo now start native observation when shown.
+Their own reader comboboxes update from inventory events; each family DFM has a
+separate presence label. Refresh explicitly restarts observation. ReaderToolsDemo
+retains its own Watch/Stop buttons and detailed log. The shared
+`ERD.Card.Demo.ReaderEvents` helper contains no form or visual controls. Worker
+timers only collect explicit operation completion; they do not poll card presence.

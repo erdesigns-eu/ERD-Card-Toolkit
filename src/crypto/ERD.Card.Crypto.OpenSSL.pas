@@ -12,15 +12,15 @@ uses
 {$ELSE}
   System.SysUtils,
 {$ENDIF}
-  ERD.Card.Crypto;
+  ERD.Card.Crypto, ERD.Card.Crypto.DES;
 
 type
-  /// <summary>Optional Linux OpenSSL 3 AES-128 CBC/CSPRNG backend; uses libcrypto.so.3.</summary>
-  /// <remarks>Not included in Windows runtime packages. No custom AES implementation, padding or RNG fallback.
+  /// <summary>Optional Linux OpenSSL 3 AES-128/3DES CBC/CSPRNG backend; uses libcrypto.so.3.</summary>
+  /// <remarks>Not included in Windows runtime packages. No custom primitive cipher implementation, padding or RNG fallback.
   /// Per-call EVP contexts permit independent concurrent calls; OpenSSL installation/policy is the host's responsibility.</remarks>
-  TCardOpenSslAesProvider = class(TInterfacedObject, ICardAesProvider)
+  TCardOpenSslAesProvider = class(TInterfacedObject, ICardAesProvider, ICardDesProvider)
   private
-    function Crypt(const AKey, AIv, AData: TBytes; const AEncrypt: Boolean): TBytes;
+    function Crypt(const AKey, AIv, AData: TBytes; const AEncrypt, ADes: Boolean): TBytes;
   public
     /// <summary>Checks OpenSSL 3 availability/version; opens no card or reader.</summary>
     /// <exception cref="ECardCryptoError">Platform or library version is unsupported.</exception>
@@ -39,6 +39,14 @@ type
     /// <returns>Independent exact-length plaintext.</returns>
     /// <exception cref="ECardCryptoError">Arguments or OpenSSL fail.</exception>
     function DecryptCbc(const AKey, AIv, AData: TBytes): TBytes;
+    /// <summary>Performs complete-block three-key Triple DES CBC through the maintained native backend.</summary>
+    /// <param name="AKey">Exactly 24 borrowed bytes; explicitly expand shorter protocol keys.</param>
+    /// <param name="AIv">Exactly eight borrowed bytes.</param>
+    /// <param name="AData">Positive multiple of eight, at most one MiB.</param>
+    /// <param name="AEncrypt">True encrypts, false decrypts; no padding.</param>
+    /// <returns>Owned exact-length native result.</returns>
+    /// <exception cref="ECardCryptoError">Bounds, backend policy or native operation fails.</exception>
+    function TripleDesCbc(const AKey, AIv, AData: TBytes; const AEncrypt: Boolean): TBytes;
     /// <summary>Uses OpenSSL RAND_bytes, without deterministic fallback.</summary>
     /// <param name="ACount">One through 65536 bytes.</param>
     /// <returns>Independent random bytes.</returns>
@@ -53,6 +61,7 @@ function OpenSSL_version_num: NativeUInt; cdecl; external 'libcrypto.so.3';
 function EVP_CIPHER_CTX_new: Pointer; cdecl; external 'libcrypto.so.3';
 procedure EVP_CIPHER_CTX_free(Ctx: Pointer); cdecl; external 'libcrypto.so.3';
 function EVP_aes_128_cbc: Pointer; cdecl; external 'libcrypto.so.3';
+function EVP_des_ede3_cbc: Pointer; cdecl; external 'libcrypto.so.3';
 function EVP_CipherInit_ex(Ctx, Cipher, Engine, Key, Iv: Pointer; Encrypt: Integer): Integer;
   cdecl; external 'libcrypto.so.3';
 function EVP_CIPHER_CTX_set_padding(Ctx: Pointer; Padding: Integer): Integer;
@@ -78,17 +87,20 @@ begin
 end;
 
 function TCardOpenSslAesProvider.Crypt(const AKey, AIv, AData: TBytes;
-  const AEncrypt: Boolean): TBytes;
+  const AEncrypt, ADes: Boolean): TBytes;
 {$IFDEF LINUX}
-var Ctx: Pointer; Buffer: TBytes; First,Last: Integer;
+var Ctx,Cipher: Pointer; Buffer: TBytes; First,Last: Integer;
 {$ENDIF}
 begin
-  Result:=nil; TCardCrypto.ValidateCbc(AKey,AIv,AData);
+  Result:=nil;
+  if ADes then TCardDesCrypto.ValidateCbc(AKey,AIv,AData) else TCardCrypto.ValidateCbc(AKey,AIv,AData);
 {$IFDEF LINUX}
   Ctx:=EVP_CIPHER_CTX_new; if Ctx=nil then CryptoError;
   Buffer:=nil;
   try
-    if EVP_CipherInit_ex(Ctx,EVP_aes_128_cbc,nil,@AKey[0],@AIv[0],Ord(AEncrypt))<>1 then CryptoError;
+    if ADes then Cipher:=EVP_des_ede3_cbc else Cipher:=EVP_aes_128_cbc;
+    if Cipher=nil then CryptoError;
+    if EVP_CipherInit_ex(Ctx,Cipher,nil,@AKey[0],@AIv[0],Ord(AEncrypt))<>1 then CryptoError;
     if EVP_CIPHER_CTX_set_padding(Ctx,0)<>1 then CryptoError;
     SetLength(Buffer,Length(AData)+16); First:=0; Last:=0;
     if EVP_CipherUpdate(Ctx,@Buffer[0],First,@AData[0],Length(AData))<>1 then CryptoError;
@@ -105,10 +117,13 @@ begin
 end;
 
 function TCardOpenSslAesProvider.EncryptCbc(const AKey, AIv, AData: TBytes): TBytes;
-begin Result:=Crypt(AKey,AIv,AData,True); end;
+begin Result:=Crypt(AKey,AIv,AData,True,False); end;
 
 function TCardOpenSslAesProvider.DecryptCbc(const AKey, AIv, AData: TBytes): TBytes;
-begin Result:=Crypt(AKey,AIv,AData,False); end;
+begin Result:=Crypt(AKey,AIv,AData,False,False); end;
+
+function TCardOpenSslAesProvider.TripleDesCbc(const AKey,AIv,AData:TBytes;const AEncrypt:Boolean):TBytes;
+begin Result:=Crypt(AKey,AIv,AData,AEncrypt,True);end;
 
 function TCardOpenSslAesProvider.RandomBytes(const ACount: Integer): TBytes;
 begin

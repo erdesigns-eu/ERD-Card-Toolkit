@@ -12,15 +12,15 @@ uses
 {$ELSE}
   System.SysUtils,
 {$ENDIF}
-  ERD.Card.Crypto;
+  ERD.Card.Crypto, ERD.Card.Crypto.DES;
 
 type
-  /// <summary>Windows CNG AES-128 CBC and system CSPRNG backend; requires Windows 7 or later.</summary>
-  /// <remarks>Uses the operating system bcrypt.dll, no vendor DLL or custom AES cipher. Per-call native
+  /// <summary>Windows CNG AES-128/3DES CBC and system CSPRNG backend; requires Windows 7 or later.</summary>
+  /// <remarks>Uses the operating system bcrypt.dll, no vendor DLL or custom primitive cipher. Per-call native
   /// handles and independent IV/key copies prevent shared mutable crypto state. No card I/O.</remarks>
-  TCardWindowsAesProvider = class(TInterfacedObject, ICardAesProvider)
+  TCardWindowsAesProvider = class(TInterfacedObject, ICardAesProvider, ICardDesProvider)
   private
-    function Crypt(const AKey, AIv, AData: TBytes; const AEncrypt: Boolean): TBytes;
+    function Crypt(const AKey, AIv, AData: TBytes; const AEncrypt, ADes: Boolean): TBytes;
   public
     /// <summary>Creates an inactive provider and rejects non-Windows platforms.</summary>
     /// <exception cref="ECardCryptoError">Platform is unsupported.</exception>
@@ -39,6 +39,14 @@ type
     /// <returns>Independent exact-length plaintext.</returns>
     /// <exception cref="ECardCryptoError">Arguments, native lengths or CNG fail.</exception>
     function DecryptCbc(const AKey, AIv, AData: TBytes): TBytes;
+    /// <summary>Performs complete-block three-key Triple DES CBC through the maintained native backend.</summary>
+    /// <param name="AKey">Exactly 24 borrowed bytes; explicitly expand shorter protocol keys.</param>
+    /// <param name="AIv">Exactly eight borrowed bytes.</param>
+    /// <param name="AData">Positive multiple of eight, at most one MiB.</param>
+    /// <param name="AEncrypt">True encrypts, false decrypts; no padding.</param>
+    /// <returns>Owned exact-length native result.</returns>
+    /// <exception cref="ECardCryptoError">Bounds, backend policy or native operation fails.</exception>
+    function TripleDesCbc(const AKey, AIv, AData: TBytes; const AEncrypt: Boolean): TBytes;
     /// <summary>Uses BCryptGenRandom with BCRYPT_USE_SYSTEM_PREFERRED_RNG.</summary>
     /// <param name="ACount">One through 65536 bytes.</param>
     /// <returns>Independent fresh random bytes, without fallback.</returns>
@@ -83,30 +91,32 @@ begin
 end;
 
 function TCardWindowsAesProvider.Crypt(const AKey, AIv, AData: TBytes;
-  const AEncrypt: Boolean): TBytes;
+  const AEncrypt, ADes: Boolean): TBytes;
 {$IFDEF MSWINDOWS}
 var Algorithm,Key: Pointer; ObjectBytes,Secret,Iv,Output: TBytes;
-  ObjectLength,Received: Cardinal; Mode: UnicodeString; Status: LongInt; Success,CleanupFailed:Boolean;
+  ObjectLength,Received: Cardinal; Mode,AlgorithmName: UnicodeString; Status: LongInt; Success,CleanupFailed:Boolean;
 {$ENDIF}
 begin
-  Result:=nil; TCardCrypto.ValidateCbc(AKey,AIv,AData);
+  Result:=nil;
+  if ADes then TCardDesCrypto.ValidateCbc(AKey,AIv,AData) else TCardCrypto.ValidateCbc(AKey,AIv,AData);
 {$IFDEF MSWINDOWS}
   Algorithm:=nil; Key:=nil; ObjectBytes:=nil; Secret:=Copy(AKey,0,Length(AKey));
   Iv:=Copy(AIv,0,Length(AIv)); Output:=nil; Success:=False;
   try
-    if BCryptOpenAlgorithmProvider(Algorithm,'AES',nil,0)<0 then CryptoError;
+    if ADes then AlgorithmName:='3DES' else AlgorithmName:='AES';
+    if BCryptOpenAlgorithmProvider(Algorithm,PWideChar(AlgorithmName),nil,0)<0 then CryptoError;
     Mode:='ChainingModeCBC';
     if BCryptSetProperty(Algorithm,'ChainingMode',PWideChar(Mode),(Length(Mode)+1)*SizeOf(WideChar),0)<0 then CryptoError;
     ObjectLength:=0; Received:=0;
     if BCryptGetProperty(Algorithm,'ObjectLength',@ObjectLength,SizeOf(ObjectLength),Received,0)<0 then CryptoError;
     if (Received<>SizeOf(ObjectLength)) or (ObjectLength<1) or (ObjectLength>65536) then CryptoError;
     SetLength(ObjectBytes,ObjectLength);
-    if BCryptGenerateSymmetricKey(Algorithm,Key,@ObjectBytes[0],ObjectLength,@Secret[0],16,0)<0 then CryptoError;
+    if BCryptGenerateSymmetricKey(Algorithm,Key,@ObjectBytes[0],ObjectLength,@Secret[0],Length(Secret),0)<0 then CryptoError;
     SetLength(Output,Length(AData)); Received:=0;
     if AEncrypt then
-      Status:=BCryptEncrypt(Key,@AData[0],Length(AData),nil,@Iv[0],16,@Output[0],Length(Output),Received,0)
+      Status:=BCryptEncrypt(Key,@AData[0],Length(AData),nil,@Iv[0],Length(Iv),@Output[0],Length(Output),Received,0)
     else
-      Status:=BCryptDecrypt(Key,@AData[0],Length(AData),nil,@Iv[0],16,@Output[0],Length(Output),Received,0);
+      Status:=BCryptDecrypt(Key,@AData[0],Length(AData),nil,@Iv[0],Length(Iv),@Output[0],Length(Output),Received,0);
     if (Status<0) or (Received<>Cardinal(Length(AData))) then CryptoError;
     Result:=Copy(Output,0,Length(Output)); Success:=True;
   finally
@@ -122,10 +132,13 @@ begin
 end;
 
 function TCardWindowsAesProvider.EncryptCbc(const AKey, AIv, AData: TBytes): TBytes;
-begin Result:=Crypt(AKey,AIv,AData,True); end;
+begin Result:=Crypt(AKey,AIv,AData,True,False); end;
 
 function TCardWindowsAesProvider.DecryptCbc(const AKey, AIv, AData: TBytes): TBytes;
-begin Result:=Crypt(AKey,AIv,AData,False); end;
+begin Result:=Crypt(AKey,AIv,AData,False,False); end;
+
+function TCardWindowsAesProvider.TripleDesCbc(const AKey,AIv,AData:TBytes;const AEncrypt:Boolean):TBytes;
+begin Result:=Crypt(AKey,AIv,AData,AEncrypt,True);end;
 
 function TCardWindowsAesProvider.RandomBytes(const ACount: Integer): TBytes;
 begin

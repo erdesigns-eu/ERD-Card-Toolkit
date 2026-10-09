@@ -4,7 +4,7 @@ uses
 {$IFDEF UNIX}cthreads,{$ENDIF}
 {$IFDEF FPC}Classes,SysUtils,{$ELSE}System.Classes,System.SysUtils,System.SyncObjs,{$ENDIF}
  ERD.Card.Events,ERD.Card.Bytes,ERD.Card.PCSC.Api,ERD.Card.PCSC.Monitor,ERD.Card.PCSC.Reader,
- ERD.Card.HID,ERD.Card.HID.Monitor;
+ ERD.Card.Demo.ReaderEvents,ERD.Card.Demo.Devices,ERD.Card.HID,ERD.Card.HID.Monitor;
 var Checks:Integer=0;
 procedure Check(B:Boolean;const S:string);
 begin Inc(Checks);if not B then raise Exception.Create(S);end;
@@ -48,6 +48,9 @@ type
  TRecorder=class
   Log:TStringList;M:TSmartCardMonitor;R:TSmartCardReader;HM:THidDeviceMonitor;Input:TUsbHidInputMonitor;
   StopOnInsert,FreeOnInsert,StopOnReport,FreeOnReport:Boolean;Reports,Errors:Integer;
+  Inventory:TCardDemoDevices;Status:string;InventoryCalls:Integer;
+  procedure DemoInventory(const Devices:TCardDemoDevices);
+  procedure DemoStatus(const Text:string);
   constructor Create;destructor Destroy;override;
   procedure ThreadCheck;
   procedure Added(Sender:TObject;const Name:UnicodeString);
@@ -130,6 +133,9 @@ procedure TReportDevice.Send(const K:THidReportKind;const B:TBytes;const T:Cardi
 begin raise Exception.Create('Listener must never write.');end;
 constructor TRecorder.Create;begin inherited Create;Log:=TStringList.Create;end;
 destructor TRecorder.Destroy;begin Input.Free;HM.Free;R.Free;M.Free;Log.Free;inherited Destroy;end;
+procedure TRecorder.DemoInventory(const Devices:TCardDemoDevices);
+begin ThreadCheck;Inventory:=Devices;Inc(InventoryCalls);Log.Add('inventory');end;
+procedure TRecorder.DemoStatus(const Text:string);begin ThreadCheck;Status:=Text;Log.Add('presence');end;
 procedure TRecorder.ThreadCheck;begin Check(TThread.CurrentThread.ThreadID=MainThreadID,'Main-thread event delivery');end;
 procedure TRecorder.Added(Sender:TObject;const Name:UnicodeString);begin ThreadCheck;Log.Add('added:'+string(Name));end;
 procedure TRecorder.Removed(Sender:TObject;const Name:UnicodeString);begin ThreadCheck;Log.Add('removed:'+string(Name));end;
@@ -191,6 +197,22 @@ begin
   Check(O.Log.Count=3,'Reader component forwards selected card without PollChanges');O.R.StopMonitoring;
  finally O.Free;Api:=nil;end;
 end;
+procedure TestDemoBridge;
+var A:TMockPcsc;Api:IPcscApi;O:TRecorder;Bridge:TCardDemoReaderEvents;N:Integer;
+begin
+ A:=TMockPcsc.Create;Api:=A;A.SetStep(2);O:=TRecorder.Create;
+ Bridge:=TCardDemoReaderEvents.CreateWithApi(Api,O.DemoInventory,O.DemoStatus);
+ try
+  Check(not Bridge.Active,'Demo bridge inactive construction');Bridge.Start;Pump;
+  Check((Length(O.Inventory)=1) and (O.Inventory[0].Address='Reader'),'Demo exact initial inventory');
+  Check(Pos('Card offered: Reader; ATR 3B00',O.Status)=1,'Demo initial presence and ATR');
+  O.Inventory[0].Address:='Changed by consumer';A.SetStep(4);Pump;
+  Check((Length(O.Inventory)=0) and (Pos('Card removed: Reader',O.Status)=1),'Demo owns its inventory despite consumer mutation');
+  Bridge.Start;A.SetStep(2);Pump;Check(Length(O.Inventory)=1,'Demo explicit restart repopulates inventory');
+  Bridge.Stop;N:=O.InventoryCalls;A.SetStep(4);Pump;
+  Check((N=O.InventoryCalls) and (A.Connected=0),'Demo Stop discards callbacks and never connects');
+ finally Bridge.Free;O.Free;Api:=nil;end;
+end;
 procedure TestHid;
 var A:TNotifications;Api:IHidDeviceNotifications;D:TReportDevice;Device:IHidReportDevice;O:TRecorder;I:Integer;
 begin
@@ -235,6 +257,6 @@ begin
  finally L.Free;end;
 end;
 begin
- try TestQueue;TestPcsc;TestHid;Writeln('PASS: ',Checks,' reader/card/HID event and lifecycle assertions.');
+ try TestQueue;TestPcsc;TestDemoBridge;TestHid;Writeln('PASS: ',Checks,' reader/card/HID event and lifecycle assertions.');
  except on E:Exception do begin Writeln(E.ClassName,': ',E.Message);ExitCode:=1;end;end;
 end.

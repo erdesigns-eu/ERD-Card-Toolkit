@@ -4,7 +4,7 @@ interface
 
 uses
   System.Classes, Vcl.Controls, Vcl.Forms, Vcl.StdCtrls, Vcl.ExtCtrls, System.SysUtils,
-  Vcl.Dialogs, Vcl.ComCtrls, ERD.Card.RFID.Input, ERD.Card.Bytes, ERD.Card.Demo.Job, ERD.Card.Demo.Controller, ERD.Card.Demo.Devices;
+  Vcl.Dialogs, Vcl.ComCtrls, ERD.Card.RFID.Input, ERD.Card.Bytes, ERD.Card.Demo.Job, ERD.Card.Demo.Controller, ERD.Card.Demo.Devices, ERD.Card.Demo.ReaderEvents;
 
 type
   /// <summary>Explicit PC/SC card operations with a background worker and optional face preview.</summary>
@@ -99,6 +99,8 @@ type
     ReaderLabel: TLabel;
     /// <summary>Editable exact PC/SC reader name; no automatic reader selection.</summary>
     ReaderBox: TComboBox;
+    /// <summary>Native reader/card event status independent of operation results.</summary>
+    EventStatusLabel: TLabel;
     /// <summary>Explicit reader enumeration.</summary>
     ReadersButton: TButton;
     /// <summary>Operation selection label.</summary>
@@ -171,8 +173,12 @@ type
     procedure StartRequest(const ARequest: TCardDemoRequest);
   private
     FRfid: TRfidKeyboardReader;
+    FReaderEvents: TCardDemoReaderEvents;
+    FPreviousReader: UnicodeString;
     FPhoto: TBytes;
     FPhotoIsJpeg2000: Boolean;
+    procedure ReaderInventory(const ADevices: TCardDemoDevices);
+    procedure ReaderStatus(const AText: string);
     procedure RfidIdentified(Sender: TObject; const AIdentifier: TRfidInputIdentifier);
   protected
     /// <summary>Defers close until this form’s owned background operation completes.</summary>
@@ -207,6 +213,7 @@ procedure TSmartCardDemoForm.FormCreate(Sender: TObject);
 var M: TMemoryCardModel; C: TSleCounterModel;
 begin
   FController := TCardDemoController.Create(ddkPcsc,CreateCardDemoOperations,SetBusy,Complete,Close);
+  FReaderEvents := TCardDemoReaderEvents.Create(ReaderInventory,ReaderStatus);
   OperationBox.Items.Text := 'Offline NDEF inspect'#13#10'Read UID (PC/SC storage)'#13#10+
     'Read Belgian eID + photo'#13#10'Read ICAO DG1/DG2 + photo'#13#10+
     'Discover EMV contact PSE'#13#10'Discover EMV contactless PPSE'#13#10+
@@ -284,11 +291,24 @@ begin
   end;
 end;
 
-procedure TSmartCardDemoForm.ReadersClick(Sender: TObject);
-var R: TCardDemoRequest;
+procedure TSmartCardDemoForm.ReaderInventory(const ADevices: TCardDemoDevices);
+var I: Integer; Previous: string;
 begin
-  R := Default(TCardDemoRequest); R.Operation := cdoReaders;
-  StartRequest(R);
+  Previous := ReaderBox.Text;
+  if Previous = '' then Previous := string(FPreviousReader);
+  ReaderBox.Items.Clear;
+  for I := 0 to High(ADevices) do ReaderBox.Items.Add(string(ADevices[I].Address));
+  ReaderBox.ItemIndex := ReaderBox.Items.IndexOf(Previous);
+end;
+
+procedure TSmartCardDemoForm.ReaderStatus(const AText: string);
+begin EventStatusLabel.Caption := AText; end;
+
+procedure TSmartCardDemoForm.ReadersClick(Sender: TObject);
+begin
+  FPreviousReader := ReaderBox.Text;
+  try FReaderEvents.Start; EventStatusLabel.Caption := 'Watching reader and card events.';
+  except on E: Exception do EventStatusLabel.Caption := 'Reader events could not start: '+E.ClassName+'. Use List readers to retry.'; end;
 end;
 
 procedure TSmartCardDemoForm.RunClick(Sender: TObject);
@@ -506,7 +526,7 @@ end;
 destructor TSmartCardDemoForm.Destroy;
 begin
   if WorkerTimer <> nil then WorkerTimer.Enabled := False; if FRfid <> nil then FRfid.Stop;
-  FController.Free; inherited Destroy;
+  FReaderEvents.Free; FController.Free; inherited Destroy;
 end;
 
 procedure TSmartCardDemoForm.FormShow(Sender: TObject);

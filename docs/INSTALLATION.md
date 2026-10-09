@@ -70,13 +70,13 @@ Add the matching DCP/DCU directories or source directories to the IDE library pa
 for projects that use installed components. Never add `tests/design` to this path:
 its `DesignIntf` unit is a headless FPC test shim.
 
-The design package registers 25 components on three palette pages:
+The design package registers 26 components on three palette pages:
 
 | Palette page | Components |
 | --- | --- |
 | `ERD Cards` | `TSmartCardMonitor`, `TSmartCardReader`, `TBelgianEIDReader`, `TICAODocumentReader`, `TSimCardReaderWriter`, `TEMVCardReader`, `TMagStripeReaderWriter`, `TMemoryCardReaderWriter`, `TSleCounterCardReaderWriter`, `TSle4404CardReaderWriter` |
 | `ERD Input` | `THidDeviceMonitor`, `TUsbHidInputMonitor`, `TRfidKeyboardReader`, `TRfidHidReportReader`, `TUsbHidReaderWriter`, `TTwn4CardReaderWriter` |
-| `ERD Contactless` | `TCalypsoCardReader`, `TContactlessCardReader`, `TType2NdefCardReader`, `TType4NdefCardReader`, `TIso15693CardReader`, `TType5NdefCardReader`, `TDesfireCardReader`, `TType2PasswordCardReader`, `TRawUidProgrammer` |
+| `ERD Contactless` | `TUltralightCCardReaderWriter`, `TCalypsoCardReader`, `TContactlessCardReader`, `TType2NdefCardReader`, `TType4NdefCardReader`, `TIso15693CardReader`, `TType5NdefCardReader`, `TDesfireCardReader`, `TType2PasswordCardReader`, `TRawUidProgrammer` |
 
 Default IDE component icons are used. The optional cryptographic backends are
 interface providers rather than palette components, so the design package does

@@ -18,7 +18,7 @@ object DesfireDemoForm: TDesfireDemoForm
     Top = 0
     Width = 1080
     Align = alTop
-    Height = 94
+    Height = 118
     BevelOuter = bvNone
     TabOrder = 0
     object GuidanceLabel: TLabel
@@ -55,6 +55,15 @@ object DesfireDemoForm: TDesfireDemoForm
       Caption = 'Refresh devices'
       TabOrder = 1
       OnClick = RefreshReadersClick
+    end
+    object EventStatusLabel: TLabel
+      Left = 16
+      Top = 88
+      Width = 1040
+      Height = 22
+      AutoSize = False
+      Anchors = [akLeft, akTop, akRight]
+      Caption = 'Reader events inactive.'
     end
   end
   object BottomPanel: TPanel
@@ -251,6 +260,10 @@ object DesfireDemoForm: TDesfireDemoForm
             'Public'
             'EV2 AES'
             'EV1 AES'
+            'EV1 2K3DES'
+            'EV1 3K3DES'
+            'D40 DES'
+            'D40 2K3DES'
           )
           Text = 'Public'
         end
@@ -299,7 +312,7 @@ object DesfireDemoForm: TDesfireDemoForm
           Top = 256
           Width = 940
           Height = 18
-          Caption = 'Supplied AES key (hex)'
+          Caption = 'Supplied authentication key (hex; 8/16/24 bytes by profile)'
         end
         object ActFilesKeyEdit: TEdit
           Left = 16
@@ -399,6 +412,10 @@ object DesfireDemoForm: TDesfireDemoForm
             'Public'
             'EV2 AES'
             'EV1 AES'
+            'EV1 2K3DES'
+            'EV1 3K3DES'
+            'D40 DES'
+            'D40 2K3DES'
           )
           Text = 'Public'
         end
@@ -447,7 +464,7 @@ object DesfireDemoForm: TDesfireDemoForm
           Top = 256
           Width = 940
           Height = 18
-          Caption = 'Supplied AES key (hex)'
+          Caption = 'Supplied authentication key (hex; 8/16/24 bytes by profile)'
         end
         object ActReadKeyEdit: TEdit
           Left = 16
@@ -598,6 +615,10 @@ object DesfireDemoForm: TDesfireDemoForm
             'Public'
             'EV2 AES'
             'EV1 AES'
+            'EV1 2K3DES'
+            'EV1 3K3DES'
+            'D40 DES'
+            'D40 2K3DES'
           )
           Text = 'Public'
         end
@@ -646,7 +667,7 @@ object DesfireDemoForm: TDesfireDemoForm
           Top = 256
           Width = 940
           Height = 18
-          Caption = 'Supplied AES key (hex)'
+          Caption = 'Supplied authentication key (hex; 8/16/24 bytes by profile)'
         end
         object ActValueKeyEdit: TEdit
           Left = 16
@@ -763,6 +784,10 @@ object DesfireDemoForm: TDesfireDemoForm
             'Public'
             'EV2 AES'
             'EV1 AES'
+            'EV1 2K3DES'
+            'EV1 3K3DES'
+            'D40 DES'
+            'D40 2K3DES'
           )
           Text = 'Public'
         end
@@ -811,7 +836,7 @@ object DesfireDemoForm: TDesfireDemoForm
           Top = 256
           Width = 940
           Height = 18
-          Caption = 'Supplied AES key (hex)'
+          Caption = 'Supplied authentication key (hex; 8/16/24 bytes by profile)'
         end
         object ActRecordsKeyEdit: TEdit
           Left = 16
@@ -962,6 +987,10 @@ object DesfireDemoForm: TDesfireDemoForm
             'Public'
             'EV2 AES'
             'EV1 AES'
+            'EV1 2K3DES'
+            'EV1 3K3DES'
+            'D40 DES'
+            'D40 2K3DES'
           )
           Text = 'Public'
         end
@@ -1010,7 +1039,7 @@ object DesfireDemoForm: TDesfireDemoForm
           Top = 256
           Width = 940
           Height = 18
-          Caption = 'Supplied AES key (hex)'
+          Caption = 'Supplied authentication key (hex; 8/16/24 bytes by profile)'
         end
         object ActWriteKeyEdit: TEdit
           Left = 16
@@ -1160,6 +1189,10 @@ object DesfireDemoForm: TDesfireDemoForm
             'Public'
             'EV2 AES'
             'EV1 AES'
+            'EV1 2K3DES'
+            'EV1 3K3DES'
+            'D40 DES'
+            'D40 2K3DES'
           )
           Text = 'Public'
         end
@@ -1208,7 +1241,7 @@ object DesfireDemoForm: TDesfireDemoForm
           Top = 256
           Width = 940
           Height = 18
-          Caption = 'Supplied AES key (hex)'
+          Caption = 'Supplied authentication key (hex; 8/16/24 bytes by profile)'
         end
         object ActBackupKeyEdit: TEdit
           Left = 16
@@ -1402,6 +1435,10 @@ object DesfireDemoForm: TDesfireDemoForm
             'Public'
             'EV2 AES'
             'EV1 AES'
+            'EV1 2K3DES'
+            'EV1 3K3DES'
+            'D40 DES'
+            'D40 2K3DES'
           )
           Text = 'Public'
         end
@@ -1450,7 +1487,7 @@ object DesfireDemoForm: TDesfireDemoForm
           Top = 256
           Width = 940
           Height = 18
-          Caption = 'Supplied AES key (hex)'
+          Caption = 'Supplied authentication key (hex; 8/16/24 bytes by profile)'
         end
         object ActCreditKeyEdit: TEdit
           Left = 16
@@ -1627,6 +1664,10 @@ object DesfireDemoForm: TDesfireDemoForm
             'Public'
             'EV2 AES'
             'EV1 AES'
+            'EV1 2K3DES'
+            'EV1 3K3DES'
+            'D40 DES'
+            'D40 2K3DES'
           )
           Text = 'Public'
         end
@@ -1675,7 +1716,7 @@ object DesfireDemoForm: TDesfireDemoForm
           Top = 256
           Width = 940
           Height = 18
-          Caption = 'Supplied AES key (hex)'
+          Caption = 'Supplied authentication key (hex; 8/16/24 bytes by profile)'
         end
         object ActDebitKeyEdit: TEdit
           Left = 16
@@ -1852,6 +1893,10 @@ object DesfireDemoForm: TDesfireDemoForm
             'Public'
             'EV2 AES'
             'EV1 AES'
+            'EV1 2K3DES'
+            'EV1 3K3DES'
+            'D40 DES'
+            'D40 2K3DES'
           )
           Text = 'Public'
         end
@@ -1900,7 +1945,7 @@ object DesfireDemoForm: TDesfireDemoForm
           Top = 256
           Width = 940
           Height = 18
-          Caption = 'Supplied AES key (hex)'
+          Caption = 'Supplied authentication key (hex; 8/16/24 bytes by profile)'
         end
         object ActLimitedKeyEdit: TEdit
           Left = 16
@@ -2077,6 +2122,10 @@ object DesfireDemoForm: TDesfireDemoForm
             'Public'
             'EV2 AES'
             'EV1 AES'
+            'EV1 2K3DES'
+            'EV1 3K3DES'
+            'D40 DES'
+            'D40 2K3DES'
           )
           Text = 'Public'
         end
@@ -2125,7 +2174,7 @@ object DesfireDemoForm: TDesfireDemoForm
           Top = 256
           Width = 940
           Height = 18
-          Caption = 'Supplied AES key (hex)'
+          Caption = 'Supplied authentication key (hex; 8/16/24 bytes by profile)'
         end
         object ActAppendKeyEdit: TEdit
           Left = 16
@@ -2302,6 +2351,10 @@ object DesfireDemoForm: TDesfireDemoForm
             'Public'
             'EV2 AES'
             'EV1 AES'
+            'EV1 2K3DES'
+            'EV1 3K3DES'
+            'D40 DES'
+            'D40 2K3DES'
           )
           Text = 'Public'
         end
@@ -2350,7 +2403,7 @@ object DesfireDemoForm: TDesfireDemoForm
           Top = 256
           Width = 940
           Height = 18
-          Caption = 'Supplied AES key (hex)'
+          Caption = 'Supplied authentication key (hex; 8/16/24 bytes by profile)'
         end
         object ActClearKeyEdit: TEdit
           Left = 16
@@ -2559,7 +2612,7 @@ object DesfireDemoForm: TDesfireDemoForm
           Top = 256
           Width = 940
           Height = 18
-          Caption = 'Supplied AES key (hex)'
+          Caption = 'Supplied authentication key (hex; 8/16/24 bytes by profile)'
         end
         object ActSettingsKeyEdit: TEdit
           Left = 16
@@ -2707,7 +2760,7 @@ object DesfireDemoForm: TDesfireDemoForm
           Top = 256
           Width = 940
           Height = 18
-          Caption = 'Supplied AES key (hex)'
+          Caption = 'Supplied authentication key (hex; 8/16/24 bytes by profile)'
         end
         object ActFreememoryKeyEdit: TEdit
           Left = 16
@@ -2855,7 +2908,7 @@ object DesfireDemoForm: TDesfireDemoForm
           Top = 256
           Width = 940
           Height = 18
-          Caption = 'Supplied AES key (hex)'
+          Caption = 'Supplied authentication key (hex; 8/16/24 bytes by profile)'
         end
         object ActKeyversionKeyEdit: TEdit
           Left = 16
@@ -3020,7 +3073,7 @@ object DesfireDemoForm: TDesfireDemoForm
           Top = 256
           Width = 940
           Height = 18
-          Caption = 'Supplied AES key (hex)'
+          Caption = 'Supplied authentication key (hex; 8/16/24 bytes by profile)'
         end
         object ActKeysettingsKeyEdit: TEdit
           Left = 16
@@ -3184,7 +3237,7 @@ object DesfireDemoForm: TDesfireDemoForm
           Top = 256
           Width = 940
           Height = 18
-          Caption = 'Supplied AES key (hex)'
+          Caption = 'Supplied authentication key (hex; 8/16/24 bytes by profile)'
         end
         object ActFileaccessKeyEdit: TEdit
           Left = 16
@@ -3436,7 +3489,7 @@ object DesfireDemoForm: TDesfireDemoForm
           Top = 256
           Width = 940
           Height = 18
-          Caption = 'Supplied AES key (hex)'
+          Caption = 'Supplied authentication key (hex; 8/16/24 bytes by profile)'
         end
         object ActChangekeyKeyEdit: TEdit
           Left = 16
@@ -3651,7 +3704,7 @@ object DesfireDemoForm: TDesfireDemoForm
           Top = 256
           Width = 940
           Height = 18
-          Caption = 'Supplied AES key (hex)'
+          Caption = 'Supplied authentication key (hex; 8/16/24 bytes by profile)'
         end
         object ActCreateappKeyEdit: TEdit
           Left = 16
@@ -3847,7 +3900,7 @@ object DesfireDemoForm: TDesfireDemoForm
           Top = 256
           Width = 940
           Height = 18
-          Caption = 'Supplied AES key (hex)'
+          Caption = 'Supplied authentication key (hex; 8/16/24 bytes by profile)'
         end
         object ActDeleteappKeyEdit: TEdit
           Left = 16
@@ -4011,7 +4064,7 @@ object DesfireDemoForm: TDesfireDemoForm
           Top = 256
           Width = 940
           Height = 18
-          Caption = 'Supplied AES key (hex)'
+          Caption = 'Supplied authentication key (hex; 8/16/24 bytes by profile)'
         end
         object ActDeletefileKeyEdit: TEdit
           Left = 16
@@ -4176,7 +4229,7 @@ object DesfireDemoForm: TDesfireDemoForm
           Top = 256
           Width = 940
           Height = 18
-          Caption = 'Supplied AES key (hex)'
+          Caption = 'Supplied authentication key (hex; 8/16/24 bytes by profile)'
         end
         object ActCreatefileKeyEdit: TEdit
           Left = 16
