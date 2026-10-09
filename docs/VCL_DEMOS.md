@@ -1,7 +1,7 @@
 # VCL read/write demos
 
-Twenty-three applications demonstrate implemented APIs: SmartCardDemo,
-MagStripeDemo and twenty-one family projects. Each application owns a direct TForm
+Twenty-five applications demonstrate implemented APIs: SmartCardDemo,
+MagStripeDemo and twenty-three family projects. Each application owns a direct TForm
 class and its own designer-editable Main.dfm, including all action inputs and a
 reader dropdown.
 Only nonvisual operation, metadata and worker/controller units are shared.
@@ -61,6 +61,8 @@ that byte-buffer wiping guarantee. Errors display their class, never backend tex
 | `emv/EmvDemo.dproj` | PSE/PPSE, PDOL inspection, explicit AID/terminal values, GPO/AFL records, bounded SFI/record scan, raw records/statuses, GET DATA, advertised logs, DOL/log decoders and exact exports |
 | `belgianeid/BelgianEidDemo.dproj` | Public sections, identity/address/photo, JPEG preview, RAW/DER certificates and raw signature exports |
 | `icaodocument/IcaoDocumentDemo.dproj` | BAC/PACE with MRZ/CAN/curve/provider, document sections and face images, CardAccess/DG1/DG2/COM/SOD exports, JPEG preview and JPEG2000 export |
+| `slix2/Slix2Demo.dproj` | Supplied SLIX2 read/write passwords, physical blocks, parsed Type 5 NDEF read/replace/clear |
+| `st25dv/St25DvDemo.dproj` | Original ST25DV RF user password, ordinary/extended physical blocks, parsed Type 5 NDEF read/replace/clear |
 | `iso15693/Iso15693Demo.dproj` | ACR1552 explicit address/response dialects, UID/geometry, block reads/verified writes and Type 5 NDEF read/write/clear |
 | `uid/UidProgrammingDemo.dproj` | PC/SC Gen2/FUID; ACR122 Gen1a/Gen1b/unsealed UFUID, DirectWrite, Gen3, six Gen4 layouts, USCUID/GDM and partial UFUID/ZUID/PFUID |
 | `desfire/DesfireDemo.dproj` | Public/EV1/EV2 AES, EV1 2K3DES/3K3DES and D40 DES/2K3DES, directories/data/values/records, standard writes, backup/value/record transactions with commit/abort, application/file create-delete across those profiles, explicit new application key type/count, AES key/access-policy mutations |
@@ -387,7 +389,7 @@ save dialog. See [MOBIB_CALYPSO.md](MOBIB_CALYPSO.md) for the concrete files,
 status behavior, parsed fields, secure-provider integration and remaining
 issuer-specific schemas.
 
-The project group's Build/Make/Clean aggregates cover all twenty-three applications;
+The project group's Build/Make/Clean aggregates cover all twenty-five applications;
 the standalone build script includes them too.
 
 
@@ -400,3 +402,26 @@ Blank zone policy means unknown contract zones; `*` explicitly means unrestricte
 It prints each independent check and reason plus resolved dates, without claiming
 issuer authorization. See [MOBIB_CALYPSO.md](MOBIB_CALYPSO.md) for the native API,
 clock domains, contract-duration mappings and application-supplied rule profiles.
+
+## Authenticated NFC-V examples
+
+Open `slix2/Slix2Demo.dproj` or `st25dv/St25DvDemo.dproj`. Each has its own
+editable DFM and direct TForm, discovers PC/SC readers inside that application,
+and subscribes to native reader/card presence events. Select an ACR1552 FF-FB
+reader and the explicit firmware response format. For ST25DV16K/64K choose
+extended addressing. Password hex is in RF wire byte order; input is masked and
+copied into worker-owned credential buffers. SLIX2 accepts read and/or write
+passwords; ST25DV accepts one RF user password number 1..3. No default password
+is supplied and no password list is tried.
+
+Pages expose authenticated identity, bounded physical reads (optional native
+bulk command), verified data writes and parsed Type 5 NDEF read/replace/clear.
+An empty NDEF replacement clears an existing initialized message. NDEF output
+shows decoded record types, identifiers and Text/URI content, and the original
+message bytes remain available for export. `Iso15693Demo` separately adds a
+native-multiple-block tab without a password profile.
+
+These demos do not change password/protection configuration. SLIX2 counter block
+79 is reserved. A PC/SC transaction release does not clear the tag's RF security
+state. A failed SLIX2 password requires a real RF power-on reset before another
+attempt. See [the exact profile contract](ISO15693_TYPE5.md).

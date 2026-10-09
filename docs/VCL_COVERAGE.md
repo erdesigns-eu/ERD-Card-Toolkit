@@ -1,6 +1,6 @@
 # VCL examples: current coverage
 
-There are **twenty-three separately executable applications** in
+There are **twenty-five separately executable applications** in
 `examples/vcl/CardDemos.groupproj`. Each application has its own `TForm`,
 `.Main.pas`, and `.Main.dfm`. All visual controls are in that application's own
 DFM, including action pages, input fields, reader selection, and timers. There is
@@ -27,6 +27,8 @@ set.
 | EmvDemo | PSE/PPSE, PDOL inspection, explicit AID/terminal values, GPO/AFL records plus bounded extra SFI/record scan, visible raw records/statuses, GET DATA, advertised logs, DOL/log decoders, and exact exports |
 | BelgianEidDemo | All public sections, identity/address, JPEG, RAW/DER certificate export, and raw signature export |
 | IcaoDocumentDemo | BAC/PACE with MRZ/CAN/curve/provider, all document sections/face images, CardAccess/DG1/DG2/COM/SOD export, JPEG preview, and JPEG2000 export |
+| Slix2Demo | Supplied SLIX2 read/write passwords, physical data and parsed Type 5 NDEF, own reader/events form |
+| St25DvDemo | Original ST25DV RF user passwords, ordinary/extended blocks and parsed Type 5 NDEF, own reader/events form |
 | Iso15693Demo | ACR1552 explicit address/response dialects, UID/geometry, block reads/verified writes, and Type 5 NDEF read/write/clear |
 | UidProgrammingDemo | PC/SC Gen2/FUID; ACR122 Gen1a/Gen1b/unsealed UFUID, DirectWrite, Gen3, six Gen4 layouts, USCUID/GDM, and partial UFUID/ZUID/PFUID |
 | DesfireDemo | Public/EV1/EV2 AES, EV1 2K3DES/3K3DES and D40 DES/2K3DES, directories/data/values/records, standard writes, backup/value/record transactions with commit/abort, application/file create-delete across those profiles, explicit new application key type/count, AES key/access-policy mutations |

@@ -760,3 +760,30 @@ dependencies. The fixture generator uses standard Python only and is reproducibl
 These are compiler/protocol/backend/script checks; they do not constitute a Delphi
 IDE build or physical-card qualification. Unencrypted FeliCa data and PWD_AUTH/PACK
 are not cryptographic card-authenticity claims.
+
+## ISO 15693 bulk access and SLIX2/ST25DV password sessions
+
+The complete `run_core_tests.py` regression workflow passed, including native
+crypto backends and the existing card families. The final focused
+`Iso15693Profiles.Tests.dpr` run passed 1,295 assertions with range/overflow checking
+and heap tracing. Independent literal FF-FB transcripts verify 23/33 block/count
+encoding, 240-byte chunk boundaries, SLIX2 random/XOR/B3 wire frames and ST25DV
+B3 wire frames. Coverage includes all three original ST25DV geometries, wrong
+manufacturer/geometry/missing IC reference before password dispatch, copied
+credentials, duplicate/invalid identifier and size preflight, every acquisition
+and authentication exchange failure, poisoned-session refusal, reserved SLIX2
+counter block, verified user-memory writes, uncertain dispatch/read-back/release
+and password-session integration with Type 5 NDEF read/write.
+
+Family execution/preflight tests passed 2,278 assertions, including every new
+SLIX2/ST25DV action and malformed passwords/acknowledgement before hardware
+acquisition. Distribution validation reported zero findings across 38 projects,
+two groups and 25 independent DFM forms; the component palette remains 28.
+All 36 Python tool regressions and all 21 Pascal checkers passed. Existing
+ISO 15693/Type 5 tests retain their 280,409 assertions. New project files use
+BOM/CRLF; the existing runtime/design package source closures require no new unit
+or runtime BPL dependency. Test executables reported no leaked heap blocks.
+
+These results are compiler/protocol/backend/script checks, not a Delphi IDE
+build or physical-card qualification. RF password acceptance is not cryptographic
+card authenticity, and ending a PC/SC transaction is not a fresh RF power-on reset.

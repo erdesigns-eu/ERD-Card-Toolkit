@@ -65,7 +65,7 @@ def main():
                     'tests/contactless/Type2Password.Tests.dpr', 'tests/contactless/Type2Felica.Tests.dpr',
                     'tests/contactless/Ndef.Tests.dpr',
                     'tests/contactless/Type4Ndef.Tests.dpr',
-                    'tests/contactless/Iso15693Type5.Tests.dpr',
+                    'tests/contactless/Iso15693Type5.Tests.dpr', 'tests/contactless/Iso15693Profiles.Tests.dpr',
                     'tests/magstripe/MagStripe.Tests.dpr',
                     'tests/magstripe/Msr206.Tests.dpr',
                     'tests/magstripe/Msr2067HL.Tests.dpr',
@@ -85,7 +85,7 @@ def main():
     subprocess.run(command + ['-Fu' + str(REPO / 'tests/design'),
                               'tests/design/Registration.Tests.dpr'], cwd=REPO, check=True)
     suffix = '.exe' if os.name == 'nt' else ''
-    for project in ('CardEvents.Tests', 'SimCard.Tests', 'Twn4.Tests', 'RfidInput.Tests', 'Hid.Tests', 'Sle4404.Tests', 'MemoryCounter.Tests', 'MemoryCard.Tests', 'Controller.Tests', 'DemoJob.Tests', 'FamilyOperations.Tests', 'Registration.Tests', 'EacCrypto.Tests', 'IcaoDocument.Tests', 'DesfireManagement.Tests', 'CardCore.Tests', 'ProtocolCore.Tests', 'CardCatalogs.Tests', 'CardCrypto.Tests', 'LegacyMifare.Tests', 'Desfire.Tests', 'DesfireSession.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'MobibCodec.Tests', 'Calypso.Tests', 'CalypsoSam.Tests', 'MobibSubscriptions.Tests', 'MobibRules.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Type2Felica.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'Iso15693Type5.Tests', 'MagStripe.Tests', 'Msr206.Tests', 'Msr2067HL.Tests'):
+    for project in ('CardEvents.Tests', 'SimCard.Tests', 'Twn4.Tests', 'RfidInput.Tests', 'Hid.Tests', 'Sle4404.Tests', 'MemoryCounter.Tests', 'MemoryCard.Tests', 'Controller.Tests', 'DemoJob.Tests', 'FamilyOperations.Tests', 'Registration.Tests', 'EacCrypto.Tests', 'IcaoDocument.Tests', 'DesfireManagement.Tests', 'CardCore.Tests', 'ProtocolCore.Tests', 'CardCatalogs.Tests', 'CardCrypto.Tests', 'LegacyMifare.Tests', 'Desfire.Tests', 'DesfireSession.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'MobibCodec.Tests', 'Calypso.Tests', 'CalypsoSam.Tests', 'MobibSubscriptions.Tests', 'MobibRules.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Type2Felica.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'Iso15693Type5.Tests', 'Iso15693Profiles.Tests', 'MagStripe.Tests', 'Msr206.Tests', 'Msr2067HL.Tests'):
         result = subprocess.run([str(build / (project + suffix))], cwd=REPO,
                                 capture_output=True, text=True)
         print(result.stdout, end='', flush=True)

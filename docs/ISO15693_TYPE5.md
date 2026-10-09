@@ -16,9 +16,9 @@ All visible APIs have Delphi `///` XML documentation.
 | Layer | Implemented operations | Separate validation/boundary |
 | --- | --- | --- |
 | Pure ISO 15693 codec | Canonical/wire UID conversion, ordinary/extended system information, addressed read/write/security command builders, explicit response normalization | Optional commands and memory/protection semantics depend on the card |
-| ACS pass-through | FF-CA-80 activation data; addressed FF-FB 2B/3B, 20/30, 21/31, 2C/3C in one PC/SC transaction | ACR1552U-M firmware 1.03.00+, ACM1552U-Y/Z 2.03.00+, real firmware/driver framing and card tests |
+| ACS pass-through | FF-CA-80 activation data; addressed FF-FB 2B/3B, 20/30, 23/33, 21/31, 2C/3C; optional SLIX2/ST25DV password wrapper in one PC/SC transaction | ACR1552U-M firmware 1.03.00+, ACM1552U-Y/Z 2.03.00+, real firmware/driver framing and card tests |
 | Raw memory component | Information, selected block ranges and unlocked verified single-block writes | Blocks zero/one reserved by the wrapper; no generic write authorization or automatic card detection |
-| Type 5 component | Mapping 1.0 E1/E2 four/eight-byte CC, existing public contiguous NDEF TLV, read/replace/clear, verified no-op | No formatting, authentication, permanent locks or manufacturer/configuration updates |
+| Type 5 component | Mapping 1.0 E1/E2 four/eight-byte CC, existing public contiguous NDEF TLV, read/replace/clear, verified no-op | No formatting, inline authentication, permanent locks or manufacturer/configuration updates; explicit password session can authenticate before CC acquisition |
 
 The ACS manual lists those firmware requirements for ISO 15693 pass-through. It
 does not list the ACR1552U-A in that section; support for the -A is **not inherited**.
@@ -58,7 +58,9 @@ Reader firmware supplies RF framing/CRC and timing. Write-single-block commands
 use high-data-rate/addressed flags `22`, with the option flag clear. Cards needing
 option/EOF handshakes, custom authentication or manufacturer-specific protection
 require a separate profile. No inventory flood, select/quiet, reset, retry,
-retransmission, lock, password, AFI, DSFID or UID-programming command is sent.
+retransmission, lock, AFI, DSFID or UID-programming command is sent. The
+base adapter does not submit a password automatically; the explicit password
+wrapper described below adds manufacturer authentication before memory access.
 
 ## Example
 
@@ -184,3 +186,112 @@ all I/O boundaries and partial writes, locked later blocks, no-op/clear, malform
 mapping/messages, native session poisoning and release/acquisition failures.
 No physical card or payment was accessed. See [VALIDATION.md](VALIDATION.md): real
 Delphi/Windows/firmware, driver framing and physical preservation/writing remain pending.
+
+## Multiple-block reads and supplied-password profiles
+
+`IIso15693Session` keeps its original GUID and methods. Two optional interfaces
+extend an active session: `IIso15693BlockReader` for commands 23/33 and
+`IIso15693CustomCommands` for addressed manufacturer commands. The built-in ACS
+FF-FB adapter implements both. A third-party adapter can implement either without
+changing the original interface. Select `TIso15693CardReader.UseMultipleBlockRead`
+explicitly (default false); no unsupported-command fallback or retry occurs.
+Commands encode count minus one and, in extended mode, both block address and
+count in little-endian order. The ACS adapter chunks at 240 data bytes, validates
+exact reply lengths, and returns a result only after all chunks succeed. Physical
+geometry and total capacity remain bounded by `Iso15693MaxMemoryBytes`.
+
+`TIso15693PasswordSession` is an injectable nonvisual session wrapper, supplied to
+the existing `TIso15693CardReader.Session` or `TType5NdefCardReader.Session`.
+Its constructor copies credentials and validates identifiers, lengths and
+uniqueness without I/O. Acquisition first checks addressed identity and geometry,
+then submits each provided password exactly once. No default-password probes,
+password search, retry candidates or unprotected fallback are performed.
+
+| Explicit profile | Acquired identity / geometry | Authentication |
+| --- | --- | --- |
+| `ippSlix2` | NXP SL2S2602: UID E0/04/01, type-indicator bits 37/36 = 0/1, 80 four-byte blocks | Identifier 1 (read) and/or 2 (write); B2 Get Random Number followed by B3 Set Password; each four-byte wire-order password is XORed with the received two-byte random number repeated twice |
+| `ippSt25Dv` | Original ST25DV04K: UID product 24 and IC_REF 24, 128 blocks; ST25DV16K/64K: product 26 and IC_REF 26, 512/2048 blocks; all blocks four bytes | B3 Present Password; exactly one eight-byte RF user password with number 1, 2 or 3; use extended addressing for 16K/64K |
+
+Passwords are byte arrays **in RF transmission order**, least significant byte
+first. These are not numeric hex strings to be silently reversed. SLIX2 can retain
+read and write authentication together; ST25DV closes the previous RF security
+session when a different password is presented, so the wrapper rejects a list of
+ST25DV passwords. Reads/writes crossing areas assigned to another ST25DV password
+can fail; split them into separate explicit operations. Area configuration is not
+changed to make an operation succeed. SLIX2 block 79 is the counter and is refused
+by the wrapper's ordinary data-write method. Standard lock checks and independent
+read-back remain in the existing memory and NDEF components.
+
+Example for an already connected ACS reader transport, with a supplied original
+ST25DV16K RF password (local variables include `S: IIso15693Session`,
+`P: TIso15693Passwords`, `Memory: TIso15693CardReader`, and `Data: TBytes`):
+
+```pascal
+SetLength(P, 1);
+P[0].Identifier := 1;
+P[0].Value := CopyBytes(SuppliedWireOrderPassword);
+try
+  S := TAcr1552Iso15693Session.Create(Reader.Transport, iam16Bit, irfNativeFlags);
+  S := TIso15693PasswordSession.Create(S, ippSt25Dv, P);
+finally
+  if Length(P[0].Value) > 0 then
+    FillChar(P[0].Value[0], Length(P[0].Value), 0);
+end;
+Memory := TIso15693CardReader.Create(nil);
+try
+  Memory.Session := S;
+  Memory.UseMultipleBlockRead := True;
+  Data := Memory.ReadBlocks(256, 8);
+finally
+  Memory.Free;
+  S := nil;
+end;
+```
+
+Choose the actual reader response convention. The wrapper can also be assigned
+to `TType5NdefCardReader.Session`; acquisition authenticates before that component
+reads the CC/TLV or updates NDEF. Existing strict CC access checks still apply:
+only the implemented initialized Type 5 mapping is accepted. An RF password does
+not authorize overwriting reserved CC access fields or guessing an unsupported
+NDEF mapping.
+
+Authentication failure releases the acquired transaction and exposes no memory
+session. Later I/O failures poison the wrapper until release. A dispatched write
+with failed status, verification or transaction release remains
+`EContactlessWriteUncertain` through the existing components, without replay.
+Owned password and outgoing command buffers are wiped; strings, OS buffers and
+transport-held copies remain outside that guarantee. Exceptions contain no
+passwords or card data.
+
+**Transaction release is not an RF power-on reset.** A tag may retain its RF
+security state after `EndSession`; a new acquisition resubmits supplied credentials
+but is not advertised as a fresh-field credential proof. NXP specifies that a
+wrong SLIX2 password prevents further commands until a power-on reset; remove the
+card from the field or perform a supported explicit reader RF reset before a new
+attempt. Do not assume ending a PC/SC transaction clears tag authentication.
+
+This implements authenticated user-memory access, not password rotation,
+protection provisioning, RF configuration password 0, SLIX2 privacy/destroy/EAS,
+permanent locking, ST25DV mailbox/I²C access, ST25DVxxKC or ST25TV passwords.
+ST25DV I²C activity can still modify memory while RF access is exclusive on the
+PC/SC connection. These limits are explicit rather than claiming all ST25 chips.
+
+`Slix2Demo` and `St25DvDemo` each have an independent TForm/DFM with reader
+selection, native reader/card events, masked credential inputs and background
+execution. Both demonstrate identity, physical reads, verified writes and parsed
+Type 5 NDEF read/replace/clear. `Iso15693Demo` adds a separate native-bulk-read tab.
+The profile/password transcript tests use literal manufacturer frames and cover
+acquisition failures, malformed replies, poisoned sessions, counter protection,
+credential ownership, Type 5 integration and uncertain writes.
+
+Protocol sources:
+
+- NXP **SL2S2602 Rev. 4.2**, sections 9.2.1, 9.5.3.1 and 9.5.3.2:
+  <https://www.nxp.com/docs/en/data-sheet/SL2S2602.pdf>.
+- ST **DS10925 Rev. 11**, sections 5.6, 7.6.12/13 and 7.6.36,
+  IC_REF/UID tables 83/85: <https://www.st.com/resource/en/datasheet/st25dv04k.pdf>.
+- ACS **ACR1552U Series Reference Manual v1.09**, section 5.3.4.2:
+  explicit FF-FB flags and custom manufacturer-byte placement. The selected-state
+  random-number example uses flags 12; these implementations use addressed flags
+  22 and include the acquired UID. No automatic UID insertion (flags 00) is used
+  for custom commands.

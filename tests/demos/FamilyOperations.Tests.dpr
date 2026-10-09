@@ -17,7 +17,7 @@ uses
 {$ELSE}
   System.SysUtils,
 {$ENDIF}
-  ERD.Card.HID, ERD.Card.Bytes, ERD.Card.Transport, ERD.Card.Demo.Job, ERD.Card.SIM.Data, ERD.Card.Demo.Families,
+  ERD.Card.Contactless, ERD.Card.HID, ERD.Card.Bytes, ERD.Card.Transport, ERD.Card.Demo.Job, ERD.Card.SIM.Data, ERD.Card.Demo.Families,
   ERD.Card.Demo.FamilyOperations, ERD.Card.Reader.TWN4, ERD.Card.RFID.Input,
   ERD.Card.Memory, ERD.Card.Demo.Operations;
 
@@ -463,6 +463,29 @@ begin
  end;
 end;
 
+procedure TestIsoPasswordFamilyPreflight;
+var F:TCardDemoFamily;A:TCardFamilyActions;R:TCardDemoRequest;D:TCardDemoResult;
+ H:THardware;Hardware:ICardFamilyHardware;I,N:Integer;Reached,Failed:Boolean;
+begin
+ for F:=dfSlix2 to dfSt25Dv do begin
+  A:=CardFamilyActions(F);H:=THardware.Create;Hardware:=H;
+  for I:=0 to High(A) do begin
+   R:=Request(F,A[I].Id);Put(R,F,'data','01020304');Put(R,F,'block','2');Put(R,F,'count','1');
+   Put(R,F,'readpassword','11223344');Put(R,F,'writepassword','55467788');
+   Put(R,F,'password','1122334455667788');Put(R,F,'identifier','1');
+   Put(R,F,'ndef','D101045402656E41');Reached:=False;
+   try CreateCardFamilyOperations(F,Hardware).Run(R,D);except on E:EReachedHardware do Reached:=True;end;
+   Check(Reached,'ISO password family action reaches hardware '+A[I].Id);
+   R.MutationAcknowledged:=False;N:=H.Acquires;Failed:=False;
+   try CreateCardFamilyOperations(F,Hardware).Run(R,D);except on E:EArgumentException do Failed:=True;end;
+   Check(Failed and (H.Acquires=N),'Explicit credential attempt acknowledgement');
+   R.MutationAcknowledged:=True;Put(R,F,'readpassword','01');Put(R,F,'password','01');Failed:=False;
+   try CreateCardFamilyOperations(F,Hardware).Run(R,D);except on E:EContactlessError do Failed:=True;end;
+   Check(Failed and (H.Acquires=N),'Invalid password size before hardware');
+  end;
+ end;
+end;
+
 procedure TestStorageDemos;
 var F: TCardDemoFamily; Actions: TCardFamilyActions; R: TCardDemoRequest; D: TCardDemoResult;
   H: THardware; Hardware: ICardFamilyHardware; S: TScript; T: ICardTransport; I,J,K,Prev: Integer; Reached,Failed: Boolean;
@@ -782,7 +805,7 @@ end;
 
 begin
   try
-    TestMobibParsedDemo; TestNativeSamDemo; TestMobibRulesDemo; TestRecordAcquisitionDemos; TestNativeHidDemo; TestAdditionalFamilies; TestDocumentAndEmvDemos; TestExtendedSimDemo; TestFelicaFamilyPreflight; TestStorageDemos; TestSimRoutes; TestOffline; TestLegacyProfilePreflight; TestPreflight; TestCounterAndSleRoutes;
+    TestMobibParsedDemo; TestNativeSamDemo; TestMobibRulesDemo; TestRecordAcquisitionDemos; TestNativeHidDemo; TestAdditionalFamilies; TestDocumentAndEmvDemos; TestExtendedSimDemo; TestFelicaFamilyPreflight; TestIsoPasswordFamilyPreflight; TestStorageDemos; TestSimRoutes; TestOffline; TestLegacyProfilePreflight; TestPreflight; TestCounterAndSleRoutes;
     TestTwnRoutes(0,False); TestTwnRoutes(1,False); TestTwnRoutes(2,False); TestTwnRoutes(3,False); TestTwnRoutes(3,True);
     TestMemoryWrite(-1,False,False); TestMemoryWrite(6,False,False);
     TestMemoryWrite(7,False,False); TestMemoryWrite(-1,True,False); TestMemoryWrite(-1,False,True);

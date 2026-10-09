@@ -605,6 +605,99 @@ object Iso15693DemoForm: TIso15693DemoForm
         end
       end
     end
+    object ActReadmultipleTab: TTabSheet
+      Left = 4
+      Top = 44
+      Width = 1072
+      Height = 438
+      Caption = 'Read physical blocks with native bulk commands'
+      Tag = 6
+      object ActReadmultipleInputs: TScrollBox
+        Left = 0
+        Top = 0
+        Width = 1072
+        Height = 438
+        Align = alClient
+        BorderStyle = bsNone
+        TabOrder = 0
+        object ActReadmultipleModeLabel: TLabel
+          Left = 16
+          Top = 8
+          Width = 940
+          Height = 18
+          Caption = 'Explicit block address dialect'
+        end
+        object ActReadmultipleModeBox: TComboBox
+          Left = 16
+          Top = 30
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 0
+          Style = csDropDownList
+          ItemIndex = 0
+          Items.Strings = (
+            'Ordinary 8-bit'
+            'Extended 16-bit'
+          )
+          Text = 'Ordinary 8-bit'
+        end
+        object ActReadmultipleFormatLabel: TLabel
+          Left = 16
+          Top = 70
+          Width = 940
+          Height = 18
+          Caption = 'Actual ACR1552 firmware response format'
+        end
+        object ActReadmultipleFormatBox: TComboBox
+          Left = 16
+          Top = 92
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 1
+          Style = csDropDownList
+          ItemIndex = 0
+          Items.Strings = (
+            'Native flags'
+            'Payload only'
+          )
+          Text = 'Native flags'
+        end
+        object ActReadmultipleBlockLabel: TLabel
+          Left = 16
+          Top = 132
+          Width = 940
+          Height = 18
+          Caption = 'First physical block (write: 2 or greater)'
+        end
+        object ActReadmultipleBlockEdit: TEdit
+          Left = 16
+          Top = 154
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 2
+          Text = '2'
+        end
+        object ActReadmultipleCountLabel: TLabel
+          Left = 16
+          Top = 194
+          Width = 940
+          Height = 18
+          Caption = 'Number of complete blocks'
+        end
+        object ActReadmultipleCountEdit: TEdit
+          Left = 16
+          Top = 216
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 3
+          Text = '1'
+        end
+      end
+    end
   end
   object ExportDialog: TSaveDialog
     Options = [ofOverwritePrompt, ofPathMustExist]
