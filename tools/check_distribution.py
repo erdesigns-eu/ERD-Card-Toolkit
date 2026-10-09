@@ -250,11 +250,12 @@ def check_form(path):
         event = re.fullmatch(r'\s*(On\w+)\s*=\s*(\w+)\s*', line)
         if event:
             handler = event.group(2)
-            # The shipped demos use only TNotifyEvent bindings; no event-type inference.
-            signature = r'procedure\s+' + re.escape(handler) + r'\(Sender:\s*TObject\);'
+            parameters = (r'Sender:\s*TObject;\s*var\s+Key:\s*Char'
+                          if event.group(1) == 'OnKeyPress' else r'Sender:\s*TObject')
+            signature = r'procedure\s+' + re.escape(handler) + r'\(' + parameters + r'\);'
             if not re.search(signature, pas, re.I):
                 errors.append(f'{path.name}: missing notify handler {handler}')
-            if not re.search(r'procedure\s+\w+\.' + re.escape(handler) + r'\(Sender:\s*TObject\);', pas, re.I):
+            if not re.search(r'procedure\s+\w+\.' + re.escape(handler) + r'\(' + parameters + r'\);', pas, re.I):
                 errors.append(f'{path.name}: handler implementation {handler} missing')
     if stack:
         errors.append(f'{path.name}: unclosed DFM objects')
@@ -273,6 +274,14 @@ def check_program(path):
         errors.append(f'{path.name}: main form creation/source missing')
     elif not re.search(r'\b' + create.group(2) + r'\s*:\s*' + create.group(1) + r'\s*;', main.read_text()):
         errors.append(f'{path.name}: CreateForm class/global differ')
+    if main.is_file() and create:
+        main_source = main.read_text(encoding='utf-8-sig')
+        if not re.search(r'\b' + re.escape(create.group(1)) + r'\s*=\s*class\(TForm\)', main_source):
+            errors.append(f'{path.name}: demo must own a direct TForm class')
+        if not main.with_suffix('.dfm').is_file() or '{$R *.dfm}' not in main_source:
+            errors.append(f'{path.name}: demo must own its designer DFM resource')
+        if re.search(r'\bT(?:Panel|Label|Edit|ComboBox|Button|Memo|PageControl|TabSheet|ScrollBox|Image|CheckBox)\.Create\(', main_source):
+            errors.append(f'{path.name}: visual demo controls must be declared in its DFM')
     return errors
 
 

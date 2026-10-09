@@ -120,7 +120,8 @@
             <Form>MagStripeForm</Form>
             <FormType>dfm</FormType>
         </DCCReference>
-        <DCCReference Include="..\shared\ERD.Card.Demo.Form.pas" />
+        <DCCReference Include="..\shared\ERD.Card.Demo.Controller.pas" />
+        <DCCReference Include="..\shared\ERD.Card.Demo.Devices.pas" />
         <DCCReference Include="..\shared\ERD.Card.Demo.Job.pas" />
         <DCCReference Include="..\shared\ERD.Card.Demo.Operations.pas" />
         <DelphiCompile Include="$(MainSource)">

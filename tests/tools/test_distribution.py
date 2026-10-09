@@ -42,6 +42,8 @@ class DistributionTests(unittest.TestCase):
         self.assertEqual(distribution.check_registration(distribution.REPO), [])
         for path in list(distribution.REPO.glob('packages/**/*.dproj')) + list(distribution.REPO.glob('examples/vcl/**/*.dproj')) + list(distribution.REPO.glob('packages/**/*.groupproj')) + list(distribution.REPO.glob('examples/vcl/**/*.groupproj')):
             self.assertEqual(distribution.check_project(path), [])
+        for path in distribution.REPO.glob('examples/vcl/**/*.dpr'):
+            self.assertEqual(distribution.check_program(path), [])
         for path in distribution.REPO.glob('examples/vcl/**/*.dfm'):
             self.assertEqual(distribution.check_form(path), [])
 
@@ -77,6 +79,31 @@ class DistributionTests(unittest.TestCase):
             self.assertTrue(any('field/type' in e for e in errors))
             self.assertTrue(any('handler Missing' in e for e in errors))
             self.assertTrue(any('unclosed' in e for e in errors))
+
+    def test_keypress_signature_and_own_form_required(self):
+        with tempfile.TemporaryDirectory() as directory:
+            main = Path(directory) / 'Example.Main.pas'
+            dfm = main.with_suffix('.dfm')
+            source = ('unit Example.Main; interface type TExample = class(TForm) '
+                      'published Edit: TEdit; procedure KeyPress(Sender: TObject; var Key: Char); '
+                      'end; var Example: TExample; implementation {$R *.dfm} '
+                      'procedure TExample.KeyPress(Sender: TObject; var Key: Char); begin end; end.')
+            main.write_text(source)
+            dfm.write_text('object Example: TExample\n object Edit: TEdit\n OnKeyPress = KeyPress\n end\nend\n')
+            self.assertEqual(distribution.check_form(dfm), [])
+            main.write_text(source.replace('var Key: Char', 'Key: Integer'))
+            self.assertTrue(distribution.check_form(dfm))
+            main.write_text(source)
+            program = main.with_name('Example.dpr')
+            program.write_text('Application.CreateForm(TExample, Example);')
+            self.assertEqual(distribution.check_program(program), [])
+            main.write_text(source.replace('class(TForm)', 'class(TSharedForm)'))
+            self.assertTrue(any('direct TForm' in e for e in distribution.check_program(program)))
+            main.write_text(source.replace('begin end; end.', 'begin TButton.Create(nil); end; end.'))
+            self.assertTrue(any('visual demo controls' in e for e in distribution.check_program(program)))
+            main.write_text(source)
+            dfm.unlink()
+            self.assertTrue(any('designer DFM' in e for e in distribution.check_program(program)))
 
     def test_package_duplicate_ownership_and_design_dependency(self):
         with tempfile.TemporaryDirectory() as directory:

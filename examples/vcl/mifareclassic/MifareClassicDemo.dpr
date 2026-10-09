@@ -2,11 +2,10 @@
 
 uses
   Vcl.Forms,
-  MifareClassicDemo.Main in 'MifareClassicDemo.Main.pas',
-  ERD.Card.Demo.FamilyForm in '..\shared\ERD.Card.Demo.FamilyForm.pas',
+  MifareClassicDemo.Main in 'MifareClassicDemo.Main.pas' {MifareClassicDemoForm},
   ERD.Card.Demo.Families in '..\shared\ERD.Card.Demo.Families.pas',
   ERD.Card.Demo.FamilyOperations in '..\shared\ERD.Card.Demo.FamilyOperations.pas',
-  ERD.Card.Demo.Form in '..\shared\ERD.Card.Demo.Form.pas',
+  ERD.Card.Demo.Controller in '..\shared\ERD.Card.Demo.Controller.pas',
   ERD.Card.Demo.Job in '..\shared\ERD.Card.Demo.Job.pas',
   ERD.Card.Demo.Operations in '..\shared\ERD.Card.Demo.Operations.pas';
 
@@ -15,7 +14,6 @@ uses
 begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
-  ConfigureCardFamilyDemo(dfClassic);
   Application.CreateForm(TMifareClassicDemoForm, MifareClassicDemoForm);
   Application.Run;
 end.

@@ -1,8 +1,10 @@
 # VCL-voorbeelden: huidige dekking
 
 Er zijn **twintig afzonderlijk uitvoerbare toepassingen** in
-`examples/vcl/CardDemos.groupproj`. Achttien familiedemo’s delen hun formulier,
-invoercontrole, achtergrondworker en expliciete bestands-export. Betalingen vallen
+`examples/vcl/CardDemos.groupproj`. Elke toepassing heeft een eigen `TForm`, `.Main.pas` en `.Main.dfm`.
+Alle visuele controls staan in dat eigen DFM, inclusief actiepagina’s, invoervelden,
+readerkeuze en timers. Er is geen gedeeld formulier of gedeelde form-ancestor.
+Alleen niet-visuele kaartuitvoering, inputmetadata en workerlevenscyclus blijven gedeeld. Betalingen vallen
 buiten deze componentset.
 
 | Project | Aanwezige functies |
@@ -27,6 +29,21 @@ buiten deze componentset.
 | EmvDemo | PSE/PPSE, explicit AID/terminal values, GPO/AFL/all records, GET DATA, advertised logs, DOL/log decoders en exacte exports |
 | BelgianEidDemo | Alle publieke sections, identiteit/adres, JPEG, RAW/DER-certificaten en ruwe handtekeningen exporteren |
 | IcaoDocumentDemo | BAC/PACE met MRZ/CAN/curve/provider, alle documentsections/face images, CardAccess/DG1/DG2/COM/SOD-export, JPEG-preview en JPEG2000-export |
+
+## Lezerkeuze in iedere demo
+
+Elke demo vult bij het openen zijn eigen dropdown op een achtergrondtaak en heeft
+zelf een verversknop. PC/SC-demo’s tonen de geïnstalleerde kaartlezers; TWN4 en
+magstripe tonen aanwezige Windows COM-poorten; RFID/native HID tonen HID-collecties
+met VID/PID/usage. De zichtbare naam en het operationele adres blijven gekoppeld.
+Er is geen vooraf gekozen lezer. Bij verversen blijft de keuze alleen behouden
+als dezelfde lezer nog aanwezig is; een fout wist de oude lijst.
+
+Detectie opent geen kaartverbinding en verstuurt geen kaartcommando. COM-detectie
+bewijst niet dat een poort een geschikte schrijver is; kies het juiste protocol.
+HID-collecties zijn evenmin automatisch kaartschrijvers. Foreground keyboard-
+capture ontvangt Windows-toetsen en filtert geen afzonderlijk USB-apparaat;
+native HID-report-I/O gebruikt wel het gekozen interfacepad.
 
 ## Gedrag dat je kunt overnemen
 

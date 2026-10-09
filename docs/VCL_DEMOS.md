@@ -1,7 +1,9 @@
 # VCL read/write demos
 
 Twenty applications demonstrate implemented APIs: SmartCardDemo, MagStripeDemo
-and eighteen separate family projects sharing a form/input/worker/export base.
+and eighteen family projects. Each application owns a direct TForm class and
+its own designer-editable Main.dfm, including all action inputs and a reader dropdown.
+Only nonvisual operation, metadata and worker/controller units are shared.
 The complete current/missing coverage is recorded in [VCL_COVERAGE.md](VCL_COVERAGE.md).
 
 Open `examples/vcl/CardDemos.groupproj` or any application's `.dproj` in RAD
@@ -23,7 +25,9 @@ host, not evidence that those builds already pass.
 
 ## Separate family projects
 
-All six projects open without accessing hardware. Choose one action; its named
+All family forms construct without opening hardware. Their first OnShow starts
+background discovery of reader names, HID metadata or COM aliases; no card connection
+or card command is issued. Choose a device in the demo itself and refresh there. Choose one action; its named
 fields appear below. Enum choices have no default card/reader profile. Public
 bytes use hexadecimal text; numeric addresses/counts use decimal unless the label
 says hexadecimal. Credentials are masked, decoded into separate byte buffers,
@@ -40,9 +44,10 @@ that byte-buffer wiping guarantee. Errors display their class, never backend tex
 | `slecounter/SleCounterDemo.dproj` | Explicit SLE4406/4436/5536/6636/window, public range reads, program/carry/backup modes with expected complete before/after windows, raw certificates; credential-bearing code command validation offline only |
 | `sle4404/Sle4404Demo.dproj` | Known window/layout/retry budgets, reads with optional supplied user code, user-code proof, one-to-zero programming, scratchpad erase and application erase with both supplied codes |
 
-For PC/SC operations enter the **exact reader name** returned by ReaderToolsDemo.
+For PC/SC operations select the reader from **this demo’s own dropdown**.
+Discovery runs on opening and can be refreshed without another application.
 An ACS dialect is a known protocol configuration, not a guess from the name/ATR.
-TWN4 uses its own COM field and suitable Simple Protocol firmware; it does not
+TWN4 uses its own discovered-COM dropdown and suitable Simple Protocol firmware; it does not
 send memory commands to keyboard-only HID readers. Firmware changes are not made
 by the demo. See [TWN4.md](TWN4.md) and [memory profiles](MEMORY_CARDS.md).
 
@@ -175,7 +180,7 @@ including odd parity and LRC. Do not include sentinels or an LRC character in th
 editable track fields. Empty payloads are allowed by the offline codec.
 
 Hardware operations use only the explicit **MSR206-7HL** serial adapter at
-9600 baud, seven data bits, odd parity and one stop bit. Enter the exact COM port,
+9600 baud, seven data bits, odd parity and one stop bit. Select the connected device from this demo’s COM dropdown,
 selected tracks and a timeout between 1 and 600000 ms. `Read one swipe` updates
 only the selected track fields. `Write selected + verify` additionally requires
 nonempty payloads and an explicit low/high coercivity choice. It uses the verified
@@ -197,11 +202,11 @@ bound is not a PC/SC timeout. Writes are never cancelled or retried behind the U
 Access input is cleared after starting, but this is not a guarantee of erasure
 of the Windows edit control's or Delphi strings' historical allocations.
 
-The job constructor creates a suspended worker. The form calls `StartWork` only
+The job constructor creates a suspended worker. The nonvisual controller calls `StartWork` only
 after construction returns, so Delphi's `TThread.AfterConstruction` finishes before
 the explicit start. Starting inside the constructor caused the reported EThread
 exception in both demos. A second start is refused; freeing a never-started job
-does not execute its request. If starting fails, the form releases the job and
+does not execute its request. If starting fails, the controller releases the job and
 restores its controls. This follow-up has passed the headless worker tests; a
 Delphi/Windows rebuild and retest of both demos is still required.
 
@@ -270,7 +275,7 @@ pagina’s vóór writes op testkaarten; onzekere uitkomsten mogen niet worden h
 
 ## BelgianEidDemo, IcaoDocumentDemo en EmvDemo
 
-De gedeelde form heeft een selector voor exact acquired files en een expliciete
+Elk eigen DFM-formulier heeft een selector voor exact acquired files en een expliciete
 Save-dialog met overwrite prompt. Geen automatisch exportpad. Mislukte jobs
 publiceren geen exportbestanden. Belgische eID en ICAO tonen geselecteerde JPEG
 foto's; JPEG2000 blijft exact als .jp2 exporteerbaar zonder codecconversie.

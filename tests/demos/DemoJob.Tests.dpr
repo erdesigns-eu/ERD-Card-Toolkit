@@ -1,4 +1,4 @@
-program DemoJobTests;
+﻿program DemoJobTests;
 
 {$IFDEF FPC}
   {$MODE DELPHI}
@@ -125,6 +125,7 @@ begin
   D.Tracks := R.Tracks;
   SetLength(D.Artifacts,1); D.Artifacts[0].Name := 'fixture.bin'; D.Artifacts[0].Data := HexToBytes('010203');
   D.Photo := HexToBytes('010203'); D.NdefBytes := HexToBytes('AABB');
+  SetLength(D.Devices,1); D.Devices[0].Address := 'exact address';
   D.Text := 'owned result'; D.WriteVerified := FVerified;
   if FFailure then raise EInvalidOpException.Create('secret request text');
 end;
@@ -169,6 +170,7 @@ begin
     Check(not Job.TryTakeResult(Again), 'Completion delivered twice.');
     Check(Again.Text = 'unchanged', 'Unready poll modified existing result.');
     Check((Length(D.Artifacts) > 0) = not Fail, 'Failed result must never publish exportable artifacts.');
+    Check((Length(D.Devices) > 0) = not Fail, 'Failed result published device addresses.');
     Check(D.Success = not Fail, 'Success state differs.');
     Check(D.WriteVerified = Verified, 'Verified write evidence was lost.');
     if not Fail or Verified then Check(D.Tracks[mstTrack1] = 'ABC', 'Request strings were aliased.');

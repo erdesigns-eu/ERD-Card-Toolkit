@@ -4,11 +4,50 @@ interface
 
 uses
   System.Classes, Vcl.Controls, Vcl.Forms, Vcl.StdCtrls, Vcl.ExtCtrls, System.SysUtils,
-  Vcl.Dialogs, Vcl.ComCtrls, ERD.Card.RFID.Input, ERD.Card.Bytes, ERD.Card.Demo.Job, ERD.Card.Demo.Form;
+  Vcl.Dialogs, Vcl.ComCtrls, ERD.Card.RFID.Input, ERD.Card.Bytes, ERD.Card.Demo.Job, ERD.Card.Demo.Controller, ERD.Card.Demo.Devices;
 
 type
   /// <summary>Explicit PC/SC card operations with a background worker and optional face preview.</summary>
-  TSmartCardDemoForm = class(TCardDemoForm)
+  TSmartCardDemoForm = class(TForm)
+  published
+    /// <summary>Own keyboard-input page.</summary>
+    FRfidTab: TTabSheet;
+    /// <summary>Reader-presented input profile.</summary>
+    FRfidSettings: TPanel;
+    /// <summary>Explicit ASCII, hex or decimal output.</summary>
+    FRfidEncoding: TComboBox;
+    /// <summary>Actual reader terminator.</summary>
+    FRfidTerminator: TComboBox;
+    /// <summary>Exact expected characters; zero means variable.</summary>
+    FRfidLength: TEdit;
+    /// <summary>Maximum inter-character gap in milliseconds.</summary>
+    FRfidTimeout: TEdit;
+    /// <summary>Exact reader prefix.</summary>
+    FRfidPrefix: TEdit;
+    /// <summary>Exact reader suffix.</summary>
+    FRfidSuffix: TEdit;
+    /// <summary>Own foreground keyboard capture control.</summary>
+    FRfidCapture: TMemo;
+    /// <summary>Start or stop explicit foreground capture.</summary>
+    FRfidToggle: TButton;
+    /// <summary>Foreground input and formatting guidance.</summary>
+    RfidGuidance: TLabel;
+    /// <summary>Starts or stops the configured foreground capture.</summary>
+    /// <param name="Sender">VCL event sender.</param>
+    procedure RfidToggleClick(Sender: TObject);
+    /// <summary>Consumes keyboard characters from this form’s own DFM memo.</summary>
+    /// <param name="Sender">Capture memo.</param>
+    /// <param name="Key">Consumed input character.</param>
+    procedure RfidKeyPress(Sender: TObject; var Key: Char);
+  published
+    /// <summary>Own DFM timer polling this form’s nonvisual controller.</summary>
+    WorkerTimer: TTimer;
+    /// <summary>Starts device discovery once when this form is shown.</summary>
+    /// <param name="Sender">VCL event sender.</param>
+    procedure FormShow(Sender: TObject);
+    /// <summary>Polls this form’s own worker from its DFM timer.</summary>
+    /// <param name="Sender">VCL event sender.</param>
+    procedure PollTimer(Sender: TObject);
   published
     /// <summary>Card operations and contact-memory pages.</summary>
     OperationPages: TPageControl;
@@ -127,26 +166,27 @@ type
     /// <param name="Sender">VCL event sender.</param>
     procedure SavePhotoClick(Sender: TObject);
   private
+    FController: TCardDemoController;
+    FDiscoveryStarted: Boolean;
+    procedure StartRequest(const ARequest: TCardDemoRequest);
+  private
     FRfid: TRfidKeyboardReader;
-    FRfidTab: TTabSheet;
-    FRfidSettings: TPanel;
-    FRfidEncoding, FRfidTerminator: TComboBox;
-    FRfidLength, FRfidTimeout, FRfidPrefix, FRfidSuffix: TEdit;
-    FRfidCapture: TMemo;
-    FRfidToggle: TButton;
     FPhoto: TBytes;
     FPhotoIsJpeg2000: Boolean;
-    procedure CreateRfidPage;
-    procedure RfidToggleClick(Sender: TObject);
-    procedure RfidKeyPress(Sender: TObject; var Key: Char);
     procedure RfidIdentified(Sender: TObject; const AIdentifier: TRfidInputIdentifier);
   protected
+    /// <summary>Defers close until this form’s owned background operation completes.</summary>
+    /// <returns>True only when inherited close permission and worker lifecycle permit it.</returns>
+    function CloseQuery: Boolean; override;
     /// <summary>Disables operation inputs while hardware work is pending.</summary>
     /// <param name="AValue">True while busy.</param>
-    procedure SetBusy(const AValue: Boolean); override;
+    procedure SetBusy(const AValue: Boolean);
     /// <summary>Displays completion, reader names, NDEF and encoded face data on the UI thread.</summary>
     /// <param name="AResult">Owned worker completion data.</param>
-    procedure Complete(const AResult: TCardDemoResult); override;
+    procedure Complete(const AResult: TCardDemoResult);
+  public
+    /// <summary>Stops this form’s timer and joins its worker before destroying controls.</summary>
+    destructor Destroy; override;
   end;
 
 var
@@ -156,7 +196,7 @@ var
 implementation
 
 uses
-  Winapi.Windows, Vcl.Imaging.jpeg, ERD.Card.Crypto, ERD.Card.Crypto.EAC,
+  ERD.Card.Demo.Operations, Winapi.Windows, Vcl.Imaging.jpeg, ERD.Card.Crypto, ERD.Card.Crypto.EAC,
   ERD.Card.EID.Access, ERD.Card.Contactless.Type2, ERD.Card.Ndef,
   ERD.Card.Ndef.Records, ERD.Card.Memory, ERD.Card.Memory.Counter,
   ERD.Card.Memory.Capabilities;
@@ -166,6 +206,7 @@ uses
 procedure TSmartCardDemoForm.FormCreate(Sender: TObject);
 var M: TMemoryCardModel; C: TSleCounterModel;
 begin
+  FController := TCardDemoController.Create(ddkPcsc,CreateCardDemoOperations,SetBusy,Complete,Close);
   OperationBox.Items.Text := 'Offline NDEF inspect'#13#10'Read UID (PC/SC storage)'#13#10+
     'Read Belgian eID + photo'#13#10'Read ICAO DG1/DG2 + photo'#13#10+
     'Discover EMV contact PSE'#13#10'Discover EMV contactless PPSE'#13#10+
@@ -186,42 +227,8 @@ begin
     MemoryModelBox.Items.Add(TAcsMemoryCapabilityCatalog.CounterName(C));
   MemoryModelBox.Items.Add('SLE4404');
   MemoryDialectBox.Items.Text := 'ACR38x CCID (explicit)'#13#10'ACR39 (explicit)';
-  CreateRfidPage;
-  MemoryPageBox.Items.Text := '8 bytes'#13#10'16 bytes'#13#10'32 bytes'#13#10'64 bytes'#13#10'128 bytes';
-end;
-
-procedure TSmartCardDemoForm.CreateRfidPage;
-var Guidance: TLabel;
-  function CreateRfidEdit(const Left: Integer; const Width: Integer; const HintText, Value: string): TEdit;
-  begin
-    Result := TEdit.Create(Self); Result.Parent := FRfidSettings;
-    Result.SetBounds(Left,48,Width,24); Result.Text := Value;
-    Result.Hint := HintText; Result.ShowHint := True;
-  end;
-begin
   FRfid := TRfidKeyboardReader.Create(Self); FRfid.OnIdentifier := RfidIdentified;
-  FRfidTab := TTabSheet.Create(Self); FRfidTab.PageControl := OperationPages; FRfidTab.Caption := 'RFID keyboard';
-  FRfidSettings := TPanel.Create(Self); FRfidSettings.Parent := FRfidTab;
-  FRfidSettings.SetBounds(8,8,704,88); FRfidSettings.BevelOuter := bvNone;
-  FRfidEncoding := TComboBox.Create(Self); FRfidEncoding.Parent := FRfidSettings;
-  FRfidEncoding.SetBounds(0,8,216,24); FRfidEncoding.Style := csDropDownList;
-  FRfidEncoding.Items.Text := 'ASCII identifier'#13#10'Hexadecimal bytes'#13#10'Decimal number'; FRfidEncoding.ItemIndex := 0;
-  FRfidTerminator := TComboBox.Create(Self); FRfidTerminator.Parent := FRfidSettings;
-  FRfidTerminator.SetBounds(232,8,216,24); FRfidTerminator.Style := csDropDownList;
-  FRfidTerminator.Items.Text := 'CR (Enter)'#13#10'CR + LF'#13#10'LF'#13#10'Tab'; FRfidTerminator.ItemIndex := 0;
-  FRfidLength := CreateRfidEdit(0,104,'Exact identifier length; 0 = variable','0');
-  FRfidTimeout := CreateRfidEdit(120,104,'Maximum gap between characters in milliseconds','500');
-  FRfidPrefix := CreateRfidEdit(240,104,'Exact reader prefix','');
-  FRfidSuffix := CreateRfidEdit(360,104,'Exact reader suffix','');
-  FRfidToggle := TButton.Create(Self); FRfidToggle.Parent := FRfidTab;
-  FRfidToggle.SetBounds(8,104,144,28); FRfidToggle.Caption := 'Start RFID capture'; FRfidToggle.OnClick := RfidToggleClick;
-  Guidance := TLabel.Create(Self); Guidance.Parent := FRfidTab; Guidance.SetBounds(8,144,704,40);
-  Guidance.AutoSize := False; Guidance.WordWrap := True;
-  Guidance.Caption := 'Length / gap (ms) / prefix / suffix above. Scan while the box below has focus. '+
-    'Keyboard-mode readers present an identifier only; format and RF UID byte order are not detected.';
-  FRfidCapture := TMemo.Create(Self); FRfidCapture.Parent := FRfidTab;
-  FRfidCapture.SetBounds(8,192,704,40); FRfidCapture.WantTabs := True; FRfidCapture.WantReturns := True;
-  FRfidCapture.Enabled := False; FRfidCapture.OnKeyPress := RfidKeyPress;
+  MemoryPageBox.Items.Text := '8 bytes'#13#10'16 bytes'#13#10'32 bytes'#13#10'64 bytes'#13#10'128 bytes';
 end;
 
 procedure TSmartCardDemoForm.RfidToggleClick(Sender: TObject);
@@ -267,6 +274,7 @@ end;
 
 procedure TSmartCardDemoForm.SetBusy(const AValue: Boolean);
 begin
+  OperationPages.Enabled := not AValue;
   InputPanel.Enabled := not AValue;
   SavePhotoButton.Enabled := not AValue and (Length(FPhoto) > 0);
   if AValue then
@@ -437,12 +445,13 @@ begin
       (AResult.ErrorClass = 'EMemoryCardWriteUncertain') then
       OutputMemo.Lines.Add('The write outcome is uncertain. Check card state before repeating.');
   end;
-  if AResult.Success and (AResult.Operation = cdoReaders) then
+  if AResult.Operation = cdoReaders then
   begin
     SelectedReader := ReaderBox.Text;
     ReaderBox.Items.Clear;
-    for I := 0 to High(AResult.Readers) do ReaderBox.Items.Add(AResult.Readers[I]);
-    ReaderBox.Text := SelectedReader;
+    if AResult.Success then
+      for I := 0 to High(AResult.Readers) do ReaderBox.Items.Add(AResult.Readers[I]);
+    ReaderBox.ItemIndex := ReaderBox.Items.IndexOf(SelectedReader);
   end;
   if Length(AResult.CounterBytes) > 0 then
     OutputMemo.Lines.Add('Special-chip public memory hex: ' + BytesToHex(AResult.CounterBytes));
@@ -478,6 +487,31 @@ begin
     try Stream.WriteBuffer(FPhoto[0], Length(FPhoto)); finally Stream.Free; end;
     OutputMemo.Lines.Add('Encoded photo saved.');
   except on E: Exception do OutputMemo.Lines.Add(E.ClassName + ': ' + E.Message); end;
+end;
+
+procedure TSmartCardDemoForm.PollTimer(Sender: TObject);
+begin if FController <> nil then FController.Poll; end;
+
+procedure TSmartCardDemoForm.StartRequest(const ARequest: TCardDemoRequest);
+begin FController.StartRequest(ARequest); end;
+
+function TSmartCardDemoForm.CloseQuery: Boolean;
+begin
+  if FRfid <> nil then FRfid.Stop;
+  Result := inherited CloseQuery;
+  if Result and (FController <> nil) then Result := FController.CanClose;
+  if not Result then Caption := 'Waiting for this demo card operation to finish...';
+end;
+
+destructor TSmartCardDemoForm.Destroy;
+begin
+  if WorkerTimer <> nil then WorkerTimer.Enabled := False; if FRfid <> nil then FRfid.Stop;
+  FController.Free; inherited Destroy;
+end;
+
+procedure TSmartCardDemoForm.FormShow(Sender: TObject);
+begin
+  if FDiscoveryStarted then Exit; FDiscoveryStarted := True; ReadersClick(nil);
 end;
 
 end.

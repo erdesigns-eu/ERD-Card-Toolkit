@@ -14,7 +14,7 @@ uses
 {$ENDIF}
   ERD.Card.Bytes, ERD.Card.PCSC.Api, ERD.Card.MagStripe.Tracks,
   ERD.Card.MagStripe, ERD.Card.Contactless.Type2, ERD.Card.EID.Access,
-  ERD.Card.Crypto.EAC, ERD.Card.Memory, ERD.Card.Memory.Counter;
+  ERD.Card.Demo.Devices, ERD.Card.Crypto.EAC, ERD.Card.Memory, ERD.Card.Memory.Counter;
 
 type
 {$IFDEF FPC}
@@ -73,7 +73,9 @@ type
     /// <summary>Read an explicit public SLE4404 range through ACR38x CCID.</summary>
     cdoSle4404Read,
     /// <summary>Execute one explicit operation in the separately selected family demo.</summary>
-    cdoFamily
+    cdoFamily,
+    /// <summary>Discover devices for the owning demo without selecting or connecting a card.</summary>
+    cdoDemoDevices
   );
   /// <summary>Non-secret named-form values in catalog field order; strings use copy-on-write.</summary>
   TCardDemoArguments = array of UnicodeString;
@@ -151,6 +153,8 @@ type
   TCardDemoResult = record
     /// <summary>Operation that produced this completion.</summary>
     Operation: TCardDemoOperation;
+    /// <summary>Owned transport-specific reader/port labels and exact backend addresses from discovery.</summary>
+    Devices: TCardDemoDevices;
     /// <summary>True only if the operation and its cleanup completed successfully.</summary>
     Success: Boolean;
     /// <summary>True after component write verification, even if later disconnect fails.</summary>
@@ -301,7 +305,7 @@ begin
     on E: Exception do
     begin
       Completed.Success := False;
-      Completed.ErrorClass := E.ClassName; Completed.Artifacts := nil;
+      Completed.ErrorClass := E.ClassName; Completed.Artifacts := nil; Completed.Devices := nil;
       if not Completed.WriteVerified then
       begin
         Completed.Text := ''; Completed.Photo := nil;

@@ -375,7 +375,9 @@ automatically executed by the high-level component.
 
 ## Separate VCL family batch
 
-Six native projects now share `ERD.Card.Demo.FamilyForm`, the family input catalog,
+An earlier revision shared `ERD.Card.Demo.FamilyForm` across six projects. That
+form has since been removed in favor of the twenty individual designer forms
+documented below. At that revision the family input catalog,
 family executors and the existing post-construction worker lifecycle. The two older
 VCL projects retain their forms. The shared DFM/aliases and all twenty MSBuild
 projects pass the bounded distribution readers with the native BOM/CRLF conventions.
@@ -481,3 +483,31 @@ The layouts/config pages come from NXP's published data sheet, retaining previou
 enum ordinals. All generated native projects use the established BOM/CRLF and
 Delphi Base/configuration/platform settings. See [VCL_COVERAGE.md](VCL_COVERAGE.md),
 [USB_HID.md](USB_HID.md) and [NTAG210_212.md](NTAG210_212.md) for exact boundaries.
+
+
+## Independent designer forms and in-demo reader discovery
+
+The previous shared family form has been removed. All twenty VCL applications
+now own direct TForm descendants and individual Main.dfm resources. Their visual
+controls, action tabs, masked inputs, dropdowns and timers are defined in those
+resources rather than created in Pascal. Only nonvisual worker/protocol code is shared.
+
+PC/SC, serial and native HID demos discover their devices within the application,
+using background reader-name, QueryDosDeviceW COM-alias or HID-metadata enumeration.
+Selection is explicit; refreshing preserves only still-present addresses and clears
+stale choices on failure. Foreground keyboard capture remains OS input, without
+pretending to filter a selected HID keyboard. Device discovery issues no card command.
+
+Controller regression tests exercise all three discovery kinds, dispatch separation,
+owned result delivery, sanitized failures, overlapping-job refusal, caller-thread
+callbacks, deferred closing, failed starts and destruction joining outstanding work.
+The worker tests also reject partial device lists on failure. Distribution regressions
+check keypress signatures, direct TForm ownership, required individual resources and
+visual controls placed in Pascal. These readers complement the headless compiled tests.
+
+Validation after this change: the full FPC range/overflow/heap suite passes
+2,159,475 assertions across 41 configurations (144 controller and 91 worker
+assertions). All 35 Python regressions and 21 Pascal readers pass on 167 sources.
+Distribution checks pass for 33 projects, two groups and twenty DFM resources;
+Help Insight checks cover 1,796 production and 2,367 VCL public declarations with
+zero findings. The Linux checks do not compile or render VCL forms in Delphi.

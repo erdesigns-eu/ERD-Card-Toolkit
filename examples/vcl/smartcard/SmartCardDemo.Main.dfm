@@ -1,4 +1,4 @@
-object SmartCardDemoForm: TSmartCardDemoForm
+object SmartCardForm: TSmartCardDemoForm
   Left = 0
   Top = 0
   Caption = 'ERD Cards - PC/SC read and write demo'
@@ -14,6 +14,7 @@ object SmartCardDemoForm: TSmartCardDemoForm
   Font.Style = []
   Position = poScreenCenter
   OnCreate = FormCreate
+  OnShow = FormShow
   DesignSize = (
     1000
     650)
@@ -48,6 +49,7 @@ object SmartCardDemoForm: TSmartCardDemoForm
       Top = 12
       Width = 660
       Height = 23
+      Style = csDropDownList
       TabOrder = 0
     end
     object ReadersButton: TButton
@@ -374,6 +376,117 @@ object SmartCardDemoForm: TSmartCardDemoForm
         end
       end
     end
+    object FRfidTab: TTabSheet
+      Caption = 'RFID keyboard'
+      object FRfidSettings: TPanel
+        Left = 8
+        Top = 8
+        Width = 704
+        Height = 88
+        BevelOuter = bvNone
+        TabOrder = 0
+        object FRfidEncoding: TComboBox
+          Left = 0
+          Top = 8
+          Width = 216
+          Height = 24
+          Style = csDropDownList
+          ItemIndex = 0
+          Text = 'ASCII identifier'
+          TabOrder = 0
+          Items.Strings = (
+            'ASCII identifier'
+            'Hexadecimal bytes'
+            'Decimal number'
+          )
+        end
+        object FRfidTerminator: TComboBox
+          Left = 232
+          Top = 8
+          Width = 216
+          Height = 24
+          Style = csDropDownList
+          ItemIndex = 0
+          Text = 'CR (Enter)'
+          TabOrder = 1
+          Items.Strings = (
+            'CR (Enter)'
+            'CR + LF'
+            'LF'
+            'Tab'
+          )
+        end
+        object FRfidLength: TEdit
+          Left = 0
+          Top = 48
+          Width = 104
+          Height = 24
+          Hint = 'Exact identifier length; 0 = variable'
+          ShowHint = True
+          Text = '0'
+          TabOrder = 2
+        end
+        object FRfidTimeout: TEdit
+          Left = 120
+          Top = 48
+          Width = 104
+          Height = 24
+          Hint = 'Maximum gap in milliseconds'
+          ShowHint = True
+          Text = '500'
+          TabOrder = 3
+        end
+        object FRfidPrefix: TEdit
+          Left = 240
+          Top = 48
+          Width = 104
+          Height = 24
+          Hint = 'Exact reader prefix'
+          ShowHint = True
+          Text = ''
+          TabOrder = 4
+        end
+        object FRfidSuffix: TEdit
+          Left = 360
+          Top = 48
+          Width = 104
+          Height = 24
+          Hint = 'Exact reader suffix'
+          ShowHint = True
+          Text = ''
+          TabOrder = 5
+        end
+      end
+      object FRfidToggle: TButton
+        Left = 8
+        Top = 104
+        Width = 144
+        Height = 28
+        Caption = 'Start RFID capture'
+        TabOrder = 1
+        OnClick = RfidToggleClick
+      end
+      object RfidGuidance: TLabel
+        Left = 8
+        Top = 144
+        Width = 704
+        Height = 40
+        AutoSize = False
+        WordWrap = True
+        Caption = 'Length / gap (ms) / prefix / suffix above. Scan while the box below has focus. Foreground input does not filter a USB device.'
+      end
+      object FRfidCapture: TMemo
+        Left = 8
+        Top = 192
+        Width = 704
+        Height = 40
+        Enabled = False
+        WantTabs = True
+        WantReturns = True
+        TabOrder = 2
+        OnKeyPress = RfidKeyPress
+      end
+    end
   end
   object OutputMemo: TMemo
     Left = 16
@@ -399,6 +512,12 @@ object SmartCardDemoForm: TSmartCardDemoForm
   object PhotoDialog: TSaveDialog
     Options = [ofOverwritePrompt, ofHideReadOnly, ofPathMustExist]
     Left = 940
+    Top = 360
+  end
+  object WorkerTimer: TTimer
+    Interval = 100
+    OnTimer = PollTimer
+    Left = 8
     Top = 360
   end
 end

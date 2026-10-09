@@ -1,4 +1,4 @@
-object MagStripeDemoForm: TMagStripeDemoForm
+object MagStripeForm: TMagStripeDemoForm
   Left = 0
   Top = 0
   Caption = 'ERD Cards - magnetic tracks / MSR206-7HL demo'
@@ -14,6 +14,7 @@ object MagStripeDemoForm: TMagStripeDemoForm
   Font.Style = []
   Position = poScreenCenter
   OnCreate = FormCreate
+  OnShow = FormShow
   DesignSize = (
     900
     500)
@@ -56,12 +57,22 @@ object MagStripeDemoForm: TMagStripeDemoForm
         'Payloads exclude sentinels and LRC. Write selected + verify prog' +
         'rams the selected tracks; device is MSR206-7HL (9600 / 7O1).'
     end
-    object PortEdit: TEdit
+    object PortBox: TComboBox
       Left = 190
       Top = 12
       Width = 160
       Height = 23
+      Style = csDropDownList
       TabOrder = 0
+    end
+    object RefreshPortsButton: TButton
+      Left = 190
+      Top = 48
+      Width = 160
+      Height = 27
+      Caption = 'Refresh serial ports'
+      TabOrder = 12
+      OnClick = RefreshPortsClick
     end
     object TimeoutEdit: TEdit
       Left = 480
@@ -170,5 +181,11 @@ object MagStripeDemoForm: TMagStripeDemoForm
     ReadOnly = True
     ScrollBars = ssVertical
     TabOrder = 1
+  end
+  object WorkerTimer: TTimer
+    Interval = 100
+    OnTimer = PollTimer
+    Left = 8
+    Top = 360
   end
 end
