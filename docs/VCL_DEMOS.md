@@ -242,8 +242,9 @@ Test eerst offline ICCID `981032547698103254F6` → `8901234567890123456` en
 alpha `414C494345FF` → `ALICE`. Controleer daarna reader/ICCID, metadata en
 read-only records. Test writes alleen met een test-SIM en exact uitgelezen beforebytes.
 De terugleesstatus en eventuele cleanup-onzekerheid moeten zichtbaar blijven.
-Standalone contacten met CCP/EXT-links worden expliciet geweigerd. Ruwe SMS-records
-blijven volledig behouden; er is geen SMS-verzendactie. Compileer alle twaalf demos
+Standalone contacten met CCP/EXT-links worden expliciet geweigerd. De offline SMS-textactie decodeert een compleet EF.SMS-record, inclusief UDH.
+De linked-contactactie gebruikt een expliciet PBR-record/ADN-FID en toont IAP/EXT.
+Ruwe SMS-records blijven volledig behouden; er is geen SMS-verzendactie. Compileer alle twaalf demos
 Win32/Win64: de gedeelde executors gebruiken nu ook `src/sim`.
 
 ## MifareClassicDemo, Type2Demo en Type4NdefDemo

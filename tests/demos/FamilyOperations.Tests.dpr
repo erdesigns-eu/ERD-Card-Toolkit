@@ -423,9 +423,25 @@ begin
   end;
 end;
 
+procedure TestExtendedSimDemo;
+var R: TCardDemoRequest; D: TCardDemoResult; H: THardware; Hardware: ICardFamilyHardware; Failed: Boolean;
+begin
+  R := Request(dfSim,'decode'); Put(R,dfSim,'kind','8');
+  Put(R,dfSim,'hex','0300040B912143658709F100006201902143650005E8329BFD06'+StringOfChar('F',300));
+  CreateCardFamilyOperations(dfSim).Run(R,D); Check(Pos('hello',string(D.Text)) > 0,'SMS text demo literal');
+  H := THardware.Create; Hardware := H; R := Request(dfSim,'linkedcontact');
+  Put(R,dfSim,'profile','1'); Put(R,dfSim,'aid','A0000000871002'); Put(R,dfSim,'pin',''); Put(R,dfSim,'adnfid','20282');
+  Failed := False; try CreateCardFamilyOperations(dfSim,Hardware).Run(R,D); except on E: EReachedHardware do Failed := True; end;
+  Check(Failed and (H.Acquires = 1),'Linked USIM valid acquisition boundary');
+  Put(R,dfSim,'pbrrecord','0'); Failed := False;
+  try CreateCardFamilyOperations(dfSim,Hardware).Run(R,D); except on E: EArgumentException do Failed := True; end;
+  Check(Failed and (H.Acquires = 1),'Bad PBR before hardware');
+  Hardware := nil;
+end;
+
 begin
   try
-    TestStorageDemos; TestSimRoutes; TestOffline; TestPreflight; TestCounterAndSleRoutes;
+    TestExtendedSimDemo; TestStorageDemos; TestSimRoutes; TestOffline; TestPreflight; TestCounterAndSleRoutes;
     TestTwnRoutes(0,False); TestTwnRoutes(1,False); TestTwnRoutes(2,False); TestTwnRoutes(3,False); TestTwnRoutes(3,True);
     TestMemoryWrite(-1,False,False); TestMemoryWrite(6,False,False);
     TestMemoryWrite(7,False,False); TestMemoryWrite(-1,True,False); TestMemoryWrite(-1,False,True);

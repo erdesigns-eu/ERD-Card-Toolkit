@@ -210,7 +210,7 @@ var M: TMemoryCardReaderWriter; S: TSleCounterCardReaderWriter; L: TSle4404CardR
   Contact: TContactlessCardReader; T2: TType2NdefCardReader; T4: TType4NdefCardReader;
   CC: TType4CapabilityContainer; T4Snapshot: TType4NdefSnapshot; T2Snapshot: TType2NdefSnapshot; UserMemory: TType2UserMemory;
   Sim: TSimCardReaderWriter; SF: TSimFileAddress; SI: TSimFileInfo; PS: TSimPinStatus;
-  SR: TSimRecords; SC: TSimPhonebookEntries; SA: TSimApplications; SD: TSimApplicationInfo; SS: TSimServices; SP: TSimServiceProvider; SE: TSimPhonebookEntry; SM: TSimSmsRecord; PB: TSimPhonebookReferences;
+  SR: TSimRecords; SC: TSimPhonebookEntries; SA: TSimApplications; SD: TSimApplicationInfo; SS: TSimServices; SP: TSimServiceProvider; SE: TSimPhonebookEntry; SMS: TSimSmsMessage; Linked: TSimLinkedContact; SM: TSimSmsRecord; PB: TSimPhonebookReferences;
   W: TTwn4CardReaderWriter; H: TRfidHidReportReader;
   Layout: TSle4404AccessLayout; Info: TTwn4TagInfo; Identifier: TRfidInputIdentifier;
   Field: TRfidHidAsciiField; P, NewP, Data, Key, Id, Wire: TBytes;
@@ -466,7 +466,7 @@ begin
         else if A.Id = 'decode' then
         begin
           Data := Bytes(R,A,'hex');
-          case Number(R,A,'kind',0,7) of
+          case Number(R,A,'kind',0,8) of
             0: Output := string(TSimCodec.DecodeIccid(Data));
             1: Output := string(TSimCodec.DecodeImsi(Data));
             2: Output := string(TSimCodec.DecodeAlpha(Data));
@@ -474,6 +474,7 @@ begin
             4: begin SE := TSimCodec.DecodeAdn(Data); Output := string(SE.Name)+' / '+string(SE.Number)+' / raw '+BytesToHex(SE.Raw); end;
             5: begin SM := TSimCodec.DecodeSms(Data); Output := 'Status '+IntToStr(SM.StatusByte)+'; preserved body '+BytesToHex(SM.Body); end;
             6: begin SD := TSimCodec.DecodeDirectoryRecord(Data); Output := BytesToHex(SD.Aid)+' '+string(SD.LabelText); end;
+            8: begin SMS := TSimCodec.DecodeSmsMessage(Data); Output := 'Address '+string(SMS.Address)+'; text decoded '+BoolToStr(SMS.TextDecoded,True)+sLineBreak+string(SMS.Text)+sLineBreak+'Concat '+BoolToStr(SMS.Concatenated,True)+' reference '+IntToStr(SMS.ConcatenationReference)+' segment '+IntToStr(SMS.SegmentNumber)+'/'+IntToStr(SMS.SegmentCount)+sLineBreak+'Raw UD '+BytesToHex(SMS.UserData); end;
             7: begin PB := TSimCodec.DecodePhonebookReferences(Data); for I := 0 to High(PB) do Output := Output+'Template '+IntToStr(PB[I].TemplateIndex)+' / '+IntToHex(PB[I].TemplateTag,2)+' role '+IntToHex(PB[I].RoleTag,2)+' FID '+IntToHex(PB[I].FileId,4)+' SFI '+IntToStr(PB[I].ShortFileId)+sLineBreak; end;
           end;
         end
@@ -510,6 +511,13 @@ begin
             else if A.Id = 'range' then Output := BytesToHex(Sim.ReadBinaryRange(SF,Number(R,A,'address',0,32767),Number(R,A,'count',1,32768),P))
             else if A.Id = 'record' then Output := BytesToHex(Sim.ReadRecord(SF,Number(R,A,'record',1,255),P))
             else if A.Id = 'records' then begin SR := Sim.ReadRecords(SF,P); for I := 0 to High(SR) do Output := Output+IntToStr(I+1)+': '+BytesToHex(SR[I])+sLineBreak; end
+            else if A.Id = 'linkedcontact' then
+            begin
+              Linked := Sim.ReadLinkedUsimContact(Number(R,A,'pbrrecord',1,255),Number(R,A,'adnfid',1,65535),Number(R,A,'record',1,255),P);
+              Output := string(Linked.Contact.Name)+' / '+string(Linked.Contact.Number)+sLineBreak+'Original ADN '+BytesToHex(Linked.Contact.Raw)+sLineBreak;
+              for I := 0 to High(Linked.Fields) do Output := Output+'Role '+IntToHex(Linked.Fields[I].Reference.RoleTag,2)+' FID '+IntToHex(Linked.Fields[I].Reference.FileId,4)+' record '+IntToStr(Linked.Fields[I].RecordNumber)+' raw '+BytesToHex(Linked.Fields[I].Raw)+sLineBreak;
+              for I := 0 to High(Linked.Extensions) do Output := Output+'EXT '+BytesToHex(Linked.Extensions[I])+sLineBreak;
+            end
             else if A.Id = 'contacts' then begin SC := Sim.ReadPhonebook(SF,P); for I := 0 to High(SC) do Output := Output+IntToStr(SC[I].RecordNumber)+': '+string(SC[I].Name)+' / '+string(SC[I].Number)+' / raw '+BytesToHex(SC[I].Raw)+sLineBreak; end
             else
             begin

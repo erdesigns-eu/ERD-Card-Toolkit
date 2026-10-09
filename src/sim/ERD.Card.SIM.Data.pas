@@ -140,6 +140,35 @@ type
   end;
   /// <summary>Owned decoded contact array; record Raw arrays remain independently allocated.</summary>
   TSimPhonebookEntries = array of TSimPhonebookEntry;
+  /// <summary>Explicit complete phonebook EF snapshot; assignment shares arrays, codec results copy retained bytes.</summary>
+  TSimPhonebookFile = record
+    /// <summary>Actual elementary file identifier within the phonebook directory.</summary>
+    FileId: Word;
+    /// <summary>Complete one-based linear-fixed records in physical order.</summary>
+    Records: TSimRecords;
+  end;
+  /// <summary>Explicit phonebook file snapshots for resolving one PBR record.</summary>
+  TSimPhonebookFiles = array of TSimPhonebookFile;
+  /// <summary>One resolved same-index or IAP-linked field; role-specific contents remain exact bytes.</summary>
+  TSimLinkedField = record
+    /// <summary>Original PBR reference with its type and positional information.</summary>
+    Reference: TSimPhonebookReference;
+    /// <summary>Resolved physical record number, one based.</summary>
+    RecordNumber: Integer;
+    /// <summary>Owned exact full record; no email/ANR/footer bytes are discarded.</summary>
+    Raw: TBytes;
+  end;
+  /// <summary>Ordered resolved fields; absent FF IAP references are omitted.</summary>
+  TSimLinkedFields = array of TSimLinkedField;
+  /// <summary>One USIM ADN contact plus resolved raw linked fields and bounded EXT number chain.</summary>
+  TSimLinkedContact = record
+    /// <summary>Decoded ADN; Number includes successfully validated EXT digits; original Raw and references remain intact.</summary>
+    Contact: TSimPhonebookEntry;
+    /// <summary>Resolved type-1/type-2 fields, including IAP; independent EXT records follow separately.</summary>
+    Fields: TSimLinkedFields;
+    /// <summary>Owned EXT records in followed order; loops and missing references are refused.</summary>
+    Extensions: TSimRecords;
+  end;
   /// <summary>Stored SMS state; body remains an exact PDU-containing field, not decoded message text.</summary>
   TSimSmsState = (
     /// <summary>Unallocated record; remaining bytes may contain stale data.</summary>
@@ -163,6 +192,45 @@ type
     State: TSimSmsState;
     /// <summary>Owned 175-byte SMSC/TPDU/padding field; terminal FF bytes are not trimmed.</summary>
     Body: TBytes;
+  end;
+  /// <summary>Decoded stored SMS-DELIVER or SMS-SUBMIT, retaining bytes for binary and unsupported application payloads.</summary>
+  TSimSmsMessage = record
+    /// <summary>True for incoming DELIVER, false for outgoing SUBMIT.</summary>
+    Incoming: Boolean;
+    /// <summary>Decoded numeric service-centre address, empty when not stored.</summary>
+    ServiceCenter: UnicodeString;
+    /// <summary>Originator for DELIVER or recipient for SUBMIT.</summary>
+    Address: UnicodeString;
+    /// <summary>Original TP-PID byte.</summary>
+    ProtocolId: Byte;
+    /// <summary>Original TP-DCS byte.</summary>
+    DataCoding: Byte;
+    /// <summary>SUBMIT message reference; minus one for DELIVER.</summary>
+    MessageReference: Integer;
+    /// <summary>Owned seven-byte SCTS for DELIVER; empty for SUBMIT; no timezone conversion is guessed.</summary>
+    TimestampBytes: TBytes;
+    /// <summary>Owned complete encoded user data, including UDH and packing.</summary>
+    UserData: TBytes;
+    /// <summary>Owned UDH including its length byte; empty when absent; unknown information elements are retained.</summary>
+    Header: TBytes;
+    /// <summary>True only for successfully decoded default GSM or UCS-2 text; false for eight-bit binary.</summary>
+    TextDecoded: Boolean;
+    /// <summary>Decoded message segment text; concatenated segments are never silently combined.</summary>
+    Text: UnicodeString;
+    /// <summary>True when one valid eight/sixteen-bit concatenation element was present.</summary>
+    Concatenated: Boolean;
+    /// <summary>Original eight/sixteen-bit concatenation reference.</summary>
+    ConcatenationReference: Word;
+    /// <summary>Advertised segment count, one through 255; zero when absent.</summary>
+    SegmentCount: Byte;
+    /// <summary>One-based segment number; zero when absent.</summary>
+    SegmentNumber: Byte;
+    /// <summary>True when a valid eight/sixteen-bit application-port element was present.</summary>
+    PortAddressed: Boolean;
+    /// <summary>Original destination application port.</summary>
+    DestinationPort: Word;
+    /// <summary>Original source application port.</summary>
+    SourcePort: Word;
   end;
   /// <summary>One EF.DIR application entry; enumeration does not select it.</summary>
   TSimApplicationInfo = record
@@ -222,6 +290,15 @@ type
     /// <param name="AData">One through 255 bytes containing A8/A9/AA templates and trailing FF padding.</param>
     /// <returns>Owned ordered references; malformed geometry and roles are refused; repeated file roles retain their actual positions.</returns>
     class function DecodePhonebookReferences(const AData: TBytes): TSimPhonebookReferences; static;
+    /// <summary>Resolves one explicitly chosen ADN record using supplied PBR references and complete EF snapshots.</summary>
+    /// <param name="AReferences">Decoded references from one actual PBR record.</param>
+    /// <param name="AFiles">Independent caller snapshots keyed by unique explicit FIDs.</param>
+    /// <param name="AAdnFileId">Actual selected ADN FID; no default file is inferred.</param>
+    /// <param name="ARecord">One-based ADN record number.</param>
+    /// <returns>Owned contact, exact same-index/IAP-linked fields and complete validated EXT number chain.</returns>
+    /// <exception cref="ESimCardError">Missing/ambiguous files, invalid pointers, unsupported independent links or EXT loops are refused.</exception>
+    class function ResolvePhonebookContact(const AReferences: TSimPhonebookReferences;
+      const AFiles: TSimPhonebookFiles; const AAdnFileId: Word; const ARecord: Integer): TSimLinkedContact; static;
     /// <summary>Decodes the exact seventeen-byte service-provider-name file.</summary>
     /// <param name="AData">Display condition followed by sixteen alpha bytes.</param>
     /// <returns>Display flags and decoded name.</returns>
@@ -245,6 +322,11 @@ type
     /// <param name="AData">Exactly 176 bytes; includes status, SMSC/TPDU and padding.</param>
     /// <returns>Recognized state and owned untrimmed body; does not decode SMS text.</returns>
     class function DecodeSms(const AData: TBytes): TSimSmsRecord; static;
+    /// <summary>Decodes one allocated EF.SMS DELIVER/SUBMIT with GSM seven-bit, UCS-2 or retained binary user data.</summary>
+    /// <param name="AData">Exact 176-byte stored SMS record with matching known incoming/outgoing status.</param>
+    /// <returns>Owned message segment with preserved UDH, concatenation and application-port metadata.</returns>
+    /// <exception cref="ESimCardError">Malformed bounds, compressed/reserved DCS, enhanced validity, national-language shifts or unsupported TPDU are refused.</exception>
+    class function DecodeSmsMessage(const AData: TBytes): TSimSmsMessage; static;
     /// <summary>Creates a complete stored-SMS record from an explicit status and body.</summary>
     /// <param name="AStatus">Defined free/received/unsent/sent status, including status-report forms.</param>
     /// <param name="ABody">Already encoded SMSC/TPDU field, at most 175 bytes; not interpreted.</param>
@@ -687,6 +769,201 @@ begin
       end;
     end;
   finally Doc.Free; end;
+end;
+
+function SmsDigits(const B: TBytes; const Start, Digits: Integer; const Ton: Byte): UnicodeString;
+var I,N: Integer;
+begin
+  Result := '';
+  if (Start < 0) or (Digits < 0) or (Start+(Digits+1) div 2 > Length(B)) or (Ton and $80 = 0) then Fail;
+  for I := 0 to Digits-1 do
+  begin
+    N := B[Start+I div 2]; if I mod 2 = 0 then N := N and 15 else N := N shr 4;
+    if N > 14 then Fail; Result := Result+DialChar(N);
+  end;
+  if (Digits mod 2 = 1) and (B[Start+Digits div 2] shr 4 <> 15) then Fail;
+  if (Result <> '') and (Ton and $70 = $10) then Result := '+'+Result;
+end;
+
+function SmsSeptets(const B: TBytes; const BitOffset, Count: Integer): UnicodeString;
+var I,J,BitPosition: Integer; C: Byte; Unpacked: TBytes;
+begin
+  if (BitOffset < 0) or (Count < 0) or (BitOffset+Count*7 > Length(B)*8) then Fail;
+  SetLength(Unpacked,Count);
+  for I := 0 to Count-1 do
+  begin
+    C := 0;
+    for J := 0 to 6 do begin BitPosition := BitOffset+I*7+J;
+      if B[BitPosition div 8] and (1 shl (BitPosition mod 8)) <> 0 then C := C or (1 shl J); end;
+    Unpacked[I] := C;
+  end;
+  Result := TSimCodec.DecodeAlpha(Unpacked);
+end;
+
+procedure SmsTime(const B: TBytes);
+var V: array[0..5] of Integer; I,Lo,Hi: Integer; Date: TDateTime;
+begin
+  if Length(B) <> 7 then Fail;
+  for I := 0 to 5 do begin Lo := B[I] and 15; Hi := B[I] shr 4; if (Lo > 9) or (Hi > 9) then Fail; V[I] := Lo*10+Hi; end;
+  if not TryEncodeDate(2000+V[0],V[1],V[2],Date) then Fail;
+  if (V[3] > 23) or (V[4] > 59) or (V[5] > 59) or (B[6] shr 4 > 9) or ((B[6] and 7)*10+(B[6] shr 4) > 56) then Fail;
+end;
+
+class function TSimCodec.DecodeSmsMessage(const AData: TBytes): TSimSmsMessage;
+var Stored: TSimSmsRecord; B: TBytes; P,N,Digits,Ton,First,Vpf,Alphabet,Dcs,Udl,BytesCount,H,Start,I,L,Id,TextCount: Integer;
+  procedure Need(const Count: Integer);
+  begin if (Count < 0) or (P+Count > Length(B)) then Fail; end;
+  function Take: Byte;
+  begin Need(1); Result := B[P]; Inc(P); end;
+  function TakeBytes(const Count: Integer): TBytes;
+  begin Need(Count); Result := Copy(B,P,Count); Inc(P,Count); end;
+begin
+  Result := Default(TSimSmsMessage); Result.MessageReference := -1;
+  Stored := DecodeSms(AData);
+  if not (Stored.State in [sssReceivedRead,sssReceivedUnread,sssUnsent,sssSent]) then Fail;
+  B := Stored.Body; P := 0; N := Take;
+  if N > 0 then
+  begin
+    Need(N); Ton := Take; Dec(N); Digits := N*2;
+    if (N > 0) and (B[P+N-1] shr 4 = 15) then Dec(Digits);
+    if Ton and $70 = $50 then Fail;
+    Result.ServiceCenter := SmsDigits(B,P,Digits,Ton); Inc(P,N);
+  end;
+  First := Take; Result.Incoming := First and 3 = 0;
+  if (First and 3 > 1) or (Result.Incoming <> (Stored.State in [sssReceivedRead,sssReceivedUnread])) then Fail;
+  if not Result.Incoming then Result.MessageReference := Take;
+  Digits := Take; Ton := Take; if Ton and $80 = 0 then Fail; N := (Digits+1) div 2; Need(N);
+  if (Digits = 0) or (Digits > 20) then Fail;
+  if Ton and $70 = $50 then Result.Address := SmsSeptets(Copy(B,P,N),0,Digits*4 div 7)
+  else Result.Address := SmsDigits(B,P,Digits,Ton);
+  Inc(P,N); Result.ProtocolId := Take; Dcs := Take; Result.DataCoding := Dcs;
+  if Dcs and $C0 = 0 then begin if Dcs and $20 <> 0 then Fail; Alphabet := (Dcs shr 2) and 3; end
+  else if (Dcs and $F0 = $C0) or (Dcs and $F0 = $D0) then begin if Dcs and 4 <> 0 then Fail; Alphabet := 0; end
+  else if Dcs and $F0 = $E0 then begin if Dcs and 4 <> 0 then Fail; Alphabet := 2; end
+  else if Dcs and $F0 = $F0 then begin if Dcs and 8 <> 0 then Fail; if Dcs and 4 <> 0 then Alphabet := 1 else Alphabet := 0; end
+  else begin Fail; Alphabet := 3; end;
+  if Alphabet = 3 then Fail;
+  if Result.Incoming then begin Result.TimestampBytes := TakeBytes(7); SmsTime(Result.TimestampBytes); end
+  else begin Vpf := (First shr 3) and 3; case Vpf of
+    1: Fail;
+    2: Take;
+    3: SmsTime(TakeBytes(7));
+  end; end;
+  Udl := Take; if Alphabet = 0 then BytesCount := (Udl*7+7) div 8 else BytesCount := Udl;
+  if (BytesCount > 140) or ((Alphabet = 0) and (Udl > 160)) then Fail;
+  Result.UserData := TakeBytes(BytesCount); if not AllFf(B,P) then Fail;
+  H := 0;
+  if First and $40 <> 0 then
+  begin
+    if BytesCount = 0 then Fail; H := Result.UserData[0]+1; if H > BytesCount then Fail;
+    Result.Header := Copy(Result.UserData,0,H); I := 1;
+    while I < H do
+    begin
+      if I+2 > H then Fail; Id := Result.Header[I]; L := Result.Header[I+1]; Inc(I,2); if I+L > H then Fail;
+      case Id of
+        $00,$08:
+        begin
+          if Result.Concatenated then Fail;
+          if ((Id = 0) and (L <> 3)) or ((Id = 8) and (L <> 4)) then Fail;
+          Result.Concatenated := True;
+          if Id = 0 then Result.ConcatenationReference := Result.Header[I]
+          else Result.ConcatenationReference := Word(Result.Header[I]) shl 8 or Result.Header[I+1];
+          Result.SegmentCount := Result.Header[I+L-2]; Result.SegmentNumber := Result.Header[I+L-1];
+          if (Result.SegmentCount = 0) or (Result.SegmentNumber = 0) or (Result.SegmentNumber > Result.SegmentCount) then Fail;
+        end;
+        $04,$05:
+        begin
+          if Result.PortAddressed then Fail;
+          if ((Id = 4) and (L <> 2)) or ((Id = 5) and (L <> 4)) then Fail;
+          Result.PortAddressed := True;
+          if Id = 4 then begin Result.DestinationPort := Result.Header[I]; Result.SourcePort := Result.Header[I+1]; end
+          else begin Result.DestinationPort := Word(Result.Header[I]) shl 8 or Result.Header[I+1]; Result.SourcePort := Word(Result.Header[I+2]) shl 8 or Result.Header[I+3]; end;
+        end;
+        $24,$25: Fail;
+      end;
+      Inc(I,L);
+    end;
+  end;
+  if Alphabet = 0 then
+  begin
+    Start := (H*8+6) div 7; TextCount := Udl-Start; if TextCount < 0 then Fail;
+    Result.Text := SmsSeptets(Result.UserData,Start*7,TextCount); Result.TextDecoded := True;
+  end
+  else if Alphabet = 2 then
+  begin
+    N := BytesCount-H; if N mod 2 <> 0 then Fail; Result.Text := '';
+    for I := 0 to N div 2-1 do begin Digits := Integer(Result.UserData[H+I*2]) shl 8 or Result.UserData[H+I*2+1];
+      if (Digits >= $D800) and (Digits <= $DFFF) then Fail; Result.Text := Result.Text+WideChar(Digits); end;
+    Result.TextDecoded := True;
+  end;
+end;
+
+class function TSimCodec.ResolvePhonebookContact(const AReferences: TSimPhonebookReferences;
+  const AFiles: TSimPhonebookFiles; const AAdnFileId: Word; const ARecord: Integer): TSimLinkedContact;
+var I,J,N,Adn,Iap,Ext,Pointer,Index,AdnCount: Integer; Data,IapData: TBytes; Seen: array[0..254] of Boolean;
+  function GetRecord(const Fid: Word; const RecordNumber: Integer): TBytes;
+  var K,Found: Integer;
+  begin
+    Found := -1;
+    for K := 0 to High(AFiles) do if AFiles[K].FileId = Fid then begin if Found >= 0 then Fail; Found := K; end;
+    if (Found < 0) or (RecordNumber < 1) then Fail;
+    if RecordNumber > Length(AFiles[Found].Records) then Fail;
+    Result := CopyBytes(AFiles[Found].Records[RecordNumber-1]);
+  end;
+begin
+  Result := Default(TSimLinkedContact); Adn := -1; Iap := -1; Ext := -1; AdnCount := 0;
+  if (ARecord < 1) or (ARecord > 255) or (Length(AReferences) > 128) or (Length(AFiles) > 32) then Fail;
+  for I := 0 to High(AFiles) do
+  begin
+    if (AFiles[I].FileId = 0) or (AFiles[I].FileId = $3F00) or (AFiles[I].FileId = $FFFF) or (Length(AFiles[I].Records) > 255) then Fail;
+    for J := 0 to I-1 do if AFiles[J].FileId = AFiles[I].FileId then Fail;
+  end;
+  for I := 0 to High(AReferences) do
+  begin
+    if (AReferences[I].TemplateTag <> $A8) and (AReferences[I].TemplateTag <> $A9) and (AReferences[I].TemplateTag <> $AA) then Fail;
+    if (AReferences[I].RoleTag < $C0) or (AReferences[I].RoleTag > $CB) or (AReferences[I].TemplateIndex < 0) then Fail;
+    if AReferences[I].RoleTag = $C0 then Inc(AdnCount);
+    if (AReferences[I].ReferenceIndex < 0) or (AReferences[I].ReferenceIndex > 254) then Fail;
+    if (AReferences[I].RoleTag = $C0) and (AReferences[I].FileId = AAdnFileId) then begin if Adn >= 0 then Fail; Adn := I; end;
+    if AReferences[I].RoleTag = $C1 then begin if Iap >= 0 then Fail; Iap := I; end;
+    if AReferences[I].RoleTag = $C2 then begin if Ext >= 0 then Fail; Ext := I; end;
+  end;
+  if (Adn < 0) or (AdnCount <> 1) then Fail; if AReferences[Adn].TemplateTag <> $A8 then Fail;
+  Result.Contact := DecodeAdn(GetRecord(AAdnFileId,ARecord)); Result.Contact.RecordNumber := ARecord;
+  if Result.Contact.Empty then Exit;
+  IapData := nil;
+  if Iap >= 0 then begin if AReferences[Iap].TemplateTag <> $A8 then Fail; IapData := GetRecord(AReferences[Iap].FileId,ARecord); end;
+  for I := 0 to High(AReferences) do
+  begin
+    if AReferences[I].TemplateTag = $AA then Continue;
+    if AReferences[I].RoleTag in [$C0,$C2] then Continue;
+    Pointer := ARecord;
+    if AReferences[I].TemplateTag = $A9 then
+    begin
+      Index := AReferences[I].ReferenceIndex; if Index >= Length(IapData) then Fail;
+      Pointer := IapData[Index]; if Pointer = $FF then Continue; if Pointer = 0 then Fail;
+    end;
+    Data := GetRecord(AReferences[I].FileId,Pointer);
+    if (AReferences[I].TemplateTag = $A9) and (AReferences[I].RoleTag in [$C3,$C4,$CA]) then
+    begin
+      if Length(Data) < 2 then Fail;
+      if Data[High(Data)] <> ARecord then Fail;
+      if (AReferences[Adn].ShortFileId >= 0) and (Data[High(Data)-1] <> AReferences[Adn].ShortFileId) then Fail;
+    end;
+    N := Length(Result.Fields); SetLength(Result.Fields,N+1);
+    Result.Fields[N].Reference := AReferences[I]; Result.Fields[N].RecordNumber := Pointer; Result.Fields[N].Raw := Data;
+  end;
+  Pointer := Result.Contact.ExtensionRecord; FillChar(Seen,SizeOf(Seen),0);
+  while Pointer <> $FF do
+  begin
+    if (Pointer < 1) or (Pointer > 254) or (Ext < 0) or Seen[Pointer] then Fail; Seen[Pointer] := True;
+    Data := GetRecord(AReferences[Ext].FileId,Pointer);
+    if (Length(Data) <> 13) or (Data[0] <> 2) or (Data[1] < 1) or (Data[1] > 10) then Fail;
+    N := Data[1]*2; if Data[1+Data[1]] shr 4 = 15 then Dec(N);
+    Result.Contact.Number := Result.Contact.Number+SmsDigits(Data,2,N,$81);
+    for J := 2+Data[1] to 11 do if Data[J] <> $FF then Fail;
+    N := Length(Result.Extensions); SetLength(Result.Extensions,N+1); Result.Extensions[N] := Data; Pointer := Data[12];
+  end;
 end;
 
 end.

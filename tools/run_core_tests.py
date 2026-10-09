@@ -97,7 +97,8 @@ def main():
     for args, expected in ((['--help'], 'Offline codecs only.'),
                            (['--iccid', '981032547698103254F6'], '8901234567890123456'),
                            (['--imsi', '082980102143658709'], '208011234567890'),
-                           (['--alpha', '414C494345FF'], 'ALICE')):
+                           (['--alpha', '414C494345FF'], 'ALICE'),
+                           (['--sms-text', '0300040B912143658709F100006201902143650005E8329BFD06' + 'FF' * 150], 'hello')):
         result = subprocess.run([str(build / ('InspectSim' + suffix))] + args,
                                 cwd=REPO, capture_output=True, text=True, check=True)
         if expected not in result.stdout:

@@ -15,7 +15,9 @@ contactinterface. Een geschikte lezer transporteert APDU's; de SIM bepaalt de re
 - Transparante bestanden en linear-fixed records vervangen met exacte verwachte
   begininhoud en onafhankelijke terugleescontrole. Geen automatische write-herhaling.
 - Standalone ADN-contacten lezen, schrijven en wissen; GSM/UCS-2 namen en TBCD-nummers.
-- USIM PBR-decoder met expliciete A8/A9/AA-templates, file-role/FID/SFI en IAP-posities; gekoppelde records worden nog niet automatisch beheerd.
+- USIM PBR-decoder met expliciete A8/A9/AA-templates, file-role/FID/SFI en IAP-posities; gekoppelde writes worden nog niet automatisch beheerd.
+- Gekoppelde USIM-contacten lezen: expliciet ADN-FID/PBR-record, IAP-posities, ruwe gekoppelde velden en gevalideerde EXT-nummerketens in één transactie.
+- SMS-tekstdecoder voor DELIVER/SUBMIT: GSM zeven-bit, UCS-2, binaire payloadbehoud, UDH/segmentreferenties en applicatiepoorten; geen automatische samenvoeging.
 - SMS-recordcodec met status en behoud van alle 175 bodybytes (SMSC/TPDU/padding).
   SMS-geheugen lezen/schrijven via de expliciete recordmethoden.
 - Een aangeleverde PIN één keer presenteren als het resterende budget bekend en
@@ -84,13 +86,13 @@ terugleesbewijs en offline decoders. Geen verbinding of PIN-poging bij opstarten
 
 Dit is geen telefonie-stack: geen netwerkregistratie, telefoonmodem, SMS verzenden,
 GSM/AKA-authenticatie, Ki-uitlezing, eSIM-download/provisioning of SIM Toolkit.
-PIN-wijziging/PUK-herstel, ADM-authenticatie, USIM PBR/IAP/EXT-contactbeheer,
-SMS-tekst/UDH/concatenatie en extra telefoonbestanden zijn vervolgstappen.
+PIN-wijziging/PUK-herstel, ADM-authenticatie, gekoppeld USIM PBR/IAP/EXT-schrijfbeheer,
+automatische SMS-segmentsamenvoeging, nationale taaltabellen en extra telefoonbestanden zijn vervolgstappen.
 Cyclic-recordwrites ontbreken; absolute cyclic reads zijn aanwezig. Binary-offsets
 zijn beperkt tot 32767; volledige transparante files tot 32768 bytes. Records zijn
 maximaal 255 bytes/255 records. Grotere profielen worden geweigerd, niet afgekapt.
 
-Praktische volgende uitbreidingen: eerst SMS-tekstdecodering en PBR-contactlinks,
+Praktische volgende uitbreidingen: eerst segmentverzameling en veilige gekoppelde contactwrites,
 daarna gecontroleerde PIN/PUK-methoden met nieuw sessiebewijs en aparte transcripttests.
 Andere kaartfamilies: de resterende VCL-demo's, native USB-HID-bronnen, MIFARE Plus
 of CryptoMemory vereisen elk hun eigen reader/protocolprofiel; betalingen blijven buiten scope.
@@ -102,8 +104,33 @@ ETSI TS 102 221 (UICC), TS 131 102 / 3GPP TS 31.102 (USIM) en
 3GPP TS 23.038 (tekencodering). Publieke pySim-protocoldefinities zijn gebruikt
 als secundaire crosscheck; de Pascal-implementatie is zelfstandig geschreven.
 
-71.363 SIM/USIM-assertions zijn uitgevoerd onder FPC met range/overflow/heapchecks:
+72.302 SIM/USIM-assertions zijn uitgevoerd onder FPC met range/overflow/heapchecks:
 literal APDU's/codecs, PIN-budgetten, buffers, elke write-I/O-grens, volledige
 terugleesbits, chunking en cleanup-onzekerheid. De aparte familie-executor heeft
 ook literal SIM-leesroutes en preflighttests. **Delphi/Windows en fysieke SIMs zijn
 nog niet getest.** Bronvalidatiescripts vervangen die tests niet.
+
+## Gekoppelde contacten en SMS-tekst
+
+`ReadLinkedUsimContact(PbrRecord, ActualAdnFid, Record, Pin)` leest de gerefereerde
+linear-fixed EFs onder één exclusieve transactie. De ADN-keuze is expliciet;
+ontbrekende/ambigue IAP/EXT-referenties, pointers buiten het bestand en loops worden
+geweigerd. EXT type 2 wordt als extra nummerdigits gevolgd; overige gekoppelde
+velden blijven volledige bytes inclusief footer. EMAIL/ANR-tekstinterpretatie en
+gekoppelde writes zijn nog niet aangeboden. Dit profiel vereist precies één ADN en ondubbelzinnige IAP/EXT-referenties in het gekozen PBR-record. Type-2 EMAIL/ANR/SNE-terugverwijzingen worden tegen de gekozen ADN-record/SFI gecontroleerd.
+Maximaal 32 verschillende EFs worden
+ingelezen. Type-3 referenties worden alleen gevolgd voor de ondersteunde EXT-keten.
+
+`DecodeSmsMessage` accepteert een volledig toegewezen 176-byte EF.SMS-record en
+controleert dat DELIVER/SUBMIT overeenkomt met de opgeslagen richting. GSM-text
+wordt met UDH-fillbits gedecodeerd. UCS-2 behoudt ook nul/FF-codepunten; surrogates
+worden geweigerd. Acht-bit berichten geven `TextDecoded=False` en exacte user data.
+SCTS blijft origineel in `TimestampBytes`; er wordt geen UTC/jaartal geraden.
+Ondersteunde DCS-groepen: algemene ongecomprimeerde 00..3F, geldige C/D/E message-waiting en F0..F7 class-coding.
+Onbekende UDH-elementen blijven behouden, maar nationale language-shift-IEs,
+gecomprimeerde/reserved DCS, enhanced validity en STATUS-REPORT TPDUs worden
+expliciet geweigerd. Segmentgegevens zijn metadata; geen berichtsamenvoeging.
+
+`InspectSim --sms-text <complete-record-hex>` en de offline SMS-textactie in
+`SimCardDemo` tonen de inhoud. De linked-contactactie toont originele ADN, exact
+gelinkte records en EXT-keten. Gebruik de werkelijke USIM AID en decimal ADN-FID.

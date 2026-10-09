@@ -28,7 +28,7 @@ Beoogd platform: **Delphi 10.4+, Windows Win32/Win64**.
 | SLE4404 | `TSle4404CardReaderWriter` | ACR38x CCID: publiek/beveiligd lezen, user-codecontrole, bitprogrammering en expliciete scratchpad/applicatie-erases met terugleescontrole; bekende layout vereist. |
 | USB-HID RFID | `TRfidKeyboardReader`, `TRfidHidReportReader` | Keyboard-input en host-aangeleverde 8/9-byte toetsenbordreports of vaste ASCII-velden; expliciete ASCII/hex/decimale profielen. |
 | ELATEC TWN4 | `TTwn4CardReaderWriter` | PRS/USB-CDC: tag-ID, Classic-blokken met aangeleverde sleutel en publieke Type 2-pagina’s lezen/geverifieerd schrijven; geschikte firmware vereist. |
-| SIM / USIM | `TSimCardReaderWriter` | ICCID/IMSI/SPN/servicebits, expliciete bestanden/records, PIN-budgetten, geverifieerde writes, standalone ADN-contacten en ruwe SMS-recordcodecs. |
+| SIM / USIM | `TSimCardReaderWriter` | ICCID/IMSI/SPN/servicebits, expliciete bestanden/records, PIN-budgetten, geverifieerde writes, standalone/gekoppelde USIM-contactuitlezing, EXT-nummers en SMS-tekst/UDH-codecs. |
 | Tools | Losse codecs en catalogs | APDU, ATR, BER-TLV, hex/bytes, MRZ, NDEF, magstripe-pariteit/LRC en ATR/EMV-metadata. |
 
 **Schrijfcontrole:** MSR206/MSR605-programmering levert apparaatstatus; MSR206-7HL
@@ -40,7 +40,7 @@ Lezerondersteuning en kaartondersteuning zijn afzonderlijk: het juiste protocolp
 
 ## Wat zit er nog niet in?
 
-- **Uitgebreide SIM-diensten:** geen eSIM-provisioning, telefonie/netwerkauthenticatie, SMS-verzending, PIN/PUK-wijziging of automatisch gekoppeld USIM-PBR-contactbeheer.
+- **Uitgebreide SIM-diensten:** geen eSIM-provisioning, telefonie/netwerkauthenticatie, SMS-verzending, PIN/PUK-wijziging of gekoppelde USIM-contactwrites.
 - **Betalingen:** geen terminal/providerintegratie, betaaltransacties of directe NFC-betaalkernel.
 - **Overige contact-memorychips:** AT88SC/CryptoMemory en andere readerdialecten ontbreken nog. Voor SLE-counterchips ontbreken automatische tellerberekening en geverifieerde personalisatie/code-ontgrendeling.
 - **Universele USB-HID:** raw USB openen/enumereren, willekeurige vendorreports en generiek RFID-geheugen/UID schrijven ontbreken; keyboard-input is direct bruikbaar, raw profielen vereisen een hostbron.

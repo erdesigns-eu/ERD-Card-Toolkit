@@ -394,10 +394,110 @@ begin
     Check(Failed,'Malformed PBR refused'); end;
 end;
 
+procedure TestSmsText;
+const Body = '00040B912143658709F100006201902143650005E8329BFD06';
+var Message: TSimSmsMessage; Data,B: TBytes; I: Integer; Failed: Boolean;
+begin
+  Data := TSimCodec.EncodeSms(3,HexToBytes(Body)); Message := TSimCodec.DecodeSmsMessage(Data);
+  Check(Message.Incoming and Message.TextDecoded and (Message.Text = 'hello'),'Literal GSM packed SMS DELIVER');
+  Check((Message.Address = '+12345678901') and (Message.MessageReference = -1) and (Length(Message.TimestampBytes) = 7),'SMS origin/time');
+  Message := TSimCodec.DecodeSmsMessage(TSimCodec.EncodeSms(7,HexToBytes('0001000491214300080400480069')));
+  Check(not Message.Incoming and Message.TextDecoded and (Message.Text = 'Hi') and (Message.Address = '+1234'),'Literal UCS2 SUBMIT');
+  Message := TSimCodec.DecodeSmsMessage(TSimCodec.EncodeSms(7,HexToBytes('0041000491214300080A0500037A020100480069')));
+  Check((Message.Text = 'Hi') and Message.Concatenated and (Message.ConcatenationReference = $7A) and (Message.SegmentCount = 2) and (Message.SegmentNumber = 1),'UCS2 concatenation UDH');
+  Message := TSimCodec.DecodeSmsMessage(TSimCodec.EncodeSms(7,HexToBytes('0041000491214300040B06050415810000DEADBEEF')));
+  Check(not Message.TextDecoded and Message.PortAddressed and (Message.DestinationPort = $1581) and (Message.SourcePort = 0),'Binary SMS port UDH');
+  Check(BytesEqual(Message.UserData,HexToBytes('06050415810000DEADBEEF')),'Binary body exact retention');
+  Message := TSimCodec.DecodeSmsMessage(TSimCodec.EncodeSms(7,HexToBytes('0041000491214300000C0500037A0201D06536FB0D')));
+  Check((Message.Text = 'hello') and Message.Concatenated, 'GSM UDH septet fill alignment');
+  for I := 0 to 175 do
+  begin
+    B := Copy(Data,0,Length(Data));
+    case I of
+      0: B[0] := 0;
+      1: B[1] := 175;
+      2: B[2] := $06;
+      3: B[3] := 255;
+      12: B[I] := $20;
+      13: B[I] := $FF;
+      20: B[I] := 161;
+    else Continue; end;
+    Failed := False; try Message := TSimCodec.DecodeSmsMessage(B); except on E: Exception do Failed := True; end;
+    Check(Failed,'Malformed SMS text boundary '+IntToStr(I));
+  end;
+end;
+
+procedure TestLinkedContact;
+var Refs: TSimPhonebookReferences; Files: TSimPhonebookFiles; Contact: TSimLinkedContact;
+  I: Integer; Failed: Boolean;
+begin
+  Refs := TSimCodec.DecodePhonebookReferences(HexToBytes('A809C0034F3A01C1024F17A904CA024F50AA04C2024F4A'));
+  SetLength(Files,4);
+  Files[0].FileId := $4F3A; SetLength(Files[0].Records,1);
+  Files[0].Records[0] := HexToBytes('414C494345FF04912143F5FFFFFFFFFFFFFFFF01');
+  Files[1].FileId := $4F17; SetLength(Files[1].Records,1); Files[1].Records[0] := HexToBytes('02');
+  Files[2].FileId := $4F50; SetLength(Files[2].Records,2); Files[2].Records[0] := HexToBytes('FFFFFFFF'); Files[2].Records[1] := HexToBytes('41420101');
+  Files[3].FileId := $4F4A; SetLength(Files[3].Records,1); Files[3].Records[0] := HexToBytes('020276F8FFFFFFFFFFFFFFFFFF');
+  Contact := TSimCodec.ResolvePhonebookContact(Refs,Files,$4F3A,1);
+  Check((Contact.Contact.Name = 'ALICE') and (Contact.Contact.Number = '+12345678'),'ADN extended number chain');
+  Check((Length(Contact.Fields) = 2) and (Contact.Fields[1].RecordNumber = 2) and BytesEqual(Contact.Fields[1].Raw,HexToBytes('41420101')),'IAP linked email raw footer preserved');
+  Check((Length(Contact.Extensions) = 1) and (Contact.Contact.Raw[19] = 1),'Original extension pointer preserved');
+  Contact.Fields[1].Raw[0] := 0; Check(Files[2].Records[1][0] = $41,'Resolved contact owns bytes');
+  for I := 0 to 6 do
+  begin
+    Files[1].Records[0][0] := 2; Files[3].Records[0][0] := 2; Files[3].Records[0][1] := 2; Files[3].Records[0][12] := $FF;
+    Files[2].Records[1][2] := 1; Files[2].Records[1][3] := 1;
+    case I of
+      0: Files[1].Records[0][0] := 0;
+      1: Files[1].Records[0][0] := 3;
+      2: begin Files[1].Records[0][0] := 2; Files[3].Records[0][12] := 1; end;
+      3: begin Files[3].Records[0][12] := $FF; Files[3].Records[0][1] := 11; end;
+      4: begin Files[3].Records[0][1] := 2; Files[3].Records[0][0] := 1; end;
+      5: Files[2].Records[1][3] := 2;
+      6: Files[2].Records[1][2] := 2;
+    end;
+    Failed := False; try Contact := TSimCodec.ResolvePhonebookContact(Refs,Files,$4F3A,1); except on E: Exception do Failed := True; end;
+    Check(Failed,'Invalid linked contact / cyclic EXT');
+  end;
+end;
+
+procedure TestLinkedRead(const Failure: Integer; const CleanupFailure: Boolean);
+var S: TScript; T: ICardTransport; Reader: TSimCardReaderWriter; Contact: TSimLinkedContact;
+  Failed: Boolean;
+  procedure FileSelect(const Fid,Metadata: string);
+  begin
+    S.Add('00A4040407A000000087100200',UiccAdf+'9000');
+    S.Add('00A40004025F3A00','62088202782183025F3A9000');
+    S.Add('00A4000402'+Fid+'00',Metadata+'9000');
+  end;
+begin
+  S := TScript.Create; T := S; Reader := TSimCardReaderWriter.Create(nil);
+  try
+    Reader.Profile := scpUiccUsim; Reader.ApplicationAid := HexToBytes('A0000000871002'); Reader.Transport := T;
+    FileSelect('4F30','620F8205422100170183024F3080020017');
+    S.Add('00B2010417','A809C0034F3A01C1024F17A904CA024F50AA04C2024F4A9000');
+    FileSelect('4F3A','620F8205422100140183024F3A80020014');
+    S.Add('00B2010414','414C494345FF04912143F5FFFFFFFFFFFFFFFF019000');
+    FileSelect('4F17','620F8205422100010183024F1780020001');
+    S.Add('00B2010401','029000');
+    FileSelect('4F50','620F8205422100040283024F5080020008');
+    S.Add('00B2010404','FFFFFFFF9000'); S.Add('00B2020404','414201019000');
+    FileSelect('4F4A','620F82054221000D0183024F4A8002000D');
+    S.Add('00B201040D','020276F8FFFFFFFFFFFFFFFFFF9000');
+    S.FailAt := Failure; S.EndFails := CleanupFailure; Failed := False;
+    try Contact := Reader.ReadLinkedUsimContact(1,$4F3A,1); except on E: Exception do Failed := True; end;
+    Check(Failed = ((Failure >= 0) or CleanupFailure),'Linked read failure result');
+    Check((S.Begins = 1) and (S.Ends = 1) and not S.Active and (S.Writes = 0) and (S.PinAttempts = 0),'One owned read-only linked transaction');
+    if Failure < 0 then Check(S.Position = Length(S.Steps),'Complete literal linked EF transcript');
+    if not Failed then Check((Contact.Contact.Number = '+12345678') and (Contact.Fields[1].RecordNumber = 2),'Live extended number and IAP field');
+  finally Reader.Free; T := nil; end;
+end;
+
 var I: Integer;
 begin
   try
-    TestPbr; TestCodecs; TestIdentityReads; TestProtectedReadAndDirectory; TestGeometryAndStatusFailures;
+    TestLinkedRead(-1,False); TestLinkedRead(-1,True); for I := 0 to 20 do TestLinkedRead(I,True);
+    TestSmsText; TestLinkedContact; TestPbr; TestCodecs; TestIdentityReads; TestProtectedReadAndDirectory; TestGeometryAndStatusFailures;
     TestWholeFile(-1,False); TestWholeFile(-1,True);
     for I := 0 to 7 do TestWholeFile(I,True);
     TestPin(False,'63C3',1,True); TestPin(False,'63C1',2,False);

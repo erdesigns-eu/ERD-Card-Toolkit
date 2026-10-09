@@ -161,6 +161,14 @@ type
     /// <param name="APin">Optional supplied ASCII PIN.</param>
     /// <returns>Owned contacts with physical record numbers and unresolved extension references.</returns>
     function ReadPhonebook(const AFile: TSimFileAddress; const APin: TBytes = nil): TSimPhonebookEntries;
+    /// <summary>Reads one explicit PBR/ADN contact and referenced EFs under a single exclusive USIM transaction.</summary>
+    /// <param name="APbrRecord">One-based record in USIM DF.PHONEBOOK EF.PBR.</param>
+    /// <param name="AAdnFileId">Explicit actual ADN file identifier reported by PBR.</param>
+    /// <param name="ARecord">One-based ADN record.</param>
+    /// <param name="APin">Optional supplied ASCII PIN; at most one authentication step.</param>
+    /// <returns>Owned contact, IAP-linked raw fields and validated extended number; no linked writes.</returns>
+    function ReadLinkedUsimContact(const APbrRecord: Integer; const AAdnFileId: Word;
+      const ARecord: Integer; const APin: TBytes = nil): TSimLinkedContact;
     /// <summary>Encodes and verifies one standalone ADN contact without dropping linked CCP/EXT data.</summary>
     /// <param name="AFile">Explicit actual contact EF path.</param>
     /// <param name="ARecord">One-based absolute record.</param>
@@ -585,6 +593,36 @@ var Records: TSimRecords; I: Integer;
 begin
   Records := ReadRecords(AFile,APin); Result := nil; SetLength(Result,Length(Records));
   for I := 0 to High(Records) do begin Result[I] := TSimCodec.DecodeAdn(Records[I]); Result[I].RecordNumber := I+1; end;
+end;
+function TSimCardReaderWriter.ReadLinkedUsimContact(const APbrRecord: Integer;
+  const AAdnFileId: Word; const ARecord: Integer; const APin: TBytes): TSimLinkedContact;
+var Address: TSimFileAddress; Pin: TBytes; Info: TSimFileInfo; Refs: TSimPhonebookReferences;
+  Files: TSimPhonebookFiles; Good,Found: Boolean; I,J,K,N: Integer;
+begin
+  RequireIdle;
+  if (FProfile <> scpUiccUsim) or (APbrRecord < 1) or (APbrRecord > 255) or
+    (ARecord < 1) or (ARecord > 255) or (AAdnFileId = 0) or (AAdnFileId = $3F00) or (AAdnFileId = $FFFF) then Fail('explicit USIM contact selection');
+  Address := OwnAddress(TSimCodec.FileAddress(sfrUsimApplication,[$5F3A,$4F30]),APin);
+  Pin := CopyBytes(APin); Files := nil;
+  try BeginOperation; Good := False;
+    try
+      Info := InitializeFile(Address,Pin); ValidateRecord(Info,APbrRecord,False);
+      Refs := TSimCodec.DecodePhonebookReferences(ReadRecordSelected(APbrRecord,Info.RecordBytes)); Found := False;
+      for I := 0 to High(Refs) do if (Refs[I].RoleTag = $C0) and (Refs[I].FileId = AAdnFileId) then Found := True;
+      if not Found then Fail('ADN FID not reported by selected PBR');
+      for I := 0 to High(Refs) do
+      begin
+        Found := False; for J := 0 to High(Files) do if Files[J].FileId = Refs[I].FileId then Found := True;
+        if Found then Continue;
+        N := Length(Files); if N >= 32 then Fail('phonebook file budget'); SetLength(Files,N+1); Files[N].FileId := Refs[I].FileId;
+        Info := SelectPath(TSimCodec.FileAddress(sfrUsimApplication,[$5F3A,Refs[I].FileId])); ValidateRecord(Info,1,False);
+        if Info.Structure <> sfsLinearFixed then Fail('phonebook file must be linear fixed');
+        SetLength(Files[N].Records,Info.RecordCount);
+        for K := 1 to Info.RecordCount do Files[N].Records[K-1] := ReadRecordSelected(K,Info.RecordBytes);
+      end;
+      Result := TSimCodec.ResolvePhonebookContact(Refs,Files,AAdnFileId,ARecord); Good := True;
+    finally FinishOperation(Good); end;
+  finally TCardCrypto.Clear(Pin); end;
 end;
 procedure TSimCardReaderWriter.WritePhonebookContact(const AFile: TSimFileAddress;
   const ARecord: Integer; const AExpectedBefore: TBytes; const AName, ANumber: UnicodeString; const APin: TBytes);

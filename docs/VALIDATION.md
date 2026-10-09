@@ -1,12 +1,12 @@
 # Library validation record
 
 The complete protocol/component/example suite was rebuilt and rerun in Linux on
-2026-10-08 after adding ordinary/counter memory, SLE4404, USB-HID RFID input and TWN4 memory,
+2026-10-09 after adding ordinary/counter memory, SLE4404, USB-HID RFID input and TWN4 memory,
 ten separate VCL family projects and SIM/USIM, the memory/RFID pages and standalone design bundle, starting from the
-maintainer's latest IDE changes (`951ea62`). The full run passed **2,153,192 assertions
+maintainer's latest IDE changes (`951ea62`). The full run passed **2,154,137 assertions
 across 38 program runs**: 1,789,463 existing protocol assertions, 65,619 RFID
 input/profile, 60,114 SLE4404, 34,280 counter/profile, 2,955 ordinary-memory,
-85 demo-worker and 1,596 family-executor, 127,696 TWN4 and 21 registration assertions and 71,363 SIM/USIM assertions. All 34 Python regression tests,
+85 demo-worker and 1,602 family-executor, 127,696 TWN4 and 21 registration assertions and 72,302 SIM/USIM assertions. All 34 Python regression tests,
 21 Pascal readers on 147 sources and distribution checks for twenty-five projects passed.
 
 The maintainer confirmed warning-free compilation and installation of the prior
@@ -34,7 +34,7 @@ Help Insight and physical memory-card compatibility remain unverified.
 | ICAO MRZ and DG1/DG2 data codecs | 297 assertions passed: published MRZ examples, synthetic FAC/CBEFF records and malformed inputs |
 | EMV data codecs, application reader and diagnostics | 1605 assertions in nine groups passed, including exact PSE/PPSE/GPO/AFL/GET DATA/log transcripts and resource limits |
 | TWN4 PRS/CDC memory | 127696 assertions passed: literal ASCII/CRC/tag/Classic/Type 2 chains, all byte-I/O failure boundaries and block/page read-back bits, stale/changed IDs/content, both key types, no-ops, pre/post-dispatch deadlines/reversal, ownership and cleanup; native TWN4 hardware not tested |
-| SIM / USIM | 71363 assertions: independent identity/alpha/ADN/SMS/service/PBR vectors, literal classic/UICC APDU chains, PIN budgets and proof, continuation/length bounds, caller ownership, full-file/record writes, every I/O failure and read-back bit, no replay and cleanup uncertainty |
+| SIM / USIM | 72302 assertions: independent identity/alpha/ADN/SMS/service/PBR vectors, literal classic/UICC APDU chains, PIN budgets and proof, continuation/length bounds, caller ownership, full-file/record writes, every I/O failure and read-back bit, no replay and cleanup uncertainty |
 | RFID input/report profiles | 65619 assertions passed: exhaustive two-byte decimal conversion plus independent wide/overflow vectors, literal boot/report-ID/ASCII fields, framing/deadlines/discard recovery, held keys/errors, event ownership and reentrancy; no physical USB opening |
 | SLE4404 | 60114 assertions passed: literal code/program/scratchpad/application erase transcripts, budgets/success proof, all I/O boundaries and read-back bits, chunking, stale state, owned caller buffers and release uncertainty; no physical card |
 | Contact memory profiles | 2955 assertions in nine groups passed: nineteen geometries, literal ACR38/ACR39/SLE/PIN/protection/page/bank transcripts, wrong/blocked retry counters, every write/PIN-chain I/O failure, every acknowledgement status/read-back data bit, no-op/locked ranges, release evidence, credential copies and acquisition recovery; no physical chip access |
@@ -53,13 +53,13 @@ Help Insight and physical memory-card compatibility remain unverified.
 | Native Windows CNG branches | 51 assertions passed: native argument/length/IV handling, every encrypt/decrypt call failure, handle cleanup and system RNG failure without fallback |
 | Console examples | All nineteen built; hardware-free help/inspection checks passed, including TWN4 offline framing/help and SLE4404 help/window and invalid-before-hardware checks, memory-model geometry and DESFire key/access administration offline help/plan, ICAO help/CardAccess inspection, DESFire management offline help/plan and invalid arguments, APDU/NDEF/Type 4/Type 5/DESFire valid/invalid cases, ATR known/unknown/bad-TCK and EMV known/private tags, magstripe parity and MSR206 frame/status cases |
 | Demo worker and offline operations | 85 assertions passed: nested credential deep copies/wiping, copied argument arrays, real worker/caller separation, request ownership, single delivery, join, nil executor, sanitized errors, verified-write evidence, offline operations and hardware preflight, suspended destruction, duplicate start and completed restart |
-| Family demo executors | 1596 assertions passed: offline APDU command/response, ATR, TLV, EMV metadata, NDEF and RFID conversion/report profiles; all valid device-action preflights; invalid choices, PIN lengths, expected ranges, acknowledgement and credentials in public fields refused before hardware; literal memory/counter/SLE4404 and TWN4 command chains; no replay; uncertain writes and completed proof across transaction/connection/CDC cleanup failures |
+| Family demo executors | 1602 assertions passed: offline APDU command/response, ATR, TLV, EMV metadata, NDEF and RFID conversion/report profiles; all valid device-action preflights; invalid choices, PIN lengths, expected ranges, acknowledgement and credentials in public fields refused before hardware; literal memory/counter/SLE4404 and TWN4 command chains; no replay; uncertain writes and completed proof across transaction/connection/CDC cleanup failures |
 | Palette registration / RTL streaming | 20 assertions passed: actual Register routine captures nineteen classes; inactive construction and FPC component stream round-trip for each; DesignIntf capture is not an IDE/ABI test |
 | Distribution / VCL source readers | Twenty-five MSBuild projects (all four Debug/Release × Win32/Win64 property combinations), two groups and three DFM forms passed: references, package ownership/order, explicit IDE package identity, native Base/configuration/platform activation, GenDll/GenPackage, named DCP dependencies, native integer-overflow/debug settings, BOM/CRLF/resources, runtime/design dependency separation, palette completeness, field/event bindings, form creation and Platform/Config output isolation; no Delphi/VCL execution |
 | FPC range/overflow/heap checks | Passed; no unfreed allocations in passing test programs |
 | Python checker regression tests | All 34 passed, including nineteen distribution-reader cases; coverage includes IDE package identity, native configuration inheritance, omitted empty IDE platform groups, owning-package dependencies, explicit standalone design copies without dependency-owned duplicates, group target order, named DCPs, resources, BOM/CRLF, compiler property types and bounded condition parsing |
 | Pascalcheck core profile | All 21 readers passed on 147 explicitly selected source files |
-| XML documentation | 1708 visible production API declarations and 235 VCL example declarations inspected; zero findings; exported test-vector declarations also pass the full profile |
+| XML documentation | 1743 visible production API declarations and 235 VCL example declarations inspected; zero findings; exported test-vector declarations also pass the full profile |
 | Reference integrity | All 26 retained files match the original Git bytes and manifest hashes |
 | Patch whitespace | `git diff --check` passed |
 
@@ -85,9 +85,9 @@ constructor, a platform-dependent unreachable branch in the test handle factory,
 and unused test-result variable notes. None has been suppressed. Production TWN4/RFID/SLE4404/PCSC
 and eID/EMV/contactless units compile without additional FPC warnings in the tested branches.
 
-The suite reported 2,153,192 passing assertions across 38 program runs, including
+The suite reported 2,154,137 passing assertions across 38 program runs, including
 65,619 RFID, 60,114 SLE4404, 34,280 counter/profile, 2,955 memory-card,
-85 demo-worker and 1,596 family-executor, 127,696 TWN4 and 21 registration assertions and 71,363 SIM/USIM assertions.
+85 demo-worker and 1,602 family-executor, 127,696 TWN4 and 21 registration assertions and 72,302 SIM/USIM assertions.
 The full 21-reader profile covers 147 Pascal sources, including the VCL units.
 Only the non-VCL workers/executors and inactive component registration/streaming
 were compiled/executed under FPC. The actual forms, MSBuild projects, package BPLs
@@ -397,7 +397,7 @@ card support are claimed by this demo batch.
 The full 38-program suite passed 2,153,042 assertions before the PBR extension.
 After that extension, the focused SIM suite passed 71,363 (18 additional PBR
 assertions); the final family-executor run passed 1,596 after the extra demos.
-The aggregate distinct final program results are 2,153,192. InspectSim was separately built and checked against
+That batch ended at 2,153,192 aggregate assertions. InspectSim was separately built and checked against
 literal ICCID/IMSI/alpha output and help; malformed input exits with failure.
 Source validation, distribution readers and XML documentation were rerun after
 these additions. Physical SIM/USIM and Delphi/Windows tests remain outstanding.
@@ -412,3 +412,22 @@ lifetime. Status-only block/page writes never set WriteVerified. NDEF operations
 route to the already tested components. The distribution readers passed 25
 projects and the 21-reader source profile passed 147 sources. Native VCL remains
 unexecuted here. This follow-up changes demos, not the underlying card protocols.
+
+## Linked USIM contacts and SMS text (2026-10-09)
+
+The full 38-program run passed 2,154,129 assertions. Final focused reruns add
+two ADN backlink checks and six demo-route checks: SIM 72,302 and family 1,602,
+for 2,154,137 distinct final assertions. Both focused programs report zero leaks.
+The full run also passed all 34 Python regressions, distribution readers and
+21 source checkers; the latter were rerun after the final tests. XML readers
+inspect 1,743 production and 235 VCL declarations with zero findings.
+
+Independent literals cover received GSM text, outgoing UCS-2, UDH-fill alignment,
+concatenation metadata and binary application ports. SMS malformed direction,
+bounds, timestamp/DCS and payload lengths are refused. Linked-contact tests
+cover a complete PBR/ADN/IAP/EMAIL/EXT read under one transaction and every one
+of its 21 I/O failure positions with secondary cleanup errors. Original contact,
+linked field and extension bytes remain owned; loops, out-of-range pointers and
+wrong ADN backlinks are refused. No linked writes, SMS sending or hardware
+validation is claimed. InspectSim's literal --sms-text output was separately
+checked; its check is now in the automated runner.
