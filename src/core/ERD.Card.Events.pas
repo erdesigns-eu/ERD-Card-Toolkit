@@ -42,10 +42,11 @@ type
 {$ELSE}
  TQueueLock=TCriticalSection;
 {$ENDIF}
+ TCardQueuedEvents = array of ICardQueuedEvent;
  TEventQueue=class(TInterfacedObject,ICardEventQueue)
  private
   FLock:TQueueLock;
-  FEvents:array of ICardQueuedEvent;
+  FEvents:TCardQueuedEvents;
   FEnabled,FScheduled:Boolean; FMax:Integer; FThread:NativeUInt;
   procedure Enter;
   procedure Leave;
@@ -96,7 +97,7 @@ end;
 procedure TEventQueue.Disable;
 begin Enter;try FEnabled:=False;FEvents:=nil;finally Leave;end;end;
 procedure TEventQueue.Dispatch;
-var Batch:array of ICardQueuedEvent;I:Integer;Enabled:Boolean;
+var Batch:TCardQueuedEvents;I:Integer;Enabled:Boolean;
 begin
  if NativeUInt(TThread.CurrentThread.ThreadID)<>FThread then raise ECardEventError.Create('Dispatch belongs to the queue creator thread.');
  Enter;try Batch:=FEvents;FEvents:=nil;FScheduled:=False;finally Leave;end;
