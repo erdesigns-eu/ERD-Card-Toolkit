@@ -473,13 +473,16 @@ begin
    R:=Request(F,A[I].Id);Put(R,F,'data','01020304');Put(R,F,'block','2');Put(R,F,'count','1');
    Put(R,F,'readpassword','11223344');Put(R,F,'writepassword','55467788');
    Put(R,F,'password','1122334455667788');Put(R,F,'identifier','1');
+   if F=dfSlix2 then begin Put(R,F,'oldpassword','11223344');Put(R,F,'newpassword','55667788');Put(R,F,'expected','0533007F070000');end
+   else begin Put(R,F,'oldpassword','1122334455667788');Put(R,F,'newpassword','8877665544332211');Put(R,F,'expected','0003000400050000');end;
    Put(R,F,'ndef','D101045402656E41');Reached:=False;
    try CreateCardFamilyOperations(F,Hardware).Run(R,D);except on E:EReachedHardware do Reached:=True;end;
    Check(Reached,'ISO password family action reaches hardware '+A[I].Id);
+   if not A[I].Mutation then Continue;
    R.MutationAcknowledged:=False;N:=H.Acquires;Failed:=False;
    try CreateCardFamilyOperations(F,Hardware).Run(R,D);except on E:EArgumentException do Failed:=True;end;
    Check(Failed and (H.Acquires=N),'Explicit credential attempt acknowledgement');
-   R.MutationAcknowledged:=True;Put(R,F,'readpassword','01');Put(R,F,'password','01');Failed:=False;
+   R.MutationAcknowledged:=True;Put(R,F,'readpassword','01');Put(R,F,'password','01');Put(R,F,'oldpassword','01');Failed:=False;
    try CreateCardFamilyOperations(F,Hardware).Run(R,D);except on E:EContactlessError do Failed:=True;end;
    Check(Failed and (H.Acquires=N),'Invalid password size before hardware');
   end;

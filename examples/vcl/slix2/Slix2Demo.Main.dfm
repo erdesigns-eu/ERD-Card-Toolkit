@@ -731,6 +731,321 @@ object Slix2DemoForm: TSlix2DemoForm
         end
       end
     end
+    object ActProtectionTab: TTabSheet
+      Left = 4
+      Top = 44
+      Width = 1072
+      Height = 438
+      Caption = 'Read decoded page protection / lock / feature information'
+      Tag = 5
+      object ActProtectionInputs: TScrollBox
+        Left = 0
+        Top = 0
+        Width = 1072
+        Height = 438
+        Align = alClient
+        BorderStyle = bsNone
+        TabOrder = 0
+        object ActProtectionModeLabel: TLabel
+          Left = 16
+          Top = 8
+          Width = 940
+          Height = 18
+          Caption = 'SLIX2 ordinary block addressing'
+        end
+        object ActProtectionModeBox: TComboBox
+          Left = 16
+          Top = 30
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 0
+          Style = csDropDownList
+          ItemIndex = 0
+          Items.Strings = (
+            'Ordinary 8-bit'
+          )
+          Text = 'Ordinary 8-bit'
+        end
+        object ActProtectionFormatLabel: TLabel
+          Left = 16
+          Top = 70
+          Width = 940
+          Height = 18
+          Caption = 'Actual firmware response format'
+        end
+        object ActProtectionFormatBox: TComboBox
+          Left = 16
+          Top = 92
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 1
+          Style = csDropDownList
+          ItemIndex = 0
+          Items.Strings = (
+            'Native flags'
+            'Payload only'
+          )
+          Text = 'Native flags'
+        end
+      end
+    end
+    object ActChangepasswordTab: TTabSheet
+      Left = 4
+      Top = 44
+      Width = 1072
+      Height = 438
+      Caption = 'Change password + proof after RF reset'
+      Tag = 6
+      object ActChangepasswordInputs: TScrollBox
+        Left = 0
+        Top = 0
+        Width = 1072
+        Height = 438
+        Align = alClient
+        BorderStyle = bsNone
+        TabOrder = 0
+        object ActChangepasswordModeLabel: TLabel
+          Left = 16
+          Top = 8
+          Width = 940
+          Height = 18
+          Caption = 'SLIX2 ordinary block addressing'
+        end
+        object ActChangepasswordModeBox: TComboBox
+          Left = 16
+          Top = 30
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 0
+          Style = csDropDownList
+          ItemIndex = 0
+          Items.Strings = (
+            'Ordinary 8-bit'
+          )
+          Text = 'Ordinary 8-bit'
+        end
+        object ActChangepasswordFormatLabel: TLabel
+          Left = 16
+          Top = 70
+          Width = 940
+          Height = 18
+          Caption = 'Actual firmware response format'
+        end
+        object ActChangepasswordFormatBox: TComboBox
+          Left = 16
+          Top = 92
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 1
+          Style = csDropDownList
+          ItemIndex = 0
+          Items.Strings = (
+            'Native flags'
+            'Payload only'
+          )
+          Text = 'Native flags'
+        end
+        object ActChangepasswordIdentifierLabel: TLabel
+          Left = 16
+          Top = 132
+          Width = 940
+          Height = 18
+          Caption = 'Password identifier: 1 read, 2 write'
+        end
+        object ActChangepasswordIdentifierEdit: TEdit
+          Left = 16
+          Top = 154
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 2
+          MaxLength = 262144
+          Text = '1'
+        end
+        object ActChangepasswordOldpasswordLabel: TLabel
+          Left = 16
+          Top = 194
+          Width = 940
+          Height = 18
+          Caption = 'Current password in RF wire order (hex)'
+        end
+        object ActChangepasswordOldpasswordEdit: TEdit
+          Left = 16
+          Top = 216
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 3
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+        object ActChangepasswordNewpasswordLabel: TLabel
+          Left = 16
+          Top = 256
+          Width = 940
+          Height = 18
+          Caption = 'New password in RF wire order (hex)'
+        end
+        object ActChangepasswordNewpasswordEdit: TEdit
+          Left = 16
+          Top = 278
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 4
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+      end
+    end
+    object ActConfigureTab: TTabSheet
+      Left = 4
+      Top = 44
+      Width = 1072
+      Height = 438
+      Caption = 'Configure page protection + post-reset verification'
+      Tag = 7
+      object ActConfigureInputs: TScrollBox
+        Left = 0
+        Top = 0
+        Width = 1072
+        Height = 438
+        Align = alClient
+        BorderStyle = bsNone
+        TabOrder = 0
+        object ActConfigureModeLabel: TLabel
+          Left = 16
+          Top = 8
+          Width = 940
+          Height = 18
+          Caption = 'SLIX2 ordinary block addressing'
+        end
+        object ActConfigureModeBox: TComboBox
+          Left = 16
+          Top = 30
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 0
+          Style = csDropDownList
+          ItemIndex = 0
+          Items.Strings = (
+            'Ordinary 8-bit'
+          )
+          Text = 'Ordinary 8-bit'
+        end
+        object ActConfigureFormatLabel: TLabel
+          Left = 16
+          Top = 70
+          Width = 940
+          Height = 18
+          Caption = 'Actual firmware response format'
+        end
+        object ActConfigureFormatBox: TComboBox
+          Left = 16
+          Top = 92
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 1
+          Style = csDropDownList
+          ItemIndex = 0
+          Items.Strings = (
+            'Native flags'
+            'Payload only'
+          )
+          Text = 'Native flags'
+        end
+        object ActConfigureReadpasswordLabel: TLabel
+          Left = 16
+          Top = 132
+          Width = 940
+          Height = 18
+          Caption = 'Supplied read password, four wire-order bytes'
+        end
+        object ActConfigureReadpasswordEdit: TEdit
+          Left = 16
+          Top = 154
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 2
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+        object ActConfigureWritepasswordLabel: TLabel
+          Left = 16
+          Top = 194
+          Width = 940
+          Height = 18
+          Caption = 'Supplied write password, four wire-order bytes'
+        end
+        object ActConfigureWritepasswordEdit: TEdit
+          Left = 16
+          Top = 216
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 3
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+        object ActConfigureExpectedLabel: TLabel
+          Left = 16
+          Top = 256
+          Width = 940
+          Height = 18
+          Caption = 'Exact complete AB protection preimage (hex)'
+        end
+        object ActConfigureExpectedEdit: TEdit
+          Left = 16
+          Top = 278
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 4
+          MaxLength = 262144
+        end
+        object ActConfigurePointerLabel: TLabel
+          Left = 16
+          Top = 318
+          Width = 940
+          Height = 18
+          Caption = 'First Page H block (0..78)'
+        end
+        object ActConfigurePointerEdit: TEdit
+          Left = 16
+          Top = 340
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 5
+          MaxLength = 262144
+          Text = '0'
+        end
+        object ActConfigureConditionsLabel: TLabel
+          Left = 16
+          Top = 380
+          Width = 940
+          Height = 18
+          Caption = 'RL/WL/RH/WH bit mask (hex byte; bits 0/1/4/5)'
+        end
+        object ActConfigureConditionsEdit: TEdit
+          Left = 16
+          Top = 402
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 6
+          MaxLength = 262144
+          Text = '00'
+        end
+      end
+    end
   end
   object ExportDialog: TSaveDialog
     Options = [ofOverwritePrompt, ofPathMustExist]

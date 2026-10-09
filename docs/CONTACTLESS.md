@@ -276,5 +276,6 @@ FeliCa unencrypted-service access and NFC Forum Type 3 version 1.0 NDEF are now 
 
 Supplied-password NFC-V access for ICODE SLIX2 and original ST25DV04K/16K/64K
 is available through `TIso15693PasswordSession`, including the existing strict
-Type 5 reader/writer. It does not cover ST25TV/KC or password/protection
-provisioning. See [the profile and RF-session contract](ISO15693_TYPE5.md).
+Type 5 reader/writer. Verified password/protection management is provided by
+`TIso15693SecurityManager`; ST25TV/KC and irreversible lock/provisioning dialects
+remain outside the implementation. See [the profile and RF-session contract](ISO15693_TYPE5.md).

@@ -11,6 +11,82 @@ type
   /// <summary>Independent St25DvDemo form; all visual controls belong to its own editable DFM.</summary>
   TSt25DvDemoForm = class(TForm)
   published
+    /// <summary>Read decoded RF area geometry / access / lock information.</summary>
+    ActConfigurationTab: TTabSheet;
+    /// <summary>Read decoded RF area geometry / access / lock information inputs.</summary>
+    ActConfigurationInputs: TScrollBox;
+    /// <summary>Explicit block address dialect label.</summary>
+    ActConfigurationModeLabel: TLabel;
+    /// <summary>Explicit block address dialect.</summary>
+    ActConfigurationModeBox: TComboBox;
+    /// <summary>Actual firmware response format label.</summary>
+    ActConfigurationFormatLabel: TLabel;
+    /// <summary>Actual firmware response format.</summary>
+    ActConfigurationFormatBox: TComboBox;
+    /// <summary>Change RF password + proof after RF reset.</summary>
+    ActChangepasswordTab: TTabSheet;
+    /// <summary>Change RF password + proof after RF reset inputs.</summary>
+    ActChangepasswordInputs: TScrollBox;
+    /// <summary>Explicit block address dialect label.</summary>
+    ActChangepasswordModeLabel: TLabel;
+    /// <summary>Explicit block address dialect.</summary>
+    ActChangepasswordModeBox: TComboBox;
+    /// <summary>Actual firmware response format label.</summary>
+    ActChangepasswordFormatLabel: TLabel;
+    /// <summary>Actual firmware response format.</summary>
+    ActChangepasswordFormatBox: TComboBox;
+    /// <summary>RF password number: 0 configuration, 1..3 user label.</summary>
+    ActChangepasswordIdentifierLabel: TLabel;
+    /// <summary>RF password number: 0 configuration, 1..3 user.</summary>
+    ActChangepasswordIdentifierEdit: TEdit;
+    /// <summary>Current password in RF wire order (hex) label.</summary>
+    ActChangepasswordOldpasswordLabel: TLabel;
+    /// <summary>Current password in RF wire order (hex).</summary>
+    ActChangepasswordOldpasswordEdit: TEdit;
+    /// <summary>New password in RF wire order (hex) label.</summary>
+    ActChangepasswordNewpasswordLabel: TLabel;
+    /// <summary>New password in RF wire order (hex).</summary>
+    ActChangepasswordNewpasswordEdit: TEdit;
+    /// <summary>External VCC guaranteed stable if VCC_ON is set label.</summary>
+    ActChangepasswordStablevccLabel: TLabel;
+    /// <summary>External VCC guaranteed stable if VCC_ON is set.</summary>
+    ActChangepasswordStablevccBox: TComboBox;
+    /// <summary>Configure one RF area + post-reset verification.</summary>
+    ActConfigureTab: TTabSheet;
+    /// <summary>Configure one RF area + post-reset verification inputs.</summary>
+    ActConfigureInputs: TScrollBox;
+    /// <summary>Explicit block address dialect label.</summary>
+    ActConfigureModeLabel: TLabel;
+    /// <summary>Explicit block address dialect.</summary>
+    ActConfigureModeBox: TComboBox;
+    /// <summary>Actual firmware response format label.</summary>
+    ActConfigureFormatLabel: TLabel;
+    /// <summary>Actual firmware response format.</summary>
+    ActConfigureFormatBox: TComboBox;
+    /// <summary>Active RF area number (1..4) label.</summary>
+    ActConfigureAreaLabel: TLabel;
+    /// <summary>Active RF area number (1..4).</summary>
+    ActConfigureAreaEdit: TEdit;
+    /// <summary>Supplied RF configuration password 0, eight wire-order bytes label.</summary>
+    ActConfigurePasswordLabel: TLabel;
+    /// <summary>Supplied RF configuration password 0, eight wire-order bytes.</summary>
+    ActConfigurePasswordEdit: TEdit;
+    /// <summary>Exact eight-register configuration preimage (hex) label.</summary>
+    ActConfigureExpectedLabel: TLabel;
+    /// <summary>Exact eight-register configuration preimage (hex).</summary>
+    ActConfigureExpectedEdit: TEdit;
+    /// <summary>Area user password number (0..3) label.</summary>
+    ActConfigureIdentifierLabel: TLabel;
+    /// <summary>Area user password number (0..3).</summary>
+    ActConfigureIdentifierEdit: TEdit;
+    /// <summary>Area protection code label.</summary>
+    ActConfigureProtectionLabel: TLabel;
+    /// <summary>Area protection code.</summary>
+    ActConfigureProtectionBox: TComboBox;
+    /// <summary>External VCC guaranteed stable if VCC_ON is set label.</summary>
+    ActConfigureStablevccLabel: TLabel;
+    /// <summary>External VCC guaranteed stable if VCC_ON is set.</summary>
+    ActConfigureStablevccBox: TComboBox;
     /// <summary>Reader discovery and transport guidance.</summary>
     HeaderPanel: TPanel;
     /// <summary>Native card offered/removed status, independent of operation output.</summary>
@@ -305,12 +381,43 @@ begin
       FInputs[3] := ActWritendefPasswordEdit;
       FInputs[4] := ActWritendefNdefEdit;
     end;
+    5:
+    begin
+      SetLength(FInputs,2);
+      FInputs[0] := ActConfigurationModeBox;
+      FInputs[1] := ActConfigurationFormatBox;
+    end;
+    6:
+    begin
+      SetLength(FInputs,6);
+      FInputs[0] := ActChangepasswordModeBox;
+      FInputs[1] := ActChangepasswordFormatBox;
+      FInputs[2] := ActChangepasswordIdentifierEdit;
+      FInputs[3] := ActChangepasswordOldpasswordEdit;
+      FInputs[4] := ActChangepasswordNewpasswordEdit;
+      FInputs[5] := ActChangepasswordStablevccBox;
+    end;
+    7:
+    begin
+      SetLength(FInputs,8);
+      FInputs[0] := ActConfigureModeBox;
+      FInputs[1] := ActConfigureFormatBox;
+      FInputs[2] := ActConfigureAreaEdit;
+      FInputs[3] := ActConfigurePasswordEdit;
+      FInputs[4] := ActConfigureExpectedEdit;
+      FInputs[5] := ActConfigureIdentifierEdit;
+      FInputs[6] := ActConfigureProtectionBox;
+      FInputs[7] := ActConfigureStablevccBox;
+    end;
   else Exit; end;
   AcknowledgeCheck.Enabled := FActions[ActionPages.ActivePageIndex].Mutation;
 end;
 
 procedure TSt25DvDemoForm.ClearCredentials;
 begin
+  ActChangepasswordOldpasswordEdit.Clear;
+  ActChangepasswordNewpasswordEdit.Clear;
+  ActConfigurePasswordEdit.Clear;
   ActInformationPasswordEdit.Clear;
   ActReadPasswordEdit.Clear;
   ActWritePasswordEdit.Clear;

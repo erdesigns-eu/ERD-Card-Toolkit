@@ -28,7 +28,7 @@ begin
     TICAODocumentReader, TSimCardReaderWriter, TEMVCardReader, TMagStripeReaderWriter, TMemoryCardReaderWriter, TSleCounterCardReaderWriter, TSle4404CardReaderWriter]);
   RegisterComponents('ERD Input', [THidDeviceMonitor, TUsbHidInputMonitor, TRfidKeyboardReader, TRfidHidReportReader, TUsbHidReaderWriter, TTwn4CardReaderWriter]);
   RegisterComponents('ERD Contactless', [TFelicaCardReader, TType3NdefCardReader, TUltralightCCardReaderWriter, TCalypsoCardReader, TContactlessCardReader,
-    TType2NdefCardReader, TType4NdefCardReader, TIso15693CardReader,
+    TType2NdefCardReader, TType4NdefCardReader, TIso15693CardReader, TIso15693SecurityManager,
     TType5NdefCardReader, TDesfireCardReader, TType2PasswordCardReader,
     TRawUidProgrammer]);
 end;

@@ -114,6 +114,14 @@ type
     /// <remarks>Raw custom writes require caller uncertainty handling. An I/O failure poisons the session.</remarks>
     function ExchangeCustom(const AManufacturer, ACommand: Byte; const AParameters: TBytes): TBytes;
   end;
+  /// <summary>Optional explicit RF power-on reset within an exclusive ISO 15693 transaction.</summary>
+  IIso15693FieldReset = interface
+    ['{4811F489-966F-4A73-9F11-CC2D9E50FF2B}']
+    /// <summary>Cycles RF off/on, reacquires addressed information and rejects changed identity/geometry.</summary>
+    /// <returns>Independent information for the same UID and physical memory after reset.</returns>
+    /// <remarks>No automatic retry. All tag authentication is lost; call only at an explicit protocol boundary.</remarks>
+    function ResetField: TIso15693SystemInfo;
+  end;
   /// <summary>Explicit supported RF user-memory password dialect; no automatic chip guessing.</summary>
   TIso15693PasswordProfile = (
     /// <summary>NXP SL2S2602 ICODE SLIX2, four-byte read/write passwords and random-number XOR.</summary>
@@ -176,9 +184,126 @@ type
     /// <returns>Exact concatenated bytes.</returns>
     function ReadMultipleBlocks(const AFirstBlock, ACount: Integer): TBytes;
   end;
+  /// <summary>Decoded NXP AB system information for SLIX2 paged password protection.</summary>
+  TSlix2Protection = record
+    /// <summary>First Page H block, 0..78; block 79 is outside this protection scheme.</summary>
+    PointerBlock: Byte;
+    /// <summary>RL/WL/RH/WH bits 0/1/4/5, describing both pages' password requirements.</summary>
+    Conditions: Byte;
+    /// <summary>AFI/EAS/DSFID/PPL lock bits 0..3; bit 3 permanently locks page protection settings.</summary>
+    LockBits: Byte;
+    /// <summary>Little-endian first feature bitmap; bit 31 indicates a second bitmap.</summary>
+    Features: Cardinal;
+    /// <summary>Optional second feature bitmap, zero when not present.</summary>
+    ExtendedFeatures: Cardinal;
+    /// <summary>Independent seven- or eleven-byte response used as a complete expected preimage.</summary>
+    Raw: TBytes;
+  end;
+  /// <summary>One decoded original ST25DV RF area and access policy.</summary>
+  TSt25RfArea = record
+    /// <summary>First physical block; zero-length areas are inactive.</summary>
+    FirstBlock: Integer;
+    /// <summary>Physical area size in complete four-byte blocks, possibly zero.</summary>
+    BlockCount: Integer;
+    /// <summary>Raw RFAxSS byte; high reserved bits are retained.</summary>
+    RawAccess: Byte;
+    /// <summary>RF user password number 0..3; zero opens no user security session.</summary>
+    PasswordNumber: Byte;
+    /// <summary>Two-bit RW_PROTECTION code; area 1 is always readable.</summary>
+    ProtectionCode: Byte;
+    /// <summary>True for active areas 2..4 with protection code 2 or 3.</summary>
+    ReadRequiresPassword: Boolean;
+    /// <summary>True for protection codes 1 or 2 in an active area.</summary>
+    WriteRequiresPassword: Boolean;
+    /// <summary>True for protection code 3 in an active area; configuration may later change it.</summary>
+    WriteForbidden: Boolean;
+  end;
+  /// <summary>Four ordered RF area records, corresponding to RFA1SS..RFA4SS.</summary>
+  TSt25RfAreas = array[0..3] of TSt25RfArea;
+  /// <summary>Decoded original ST25DV RF area boundaries, access settings and configuration lock.</summary>
+  TSt25RfConfiguration = record
+    /// <summary>Independent area geometry and policy records.</summary>
+    Areas: TSt25RfAreas;
+    /// <summary>True when LOCK_CFG prevents RF static configuration updates.</summary>
+    ConfigurationLocked: Boolean;
+    /// <summary>Independent eight-byte preimage: RF registers 04..0A, then 0F.</summary>
+    Raw: TBytes;
+  end;
+  /// <summary>Verified SLIX2/original ST25DV password and RF protection management component.</summary>
+  /// <remarks>Inactive by construction; one caller thread. Mutations require explicit RF reset capability,
+  /// authenticate supplied credentials once, compare full configuration preimages and verify after RF reset.
+  /// Does not provision irreversible locks, resize areas, enable privacy or issue destroy commands.</remarks>
+  TIso15693SecurityManager = class(TComponent)
+  private
+    FSession: IIso15693Session;
+    FBusy: Boolean;
+    FAcquiredInfo: TIso15693SystemInfo;
+    procedure SetSession(const AValue: IIso15693Session);
+    function Run(const AProfile: TIso15693PasswordProfile; const AKind, AIdentifier: Integer;
+      const APassword, ANewPassword, AExpected, ASettings: TBytes; const AExternalPowerStable: Boolean): TBytes;
+  public
+    /// <summary>Reads and decodes SLIX2 AB protection information without attempting a password.</summary>
+    /// <returns>Independent complete protection/lock/feature snapshot.</returns>
+    function ReadSlix2Protection: TSlix2Protection;
+    /// <summary>Changes SLIX2 pointer/conditions and verifies unchanged locks/features after RF reset.</summary>
+    /// <param name="AReadPassword">Supplied four-byte read password in RF wire order.</param>
+    /// <param name="AWritePassword">Supplied four-byte write password in RF wire order.</param>
+    /// <param name="AExpected">Exact previously acquired seven/eleven-byte AB snapshot.</param>
+    /// <param name="APointerBlock">New first Page H block, 0..78.</param>
+    /// <param name="AConditions">Only RL/WL/RH/WH bits 0/1/4/5.</param>
+    /// <exception cref="EContactlessWriteUncertain">Dispatched change or subsequent verification/release fails.</exception>
+    procedure ConfigureSlix2Protection(const AReadPassword, AWritePassword, AExpected: TBytes;
+      const APointerBlock, AConditions: Byte);
+    /// <summary>Authenticates and replaces one SLIX2 password, then proves the new password after RF reset.</summary>
+    /// <param name="AIdentifier">One for read or two for write.</param>
+    /// <param name="AOldPassword">Supplied current four-byte wire-order credential.</param>
+    /// <param name="ANewPassword">Replacement four-byte wire-order credential.</param>
+    /// <exception cref="EContactlessWriteUncertain">Dispatched replacement or fresh proof/release fails.</exception>
+    procedure ChangeSlix2Password(const AIdentifier: Byte; const AOldPassword, ANewPassword: TBytes);
+    /// <summary>Reads static RF area registers and derives active geometry/access without password attempts.</summary>
+    /// <returns>Independent eight-register snapshot and four decoded areas.</returns>
+    function ReadSt25Configuration: TSt25RfConfiguration;
+    /// <summary>Updates only one RFAxSS policy, preserving boundaries, locks and unrelated bits.</summary>
+    /// <param name="AArea">Area number 1..4; must be active.</param>
+    /// <param name="AConfigurationPassword">Supplied eight-byte RF configuration password 0, wire order.</param>
+    /// <param name="AExpected">Exact eight-register preimage returned by ReadSt25Configuration.</param>
+    /// <param name="APasswordNumber">New user password number 0..3; protection must remain unlockable.</param>
+    /// <param name="AProtectionCode">RW_PROTECTION 0..3; area 1 always remains readable.</param>
+    /// <param name="AExternalPowerStable">Explicit external VCC stability guarantee if VCC_ON is set.</param>
+    /// <exception cref="EContactlessWriteUncertain">Dispatched policy update or post-reset verification/release fails.</exception>
+    procedure ConfigureSt25Area(const AArea: Byte; const AConfigurationPassword, AExpected: TBytes;
+      const APasswordNumber, AProtectionCode: Byte; const AExternalPowerStable: Boolean);
+    /// <summary>Replaces original ST25DV RF password 0..3 and proves the replacement after RF reset.</summary>
+    /// <param name="AIdentifier">RF password number; zero is configuration, 1..3 are user passwords.</param>
+    /// <param name="AOldPassword">Supplied current eight-byte RF wire-order password.</param>
+    /// <param name="ANewPassword">Replacement eight-byte RF wire-order password.</param>
+    /// <param name="AExternalPowerStable">Explicit external VCC stability guarantee if VCC_ON is set.</param>
+    /// <exception cref="EContactlessWriteUncertain">Dispatched replacement or fresh proof/release fails.</exception>
+    procedure ChangeSt25Password(const AIdentifier: Byte; const AOldPassword, ANewPassword: TBytes;
+      const AExternalPowerStable: Boolean);
+    /// <summary>Retained inactive exclusive backend; writes require optional custom-command and RF-reset interfaces.</summary>
+    property Session: IIso15693Session read FSession write SetSession;
+    /// <summary>True while acquiring, authenticating, modifying, verifying or releasing.</summary>
+    property Busy: Boolean read FBusy;
+  end;
   /// <summary>Pure ISO 15693 payload and ACR1552U FF-FB addressed command codecs.</summary>
   TIso15693Codec = class
   public
+    /// <summary>Checks an acquired card against the explicit original SLIX2/ST25DV password profile.</summary>
+    /// <param name="AInfo">Validated UID, geometry and optional IC reference.</param>
+    /// <param name="AProfile">Exact documented vendor dialect.</param>
+    class procedure ValidatePasswordProfile(const AInfo: TIso15693SystemInfo;
+      const AProfile: TIso15693PasswordProfile); static;
+    /// <summary>Decodes a complete NXP AB snapshot, including optional extended feature flags.</summary>
+    /// <param name="AData">Exactly seven bytes, or eleven when feature bit 31 is set.</param>
+    /// <returns>Independent validated pointer/conditions/locks/features.</returns>
+    class function DecodeSlix2Protection(const AData: TBytes): TSlix2Protection; static;
+    /// <summary>Decodes original ST25DV static area registers against acquired geometry.</summary>
+    /// <param name="AData">RF registers 04..0A followed by LOCK_CFG register 0F, exactly eight bytes.</param>
+    /// <param name="AInfo">Acquired original ST25DV identity/geometry.</param>
+    /// <returns>Independent decoded area configuration with active and inactive areas.</returns>
+    class function DecodeSt25Configuration(const AData: TBytes;
+      const AInfo: TIso15693SystemInfo): TSt25RfConfiguration; static;
     /// <summary>Builds addressed Read Multiple Blocks (23/33), option clear and no RF CRC.</summary>
     /// <param name="AUid">Canonical E0-prefixed UID.</param>
     /// <param name="AMode">One- or two-byte little-endian block/count fields.</param>
@@ -256,7 +381,7 @@ type
   /// firmware and an existing connected ICardTransaction transport. Constructor opens no hardware.
   /// FF-CA-80 obtains DSFID/UID in transmission order; addressed system information must agree.
   /// Response-header convention and address mode are explicit; optional-command failure is not retried.</remarks>
-  TAcr1552Iso15693Session = class(TInterfacedObject, IIso15693Session, IIso15693BlockReader, IIso15693CustomCommands)
+  TAcr1552Iso15693Session = class(TInterfacedObject, IIso15693Session, IIso15693BlockReader, IIso15693CustomCommands, IIso15693FieldReset)
   private
     FTransport: ICardTransport;
     FTransaction: ICardTransaction;
@@ -266,7 +391,12 @@ type
     FActive, FBusy, FPoisoned: Boolean;
     function Send(const ACommand: TBytes): TBytes;
     procedure CheckBlock(const ABlock: Integer);
+    procedure ManageRf(const AData: TBytes);
   public
+    /// <summary>Explicitly cycles RF off for 10 ms via FF C2 manage-session TLVs and confirms the same card.</summary>
+    /// <returns>Independent addressed system information after RF off/on and polling restoration.</returns>
+    /// <remarks>Failure poisons the session. Cleanup ends transparent mode; it cannot guarantee recovery after reader failure.</remarks>
+    function ResetField: TIso15693SystemInfo;
     /// <summary>Reads chunks of at most 240 data bytes with explicit 23/33 commands; no fallback.</summary>
     /// <param name="AFirstBlock">First acquired physical block.</param>
     /// <param name="ACount">Positive bounded contiguous count.</param>
@@ -671,18 +801,7 @@ begin
   try
     try
       Info:=FInner.BeginSession; Owns:=True; TIso15693Codec.ValidateInfo(Info);
-      if Info.BlockSize<>4 then InvalidIso15693;
-      if FProfile=ippSlix2 then begin
-        if (Info.Uid[1]<>$04) or (Info.Uid[2]<>$01) or ((Info.Uid[3] and $18)<>$08) or
-          (Info.BlockCount<>80) then InvalidIso15693;
-      end else begin
-        if (Info.Uid[1]<>$02) or not Info.HasIcReference then InvalidIso15693;
-        if Info.BlockCount=128 then begin
-          if (Info.IcReference<>$24) or (Info.Uid[2]<>$24) then InvalidIso15693;
-        end else if (Info.BlockCount=512) or (Info.BlockCount=2048) then begin
-          if (Info.IcReference<>$26) or (Info.Uid[2]<>$26) then InvalidIso15693;
-        end else InvalidIso15693;
-      end;
+      TIso15693Codec.ValidatePasswordProfile(Info,FProfile);
       for I:=0 to High(FPasswords) do begin
         SetLength(P,1+Length(FPasswords[I].Value)); P[0]:=FPasswords[I].Identifier;
         if FProfile=ippSlix2 then begin
@@ -765,6 +884,258 @@ begin if FBusy then InvalidIso15693; FUseMultipleBlockRead:=AValue; end;
 
 procedure Release(const Session: IIso15693Session; const Succeeded: Boolean);
 begin if Succeeded then Session.EndSession else try Session.EndSession; except end; end;
+
+class procedure TIso15693Codec.ValidatePasswordProfile(const AInfo: TIso15693SystemInfo;
+  const AProfile: TIso15693PasswordProfile);
+begin
+  ValidateInfo(AInfo);
+  if (Ord(AProfile)<0) or (Ord(AProfile)>Ord(High(TIso15693PasswordProfile))) or
+    (AInfo.BlockSize<>4) then InvalidIso15693;
+  if AProfile=ippSlix2 then begin
+    if (AInfo.Uid[1]<>$04) or (AInfo.Uid[2]<>$01) or ((AInfo.Uid[3] and $18)<>$08) or
+      (AInfo.BlockCount<>80) then InvalidIso15693;
+  end else begin
+    if (AInfo.Uid[1]<>$02) or not AInfo.HasIcReference then InvalidIso15693;
+    if AInfo.BlockCount=128 then begin
+      if (AInfo.IcReference<>$24) or (AInfo.Uid[2]<>$24) then InvalidIso15693;
+    end else if (AInfo.BlockCount=512) or (AInfo.BlockCount=2048) then begin
+      if (AInfo.IcReference<>$26) or (AInfo.Uid[2]<>$26) then InvalidIso15693;
+    end else InvalidIso15693;
+  end;
+end;
+
+function ReadLe32(const B:TBytes;const P:Integer):Cardinal;
+begin Result:=Cardinal(B[P]) or (Cardinal(B[P+1]) shl 8) or
+  (Cardinal(B[P+2]) shl 16) or (Cardinal(B[P+3]) shl 24);end;
+
+class function TIso15693Codec.DecodeSlix2Protection(const AData: TBytes): TSlix2Protection;
+begin
+  Result:=Default(TSlix2Protection);
+  if (Length(AData)<>7) and (Length(AData)<>11) then InvalidIso15693;
+  if (AData[0]>78) or ((AData[1] and $CC)<>0) or ((AData[2] and $F0)<>0) then InvalidIso15693;
+  Result.Features:=ReadLe32(AData,3);
+  if ((Result.Features and $80000000)<>0)<>(Length(AData)=11) then InvalidIso15693;
+  if Length(AData)=11 then Result.ExtendedFeatures:=ReadLe32(AData,7);
+  Result.PointerBlock:=AData[0];Result.Conditions:=AData[1];Result.LockBits:=AData[2];
+  Result.Raw:=CopyBytes(AData);
+end;
+
+class function TIso15693Codec.DecodeSt25Configuration(const AData: TBytes;
+  const AInfo: TIso15693SystemInfo): TSt25RfConfiguration;
+var I,First,Last,EndIndex:Integer;
+begin
+  Result:=Default(TSt25RfConfiguration);ValidatePasswordProfile(AInfo,ippSt25Dv);
+  if Length(AData)<>8 then InvalidIso15693;
+  if AData[7]>1 then InvalidIso15693;
+  First:=0;
+  for I:=0 to 3 do begin
+    EndIndex:=2*I+1;Last:=AInfo.BlockCount-1;
+    if I<3 then Last:=(Integer(AData[EndIndex])+1)*8-1;
+    if (Last<First-1) or (Last>=AInfo.BlockCount) then InvalidIso15693;
+    Result.Areas[I].FirstBlock:=First;Result.Areas[I].BlockCount:=Last-First+1;
+    Result.Areas[I].RawAccess:=AData[2*I];
+    Result.Areas[I].PasswordNumber:=AData[2*I] and 3;
+    Result.Areas[I].ProtectionCode:=(AData[2*I] shr 2) and 3;
+    Result.Areas[I].ReadRequiresPassword:=(I>0) and (Last>=First) and (Result.Areas[I].ProtectionCode>=2);
+    Result.Areas[I].WriteRequiresPassword:=(Last>=First) and (Result.Areas[I].ProtectionCode in [1,2]);
+    Result.Areas[I].WriteForbidden:=(Last>=First) and (Result.Areas[I].ProtectionCode=3);
+    First:=Last+1;
+  end;
+  Result.ConfigurationLocked:=AData[7]=1;Result.Raw:=CopyBytes(AData);
+end;
+
+procedure TAcr1552Iso15693Session.ManageRf(const AData:TBytes);
+var Wire,B:TBytes;
+begin
+  SetLength(Wire,5+Length(AData));Wire[0]:=$FF;Wire[1]:=$C2;Wire[2]:=0;Wire[3]:=0;
+  Wire[4]:=Length(AData);Move(AData[0],Wire[5],Length(AData));B:=Send(Wire);
+  if (Length(B)<>0) and not BytesEqual(B,HexToBytes('C003009000')) then InvalidIso15693;
+end;
+
+function TAcr1552Iso15693Session.ResetField:TIso15693SystemInfo;
+var Info:TIso15693SystemInfo;Succeeded:Boolean;
+begin
+  Result:=Default(TIso15693SystemInfo);CheckBlock(0);FBusy:=True;
+  try
+    try
+      Succeeded:=False;
+      try
+        ManageRf(HexToBytes('8100'));
+        ManageRf(HexToBytes('83005F4604102700008400'));Succeeded:=True;
+      finally
+        if Succeeded then ManageRf(HexToBytes('8200')) else try ManageRf(HexToBytes('8200'));except end;
+      end;
+      Info:=TIso15693Codec.DecodeSystemInfo(TIso15693Codec.DecodePayload(
+        Send(TIso15693Codec.SystemInfoCommand(FInfo.Uid,FMode)),FFormat),FMode);
+      if not BytesEqual(Info.Uid,FInfo.Uid) or (Info.BlockCount<>FInfo.BlockCount) or
+        (Info.BlockSize<>FInfo.BlockSize) or (Info.HasIcReference<>FInfo.HasIcReference) or
+        (Info.HasIcReference and (Info.IcReference<>FInfo.IcReference)) then InvalidIso15693;
+      FInfo:=Info;FInfo.Uid:=CopyBytes(Info.Uid);Result:=Info;Result.Uid:=CopyBytes(Info.Uid);
+    except FPoisoned:=True;raise;end;
+  finally FBusy:=False;end;
+end;
+
+procedure WipeIsoBytes(var B:TBytes);
+begin if Length(B)>0 then FillChar(B[0],Length(B),0);B:=nil;end;
+
+procedure AuthenticateIso(const C:IIso15693CustomCommands;const Profile:TIso15693PasswordProfile;
+  const Id:Byte;const Password:TBytes);
+var P,N,B:TBytes;I:Integer;Manufacturer:Byte;
+begin
+  P:=nil;N:=nil;B:=nil;
+  try
+    Manufacturer:=$02;SetLength(P,Length(Password)+1);P[0]:=Id;
+    if Profile=ippSlix2 then begin
+      Manufacturer:=$04;N:=C.ExchangeCustom($04,$B2,nil);if Length(N)<>2 then InvalidIso15693;
+      for I:=0 to 3 do P[I+1]:=Password[I] xor N[I mod 2];
+    end else Move(Password[0],P[1],8);
+    B:=C.ExchangeCustom(Manufacturer,$B3,P);if Length(B)<>0 then InvalidIso15693;
+  finally WipeIsoBytes(P);WipeIsoBytes(N);WipeIsoBytes(B);end;
+end;
+
+function St25Registers(const C:IIso15693CustomCommands):TBytes;
+var I:Integer;P,B:TBytes;
+begin
+  Result:=nil;SetLength(Result,8);SetLength(P,1);
+  for I:=0 to 7 do begin
+    P[0]:=I+4;if I=7 then P[0]:=$0F;
+    B:=C.ExchangeCustom($02,$A0,P);if Length(B)<>1 then InvalidIso15693;Result[I]:=B[0];
+  end;
+end;
+
+function ResetIsoForSameCard(const Rf:IIso15693FieldReset;const Before:TIso15693SystemInfo):TIso15693SystemInfo;
+begin
+  Result:=Rf.ResetField;
+  if not BytesEqual(Result.Uid,Before.Uid) or (Result.BlockSize<>Before.BlockSize) or
+    (Result.BlockCount<>Before.BlockCount) or (Result.HasIcReference<>Before.HasIcReference) or
+    (Result.HasIcReference and (Result.IcReference<>Before.IcReference)) then InvalidIso15693;
+end;
+
+procedure TIso15693SecurityManager.SetSession(const AValue:IIso15693Session);
+begin if FBusy then InvalidIso15693;FSession:=AValue;end;
+
+function TIso15693SecurityManager.Run(const AProfile:TIso15693PasswordProfile;
+  const AKind,AIdentifier:Integer;const APassword,ANewPassword,AExpected,ASettings:TBytes;
+  const AExternalPowerStable:Boolean):TBytes;
+var S:IIso15693Session;C:IIso15693CustomCommands;Rf:IIso15693FieldReset;
+ Info:TIso15693SystemInfo;Slix:TSlix2Protection;St:TSt25RfConfiguration;
+ Old,NewP,Expected,Settings,Before,After,Want,P,B,ReadPassword,WritePassword:TBytes;
+ Succeeded,Dispatched:Boolean;Size,Index:Integer;Manufacturer,Command:Byte;
+begin
+  Result:=nil;
+  if FBusy or (FSession=nil) or not Supports(FSession,IIso15693CustomCommands,C) then InvalidIso15693;
+  if (AKind<0) or (AKind>2) then InvalidIso15693;
+  if (AKind<>0) and not Supports(FSession,IIso15693FieldReset,Rf) then InvalidIso15693;
+  Size:=4;if AProfile=ippSt25Dv then Size:=8;
+  if AKind=1 then begin
+    if (Length(APassword)<>Size) or (Length(ANewPassword)<>Size) or
+      (AIdentifier<Ord(AProfile=ippSlix2)) or (AIdentifier>2+Ord(AProfile)) then InvalidIso15693;
+  end;
+  if AKind=2 then begin
+    if AProfile=ippSlix2 then begin
+      if (Length(APassword)<>8) or (Length(ASettings)<>2) then InvalidIso15693;
+      Slix:=TIso15693Codec.DecodeSlix2Protection(AExpected);
+      if (ASettings[0]>78) or ((ASettings[1] and $CC)<>0) then InvalidIso15693;
+    end else begin
+      if (Length(APassword)<>8) or (Length(AExpected)<>8) or (Length(ASettings)<>1) or
+        (AIdentifier<1) or (AIdentifier>4) or ((ASettings[0] and $F0)<>0) then InvalidIso15693;
+      if ((ASettings[0] and 3)=0) and ((ASettings[0] and $0C)<>0) and
+        not ((AIdentifier=1) and ((ASettings[0] and $0C)=$0C)) then InvalidIso15693;
+    end;
+  end;
+  Old:=CopyBytes(APassword);NewP:=CopyBytes(ANewPassword);Expected:=CopyBytes(AExpected);Settings:=CopyBytes(ASettings);
+  FAcquiredInfo:=Default(TIso15693SystemInfo);FBusy:=True;S:=FSession;Dispatched:=False;
+  try
+    try
+      Info:=S.BeginSession;Succeeded:=False;
+      try
+        TIso15693Codec.ValidatePasswordProfile(Info,AProfile);
+        if AKind<>0 then begin Info:=ResetIsoForSameCard(Rf,Info);TIso15693Codec.ValidatePasswordProfile(Info,AProfile);end;
+        if AKind=1 then AuthenticateIso(C,AProfile,AIdentifier,Old);
+        if AKind=2 then begin
+          if AProfile=ippSlix2 then begin
+            ReadPassword:=Copy(Old,0,4);WritePassword:=Copy(Old,4,4);
+            AuthenticateIso(C,ippSlix2,1,ReadPassword);AuthenticateIso(C,ippSlix2,2,WritePassword);
+          end else AuthenticateIso(C,ippSt25Dv,0,Old);
+        end;
+        Before:=nil;
+        if (AKind=0) or (AKind=2) then begin
+          if AProfile=ippSlix2 then begin
+            Before:=C.ExchangeCustom($04,$AB,nil);Slix:=TIso15693Codec.DecodeSlix2Protection(Before);
+          end else begin
+            Before:=St25Registers(C);St:=TIso15693Codec.DecodeSt25Configuration(Before,Info);
+          end;
+        end;
+        Want:=CopyBytes(Before);Manufacturer:=$04;Command:=$B4;P:=nil;
+        if AKind=1 then begin
+          SetLength(P,1+Size);P[0]:=AIdentifier;Move(NewP[0],P[1],Size);
+          if AProfile=ippSt25Dv then begin Manufacturer:=$02;Command:=$B1;end;
+        end else if AKind=2 then begin
+          if not BytesEqual(Before,Expected) then InvalidIso15693;
+          if AProfile=ippSlix2 then begin
+            if ((Slix.LockBits and 8)<>0) or ((Slix.Features and 1)=0) then InvalidIso15693;
+            Want[0]:=Settings[0];Want[1]:=Settings[1];P:=CopyBytes(Settings);Command:=$B6;
+          end else begin
+            Index:=(AIdentifier-1)*2;
+            if St.ConfigurationLocked or (St.Areas[AIdentifier-1].BlockCount=0) then InvalidIso15693;
+            Want[Index]:=(Before[Index] and $F0) or Settings[0];SetLength(P,2);
+            P[0]:=4+Index;P[1]:=Want[Index];Manufacturer:=$02;Command:=$A1;
+          end;
+        end;
+        if ((AKind=1) and not BytesEqual(Old,NewP)) or ((AKind=2) and not BytesEqual(Before,Want)) then begin
+          if AProfile=ippSt25Dv then begin
+            B:=C.ExchangeCustom($02,$AD,HexToBytes('02'));if Length(B)<>1 then InvalidIso15693;
+            if ((B[0] and 8)<>0) and not AExternalPowerStable then InvalidIso15693;
+          end;
+          Dispatched:=True;B:=C.ExchangeCustom(Manufacturer,Command,P);if Length(B)<>0 then InvalidIso15693;
+          Info:=ResetIsoForSameCard(Rf,Info);TIso15693Codec.ValidatePasswordProfile(Info,AProfile);
+          if AKind=1 then AuthenticateIso(C,AProfile,AIdentifier,NewP)
+          else if AProfile=ippSlix2 then begin
+            After:=C.ExchangeCustom($04,$AB,nil);Slix:=TIso15693Codec.DecodeSlix2Protection(After);
+            if not BytesEqual(After,Want) then InvalidIso15693;
+          end else begin
+            After:=St25Registers(C);St:=TIso15693Codec.DecodeSt25Configuration(After,Info);
+            if not BytesEqual(After,Want) then InvalidIso15693;
+          end;
+        end;
+        FAcquiredInfo:=Info;FAcquiredInfo.Uid:=CopyBytes(Info.Uid);Result:=Before;Succeeded:=True;
+      finally Release(S,Succeeded);end;
+    except on E:Exception do begin
+      Result:=nil;if Dispatched then raise EContactlessWriteUncertain.Create(E.ClassName);raise;
+    end;end;
+  finally
+    WipeIsoBytes(Old);WipeIsoBytes(NewP);WipeIsoBytes(P);
+    WipeIsoBytes(ReadPassword);WipeIsoBytes(WritePassword);FBusy:=False;
+  end;
+end;
+
+function TIso15693SecurityManager.ReadSlix2Protection:TSlix2Protection;
+begin Result:=TIso15693Codec.DecodeSlix2Protection(Run(ippSlix2,0,0,nil,nil,nil,nil,False));end;
+function TIso15693SecurityManager.ReadSt25Configuration:TSt25RfConfiguration;
+var B:TBytes;
+begin B:=Run(ippSt25Dv,0,0,nil,nil,nil,nil,False);Result:=TIso15693Codec.DecodeSt25Configuration(B,FAcquiredInfo);end;
+procedure TIso15693SecurityManager.ChangeSlix2Password(const AIdentifier:Byte;const AOldPassword,ANewPassword:TBytes);
+begin Run(ippSlix2,1,AIdentifier,AOldPassword,ANewPassword,nil,nil,False);end;
+procedure TIso15693SecurityManager.ChangeSt25Password(const AIdentifier:Byte;const AOldPassword,ANewPassword:TBytes;
+  const AExternalPowerStable:Boolean);
+begin Run(ippSt25Dv,1,AIdentifier,AOldPassword,ANewPassword,nil,nil,AExternalPowerStable);end;
+procedure TIso15693SecurityManager.ConfigureSlix2Protection(const AReadPassword,AWritePassword,AExpected:TBytes;
+  const APointerBlock,AConditions:Byte);
+var P,Settings:TBytes;
+begin
+  if (Length(AReadPassword)<>4) or (Length(AWritePassword)<>4) then InvalidIso15693;
+  P:=CopyBytes(AReadPassword);SetLength(P,8);Move(AWritePassword[0],P[4],4);
+  SetLength(Settings,2);Settings[0]:=APointerBlock;Settings[1]:=AConditions;
+  try Run(ippSlix2,2,0,P,nil,AExpected,Settings,False);finally WipeIsoBytes(P);end;
+end;
+procedure TIso15693SecurityManager.ConfigureSt25Area(const AArea:Byte;const AConfigurationPassword,AExpected:TBytes;
+  const APasswordNumber,AProtectionCode:Byte;const AExternalPowerStable:Boolean);
+var Settings:TBytes;
+begin
+  if (APasswordNumber>3) or (AProtectionCode>3) then InvalidIso15693;
+  SetLength(Settings,1);Settings[0]:=APasswordNumber or (AProtectionCode shl 2);
+  Run(ippSt25Dv,2,AArea,AConfigurationPassword,nil,AExpected,Settings,AExternalPowerStable);
+end;
 
 function TIso15693CardReader.ReadInformation: TIso15693SystemInfo;
 var S: IIso15693Session; Info: TIso15693SystemInfo; Succeeded: Boolean;

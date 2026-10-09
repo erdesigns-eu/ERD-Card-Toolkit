@@ -421,7 +421,29 @@ shows decoded record types, identifiers and Text/URI content, and the original
 message bytes remain available for export. `Iso15693Demo` separately adds a
 native-multiple-block tab without a password profile.
 
-These demos do not change password/protection configuration. SLIX2 counter block
+Memory/NDEF pages do not change password/protection configuration. The explicit
+management pages described below provide those changes. SLIX2 counter block
 79 is reserved. A PC/SC transaction release does not clear the tag's RF security
 state. A failed SLIX2 password requires a real RF power-on reset before another
 attempt. See [the exact profile contract](ISO15693_TYPE5.md).
+
+### NFC-V security management pages
+
+Both own DFM forms now add three pages: decoded public security information,
+password replacement and protection configuration. Password replacement requires
+old/new credentials in RF wire order. SLIX2 identifiers are 1 (read) and 2 (write);
+ST identifiers are 0 (RF configuration) and 1..3 (RF user). Successful output
+means the replacement was accepted after an explicit RF power-on reset.
+
+Read protection/configuration first and use its exact hex preimage on the update
+page. SLIX2 page protection requires both supplied read/write passwords, pointer
+0..78 and RL/WL/RH/WH mask bits 0/1/4/5. ST area policy requires the supplied
+configuration password 0 and an active area; area boundaries remain unchanged.
+The ST output decodes which areas require passwords and which forbid writing.
+If external VCC is on, the ST mutation page requires an explicit stable-power
+guarantee; the component does not control that external supply.
+
+RF resets run only for these explicit management actions. Neither ending a
+PC/SC transaction nor an ordinary password-session acquisition is advertised as
+RF reset. No permanent lock, privacy/destroy or automatic recovery page is added.
+See [the exact management contract](ISO15693_TYPE5.md#verified-password-and-protection-management).
