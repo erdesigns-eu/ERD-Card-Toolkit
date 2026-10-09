@@ -62,7 +62,7 @@ that byte-buffer wiping guarantee. Errors display their class, never backend tex
 | `icaodocument/IcaoDocumentDemo.dproj` | BAC/PACE with MRZ/CAN/curve/provider, document sections and face images, CardAccess/DG1/DG2/COM/SOD exports, JPEG preview and JPEG2000 export |
 | `iso15693/Iso15693Demo.dproj` | ACR1552 explicit address/response dialects, UID/geometry, block reads/verified writes and Type 5 NDEF read/write/clear |
 | `uid/UidProgrammingDemo.dproj` | PC/SC Gen2/FUID; ACR122 Gen1a/Gen1b/unsealed UFUID, DirectWrite, Gen3, six Gen4 layouts, USCUID/GDM and partial UFUID/ZUID/PFUID |
-| `desfire/DesfireDemo.dproj` | Public/EV1/EV2 AES, EV1 2K3DES/3K3DES and D40 DES/2K3DES, directories/data/values/records, standard writes, backup/value/record transactions with commit/abort, application/file/key/access management |
+| `desfire/DesfireDemo.dproj` | Public/EV1/EV2 AES, EV1 2K3DES/3K3DES and D40 DES/2K3DES, directories/data/values/records, standard writes, backup/value/record transactions with commit/abort, application/file create-delete across those profiles, explicit new application key type/count, AES key/access-policy mutations |
 | `magstripeprofiles/MagStripeProfilesDemo.dproj` | Track-bit/parity/LRC and financial decoders, MagTek keyboard/HID, MSR206/MSR605 reads and status-only all-track programming |
 | `usbhid/UsbHidDemo.dproj` | Reader hotplug and continuous input-report events, native HID collection metadata/VID/PID/usage/lengths, exact interface path, interrupt and feature reports read/send/export |
 | `mobib/MobibDemo.dproj` | Calypso legacy-94/revision-3-00, MOBIB file profile and explicit FID plan, holder/events and subscription decoding, two-reader SAM authentication, offline activation/validity/zone assessment, raw exports |

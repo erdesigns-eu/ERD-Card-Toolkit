@@ -226,6 +226,83 @@ begin
   end;
  end;
 end;
+procedure TestManagement;
+var Profile,Mode,Attempt,I,FirstWrite:Integer;R:TDesfireCardReader;T:TScript;Transport:ICardTransport;
+ S:IDesfireApplicationManagement;P:TLegacyWirePairs;D:TDesfireFileDefinition;Failed:Boolean;
+ procedure Workflow;
+ var K:Integer;
+ begin
+  if Mode=4 then
+  begin
+   Check(S.ReadFreeMemory=1000,'DES PICC free memory');Check(S.ReadKeyVersion(0)=5,'DES native key version');
+   for K:=0 to 2 do S.CreateApplicationWithKeyType($CDEF01+Cardinal(K)*$40,$0B,1,TDesfireApplicationKeyType(K));
+   for K:=2 downto 0 do S.DeleteApplication($CDEF01+Cardinal(K)*$40);
+  end else begin
+   for K:=0 to 4 do
+   begin
+    D:=Default(TDesfireFileDefinition);D.FileNumber:=K;D.FileType:=TDesfireFileType(K);D.Communication:=dfcPlain;
+    if Mode=1 then D.Communication:=dfcMac else if Mode=3 then D.Communication:=dfcFull;
+    case K of 0,1:D.FileBytes:=32;2:begin D.LowerLimit:=-100;D.UpperLimit:=100;D.InitialValue:=10;D.LimitedCreditEnabled:=True;end;
+     3,4:begin D.RecordBytes:=4;D.MaxRecords:=3;end;end;
+    S.CreateFile(D);
+   end;
+   for K:=4 downto 0 do S.DeleteFile(K);
+  end;
+ end;
+begin
+ for Profile:=0 to 3 do for Mode:=0 to 4 do if Mode<>2 then
+ begin
+  case Profile*10+Mode of
+   0:P:=F0M0;
+   1:P:=F0M1;
+   3:P:=F0M3;
+   4:P:=A0;
+   10:P:=F1M0;
+   11:P:=F1M1;
+   13:P:=F1M3;
+   14:P:=A1;
+   20:P:=F2M0;
+   21:P:=F2M1;
+   23:P:=F2M3;
+   24:P:=A2;
+   30:P:=F3M0;
+   31:P:=F3M1;
+   33:P:=F3M3;
+   34:P:=A3;
+  end;
+  FirstWrite:=0;
+  for I:=0 to High(P) do if (Pos('90CA',P[I].Command)=1) or (Pos('90CD',P[I].Command)=1) then begin FirstWrite:=I+1;Break;end;
+  Check(FirstWrite>0,'Management fixture mutation boundary');
+  for Attempt:=0 to Length(P) do
+  begin
+   R:=TDesfireCardReader.Create(nil);T:=TScript.Create;Transport:=T;T.Pairs:=P;T.FailCall:=Attempt;S:=nil;Failed:=False;
+   try
+    Configure(R,T,Profile,Mode);S:=nil;
+    try
+     if Mode=4 then S:=R.OpenApplicationManagementSession(0) else S:=R.OpenApplicationManagementSession($CDEF01);
+     if (Attempt=0) and (Mode=4) then begin
+      I:=T.Calls;Failed:=False;
+      try S.CreateApplicationWithKeyType($CDEF01,$0B,0,daktDesOrTwoKey3Des);except on E:EContactlessError do Failed:=True;end;
+      Check(Failed and (T.Calls=I) and (S.Outcome=dsoActive),'Typed zero key count rejected without poisoning');
+      Failed:=False;
+      try S.CreateApplicationWithKeyType($CDEF01,$F0,15,daktAes);except on E:EContactlessError do Failed:=True;end;
+      Check(Failed and (T.Calls=I) and (S.Outcome=dsoActive),'Typed excessive count rejected before I/O');
+      Failed:=False;
+     end;
+     if Attempt=0 then begin R.Free;R:=nil;end;
+     Workflow;
+    except on E:Exception do Failed:=True;end;
+    if Attempt=0 then begin
+     Check(not Failed and (T.Calls=Length(P)),'Explicit DES management literal success and retained ownership');
+     S.Close;Check((S.Outcome=dsoClosed) and (T.Ends=1),'Management closes without commit/abort');
+    end else begin
+     Check(Failed and (T.Calls=Attempt) and (T.Ends=1) and not T.Active,'Every DES management I/O failure closes once without replay');
+     if S<>nil then begin Check(S.Outcome in [dsoClosed,dsoUncertain],'Failed management retains closure/uncertainty');S.Close;Check(T.Ends=1,'No recovery from failed management');end;
+    end;
+   finally S:=nil;R.Free;Transport:=nil;end;
+  end;
+ end;
+end;
 procedure TestCrypto;
 var K,V,B,Original:TBytes;
 begin
@@ -238,6 +315,6 @@ end;
 begin
  try
 {$IFDEF MSWINDOWS}Base:=TCardWindowsAesProvider.Create;{$ELSE}Base:=TCardOpenSslAesProvider.Create;{$ENDIF}
- TestCrypto;TestUlc;TestDesfire;TestChaining;TestSessions;Writeln('PASS: ',Checks,' independent legacy MIFARE assertions.');
+ TestCrypto;TestUlc;TestDesfire;TestChaining;TestSessions;TestManagement;Writeln('PASS: ',Checks,' independent legacy MIFARE assertions.');
  except on E:Exception do begin Writeln(E.ClassName,': ',E.Message);ExitCode:=1;end;end;
 end.

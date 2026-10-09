@@ -28,7 +28,7 @@ set.
 | IcaoDocumentDemo | BAC/PACE with MRZ/CAN/curve/provider, all document sections/face images, CardAccess/DG1/DG2/COM/SOD export, JPEG preview, and JPEG2000 export |
 | Iso15693Demo | ACR1552 explicit address/response dialects, UID/geometry, block reads/verified writes, and Type 5 NDEF read/write/clear |
 | UidProgrammingDemo | PC/SC Gen2/FUID; ACR122 Gen1a/Gen1b/unsealed UFUID, DirectWrite, Gen3, six Gen4 layouts, USCUID/GDM, and partial UFUID/ZUID/PFUID |
-| DesfireDemo | Public/EV1/EV2 AES, EV1 2K3DES/3K3DES and D40 DES/2K3DES, directories/data/values/records, standard writes, backup/value/record transactions with commit/abort, application/file/key/access management |
+| DesfireDemo | Public/EV1/EV2 AES, EV1 2K3DES/3K3DES and D40 DES/2K3DES, directories/data/values/records, standard writes, backup/value/record transactions with commit/abort, application/file create-delete across those profiles, explicit new application key type/count, AES key/access-policy mutations |
 | MagStripeProfilesDemo | Track bit/parity/LRC and financial decoders, MagTek keyboard/HID, MSR206/MSR605 reads, and status-only all-track programming |
 | UsbHidDemo | Reader hotplug and continuous input-report events with its own DFM controls/event log; native HID collections/VID/PID/usage/lengths, exact interface path, interrupt and feature report read/send/export |
 | MobibDemo | Calypso legacy-94/revision-3-00, MOBIB file profile and custom FID plan, explicit FID/record reading, holder/events, subscription versions 0–4 with tariff/price/duration/counter assignment, native SAM authentication with two reader choices, offline activation/validity/zone evaluation with an explicitly sourced profile, raw data/status/truncation, and exact exports; no implicit issuer rules |

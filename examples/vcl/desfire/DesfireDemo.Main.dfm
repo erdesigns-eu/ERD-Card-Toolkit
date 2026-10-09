@@ -2564,6 +2564,10 @@ object DesfireDemoForm: TDesfireDemoForm
             'Public'
             'EV2 AES'
             'EV1 AES'
+            'EV1 2K3DES'
+            'EV1 3K3DES'
+            'D40 DES'
+            'D40 2K3DES'
           )
           Text = 'Public'
         end
@@ -2712,6 +2716,10 @@ object DesfireDemoForm: TDesfireDemoForm
             'Public'
             'EV2 AES'
             'EV1 AES'
+            'EV1 2K3DES'
+            'EV1 3K3DES'
+            'D40 DES'
+            'D40 2K3DES'
           )
           Text = 'Public'
         end
@@ -2860,6 +2868,10 @@ object DesfireDemoForm: TDesfireDemoForm
             'Public'
             'EV2 AES'
             'EV1 AES'
+            'EV1 2K3DES'
+            'EV1 3K3DES'
+            'D40 DES'
+            'D40 2K3DES'
           )
           Text = 'Public'
         end
@@ -3656,6 +3668,10 @@ object DesfireDemoForm: TDesfireDemoForm
             'Public'
             'EV2 AES'
             'EV1 AES'
+            'EV1 2K3DES'
+            'EV1 3K3DES'
+            'D40 DES'
+            'D40 2K3DES'
           )
           Text = 'Public'
         end
@@ -3787,7 +3803,7 @@ object DesfireDemoForm: TDesfireDemoForm
           Top = 566
           Width = 940
           Height = 18
-          Caption = 'Exact key-configuration byte (decimal)'
+          Caption = 'Application key count (1..14)'
         end
         object ActCreateappKeycountEdit: TEdit
           Left = 16
@@ -3797,6 +3813,28 @@ object DesfireDemoForm: TDesfireDemoForm
           Anchors = [akLeft, akTop, akRight]
           TabOrder = 9
           MaxLength = 262144
+        end
+        object ActCreateappKeytypeLabel: TLabel
+          Left = 16
+          Top = 628
+          Width = 940
+          Height = 18
+          Caption = 'Explicit new application key-storage type'
+        end
+        object ActCreateappKeytypeBox: TComboBox
+          Left = 16
+          Top = 650
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          Style = csDropDownList
+          ItemIndex = -1
+          TabOrder = 10
+          Items.Strings = (
+            'DES / 2K3DES'
+            '3K3DES'
+            'AES'
+          )
         end
       end
     end
@@ -3852,6 +3890,10 @@ object DesfireDemoForm: TDesfireDemoForm
             'Public'
             'EV2 AES'
             'EV1 AES'
+            'EV1 2K3DES'
+            'EV1 3K3DES'
+            'D40 DES'
+            'D40 2K3DES'
           )
           Text = 'Public'
         end
@@ -4016,6 +4058,10 @@ object DesfireDemoForm: TDesfireDemoForm
             'Public'
             'EV2 AES'
             'EV1 AES'
+            'EV1 2K3DES'
+            'EV1 3K3DES'
+            'D40 DES'
+            'D40 2K3DES'
           )
           Text = 'Public'
         end
@@ -4181,6 +4227,10 @@ object DesfireDemoForm: TDesfireDemoForm
             'Public'
             'EV2 AES'
             'EV1 AES'
+            'EV1 2K3DES'
+            'EV1 3K3DES'
+            'D40 DES'
+            'D40 2K3DES'
           )
           Text = 'Public'
         end

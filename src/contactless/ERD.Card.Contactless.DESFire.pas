@@ -53,6 +53,16 @@ type
     /// <summary>Legacy Authenticate 0A with an explicit sixteen-byte 2K3DES key; no ISO messaging.</summary>
     dfsD40TwoKey3Des
   );
+  /// <summary>Explicit native application key-type bits, independent of the PICC authentication dialect.</summary>
+  /// <remarks>Creation initializes card-default credentials. This selects storage type only and never supplies or changes keys.</remarks>
+  TDesfireApplicationKeyType = (
+    /// <summary>Native DES/2K3DES key storage; wire type bits 00.</summary>
+    daktDesOrTwoKey3Des,
+    /// <summary>Native three-key Triple DES storage; wire type bits 40.</summary>
+    daktThreeKey3Des,
+    /// <summary>Native AES storage; wire type bits 80.</summary>
+    daktAes
+  );
   /// <summary>Supported ordinary native DESFire file types; administration and transaction writes are separate.</summary>
   TDesfireFileType = (
     /// <summary>Standard data file; verified range writing is supported.</summary>
@@ -283,8 +293,8 @@ type
     /// <summary>Owned staged changes remain unresolved.</summary>
     property PendingChanges: Boolean read GetPendingChanges;
   end;
-  /// <summary>Optional authenticated AES administration view; existing IDesfireSession ABI remains unchanged.</summary>
-  /// <remarks>Mutations require dsaManage and take immediate effect. ChangeAesKey explicitly authenticates the new
+  /// <summary>Optional native administration view; existing IDesfireSession ABI remains unchanged.</summary>
+  /// <remarks>Mutations require dsaManage and take immediate effect. Policy/access/key mutations remain AES-only. ChangeAesKey explicitly authenticates the new
   /// key after dispatch; no retry/default key is used. The creating component's credentials are not changed.</remarks>
   IDesfireManagement = interface(IDesfireSession)
     ['{DD91AF14-E995-4C6B-A99E-0FC72D9D84DC}']
@@ -320,6 +330,20 @@ type
     /// Any failure after dispatch is uncertain. No key-type conversion or EV2 key-set change is inferred.</remarks>
     procedure ChangeAesKey(const AKeyNumber,ANewVersion: Byte; const ANewKey,AOldKey: TBytes);
   end;
+  /// <summary>Optional typed native application creation; existing session/management IIDs remain unchanged.</summary>
+  /// <remarks>Works through the selected public/AES/ISO-3DES/legacy message dialect. A native error never triggers type conversion or retry.</remarks>
+  IDesfireApplicationManagement = interface(IDesfireManagement)
+    ['{CE26C6D2-D17E-4BF5-A226-5457B0E112F6}']
+    /// <summary>Creates one explicitly typed native application from PICC management and verifies directory presence.</summary>
+    /// <param name="AAid">Nonzero 24-bit AID absent from the acquired directory.</param>
+    /// <param name="AKeySettings">Explicit native policy byte; change-key selector must fit the supplied key count.</param>
+    /// <param name="AKeyCount">Explicit count 1..14.</param>
+    /// <param name="AKeyType">DES/2K3DES, 3K3DES or AES key storage; not inferred from the authenticated PICC key.</param>
+    /// <remarks>Immediate mutation, not reversible through Abort. No ISO names, extensions, key guessing or key provisioning.</remarks>
+    procedure CreateApplicationWithKeyType(const AAid:Cardinal;const AKeySettings,AKeyCount:Byte;
+      const AKeyType:TDesfireApplicationKeyType);
+  end;
+
   /// <summary>Pure strict codecs for wrapped ordinary DESFire native commands and settings.</summary>
   TDesfireCodec = class
   public
@@ -476,6 +500,10 @@ type
     /// <param name="AAid">Explicit native AID, zero for PICC administration.</param>
     /// <returns>Owned management view with all ordinary session read/create/delete operations.</returns>
     function OpenManagementSession(const AAid: Cardinal): IDesfireManagement;
+    /// <summary>Opens retained native management with an optional explicit application key-type creation API.</summary>
+    /// <param name="AAid">Zero for PICC application management, nonzero for ordinary file management.</param>
+    /// <returns>Owned session; close explicitly. Authentication uses this component's selected profile.</returns>
+    function OpenApplicationManagementSession(const AAid:Cardinal):IDesfireApplicationManagement;
     /// <summary>Retained connected native-wrapping transport with ICardTransaction; cannot change while busy.</summary>
     property Transport: ICardTransport read FTransport write SetTransport;
     /// <summary>Retained maintained backend; DES profiles require the optional ICardDesProvider capability.</summary>
@@ -512,7 +540,7 @@ type
     Expected: TBytes;
     UsedLimitedCredit: Boolean;
   end;
-  TDesfireSession = class(TInterfacedObject,IDesfireSession,IDesfireManagement)
+  TDesfireSession = class(TInterfacedObject,IDesfireSession,IDesfireManagement,IDesfireApplicationManagement)
   private
     FEngine: TDesfireCardReader;
     FAid: Cardinal;
@@ -557,6 +585,7 @@ type
     procedure Commit;
     procedure Abort;
     procedure CreateApplication(const AAid:Cardinal; const AKeySettings,AKeyCount:Byte);
+    procedure CreateApplicationWithKeyType(const AAid:Cardinal;const AKeySettings,AKeyCount:Byte;const AKeyType:TDesfireApplicationKeyType);
     procedure DeleteApplication(const AAid:Cardinal);
     procedure CreateFile(const ADefinition:TDesfireFileDefinition);
     procedure DeleteFile(const AFile:Byte);
@@ -1232,6 +1261,13 @@ begin
   if not Supports(Session,IDesfireManagement,Result) then InvalidDesfire;
 end;
 
+function TDesfireCardReader.OpenApplicationManagementSession(const AAid:Cardinal):IDesfireApplicationManagement;
+var Session:IDesfireSession;
+begin
+ Session:=OpenSession(AAid,dsaManage);
+ if not Supports(Session,IDesfireApplicationManagement,Result) then InvalidDesfire;
+end;
+
 constructor TDesfireSession.Create(const AReader:TDesfireCardReader;
   const AAid:Cardinal; const AAccess:TDesfireSessionAccess);
 var Ids,Reply:TBytes; I:Integer; S:TDesfireFileSettings;
@@ -1687,8 +1723,12 @@ begin
   finally  FInCall:=False; end;
 end;
 
-procedure TDesfireSession.CreateApplication(const AAid:Cardinal; const AKeySettings,AKeyCount:Byte);
-var Before:Integer; Ids:TDesfireApplicationIds; I:Integer; Found:Boolean; Header,Reply:TBytes;
+procedure TDesfireSession.CreateApplication(const AAid:Cardinal;const AKeySettings,AKeyCount:Byte);
+begin CreateApplicationWithKeyType(AAid,AKeySettings,AKeyCount,daktAes);end;
+
+procedure TDesfireSession.CreateApplicationWithKeyType(const AAid:Cardinal;const AKeySettings,AKeyCount:Byte;
+ const AKeyType:TDesfireApplicationKeyType);
+var Before:Integer; Ids:TDesfireApplicationIds; I:Integer; Found:Boolean; Header,Reply:TBytes;KeyTypeBits:Byte;
 begin
   Before:=Enter;
   try
@@ -1696,9 +1736,14 @@ begin
       if (FAccess<>dsaManage) or (FAid<>0) or (AAid=0) or (AAid>$FFFFFF) or
         (AKeyCount<1) or (AKeyCount>14) or
         (((AKeySettings shr 4)<14) and ((AKeySettings shr 4)>=AKeyCount)) then InvalidDesfire;
+      case AKeyType of
+       daktDesOrTwoKey3Des:KeyTypeBits:=0;
+       daktThreeKey3Des:KeyTypeBits:=$40;
+       daktAes:KeyTypeBits:=$80;
+      else InvalidDesfire;end;
       RequireManagement; Ids:=TDesfireCodec.ApplicationIds(FEngine.Metadata($6A,nil,3072,False));
       for I:=0 to High(Ids) do if Ids[I]=AAid then InvalidDesfire;
-      Header:=Joined(TDesfireCodec.ApplicationBytes(AAid),Joined(OneByte(AKeySettings),OneByte($80 or AKeyCount)));
+      Header:=Joined(TDesfireCodec.ApplicationBytes(AAid),Joined(OneByte(AKeySettings),OneByte(KeyTypeBits or AKeyCount)));
       Reply:=FEngine.Metadata($CA,Header,0,True); if Length(Reply)<>0 then InvalidDesfire;
       Ids:=TDesfireCodec.ApplicationIds(FEngine.Metadata($6A,nil,3072,False)); Found:=False;
       for I:=0 to High(Ids) do Found:=Found or (Ids[I]=AAid); if not Found then InvalidDesfire;

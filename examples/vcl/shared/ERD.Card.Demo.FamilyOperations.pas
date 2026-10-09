@@ -317,7 +317,7 @@ procedure TFamilyOperations.Execute(const R: TCardDemoRequest; const A: TCardFam
 var Hid: TUsbHidReaderWriter; HidHardware: ICardFamilyHidHardware; Devices: THidDevices; Path: UnicodeString;
   Mag: TMagStripeReaderWriter; MagTracks: TMagStripeTracks; TrackSet: TMagStripeTrackSet;
   MagReceipt: TMagStripeProgrammingReceipt; Financial: TMagStripeFinancialData; MagPort: string;
-  Desfire: TDesfireCardReader; Session: IDesfireSession; Management: IDesfireManagement;
+  Desfire: TDesfireCardReader; Session: IDesfireSession; Management: IDesfireManagement; ApplicationManagement: IDesfireApplicationManagement;
   Definition: TDesfireFileDefinition; Files: TDesfireFiles; Applications: TDesfireApplicationIds;
   Aes: ICardAesProvider; Aid: Cardinal; Settings: TDesfireFileSettings;
   Ulc: TUltralightCCardReaderWriter; Des: ICardDesProvider;
@@ -842,11 +842,11 @@ begin
               else
               begin
                 { Parse all explicit scalar/input fields before acquiring the management session. }
-                Address := 0; N := 0; Count := 0; Definition := Default(TDesfireFileDefinition);
+                Address := 0; N := 0; Count := 0; J := 0; Definition := Default(TDesfireFileDefinition);
                 if (A.Id = 'createapp') or (A.Id = 'deleteapp') then Address := Number(R,A,'targetaid',1,$FFFFFF);
                 if (A.Id = 'keyversion') or (A.Id = 'changekey') then Address := Number(R,A,'targetkey',0,13);
                 if (A.Id = 'keysettings') or (A.Id = 'createapp') then N := Number(R,A,'settings',0,255);
-                if A.Id = 'createapp' then Count := Number(R,A,'keycount',0,255);
+                if A.Id = 'createapp' then begin Count := Number(R,A,'keycount',1,14); J := Number(R,A,'applicationkeytype',0,Ord(High(TDesfireApplicationKeyType))); end;
                 if (A.Id = 'deletefile') or (A.Id = 'fileaccess') or (A.Id = 'createfile') then Definition.FileNumber := Number(R,A,'file',0,31);
                 if (A.Id = 'fileaccess') or (A.Id = 'createfile') then
                 begin
@@ -868,7 +868,7 @@ begin
                 else if A.Id = 'keysettings' then Management.ChangeKeySettings(N)
                 else if A.Id = 'fileaccess' then Management.ChangeFileAccess(Definition.FileNumber,Definition.Communication,Definition.ReadKey,Definition.WriteKey,Definition.ReadWriteKey,Definition.ChangeKey)
                 else if A.Id = 'changekey' then Management.ChangeAesKey(Address,N,P,NewP)
-                else if A.Id = 'createapp' then Session.CreateApplication(Address,N,Count)
+                else if A.Id = 'createapp' then begin if not Supports(Management,IDesfireApplicationManagement,ApplicationManagement) then Fail; ApplicationManagement.CreateApplicationWithKeyType(Address,N,Count,TDesfireApplicationKeyType(J)); ApplicationManagement := nil; end
                 else if A.Id = 'deleteapp' then Session.DeleteApplication(Address)
                 else if A.Id = 'deletefile' then Session.DeleteFile(Definition.FileNumber)
                 else if A.Id = 'createfile' then Session.CreateFile(Definition)
@@ -880,9 +880,9 @@ begin
             end;
           except
             if Session <> nil then try Session.Close; except end;
-            Management := nil; Session := nil; Desfire.Free; raise;
+            ApplicationManagement := nil; Management := nil; Session := nil; Desfire.Free; raise;
           end;
-          Management := nil; Session := nil; Desfire.Free;
+          ApplicationManagement := nil; Management := nil; Session := nil; Desfire.Free;
         end;
       end;
       dfIso15693:

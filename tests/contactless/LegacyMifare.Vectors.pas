@@ -20,6 +20,9 @@ function D0M0W1:TLegacyWirePairs;
 /// <summary>Independent synthetic S0M0 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function S0M0:TLegacyWirePairs;
+/// <summary>Independent synthetic F0M0 transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function F0M0:TLegacyWirePairs;
 /// <summary>Independent synthetic D0M1W0 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function D0M1W0:TLegacyWirePairs;
@@ -29,6 +32,9 @@ function D0M1W1:TLegacyWirePairs;
 /// <summary>Independent synthetic S0M1 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function S0M1:TLegacyWirePairs;
+/// <summary>Independent synthetic F0M1 transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function F0M1:TLegacyWirePairs;
 /// <summary>Independent synthetic D0M3W0 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function D0M3W0:TLegacyWirePairs;
@@ -38,9 +44,15 @@ function D0M3W1:TLegacyWirePairs;
 /// <summary>Independent synthetic S0M3 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function S0M3:TLegacyWirePairs;
+/// <summary>Independent synthetic F0M3 transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function F0M3:TLegacyWirePairs;
 /// <summary>Independent synthetic C0 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function C0:TLegacyWirePairs;
+/// <summary>Independent synthetic A0 transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function A0:TLegacyWirePairs;
 /// <summary>Independent synthetic D1M0W0 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function D1M0W0:TLegacyWirePairs;
@@ -50,6 +62,9 @@ function D1M0W1:TLegacyWirePairs;
 /// <summary>Independent synthetic S1M0 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function S1M0:TLegacyWirePairs;
+/// <summary>Independent synthetic F1M0 transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function F1M0:TLegacyWirePairs;
 /// <summary>Independent synthetic D1M1W0 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function D1M1W0:TLegacyWirePairs;
@@ -59,6 +74,9 @@ function D1M1W1:TLegacyWirePairs;
 /// <summary>Independent synthetic S1M1 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function S1M1:TLegacyWirePairs;
+/// <summary>Independent synthetic F1M1 transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function F1M1:TLegacyWirePairs;
 /// <summary>Independent synthetic D1M3W0 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function D1M3W0:TLegacyWirePairs;
@@ -68,9 +86,15 @@ function D1M3W1:TLegacyWirePairs;
 /// <summary>Independent synthetic S1M3 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function S1M3:TLegacyWirePairs;
+/// <summary>Independent synthetic F1M3 transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function F1M3:TLegacyWirePairs;
 /// <summary>Independent synthetic C1 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function C1:TLegacyWirePairs;
+/// <summary>Independent synthetic A1 transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function A1:TLegacyWirePairs;
 /// <summary>Independent synthetic D2M0W0 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function D2M0W0:TLegacyWirePairs;
@@ -80,6 +104,9 @@ function D2M0W1:TLegacyWirePairs;
 /// <summary>Independent synthetic S2M0 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function S2M0:TLegacyWirePairs;
+/// <summary>Independent synthetic F2M0 transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function F2M0:TLegacyWirePairs;
 /// <summary>Independent synthetic D2M1W0 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function D2M1W0:TLegacyWirePairs;
@@ -89,6 +116,9 @@ function D2M1W1:TLegacyWirePairs;
 /// <summary>Independent synthetic S2M1 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function S2M1:TLegacyWirePairs;
+/// <summary>Independent synthetic F2M1 transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function F2M1:TLegacyWirePairs;
 /// <summary>Independent synthetic D2M3W0 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function D2M3W0:TLegacyWirePairs;
@@ -98,9 +128,15 @@ function D2M3W1:TLegacyWirePairs;
 /// <summary>Independent synthetic S2M3 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function S2M3:TLegacyWirePairs;
+/// <summary>Independent synthetic F2M3 transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function F2M3:TLegacyWirePairs;
 /// <summary>Independent synthetic C2 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function C2:TLegacyWirePairs;
+/// <summary>Independent synthetic A2 transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function A2:TLegacyWirePairs;
 /// <summary>Independent synthetic D3M0W0 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function D3M0W0:TLegacyWirePairs;
@@ -110,6 +146,9 @@ function D3M0W1:TLegacyWirePairs;
 /// <summary>Independent synthetic S3M0 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function S3M0:TLegacyWirePairs;
+/// <summary>Independent synthetic F3M0 transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function F3M0:TLegacyWirePairs;
 /// <summary>Independent synthetic D3M1W0 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function D3M1W0:TLegacyWirePairs;
@@ -119,6 +158,9 @@ function D3M1W1:TLegacyWirePairs;
 /// <summary>Independent synthetic S3M1 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function S3M1:TLegacyWirePairs;
+/// <summary>Independent synthetic F3M1 transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function F3M1:TLegacyWirePairs;
 /// <summary>Independent synthetic D3M3W0 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function D3M3W0:TLegacyWirePairs;
@@ -128,9 +170,15 @@ function D3M3W1:TLegacyWirePairs;
 /// <summary>Independent synthetic S3M3 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function S3M3:TLegacyWirePairs;
+/// <summary>Independent synthetic F3M3 transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function F3M3:TLegacyWirePairs;
 /// <summary>Independent synthetic C3 transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function C3:TLegacyWirePairs;
+/// <summary>Independent synthetic A3 transcript; never a production credential.</summary>
+/// <returns>Owned fixed literal wire pairs.</returns>
+function A3:TLegacyWirePairs;
 /// <summary>Independent synthetic Uread transcript; never a production credential.</summary>
 /// <returns>Owned fixed literal wire pairs.</returns>
 function Uread:TLegacyWirePairs;
@@ -218,6 +266,58 @@ begin
  Result[48].Command:='90BB0000070400000003000000';Result[48].Response:='6162636451525354111213145E7CB26F8DED10279100';
  Result[49].Command:='90F50000010400';Result[49].Response:='040000000400000300000300003942A187C1B5A5279100';
 end;
+function F0M0:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,48);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='901A0000010000';Result[1].Response:='C0489F69BEC54FA291AF';
+ Result[2].Command:='90AF000010A55F1267F8000613831E17D57181DE6F00';Result[2].Response:='29E6705DFB2FCEA89100';
+ Result[3].Command:='9045000000';Result[3].Response:='0B0136A7CA4DCE7F48A19100';
+ Result[4].Command:='906F000000';Result[4].Response:='64847AC2D6AFA6C09100';
+ Result[5].Command:='90CD0000070000000020000000';Result[5].Response:='1E15DF76A0C685109100';
+ Result[6].Command:='90F50000010000';Result[6].Response:='0000000020000019EEC951C5AFB5889100';
+ Result[7].Command:='9045000000';Result[7].Response:='0B01DB3D19280EE78D689100';
+ Result[8].Command:='906F000000';Result[8].Response:='000AF63DE277B269509100';
+ Result[9].Command:='90CB0000070100000020000000';Result[9].Response:='80806B40991711599100';
+ Result[10].Command:='90F50000010100';Result[10].Response:='01000000200000E2455095AD59D0749100';
+ Result[11].Command:='9045000000';Result[11].Response:='0B012055E92BFFBE2FD29100';
+ Result[12].Command:='906F000000';Result[12].Response:='0001DB6C7F0FD6075AFC9100';
+ Result[13].Command:='90CC000011020000009CFFFFFF640000000A0000000100';Result[13].Response:='8DBB09A052BBDA0C9100';
+ Result[14].Command:='90F50000010200';Result[14].Response:='020000009CFFFFFF640000000A000000013B3037032DE4637B9100';
+ Result[15].Command:='9045000000';Result[15].Response:='0B016B95B69E60B7C3B49100';
+ Result[16].Command:='906F000000';Result[16].Response:='0001028E432DD6FC895BED9100';
+ Result[17].Command:='90C100000A0300000004000003000000';Result[17].Response:='D819AC67F17556C89100';
+ Result[18].Command:='90F50000010300';Result[18].Response:='03000000040000030000000000BE12F2DDC66B5E859100';
+ Result[19].Command:='9045000000';Result[19].Response:='0B0135A1A9662B856B6B9100';
+ Result[20].Command:='906F000000';Result[20].Response:='00010203140B17132D6655F49100';
+ Result[21].Command:='90C000000A0400000004000003000000';Result[21].Response:='57F589A49760B47D9100';
+ Result[22].Command:='90F50000010400';Result[22].Response:='0400000004000003000000000059AEB957618F2D589100';
+ Result[23].Command:='9045000000';Result[23].Response:='0B010BC9EC7A00F7F0579100';
+ Result[24].Command:='906F000000';Result[24].Response:='000102030455015100A71B30659100';
+ Result[25].Command:='90F50000010400';Result[25].Response:='040000000400000300000000009DA87E31D301E6BA9100';
+ Result[26].Command:='90DF0000010400';Result[26].Response:='A04E47B6C52A390C9100';
+ Result[27].Command:='906F000000';Result[27].Response:='00010203149490FF81F3751E9100';
+ Result[28].Command:='9045000000';Result[28].Response:='0B0161948C7CC1CED4AE9100';
+ Result[29].Command:='906F000000';Result[29].Response:='000102037F992FC875C56B919100';
+ Result[30].Command:='90F50000010300';Result[30].Response:='03000000040000030000000000F793B927CAFE95D99100';
+ Result[31].Command:='90DF0000010300';Result[31].Response:='FEAE5501260436659100';
+ Result[32].Command:='906F000000';Result[32].Response:='000102C8A71B6238B95E8E9100';
+ Result[33].Command:='9045000000';Result[33].Response:='0B01732A9F5D457578C09100';
+ Result[34].Command:='906F000000';Result[34].Response:='0001025FA71A21715D44129100';
+ Result[35].Command:='90F50000010200';Result[35].Response:='020000009CFFFFFF640000000A0000000129798BD80BBC127C9100';
+ Result[36].Command:='90DF0000010200';Result[36].Response:='C159E7F42D5769EC9100';
+ Result[37].Command:='906F000000';Result[37].Response:='0001D7F73B78F0238C7F9100';
+ Result[38].Command:='9045000000';Result[38].Response:='0B01AD3933B10FE6702F9100';
+ Result[39].Command:='906F000000';Result[39].Response:='00014D77EC2D6C1C417B9100';
+ Result[40].Command:='90F50000010100';Result[40].Response:='01000000200000CD32562854B8EB509100';
+ Result[41].Command:='90DF0000010100';Result[41].Response:='E9BB95D6480BC3CD9100';
+ Result[42].Command:='906F000000';Result[42].Response:='001C7FBFFAFDF2B4319100';
+ Result[43].Command:='9045000000';Result[43].Response:='0B01AD0E50FCF6C573769100';
+ Result[44].Command:='906F000000';Result[44].Response:='00AB26FB1ECF21C9AA9100';
+ Result[45].Command:='90F50000010000';Result[45].Response:='000000002000001D71AB374C86F6A49100';
+ Result[46].Command:='90DF0000010000';Result[46].Response:='56B366D60402E3DE9100';
+ Result[47].Command:='906F000000';Result[47].Response:='5C76AF683AFCD9419100';
+end;
 function D0M1W0:TLegacyWirePairs;
 begin
  Result:=nil;SetLength(Result,6);
@@ -294,6 +394,58 @@ begin
  Result[47].Command:='90F50000010400';Result[47].Response:='04010000040000030000030000EF00FAFC0B30118F9100';
  Result[48].Command:='90BB0000070400000003000000';Result[48].Response:='616263645152535411121314ACC8D8EE470088689100';
  Result[49].Command:='90F50000010400';Result[49].Response:='04010000040000030000030000BAA6536FD07B1B3D9100';
+end;
+function F0M1:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,48);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='901A0000010000';Result[1].Response:='C0489F69BEC54FA291AF';
+ Result[2].Command:='90AF000010A55F1267F8000613831E17D57181DE6F00';Result[2].Response:='29E6705DFB2FCEA89100';
+ Result[3].Command:='9045000000';Result[3].Response:='0B0136A7CA4DCE7F48A19100';
+ Result[4].Command:='906F000000';Result[4].Response:='64847AC2D6AFA6C09100';
+ Result[5].Command:='90CD0000070001000020000000';Result[5].Response:='6F5F874FD4F4E65B9100';
+ Result[6].Command:='90F50000010000';Result[6].Response:='00010000200000A10D3DAE10B6ACB29100';
+ Result[7].Command:='9045000000';Result[7].Response:='0B0121AB2892F651044D9100';
+ Result[8].Command:='906F000000';Result[8].Response:='001A60D7211FE080599100';
+ Result[9].Command:='90CB0000070101000020000000';Result[9].Response:='B2055366927CAFC59100';
+ Result[10].Command:='90F50000010100';Result[10].Response:='010100002000008E0A0DBFDEABAF629100';
+ Result[11].Command:='9045000000';Result[11].Response:='0B01A2BFC8EE51B89F989100';
+ Result[12].Command:='906F000000';Result[12].Response:='0001160A4B8A8183FED79100';
+ Result[13].Command:='90CC000011020100009CFFFFFF640000000A0000000100';Result[13].Response:='9EFBF0E8BFE3C3BA9100';
+ Result[14].Command:='90F50000010200';Result[14].Response:='020100009CFFFFFF640000000A0000000126DDC4EFA3BA02E09100';
+ Result[15].Command:='9045000000';Result[15].Response:='0B01A7F1BD82E76A947A9100';
+ Result[16].Command:='906F000000';Result[16].Response:='00010284DABB7F03FE60729100';
+ Result[17].Command:='90C100000A0301000004000003000000';Result[17].Response:='59BE155BAF9DA6F49100';
+ Result[18].Command:='90F50000010300';Result[18].Response:='030100000400000300000000005D9CC4AB9BF2A2579100';
+ Result[19].Command:='9045000000';Result[19].Response:='0B015474F9B63C6642B49100';
+ Result[20].Command:='906F000000';Result[20].Response:='0001020312497F643EA2E2F09100';
+ Result[21].Command:='90C000000A0401000004000003000000';Result[21].Response:='3ED9C5157909DE649100';
+ Result[22].Command:='90F50000010400';Result[22].Response:='04010000040000030000000000ED2F9C168B9D02FD9100';
+ Result[23].Command:='9045000000';Result[23].Response:='0B01A2D328553ED3D9C69100';
+ Result[24].Command:='906F000000';Result[24].Response:='0001020304667647EF224876249100';
+ Result[25].Command:='90F50000010400';Result[25].Response:='040100000400000300000000003D9EF7DF1E4153599100';
+ Result[26].Command:='90DF0000010400';Result[26].Response:='54EA50055878879F9100';
+ Result[27].Command:='906F000000';Result[27].Response:='00010203CF873E4A0628B5B59100';
+ Result[28].Command:='9045000000';Result[28].Response:='0B01D14C184BAAD0ECF09100';
+ Result[29].Command:='906F000000';Result[29].Response:='000102036186F097EF4B4DA09100';
+ Result[30].Command:='90F50000010300';Result[30].Response:='03010000040000030000000000D0D3712F2CCFC0B09100';
+ Result[31].Command:='90DF0000010300';Result[31].Response:='C783A2673C99A5D59100';
+ Result[32].Command:='906F000000';Result[32].Response:='000102F9280B6F82A779229100';
+ Result[33].Command:='9045000000';Result[33].Response:='0B011C5E240E757DA6A79100';
+ Result[34].Command:='906F000000';Result[34].Response:='0001023C187A7698B1F4659100';
+ Result[35].Command:='90F50000010200';Result[35].Response:='020100009CFFFFFF640000000A000000014C1423E427F209879100';
+ Result[36].Command:='90DF0000010200';Result[36].Response:='3FE3393B097A89009100';
+ Result[37].Command:='906F000000';Result[37].Response:='00013FB95B9D15E57C419100';
+ Result[38].Command:='9045000000';Result[38].Response:='0B01D987F65BB4D3165F9100';
+ Result[39].Command:='906F000000';Result[39].Response:='00016C0440634B4FB9B59100';
+ Result[40].Command:='90F50000010100';Result[40].Response:='010100002000008A2DC7D7442C926B9100';
+ Result[41].Command:='90DF0000010100';Result[41].Response:='C74AA3417A6C1C619100';
+ Result[42].Command:='906F000000';Result[42].Response:='00F5BEEDF35452CD7E9100';
+ Result[43].Command:='9045000000';Result[43].Response:='0B01AE49E8229A07682A9100';
+ Result[44].Command:='906F000000';Result[44].Response:='00039FB3D433E23BCD9100';
+ Result[45].Command:='90F50000010000';Result[45].Response:='00010000200000BF013F24CA7E9F129100';
+ Result[46].Command:='90DF0000010000';Result[46].Response:='7A66F023A37956B59100';
+ Result[47].Command:='906F000000';Result[47].Response:='B8F87D33A9253AD59100';
 end;
 function D0M3W0:TLegacyWirePairs;
 begin
@@ -372,6 +524,58 @@ begin
  Result[48].Command:='90BB0000070400000003000000';Result[48].Response:='1AB74D660B1277038F0A1C2D947739679100';
  Result[49].Command:='90F50000010400';Result[49].Response:='04030000040000030000030000DC924AA88F2E5BB49100';
 end;
+function F0M3:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,48);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='901A0000010000';Result[1].Response:='C0489F69BEC54FA291AF';
+ Result[2].Command:='90AF000010A55F1267F8000613831E17D57181DE6F00';Result[2].Response:='29E6705DFB2FCEA89100';
+ Result[3].Command:='9045000000';Result[3].Response:='0B0136A7CA4DCE7F48A19100';
+ Result[4].Command:='906F000000';Result[4].Response:='64847AC2D6AFA6C09100';
+ Result[5].Command:='90CD0000070003000020000000';Result[5].Response:='87A1E2182D29D5ED9100';
+ Result[6].Command:='90F50000010000';Result[6].Response:='00030000200000A8B443584CB5A5D39100';
+ Result[7].Command:='9045000000';Result[7].Response:='0B0149008569A2F551499100';
+ Result[8].Command:='906F000000';Result[8].Response:='00E65AB453D134F81C9100';
+ Result[9].Command:='90CB0000070103000020000000';Result[9].Response:='33609B0C0E793B909100';
+ Result[10].Command:='90F50000010100';Result[10].Response:='01030000200000C1ED4D0C11C8DE869100';
+ Result[11].Command:='9045000000';Result[11].Response:='0B01AC8C6780D2FAD7B59100';
+ Result[12].Command:='906F000000';Result[12].Response:='00012BB4218728A9BE709100';
+ Result[13].Command:='90CC000011020300009CFFFFFF640000000A0000000100';Result[13].Response:='7C62A914E32F2DFF9100';
+ Result[14].Command:='90F50000010200';Result[14].Response:='020300009CFFFFFF640000000A00000001CEB5C503FC8D47709100';
+ Result[15].Command:='9045000000';Result[15].Response:='0B01A6679A61969870919100';
+ Result[16].Command:='906F000000';Result[16].Response:='000102DB0443DADA5CAF399100';
+ Result[17].Command:='90C100000A0303000004000003000000';Result[17].Response:='A8AA409AB98BDCA19100';
+ Result[18].Command:='90F50000010300';Result[18].Response:='0303000004000003000000000010045860CBAE8AA79100';
+ Result[19].Command:='9045000000';Result[19].Response:='0B019663028D4AD99D4C9100';
+ Result[20].Command:='906F000000';Result[20].Response:='00010203D9D0215BFF92D86E9100';
+ Result[21].Command:='90C000000A0403000004000003000000';Result[21].Response:='B9776780124EE2549100';
+ Result[22].Command:='90F50000010400';Result[22].Response:='0403000004000003000000000012CC8B72FF32FDAC9100';
+ Result[23].Command:='9045000000';Result[23].Response:='0B017853201BF79D66E69100';
+ Result[24].Command:='906F000000';Result[24].Response:='0001020304D172E0D4EB1196979100';
+ Result[25].Command:='90F50000010400';Result[25].Response:='040300000400000300000000000C15693EF84766219100';
+ Result[26].Command:='90DF0000010400';Result[26].Response:='FB0409745B9C44E29100';
+ Result[27].Command:='906F000000';Result[27].Response:='000102037B9F068C1B9058419100';
+ Result[28].Command:='9045000000';Result[28].Response:='0B01EFA31C4B39B2092C9100';
+ Result[29].Command:='906F000000';Result[29].Response:='000102032FFA6C77A9834B269100';
+ Result[30].Command:='90F50000010300';Result[30].Response:='03030000040000030000000000AD5C3FC2AC2B4F5E9100';
+ Result[31].Command:='90DF0000010300';Result[31].Response:='FC9F44C876AE17119100';
+ Result[32].Command:='906F000000';Result[32].Response:='000102F4C01DEDAB6E22B29100';
+ Result[33].Command:='9045000000';Result[33].Response:='0B0186183648132587F19100';
+ Result[34].Command:='906F000000';Result[34].Response:='00010251A851DC18559E809100';
+ Result[35].Command:='90F50000010200';Result[35].Response:='020300009CFFFFFF640000000A0000000198DF181B6DFF9CD79100';
+ Result[36].Command:='90DF0000010200';Result[36].Response:='AABE10370F6106069100';
+ Result[37].Command:='906F000000';Result[37].Response:='0001495E876AE7D736169100';
+ Result[38].Command:='9045000000';Result[38].Response:='0B014008F792D1D5487E9100';
+ Result[39].Command:='906F000000';Result[39].Response:='0001BDEC985734B090C89100';
+ Result[40].Command:='90F50000010100';Result[40].Response:='010300002000003CE6749038999BC59100';
+ Result[41].Command:='90DF0000010100';Result[41].Response:='AF3DE95FC1DF7F8C9100';
+ Result[42].Command:='906F000000';Result[42].Response:='007C2800EEBADE4D2E9100';
+ Result[43].Command:='9045000000';Result[43].Response:='0B014DF4F9A9C4706A619100';
+ Result[44].Command:='906F000000';Result[44].Response:='00DBF699606C45BDED9100';
+ Result[45].Command:='90F50000010000';Result[45].Response:='00030000200000864531D6D78F2D6D9100';
+ Result[46].Command:='90DF0000010000';Result[46].Response:='703F1550AFEDF1709100';
+ Result[47].Command:='906F000000';Result[47].Response:='38FDABDE5C97288F9100';
+end;
 function C0:TLegacyWirePairs;
 begin
  Result:=nil;SetLength(Result,28);
@@ -403,6 +607,40 @@ begin
  Result[25].Command:='90F50000010000';Result[25].Response:='0003000020000091AF';
  Result[26].Command:='90AF000000';Result[26].Response:='29C46544DA545D91AF';
  Result[27].Command:='90AF000000';Result[27].Response:='149100';
+end;
+function A0:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,30);
+ Result[0].Command:='905A00000300000000';Result[0].Response:='9100';
+ Result[1].Command:='901A0000010000';Result[1].Response:='C0489F69BEC54FA291AF';
+ Result[2].Command:='90AF000010A55F1267F8000613831E17D57181DE6F00';Result[2].Response:='29E6705DFB2FCEA89100';
+ Result[3].Command:='906E000000';Result[3].Response:='E803002F970D61BD2C71299100';
+ Result[4].Command:='9045000000';Result[4].Response:='0B0158784C7C98D99D6D9100';
+ Result[5].Command:='90640000010000';Result[5].Response:='051CDEE68CCF15B8539100';
+ Result[6].Command:='9045000000';Result[6].Response:='0B01F1052BBCC7C202009100';
+ Result[7].Command:='906A000000';Result[7].Response:='563412B520F463264C61239100';
+ Result[8].Command:='90CA00000501EFCD0B0100';Result[8].Response:='D1F7953161A8D1529100';
+ Result[9].Command:='906A000000';Result[9].Response:='56341201EFCD507D05E0D49D87D09100';
+ Result[10].Command:='9045000000';Result[10].Response:='0B014EE746175B99C9CD9100';
+ Result[11].Command:='906A000000';Result[11].Response:='56341201EFCD3BA477FE4E5B86429100';
+ Result[12].Command:='90CA00000541EFCD0B4100';Result[12].Response:='8AF3AB567DB210A69100';
+ Result[13].Command:='906A000000';Result[13].Response:='56341201EFCD41EFCD0288DE4FC5403C639100';
+ Result[14].Command:='9045000000';Result[14].Response:='0B011303958DD0B89E8E9100';
+ Result[15].Command:='906A000000';Result[15].Response:='56341201EFCD41EFCDA7D1E53FD66466E29100';
+ Result[16].Command:='90CA00000581EFCD0B8100';Result[16].Response:='6715634248A8C2589100';
+ Result[17].Command:='906A000000';Result[17].Response:='56341201EFCD41EFCD81EFCDDBE2E2E2AF43748B9100';
+ Result[18].Command:='9045000000';Result[18].Response:='0B0166B8FBC0BA2844B79100';
+ Result[19].Command:='906A000000';Result[19].Response:='56341201EFCD41EFCD81EFCDB5EF22139E5F3E6B9100';
+ Result[20].Command:='90DA00000381EFCD00';Result[20].Response:='DE6F2C35F3430F309100';
+ Result[21].Command:='906A000000';Result[21].Response:='56341201EFCD41EFCDEB2313E73FFDDA3B9100';
+ Result[22].Command:='9045000000';Result[22].Response:='0B0157EF1C8160116D899100';
+ Result[23].Command:='906A000000';Result[23].Response:='56341201EFCD41EFCDBA1B146B04C4BB269100';
+ Result[24].Command:='90DA00000341EFCD00';Result[24].Response:='66B05394C2A0CB669100';
+ Result[25].Command:='906A000000';Result[25].Response:='56341201EFCD64844365685A9F539100';
+ Result[26].Command:='9045000000';Result[26].Response:='0B01BC5CDD2EFEAECE279100';
+ Result[27].Command:='906A000000';Result[27].Response:='56341201EFCD097B5281560417679100';
+ Result[28].Command:='90DA00000301EFCD00';Result[28].Response:='A5F42E57D8BA2D309100';
+ Result[29].Command:='906A000000';Result[29].Response:='5634120BA934E9AD473C949100';
 end;
 function D1M0W0:TLegacyWirePairs;
 begin
@@ -481,6 +719,58 @@ begin
  Result[48].Command:='90BB0000070400000003000000';Result[48].Response:='6162636451525354111213142E4364268B1250A89100';
  Result[49].Command:='90F50000010400';Result[49].Response:='04000000040000030000030000902EE6A418704BF79100';
 end;
+function F1M0:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,48);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='901A0000010000';Result[1].Response:='C0489F69BEC54FA24FB6B1A32A7E422591AF';
+ Result[2].Command:='90AF000020B0CF98B7C6608F7B1ADE6431E091CC2C61C857C07C04856BE6D522015DE2E27500';Result[2].Response:='4A50EF9039792F1F21C71AA745EC26909100';
+ Result[3].Command:='9045000000';Result[3].Response:='0B412FDCD2F3D9D992E79100';
+ Result[4].Command:='906F000000';Result[4].Response:='0E9FEF08D3C9F38E9100';
+ Result[5].Command:='90CD0000070000000020000000';Result[5].Response:='95152FE13A8DBC769100';
+ Result[6].Command:='90F50000010000';Result[6].Response:='00000000200000014798A703CB1D369100';
+ Result[7].Command:='9045000000';Result[7].Response:='0B411CDA2CC4B9B9E6289100';
+ Result[8].Command:='906F000000';Result[8].Response:='00FEA9CB972F5DD4C99100';
+ Result[9].Command:='90CB0000070100000020000000';Result[9].Response:='5024B3E1D7BD17849100';
+ Result[10].Command:='90F50000010100';Result[10].Response:='01000000200000FA69AE03A9DAB8889100';
+ Result[11].Command:='9045000000';Result[11].Response:='0B410F7F97E29E341C769100';
+ Result[12].Command:='906F000000';Result[12].Response:='0001CC76E7D2910829879100';
+ Result[13].Command:='90CC000011020000009CFFFFFF640000000A0000000100';Result[13].Response:='213E25A92BAAAEAF9100';
+ Result[14].Command:='90F50000010200';Result[14].Response:='020000009CFFFFFF640000000A000000019420D394BD43B0129100';
+ Result[15].Command:='9045000000';Result[15].Response:='0B4167FD120FE0AE0B449100';
+ Result[16].Command:='906F000000';Result[16].Response:='000102CA5F51834182F87A9100';
+ Result[17].Command:='90C100000A0300000004000003000000';Result[17].Response:='4F7A7B15B8B026449100';
+ Result[18].Command:='90F50000010300';Result[18].Response:='03000000040000030000000000475EA15AAC9AF7579100';
+ Result[19].Command:='9045000000';Result[19].Response:='0B41B019265B02398B089100';
+ Result[20].Command:='906F000000';Result[20].Response:='00010203931C05312048AAB39100';
+ Result[21].Command:='90C000000A0400000004000003000000';Result[21].Response:='E8A37A335119695A9100';
+ Result[22].Command:='90F50000010400';Result[22].Response:='04000000040000030000000000FEE63CE462E258DC9100';
+ Result[23].Command:='9045000000';Result[23].Response:='0B4140B64F54891877DC9100';
+ Result[24].Command:='906F000000';Result[24].Response:='00010203041A7E917569D5AC909100';
+ Result[25].Command:='90F50000010400';Result[25].Response:='04000000040000030000000000551695F3EA85A0899100';
+ Result[26].Command:='90DF0000010400';Result[26].Response:='828F2D915385B94C9100';
+ Result[27].Command:='906F000000';Result[27].Response:='000102035C8C12A38DA99DB49100';
+ Result[28].Command:='9045000000';Result[28].Response:='0B41505DB4759B22544F9100';
+ Result[29].Command:='906F000000';Result[29].Response:='00010203DB5B57D74E2A4EC69100';
+ Result[30].Command:='90F50000010300';Result[30].Response:='03000000040000030000000000475E5B304A72BF199100';
+ Result[31].Command:='90DF0000010300';Result[31].Response:='6E111AF3D78D938D9100';
+ Result[32].Command:='906F000000';Result[32].Response:='000102F13A224804F58E349100';
+ Result[33].Command:='9045000000';Result[33].Response:='0B412B6595A97F369F199100';
+ Result[34].Command:='906F000000';Result[34].Response:='00010252B78FCE8596C58B9100';
+ Result[35].Command:='90F50000010200';Result[35].Response:='020000009CFFFFFF640000000A000000019310BA13C412E25E9100';
+ Result[36].Command:='90DF0000010200';Result[36].Response:='539AD071E09B16F49100';
+ Result[37].Command:='906F000000';Result[37].Response:='00018B497CDAA33712709100';
+ Result[38].Command:='9045000000';Result[38].Response:='0B419573A535FCCC55C29100';
+ Result[39].Command:='906F000000';Result[39].Response:='0001C159B1882B39ADC79100';
+ Result[40].Command:='90F50000010100';Result[40].Response:='010000002000008C8388D6A85C945B9100';
+ Result[41].Command:='90DF0000010100';Result[41].Response:='AB149F91C4F94C7C9100';
+ Result[42].Command:='906F000000';Result[42].Response:='007FB7086E0DD2B04D9100';
+ Result[43].Command:='9045000000';Result[43].Response:='0B41A7AF9198A9BC07A89100';
+ Result[44].Command:='906F000000';Result[44].Response:='004CECE5135060B6EA9100';
+ Result[45].Command:='90F50000010000';Result[45].Response:='00000000200000C2A967C670A5840F9100';
+ Result[46].Command:='90DF0000010000';Result[46].Response:='4FF0B3AD928B9BDB9100';
+ Result[47].Command:='906F000000';Result[47].Response:='A065B888D484C53D9100';
+end;
 function D1M1W0:TLegacyWirePairs;
 begin
  Result:=nil;SetLength(Result,6);
@@ -557,6 +847,58 @@ begin
  Result[47].Command:='90F50000010400';Result[47].Response:='040100000400000300000300007FC41E9541915EBE9100';
  Result[48].Command:='90BB0000070400000003000000';Result[48].Response:='6162636451525354111213149A114151AA447A319100';
  Result[49].Command:='90F50000010400';Result[49].Response:='04010000040000030000030000B6D222D6E046B51A9100';
+end;
+function F1M1:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,48);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='901A0000010000';Result[1].Response:='C0489F69BEC54FA24FB6B1A32A7E422591AF';
+ Result[2].Command:='90AF000020B0CF98B7C6608F7B1ADE6431E091CC2C61C857C07C04856BE6D522015DE2E27500';Result[2].Response:='4A50EF9039792F1F21C71AA745EC26909100';
+ Result[3].Command:='9045000000';Result[3].Response:='0B412FDCD2F3D9D992E79100';
+ Result[4].Command:='906F000000';Result[4].Response:='0E9FEF08D3C9F38E9100';
+ Result[5].Command:='90CD0000070001000020000000';Result[5].Response:='296926F6E6C9342A9100';
+ Result[6].Command:='90F50000010000';Result[6].Response:='00010000200000B5A3C90184CCD7419100';
+ Result[7].Command:='9045000000';Result[7].Response:='0B416042A3EBADE4184E9100';
+ Result[8].Command:='906F000000';Result[8].Response:='001CBC949DDBD67FBE9100';
+ Result[9].Command:='90CB0000070101000020000000';Result[9].Response:='041FA7C714CA5FA79100';
+ Result[10].Command:='90F50000010100';Result[10].Response:='01010000200000031778DC2D950F579100';
+ Result[11].Command:='9045000000';Result[11].Response:='0B4143B52731CA9B83879100';
+ Result[12].Command:='906F000000';Result[12].Response:='000163460D6D3CCBE0689100';
+ Result[13].Command:='90CC000011020100009CFFFFFF640000000A0000000100';Result[13].Response:='C84E897898D9A0779100';
+ Result[14].Command:='90F50000010200';Result[14].Response:='020100009CFFFFFF640000000A0000000191C540E0D962A0D99100';
+ Result[15].Command:='9045000000';Result[15].Response:='0B4109B4330ECE46179D9100';
+ Result[16].Command:='906F000000';Result[16].Response:='000102062D7E0AC0A467A09100';
+ Result[17].Command:='90C100000A0301000004000003000000';Result[17].Response:='5310DAA076FEDC209100';
+ Result[18].Command:='90F50000010300';Result[18].Response:='03010000040000030000000000C7A3A49380190F1B9100';
+ Result[19].Command:='9045000000';Result[19].Response:='0B41446CE3DD25599CB09100';
+ Result[20].Command:='906F000000';Result[20].Response:='000102031B541C69E08D9E289100';
+ Result[21].Command:='90C000000A0401000004000003000000';Result[21].Response:='055AD767D01B6AC79100';
+ Result[22].Command:='90F50000010400';Result[22].Response:='04010000040000030000000000609928C917EA27AF9100';
+ Result[23].Command:='9045000000';Result[23].Response:='0B41B4563A7A741B45839100';
+ Result[24].Command:='906F000000';Result[24].Response:='0001020304229DD38764045E969100';
+ Result[25].Command:='90F50000010400';Result[25].Response:='04010000040000030000000000FDD6FC76B9AE6C379100';
+ Result[26].Command:='90DF0000010400';Result[26].Response:='68FD4E91F627F8639100';
+ Result[27].Command:='906F000000';Result[27].Response:='00010203A3E7BD7E89A545F59100';
+ Result[28].Command:='9045000000';Result[28].Response:='0B41CB19D35D98654EAD9100';
+ Result[29].Command:='906F000000';Result[29].Response:='0001020389BDB4A2F3B73D9E9100';
+ Result[30].Command:='90F50000010300';Result[30].Response:='03010000040000030000000000E20B9526A8344B0E9100';
+ Result[31].Command:='90DF0000010300';Result[31].Response:='36A1325EF34CB6AB9100';
+ Result[32].Command:='906F000000';Result[32].Response:='000102E931A3F5EFAEC69A9100';
+ Result[33].Command:='9045000000';Result[33].Response:='0B41B462E21F8943568A9100';
+ Result[34].Command:='906F000000';Result[34].Response:='000102487E23DF31A820BC9100';
+ Result[35].Command:='90F50000010200';Result[35].Response:='020100009CFFFFFF640000000A00000001341E84656AD0CCC09100';
+ Result[36].Command:='90DF0000010200';Result[36].Response:='85FE7C276C72E79E9100';
+ Result[37].Command:='906F000000';Result[37].Response:='0001BE5B0496EF99BC909100';
+ Result[38].Command:='9045000000';Result[38].Response:='0B41B8F213DDD6424DAF9100';
+ Result[39].Command:='906F000000';Result[39].Response:='0001350D332DEBD17E1D9100';
+ Result[40].Command:='90F50000010100';Result[40].Response:='0101000020000098EB82A17FA1DC249100';
+ Result[41].Command:='90DF0000010100';Result[41].Response:='FED11C747DD150339100';
+ Result[42].Command:='906F000000';Result[42].Response:='0073A4941A0E9D8C7A9100';
+ Result[43].Command:='9045000000';Result[43].Response:='0B416B10E5E76740B71E9100';
+ Result[44].Command:='906F000000';Result[44].Response:='008A47003BB2B2951B9100';
+ Result[45].Command:='90F50000010000';Result[45].Response:='000100002000008155352427207B7D9100';
+ Result[46].Command:='90DF0000010000';Result[46].Response:='B053404DB5BDE4AC9100';
+ Result[47].Command:='906F000000';Result[47].Response:='AEC8D09473B2D67A9100';
 end;
 function D1M3W0:TLegacyWirePairs;
 begin
@@ -635,6 +977,58 @@ begin
  Result[48].Command:='90BB0000070400000003000000';Result[48].Response:='5E6386FA92D8ED936EE0EE3A55A73F079100';
  Result[49].Command:='90F50000010400';Result[49].Response:='0403000004000003000003000018F6AB142050F4469100';
 end;
+function F1M3:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,48);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='901A0000010000';Result[1].Response:='C0489F69BEC54FA24FB6B1A32A7E422591AF';
+ Result[2].Command:='90AF000020B0CF98B7C6608F7B1ADE6431E091CC2C61C857C07C04856BE6D522015DE2E27500';Result[2].Response:='4A50EF9039792F1F21C71AA745EC26909100';
+ Result[3].Command:='9045000000';Result[3].Response:='0B412FDCD2F3D9D992E79100';
+ Result[4].Command:='906F000000';Result[4].Response:='0E9FEF08D3C9F38E9100';
+ Result[5].Command:='90CD0000070003000020000000';Result[5].Response:='12C7857C129DAFD89100';
+ Result[6].Command:='90F50000010000';Result[6].Response:='0003000020000091B885D6650AF27F9100';
+ Result[7].Command:='9045000000';Result[7].Response:='0B413CAEE6DA382035849100';
+ Result[8].Command:='906F000000';Result[8].Response:='004EA5FB60F0278F199100';
+ Result[9].Command:='90CB0000070103000020000000';Result[9].Response:='3D5DDA12CB1F9B929100';
+ Result[10].Command:='90F50000010100';Result[10].Response:='0103000020000082E3B49BA83157809100';
+ Result[11].Command:='9045000000';Result[11].Response:='0B412FC10CD2AE01DBFD9100';
+ Result[12].Command:='906F000000';Result[12].Response:='0001EEB322565681BF469100';
+ Result[13].Command:='90CC000011020300009CFFFFFF640000000A0000000100';Result[13].Response:='CA986CAD1ED056B29100';
+ Result[14].Command:='90F50000010200';Result[14].Response:='020300009CFFFFFF640000000A00000001EDBFA6C59C2C7D0C9100';
+ Result[15].Command:='9045000000';Result[15].Response:='0B416154254A7C1EE5979100';
+ Result[16].Command:='906F000000';Result[16].Response:='000102B5BD3E9CF9B3744F9100';
+ Result[17].Command:='90C100000A0303000004000003000000';Result[17].Response:='0E1DE183CF2801579100';
+ Result[18].Command:='90F50000010300';Result[18].Response:='03030000040000030000000000A80FF1119261A7BC9100';
+ Result[19].Command:='9045000000';Result[19].Response:='0B41277358356711CD5A9100';
+ Result[20].Command:='906F000000';Result[20].Response:='000102030488C12E2D8D7C619100';
+ Result[21].Command:='90C000000A0403000004000003000000';Result[21].Response:='C5BB96F0797B3F149100';
+ Result[22].Command:='90F50000010400';Result[22].Response:='04030000040000030000000000FEC555BE88BD28479100';
+ Result[23].Command:='9045000000';Result[23].Response:='0B41BF97FEC3F88FAACA9100';
+ Result[24].Command:='906F000000';Result[24].Response:='000102030465AE35AEF989A67A9100';
+ Result[25].Command:='90F50000010400';Result[25].Response:='04030000040000030000000000FD12721BDB821F809100';
+ Result[26].Command:='90DF0000010400';Result[26].Response:='4BF0EE1911C0AFC09100';
+ Result[27].Command:='906F000000';Result[27].Response:='00010203FDB860CC24AD9BBA9100';
+ Result[28].Command:='9045000000';Result[28].Response:='0B41973EE7D36A28DD2F9100';
+ Result[29].Command:='906F000000';Result[29].Response:='000102033B000F9F3233DF319100';
+ Result[30].Command:='90F50000010300';Result[30].Response:='030300000400000300000000005F7AF388A8C8FEE39100';
+ Result[31].Command:='90DF0000010300';Result[31].Response:='41E366A335B793C69100';
+ Result[32].Command:='906F000000';Result[32].Response:='000102519D926E7369C3D29100';
+ Result[33].Command:='9045000000';Result[33].Response:='0B419EBED2EE1B484AF49100';
+ Result[34].Command:='906F000000';Result[34].Response:='000102792736590F46859D9100';
+ Result[35].Command:='90F50000010200';Result[35].Response:='020300009CFFFFFF640000000A00000001BC7CD768440CEC889100';
+ Result[36].Command:='90DF0000010200';Result[36].Response:='4F89209D9ACA68289100';
+ Result[37].Command:='906F000000';Result[37].Response:='0001146FC2F8FED538E69100';
+ Result[38].Command:='9045000000';Result[38].Response:='0B4106F3F484B304EF819100';
+ Result[39].Command:='906F000000';Result[39].Response:='00018190EF74022EB2CC9100';
+ Result[40].Command:='90F50000010100';Result[40].Response:='0103000020000052F013F4104F30BF9100';
+ Result[41].Command:='90DF0000010100';Result[41].Response:='B3AC9F6C715E57259100';
+ Result[42].Command:='906F000000';Result[42].Response:='0092485D409492EC879100';
+ Result[43].Command:='9045000000';Result[43].Response:='0B414821D8924FF4C3F09100';
+ Result[44].Command:='906F000000';Result[44].Response:='0027ED7272621952C19100';
+ Result[45].Command:='90F50000010000';Result[45].Response:='0003000020000002DB5132506404739100';
+ Result[46].Command:='90DF0000010000';Result[46].Response:='FB7E3425A72B54F09100';
+ Result[47].Command:='906F000000';Result[47].Response:='AC8CEE49CF51EFAC9100';
+end;
 function C1:TLegacyWirePairs;
 begin
  Result:=nil;SetLength(Result,28);
@@ -666,6 +1060,40 @@ begin
  Result[25].Command:='90F50000010000';Result[25].Response:='0003000020000091AF';
  Result[26].Command:='90AF000000';Result[26].Response:='53EBE88E8FABE091AF';
  Result[27].Command:='90AF000000';Result[27].Response:='4D9100';
+end;
+function A1:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,30);
+ Result[0].Command:='905A00000300000000';Result[0].Response:='9100';
+ Result[1].Command:='901A0000010000';Result[1].Response:='C0489F69BEC54FA24FB6B1A32A7E422591AF';
+ Result[2].Command:='90AF000020B0CF98B7C6608F7B1ADE6431E091CC2C61C857C07C04856BE6D522015DE2E27500';Result[2].Response:='4A50EF9039792F1F21C71AA745EC26909100';
+ Result[3].Command:='906E000000';Result[3].Response:='E8030013DD003B61B8F4BB9100';
+ Result[4].Command:='9045000000';Result[4].Response:='0B41D43DD78A100767749100';
+ Result[5].Command:='90640000010000';Result[5].Response:='05A94E5560D1772A2C9100';
+ Result[6].Command:='9045000000';Result[6].Response:='0B416E6B79FF10422D109100';
+ Result[7].Command:='906A000000';Result[7].Response:='5634129F23DA723CD4FC499100';
+ Result[8].Command:='90CA00000501EFCD0B0100';Result[8].Response:='5DA6009CA2C32DB39100';
+ Result[9].Command:='906A000000';Result[9].Response:='56341201EFCDF372B165280EBBC69100';
+ Result[10].Command:='9045000000';Result[10].Response:='0B410060427DD7AF9AA09100';
+ Result[11].Command:='906A000000';Result[11].Response:='56341201EFCD0D7A46E822033D4B9100';
+ Result[12].Command:='90CA00000541EFCD0B4100';Result[12].Response:='394CEA0342C385209100';
+ Result[13].Command:='906A000000';Result[13].Response:='56341201EFCD41EFCD6F740F8A73AE6A359100';
+ Result[14].Command:='9045000000';Result[14].Response:='0B415A251ED40FBF5E129100';
+ Result[15].Command:='906A000000';Result[15].Response:='56341201EFCD41EFCD890729D56C9178959100';
+ Result[16].Command:='90CA00000581EFCD0B8100';Result[16].Response:='DBE2BF3484CEAFCD9100';
+ Result[17].Command:='906A000000';Result[17].Response:='56341201EFCD41EFCD81EFCD30525D97233309CE9100';
+ Result[18].Command:='9045000000';Result[18].Response:='0B41FAAEC965C1EF0EF89100';
+ Result[19].Command:='906A000000';Result[19].Response:='56341201EFCD41EFCD81EFCD16C76AFC1311DBE79100';
+ Result[20].Command:='90DA00000381EFCD00';Result[20].Response:='1A2B598E5CE706B89100';
+ Result[21].Command:='906A000000';Result[21].Response:='56341201EFCD41EFCD35B4484AD5E253569100';
+ Result[22].Command:='9045000000';Result[22].Response:='0B41A81AA8EF64C1ED459100';
+ Result[23].Command:='906A000000';Result[23].Response:='56341201EFCD41EFCD0288B686ECBF5C2D9100';
+ Result[24].Command:='90DA00000341EFCD00';Result[24].Response:='8BD43CB588E3A8959100';
+ Result[25].Command:='906A000000';Result[25].Response:='56341201EFCD9C97F4960CB8A6529100';
+ Result[26].Command:='9045000000';Result[26].Response:='0B41305C16A6D11F44339100';
+ Result[27].Command:='906A000000';Result[27].Response:='56341201EFCD760CE4F561CFF50C9100';
+ Result[28].Command:='90DA00000301EFCD00';Result[28].Response:='AFCD08EC2365E42D9100';
+ Result[29].Command:='906A000000';Result[29].Response:='563412C8EA3CDB267BDFC39100';
 end;
 function D2M0W0:TLegacyWirePairs;
 begin
@@ -744,6 +1172,58 @@ begin
  Result[48].Command:='90BB0000070400000003000000';Result[48].Response:='6162636451525354111213149100';
  Result[49].Command:='90F50000010400';Result[49].Response:='040000000400000300000300009100';
 end;
+function F2M0:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,48);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='900A0000010000';Result[1].Response:='EDD076666F6AE13091AF';
+ Result[2].Command:='90AF000010285089A5EBE5BC9E273DF193EC99F16400';Result[2].Response:='32146EB46D7FA6549100';
+ Result[3].Command:='9045000000';Result[3].Response:='0B019100';
+ Result[4].Command:='906F000000';Result[4].Response:='9100';
+ Result[5].Command:='90CD0000070000000020000000';Result[5].Response:='9100';
+ Result[6].Command:='90F50000010000';Result[6].Response:='000000002000009100';
+ Result[7].Command:='9045000000';Result[7].Response:='0B019100';
+ Result[8].Command:='906F000000';Result[8].Response:='009100';
+ Result[9].Command:='90CB0000070100000020000000';Result[9].Response:='9100';
+ Result[10].Command:='90F50000010100';Result[10].Response:='010000002000009100';
+ Result[11].Command:='9045000000';Result[11].Response:='0B019100';
+ Result[12].Command:='906F000000';Result[12].Response:='00019100';
+ Result[13].Command:='90CC000011020000009CFFFFFF640000000A0000000100';Result[13].Response:='9100';
+ Result[14].Command:='90F50000010200';Result[14].Response:='020000009CFFFFFF640000000A000000019100';
+ Result[15].Command:='9045000000';Result[15].Response:='0B019100';
+ Result[16].Command:='906F000000';Result[16].Response:='0001029100';
+ Result[17].Command:='90C100000A0300000004000003000000';Result[17].Response:='9100';
+ Result[18].Command:='90F50000010300';Result[18].Response:='030000000400000300000000009100';
+ Result[19].Command:='9045000000';Result[19].Response:='0B019100';
+ Result[20].Command:='906F000000';Result[20].Response:='000102039100';
+ Result[21].Command:='90C000000A0400000004000003000000';Result[21].Response:='9100';
+ Result[22].Command:='90F50000010400';Result[22].Response:='040000000400000300000000009100';
+ Result[23].Command:='9045000000';Result[23].Response:='0B019100';
+ Result[24].Command:='906F000000';Result[24].Response:='00010203049100';
+ Result[25].Command:='90F50000010400';Result[25].Response:='040000000400000300000000009100';
+ Result[26].Command:='90DF0000010400';Result[26].Response:='9100';
+ Result[27].Command:='906F000000';Result[27].Response:='000102039100';
+ Result[28].Command:='9045000000';Result[28].Response:='0B019100';
+ Result[29].Command:='906F000000';Result[29].Response:='000102039100';
+ Result[30].Command:='90F50000010300';Result[30].Response:='030000000400000300000000009100';
+ Result[31].Command:='90DF0000010300';Result[31].Response:='9100';
+ Result[32].Command:='906F000000';Result[32].Response:='0001029100';
+ Result[33].Command:='9045000000';Result[33].Response:='0B019100';
+ Result[34].Command:='906F000000';Result[34].Response:='0001029100';
+ Result[35].Command:='90F50000010200';Result[35].Response:='020000009CFFFFFF640000000A000000019100';
+ Result[36].Command:='90DF0000010200';Result[36].Response:='9100';
+ Result[37].Command:='906F000000';Result[37].Response:='00019100';
+ Result[38].Command:='9045000000';Result[38].Response:='0B019100';
+ Result[39].Command:='906F000000';Result[39].Response:='00019100';
+ Result[40].Command:='90F50000010100';Result[40].Response:='010000002000009100';
+ Result[41].Command:='90DF0000010100';Result[41].Response:='9100';
+ Result[42].Command:='906F000000';Result[42].Response:='009100';
+ Result[43].Command:='9045000000';Result[43].Response:='0B019100';
+ Result[44].Command:='906F000000';Result[44].Response:='009100';
+ Result[45].Command:='90F50000010000';Result[45].Response:='000000002000009100';
+ Result[46].Command:='90DF0000010000';Result[46].Response:='9100';
+ Result[47].Command:='906F000000';Result[47].Response:='9100';
+end;
 function D2M1W0:TLegacyWirePairs;
 begin
  Result:=nil;SetLength(Result,6);
@@ -820,6 +1300,58 @@ begin
  Result[47].Command:='90F50000010400';Result[47].Response:='040100000400000300000300009100';
  Result[48].Command:='90BB0000070400000003000000';Result[48].Response:='6162636451525354111213142EFECFCC9100';
  Result[49].Command:='90F50000010400';Result[49].Response:='040100000400000300000300009100';
+end;
+function F2M1:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,48);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='900A0000010000';Result[1].Response:='EDD076666F6AE13091AF';
+ Result[2].Command:='90AF000010285089A5EBE5BC9E273DF193EC99F16400';Result[2].Response:='32146EB46D7FA6549100';
+ Result[3].Command:='9045000000';Result[3].Response:='0B019100';
+ Result[4].Command:='906F000000';Result[4].Response:='9100';
+ Result[5].Command:='90CD0000070001000020000000';Result[5].Response:='9100';
+ Result[6].Command:='90F50000010000';Result[6].Response:='000100002000009100';
+ Result[7].Command:='9045000000';Result[7].Response:='0B019100';
+ Result[8].Command:='906F000000';Result[8].Response:='009100';
+ Result[9].Command:='90CB0000070101000020000000';Result[9].Response:='9100';
+ Result[10].Command:='90F50000010100';Result[10].Response:='010100002000009100';
+ Result[11].Command:='9045000000';Result[11].Response:='0B019100';
+ Result[12].Command:='906F000000';Result[12].Response:='00019100';
+ Result[13].Command:='90CC000011020100009CFFFFFF640000000A0000000100';Result[13].Response:='9100';
+ Result[14].Command:='90F50000010200';Result[14].Response:='020100009CFFFFFF640000000A000000019100';
+ Result[15].Command:='9045000000';Result[15].Response:='0B019100';
+ Result[16].Command:='906F000000';Result[16].Response:='0001029100';
+ Result[17].Command:='90C100000A0301000004000003000000';Result[17].Response:='9100';
+ Result[18].Command:='90F50000010300';Result[18].Response:='030100000400000300000000009100';
+ Result[19].Command:='9045000000';Result[19].Response:='0B019100';
+ Result[20].Command:='906F000000';Result[20].Response:='000102039100';
+ Result[21].Command:='90C000000A0401000004000003000000';Result[21].Response:='9100';
+ Result[22].Command:='90F50000010400';Result[22].Response:='040100000400000300000000009100';
+ Result[23].Command:='9045000000';Result[23].Response:='0B019100';
+ Result[24].Command:='906F000000';Result[24].Response:='00010203049100';
+ Result[25].Command:='90F50000010400';Result[25].Response:='040100000400000300000000009100';
+ Result[26].Command:='90DF0000010400';Result[26].Response:='9100';
+ Result[27].Command:='906F000000';Result[27].Response:='000102039100';
+ Result[28].Command:='9045000000';Result[28].Response:='0B019100';
+ Result[29].Command:='906F000000';Result[29].Response:='000102039100';
+ Result[30].Command:='90F50000010300';Result[30].Response:='030100000400000300000000009100';
+ Result[31].Command:='90DF0000010300';Result[31].Response:='9100';
+ Result[32].Command:='906F000000';Result[32].Response:='0001029100';
+ Result[33].Command:='9045000000';Result[33].Response:='0B019100';
+ Result[34].Command:='906F000000';Result[34].Response:='0001029100';
+ Result[35].Command:='90F50000010200';Result[35].Response:='020100009CFFFFFF640000000A000000019100';
+ Result[36].Command:='90DF0000010200';Result[36].Response:='9100';
+ Result[37].Command:='906F000000';Result[37].Response:='00019100';
+ Result[38].Command:='9045000000';Result[38].Response:='0B019100';
+ Result[39].Command:='906F000000';Result[39].Response:='00019100';
+ Result[40].Command:='90F50000010100';Result[40].Response:='010100002000009100';
+ Result[41].Command:='90DF0000010100';Result[41].Response:='9100';
+ Result[42].Command:='906F000000';Result[42].Response:='009100';
+ Result[43].Command:='9045000000';Result[43].Response:='0B019100';
+ Result[44].Command:='906F000000';Result[44].Response:='009100';
+ Result[45].Command:='90F50000010000';Result[45].Response:='000100002000009100';
+ Result[46].Command:='90DF0000010000';Result[46].Response:='9100';
+ Result[47].Command:='906F000000';Result[47].Response:='9100';
 end;
 function D2M3W0:TLegacyWirePairs;
 begin
@@ -898,6 +1430,58 @@ begin
  Result[48].Command:='90BB0000070400000003000000';Result[48].Response:='4173AAEDAD01531A2849F45BCCDCB1F59100';
  Result[49].Command:='90F50000010400';Result[49].Response:='040300000400000300000300009100';
 end;
+function F2M3:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,48);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='900A0000010000';Result[1].Response:='EDD076666F6AE13091AF';
+ Result[2].Command:='90AF000010285089A5EBE5BC9E273DF193EC99F16400';Result[2].Response:='32146EB46D7FA6549100';
+ Result[3].Command:='9045000000';Result[3].Response:='0B019100';
+ Result[4].Command:='906F000000';Result[4].Response:='9100';
+ Result[5].Command:='90CD0000070003000020000000';Result[5].Response:='9100';
+ Result[6].Command:='90F50000010000';Result[6].Response:='000300002000009100';
+ Result[7].Command:='9045000000';Result[7].Response:='0B019100';
+ Result[8].Command:='906F000000';Result[8].Response:='009100';
+ Result[9].Command:='90CB0000070103000020000000';Result[9].Response:='9100';
+ Result[10].Command:='90F50000010100';Result[10].Response:='010300002000009100';
+ Result[11].Command:='9045000000';Result[11].Response:='0B019100';
+ Result[12].Command:='906F000000';Result[12].Response:='00019100';
+ Result[13].Command:='90CC000011020300009CFFFFFF640000000A0000000100';Result[13].Response:='9100';
+ Result[14].Command:='90F50000010200';Result[14].Response:='020300009CFFFFFF640000000A000000019100';
+ Result[15].Command:='9045000000';Result[15].Response:='0B019100';
+ Result[16].Command:='906F000000';Result[16].Response:='0001029100';
+ Result[17].Command:='90C100000A0303000004000003000000';Result[17].Response:='9100';
+ Result[18].Command:='90F50000010300';Result[18].Response:='030300000400000300000000009100';
+ Result[19].Command:='9045000000';Result[19].Response:='0B019100';
+ Result[20].Command:='906F000000';Result[20].Response:='000102039100';
+ Result[21].Command:='90C000000A0403000004000003000000';Result[21].Response:='9100';
+ Result[22].Command:='90F50000010400';Result[22].Response:='040300000400000300000000009100';
+ Result[23].Command:='9045000000';Result[23].Response:='0B019100';
+ Result[24].Command:='906F000000';Result[24].Response:='00010203049100';
+ Result[25].Command:='90F50000010400';Result[25].Response:='040300000400000300000000009100';
+ Result[26].Command:='90DF0000010400';Result[26].Response:='9100';
+ Result[27].Command:='906F000000';Result[27].Response:='000102039100';
+ Result[28].Command:='9045000000';Result[28].Response:='0B019100';
+ Result[29].Command:='906F000000';Result[29].Response:='000102039100';
+ Result[30].Command:='90F50000010300';Result[30].Response:='030300000400000300000000009100';
+ Result[31].Command:='90DF0000010300';Result[31].Response:='9100';
+ Result[32].Command:='906F000000';Result[32].Response:='0001029100';
+ Result[33].Command:='9045000000';Result[33].Response:='0B019100';
+ Result[34].Command:='906F000000';Result[34].Response:='0001029100';
+ Result[35].Command:='90F50000010200';Result[35].Response:='020300009CFFFFFF640000000A000000019100';
+ Result[36].Command:='90DF0000010200';Result[36].Response:='9100';
+ Result[37].Command:='906F000000';Result[37].Response:='00019100';
+ Result[38].Command:='9045000000';Result[38].Response:='0B019100';
+ Result[39].Command:='906F000000';Result[39].Response:='00019100';
+ Result[40].Command:='90F50000010100';Result[40].Response:='010300002000009100';
+ Result[41].Command:='90DF0000010100';Result[41].Response:='9100';
+ Result[42].Command:='906F000000';Result[42].Response:='009100';
+ Result[43].Command:='9045000000';Result[43].Response:='0B019100';
+ Result[44].Command:='906F000000';Result[44].Response:='009100';
+ Result[45].Command:='90F50000010000';Result[45].Response:='000300002000009100';
+ Result[46].Command:='90DF0000010000';Result[46].Response:='9100';
+ Result[47].Command:='906F000000';Result[47].Response:='9100';
+end;
 function C2:TLegacyWirePairs;
 begin
  Result:=nil;SetLength(Result,21);
@@ -922,6 +1506,40 @@ begin
  Result[18].Command:='90AF000000';Result[18].Response:='71C4308023C2EC91AF';
  Result[19].Command:='90AF000000';Result[19].Response:='BEA391A9299100';
  Result[20].Command:='90F50000010000';Result[20].Response:='000300002000009100';
+end;
+function A2:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,30);
+ Result[0].Command:='905A00000300000000';Result[0].Response:='9100';
+ Result[1].Command:='900A0000010000';Result[1].Response:='EDD076666F6AE13091AF';
+ Result[2].Command:='90AF000010285089A5EBE5BC9E273DF193EC99F16400';Result[2].Response:='32146EB46D7FA6549100';
+ Result[3].Command:='906E000000';Result[3].Response:='E803009100';
+ Result[4].Command:='9045000000';Result[4].Response:='0B019100';
+ Result[5].Command:='90640000010000';Result[5].Response:='059100';
+ Result[6].Command:='9045000000';Result[6].Response:='0B019100';
+ Result[7].Command:='906A000000';Result[7].Response:='5634129100';
+ Result[8].Command:='90CA00000501EFCD0B0100';Result[8].Response:='9100';
+ Result[9].Command:='906A000000';Result[9].Response:='56341201EFCD9100';
+ Result[10].Command:='9045000000';Result[10].Response:='0B019100';
+ Result[11].Command:='906A000000';Result[11].Response:='56341201EFCD9100';
+ Result[12].Command:='90CA00000541EFCD0B4100';Result[12].Response:='9100';
+ Result[13].Command:='906A000000';Result[13].Response:='56341201EFCD41EFCD9100';
+ Result[14].Command:='9045000000';Result[14].Response:='0B019100';
+ Result[15].Command:='906A000000';Result[15].Response:='56341201EFCD41EFCD9100';
+ Result[16].Command:='90CA00000581EFCD0B8100';Result[16].Response:='9100';
+ Result[17].Command:='906A000000';Result[17].Response:='56341201EFCD41EFCD81EFCD9100';
+ Result[18].Command:='9045000000';Result[18].Response:='0B019100';
+ Result[19].Command:='906A000000';Result[19].Response:='56341201EFCD41EFCD81EFCD9100';
+ Result[20].Command:='90DA00000381EFCD00';Result[20].Response:='9100';
+ Result[21].Command:='906A000000';Result[21].Response:='56341201EFCD41EFCD9100';
+ Result[22].Command:='9045000000';Result[22].Response:='0B019100';
+ Result[23].Command:='906A000000';Result[23].Response:='56341201EFCD41EFCD9100';
+ Result[24].Command:='90DA00000341EFCD00';Result[24].Response:='9100';
+ Result[25].Command:='906A000000';Result[25].Response:='56341201EFCD9100';
+ Result[26].Command:='9045000000';Result[26].Response:='0B019100';
+ Result[27].Command:='906A000000';Result[27].Response:='56341201EFCD9100';
+ Result[28].Command:='90DA00000301EFCD00';Result[28].Response:='9100';
+ Result[29].Command:='906A000000';Result[29].Response:='5634129100';
 end;
 function D3M0W0:TLegacyWirePairs;
 begin
@@ -1000,6 +1618,58 @@ begin
  Result[48].Command:='90BB0000070400000003000000';Result[48].Response:='6162636451525354111213149100';
  Result[49].Command:='90F50000010400';Result[49].Response:='040000000400000300000300009100';
 end;
+function F3M0:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,48);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='900A0000010000';Result[1].Response:='C0489F69BEC54FA291AF';
+ Result[2].Command:='90AF0000104A37C9D6B574D003B00B25A069581CC700';Result[2].Response:='FE5F5CE1966AAE2A9100';
+ Result[3].Command:='9045000000';Result[3].Response:='0B019100';
+ Result[4].Command:='906F000000';Result[4].Response:='9100';
+ Result[5].Command:='90CD0000070000000020000000';Result[5].Response:='9100';
+ Result[6].Command:='90F50000010000';Result[6].Response:='000000002000009100';
+ Result[7].Command:='9045000000';Result[7].Response:='0B019100';
+ Result[8].Command:='906F000000';Result[8].Response:='009100';
+ Result[9].Command:='90CB0000070100000020000000';Result[9].Response:='9100';
+ Result[10].Command:='90F50000010100';Result[10].Response:='010000002000009100';
+ Result[11].Command:='9045000000';Result[11].Response:='0B019100';
+ Result[12].Command:='906F000000';Result[12].Response:='00019100';
+ Result[13].Command:='90CC000011020000009CFFFFFF640000000A0000000100';Result[13].Response:='9100';
+ Result[14].Command:='90F50000010200';Result[14].Response:='020000009CFFFFFF640000000A000000019100';
+ Result[15].Command:='9045000000';Result[15].Response:='0B019100';
+ Result[16].Command:='906F000000';Result[16].Response:='0001029100';
+ Result[17].Command:='90C100000A0300000004000003000000';Result[17].Response:='9100';
+ Result[18].Command:='90F50000010300';Result[18].Response:='030000000400000300000000009100';
+ Result[19].Command:='9045000000';Result[19].Response:='0B019100';
+ Result[20].Command:='906F000000';Result[20].Response:='000102039100';
+ Result[21].Command:='90C000000A0400000004000003000000';Result[21].Response:='9100';
+ Result[22].Command:='90F50000010400';Result[22].Response:='040000000400000300000000009100';
+ Result[23].Command:='9045000000';Result[23].Response:='0B019100';
+ Result[24].Command:='906F000000';Result[24].Response:='00010203049100';
+ Result[25].Command:='90F50000010400';Result[25].Response:='040000000400000300000000009100';
+ Result[26].Command:='90DF0000010400';Result[26].Response:='9100';
+ Result[27].Command:='906F000000';Result[27].Response:='000102039100';
+ Result[28].Command:='9045000000';Result[28].Response:='0B019100';
+ Result[29].Command:='906F000000';Result[29].Response:='000102039100';
+ Result[30].Command:='90F50000010300';Result[30].Response:='030000000400000300000000009100';
+ Result[31].Command:='90DF0000010300';Result[31].Response:='9100';
+ Result[32].Command:='906F000000';Result[32].Response:='0001029100';
+ Result[33].Command:='9045000000';Result[33].Response:='0B019100';
+ Result[34].Command:='906F000000';Result[34].Response:='0001029100';
+ Result[35].Command:='90F50000010200';Result[35].Response:='020000009CFFFFFF640000000A000000019100';
+ Result[36].Command:='90DF0000010200';Result[36].Response:='9100';
+ Result[37].Command:='906F000000';Result[37].Response:='00019100';
+ Result[38].Command:='9045000000';Result[38].Response:='0B019100';
+ Result[39].Command:='906F000000';Result[39].Response:='00019100';
+ Result[40].Command:='90F50000010100';Result[40].Response:='010000002000009100';
+ Result[41].Command:='90DF0000010100';Result[41].Response:='9100';
+ Result[42].Command:='906F000000';Result[42].Response:='009100';
+ Result[43].Command:='9045000000';Result[43].Response:='0B019100';
+ Result[44].Command:='906F000000';Result[44].Response:='009100';
+ Result[45].Command:='90F50000010000';Result[45].Response:='000000002000009100';
+ Result[46].Command:='90DF0000010000';Result[46].Response:='9100';
+ Result[47].Command:='906F000000';Result[47].Response:='9100';
+end;
 function D3M1W0:TLegacyWirePairs;
 begin
  Result:=nil;SetLength(Result,6);
@@ -1076,6 +1746,58 @@ begin
  Result[47].Command:='90F50000010400';Result[47].Response:='040100000400000300000300009100';
  Result[48].Command:='90BB0000070400000003000000';Result[48].Response:='616263645152535411121314BC045D029100';
  Result[49].Command:='90F50000010400';Result[49].Response:='040100000400000300000300009100';
+end;
+function F3M1:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,48);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='900A0000010000';Result[1].Response:='C0489F69BEC54FA291AF';
+ Result[2].Command:='90AF0000104A37C9D6B574D003B00B25A069581CC700';Result[2].Response:='FE5F5CE1966AAE2A9100';
+ Result[3].Command:='9045000000';Result[3].Response:='0B019100';
+ Result[4].Command:='906F000000';Result[4].Response:='9100';
+ Result[5].Command:='90CD0000070001000020000000';Result[5].Response:='9100';
+ Result[6].Command:='90F50000010000';Result[6].Response:='000100002000009100';
+ Result[7].Command:='9045000000';Result[7].Response:='0B019100';
+ Result[8].Command:='906F000000';Result[8].Response:='009100';
+ Result[9].Command:='90CB0000070101000020000000';Result[9].Response:='9100';
+ Result[10].Command:='90F50000010100';Result[10].Response:='010100002000009100';
+ Result[11].Command:='9045000000';Result[11].Response:='0B019100';
+ Result[12].Command:='906F000000';Result[12].Response:='00019100';
+ Result[13].Command:='90CC000011020100009CFFFFFF640000000A0000000100';Result[13].Response:='9100';
+ Result[14].Command:='90F50000010200';Result[14].Response:='020100009CFFFFFF640000000A000000019100';
+ Result[15].Command:='9045000000';Result[15].Response:='0B019100';
+ Result[16].Command:='906F000000';Result[16].Response:='0001029100';
+ Result[17].Command:='90C100000A0301000004000003000000';Result[17].Response:='9100';
+ Result[18].Command:='90F50000010300';Result[18].Response:='030100000400000300000000009100';
+ Result[19].Command:='9045000000';Result[19].Response:='0B019100';
+ Result[20].Command:='906F000000';Result[20].Response:='000102039100';
+ Result[21].Command:='90C000000A0401000004000003000000';Result[21].Response:='9100';
+ Result[22].Command:='90F50000010400';Result[22].Response:='040100000400000300000000009100';
+ Result[23].Command:='9045000000';Result[23].Response:='0B019100';
+ Result[24].Command:='906F000000';Result[24].Response:='00010203049100';
+ Result[25].Command:='90F50000010400';Result[25].Response:='040100000400000300000000009100';
+ Result[26].Command:='90DF0000010400';Result[26].Response:='9100';
+ Result[27].Command:='906F000000';Result[27].Response:='000102039100';
+ Result[28].Command:='9045000000';Result[28].Response:='0B019100';
+ Result[29].Command:='906F000000';Result[29].Response:='000102039100';
+ Result[30].Command:='90F50000010300';Result[30].Response:='030100000400000300000000009100';
+ Result[31].Command:='90DF0000010300';Result[31].Response:='9100';
+ Result[32].Command:='906F000000';Result[32].Response:='0001029100';
+ Result[33].Command:='9045000000';Result[33].Response:='0B019100';
+ Result[34].Command:='906F000000';Result[34].Response:='0001029100';
+ Result[35].Command:='90F50000010200';Result[35].Response:='020100009CFFFFFF640000000A000000019100';
+ Result[36].Command:='90DF0000010200';Result[36].Response:='9100';
+ Result[37].Command:='906F000000';Result[37].Response:='00019100';
+ Result[38].Command:='9045000000';Result[38].Response:='0B019100';
+ Result[39].Command:='906F000000';Result[39].Response:='00019100';
+ Result[40].Command:='90F50000010100';Result[40].Response:='010100002000009100';
+ Result[41].Command:='90DF0000010100';Result[41].Response:='9100';
+ Result[42].Command:='906F000000';Result[42].Response:='009100';
+ Result[43].Command:='9045000000';Result[43].Response:='0B019100';
+ Result[44].Command:='906F000000';Result[44].Response:='009100';
+ Result[45].Command:='90F50000010000';Result[45].Response:='000100002000009100';
+ Result[46].Command:='90DF0000010000';Result[46].Response:='9100';
+ Result[47].Command:='906F000000';Result[47].Response:='9100';
 end;
 function D3M3W0:TLegacyWirePairs;
 begin
@@ -1154,6 +1876,58 @@ begin
  Result[48].Command:='90BB0000070400000003000000';Result[48].Response:='E2BE7A13E3044BD5FF16C8703508A27F9100';
  Result[49].Command:='90F50000010400';Result[49].Response:='040300000400000300000300009100';
 end;
+function F3M3:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,48);
+ Result[0].Command:='905A00000301EFCD00';Result[0].Response:='9100';
+ Result[1].Command:='900A0000010000';Result[1].Response:='C0489F69BEC54FA291AF';
+ Result[2].Command:='90AF0000104A37C9D6B574D003B00B25A069581CC700';Result[2].Response:='FE5F5CE1966AAE2A9100';
+ Result[3].Command:='9045000000';Result[3].Response:='0B019100';
+ Result[4].Command:='906F000000';Result[4].Response:='9100';
+ Result[5].Command:='90CD0000070003000020000000';Result[5].Response:='9100';
+ Result[6].Command:='90F50000010000';Result[6].Response:='000300002000009100';
+ Result[7].Command:='9045000000';Result[7].Response:='0B019100';
+ Result[8].Command:='906F000000';Result[8].Response:='009100';
+ Result[9].Command:='90CB0000070103000020000000';Result[9].Response:='9100';
+ Result[10].Command:='90F50000010100';Result[10].Response:='010300002000009100';
+ Result[11].Command:='9045000000';Result[11].Response:='0B019100';
+ Result[12].Command:='906F000000';Result[12].Response:='00019100';
+ Result[13].Command:='90CC000011020300009CFFFFFF640000000A0000000100';Result[13].Response:='9100';
+ Result[14].Command:='90F50000010200';Result[14].Response:='020300009CFFFFFF640000000A000000019100';
+ Result[15].Command:='9045000000';Result[15].Response:='0B019100';
+ Result[16].Command:='906F000000';Result[16].Response:='0001029100';
+ Result[17].Command:='90C100000A0303000004000003000000';Result[17].Response:='9100';
+ Result[18].Command:='90F50000010300';Result[18].Response:='030300000400000300000000009100';
+ Result[19].Command:='9045000000';Result[19].Response:='0B019100';
+ Result[20].Command:='906F000000';Result[20].Response:='000102039100';
+ Result[21].Command:='90C000000A0403000004000003000000';Result[21].Response:='9100';
+ Result[22].Command:='90F50000010400';Result[22].Response:='040300000400000300000000009100';
+ Result[23].Command:='9045000000';Result[23].Response:='0B019100';
+ Result[24].Command:='906F000000';Result[24].Response:='00010203049100';
+ Result[25].Command:='90F50000010400';Result[25].Response:='040300000400000300000000009100';
+ Result[26].Command:='90DF0000010400';Result[26].Response:='9100';
+ Result[27].Command:='906F000000';Result[27].Response:='000102039100';
+ Result[28].Command:='9045000000';Result[28].Response:='0B019100';
+ Result[29].Command:='906F000000';Result[29].Response:='000102039100';
+ Result[30].Command:='90F50000010300';Result[30].Response:='030300000400000300000000009100';
+ Result[31].Command:='90DF0000010300';Result[31].Response:='9100';
+ Result[32].Command:='906F000000';Result[32].Response:='0001029100';
+ Result[33].Command:='9045000000';Result[33].Response:='0B019100';
+ Result[34].Command:='906F000000';Result[34].Response:='0001029100';
+ Result[35].Command:='90F50000010200';Result[35].Response:='020300009CFFFFFF640000000A000000019100';
+ Result[36].Command:='90DF0000010200';Result[36].Response:='9100';
+ Result[37].Command:='906F000000';Result[37].Response:='00019100';
+ Result[38].Command:='9045000000';Result[38].Response:='0B019100';
+ Result[39].Command:='906F000000';Result[39].Response:='00019100';
+ Result[40].Command:='90F50000010100';Result[40].Response:='010300002000009100';
+ Result[41].Command:='90DF0000010100';Result[41].Response:='9100';
+ Result[42].Command:='906F000000';Result[42].Response:='009100';
+ Result[43].Command:='9045000000';Result[43].Response:='0B019100';
+ Result[44].Command:='906F000000';Result[44].Response:='009100';
+ Result[45].Command:='90F50000010000';Result[45].Response:='000300002000009100';
+ Result[46].Command:='90DF0000010000';Result[46].Response:='9100';
+ Result[47].Command:='906F000000';Result[47].Response:='9100';
+end;
 function C3:TLegacyWirePairs;
 begin
  Result:=nil;SetLength(Result,21);
@@ -1178,6 +1952,40 @@ begin
  Result[18].Command:='90AF000000';Result[18].Response:='65112E9C656B6491AF';
  Result[19].Command:='90AF000000';Result[19].Response:='E7216A26019100';
  Result[20].Command:='90F50000010000';Result[20].Response:='000300002000009100';
+end;
+function A3:TLegacyWirePairs;
+begin
+ Result:=nil;SetLength(Result,30);
+ Result[0].Command:='905A00000300000000';Result[0].Response:='9100';
+ Result[1].Command:='900A0000010000';Result[1].Response:='C0489F69BEC54FA291AF';
+ Result[2].Command:='90AF0000104A37C9D6B574D003B00B25A069581CC700';Result[2].Response:='FE5F5CE1966AAE2A9100';
+ Result[3].Command:='906E000000';Result[3].Response:='E803009100';
+ Result[4].Command:='9045000000';Result[4].Response:='0B019100';
+ Result[5].Command:='90640000010000';Result[5].Response:='059100';
+ Result[6].Command:='9045000000';Result[6].Response:='0B019100';
+ Result[7].Command:='906A000000';Result[7].Response:='5634129100';
+ Result[8].Command:='90CA00000501EFCD0B0100';Result[8].Response:='9100';
+ Result[9].Command:='906A000000';Result[9].Response:='56341201EFCD9100';
+ Result[10].Command:='9045000000';Result[10].Response:='0B019100';
+ Result[11].Command:='906A000000';Result[11].Response:='56341201EFCD9100';
+ Result[12].Command:='90CA00000541EFCD0B4100';Result[12].Response:='9100';
+ Result[13].Command:='906A000000';Result[13].Response:='56341201EFCD41EFCD9100';
+ Result[14].Command:='9045000000';Result[14].Response:='0B019100';
+ Result[15].Command:='906A000000';Result[15].Response:='56341201EFCD41EFCD9100';
+ Result[16].Command:='90CA00000581EFCD0B8100';Result[16].Response:='9100';
+ Result[17].Command:='906A000000';Result[17].Response:='56341201EFCD41EFCD81EFCD9100';
+ Result[18].Command:='9045000000';Result[18].Response:='0B019100';
+ Result[19].Command:='906A000000';Result[19].Response:='56341201EFCD41EFCD81EFCD9100';
+ Result[20].Command:='90DA00000381EFCD00';Result[20].Response:='9100';
+ Result[21].Command:='906A000000';Result[21].Response:='56341201EFCD41EFCD9100';
+ Result[22].Command:='9045000000';Result[22].Response:='0B019100';
+ Result[23].Command:='906A000000';Result[23].Response:='56341201EFCD41EFCD9100';
+ Result[24].Command:='90DA00000341EFCD00';Result[24].Response:='9100';
+ Result[25].Command:='906A000000';Result[25].Response:='56341201EFCD9100';
+ Result[26].Command:='9045000000';Result[26].Response:='0B019100';
+ Result[27].Command:='906A000000';Result[27].Response:='56341201EFCD9100';
+ Result[28].Command:='90DA00000301EFCD00';Result[28].Response:='9100';
+ Result[29].Command:='906A000000';Result[29].Response:='5634129100';
 end;
 function Uread:TLegacyWirePairs;
 begin
