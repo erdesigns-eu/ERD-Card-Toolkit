@@ -14,14 +14,14 @@ _Static_assert(sizeof(io_request) == 8, "SCARD_IO_REQUEST layout");
 _Static_assert(sizeof(reader_state) == (sizeof(void *) == 8 ? 64 : 56), "SCARD_READERSTATE layout");
 _Static_assert(offsetof(reader_state, current) == 2 * sizeof(void *), "DWORD offset");
 
-static int mode, transmit_calls, list_calls;
+static int mode, transmit_calls, list_calls, wait_calls;
 static const uintptr_t context = (uintptr_t)UINT64_C(0x100000001);
 static const uintptr_t card = (uintptr_t)UINT64_C(0x200000003);
 static const uint16_t names[] = {'R',0x00e9,0,'B',0,0};
 static const uint8_t atr[] = {0x3b,0x80,0x01,0x81};
 
-void CardTestConfigure(int value) { mode=value; transmit_calls=0; list_calls=0; }
-int CardTestCount(int kind) { return kind == 0 ? transmit_calls : list_calls; }
+void CardTestConfigure(int value) { mode=value; transmit_calls=0; list_calls=0; wait_calls=0; }
+int CardTestCount(int kind) { return kind == 0 ? transmit_calls : kind == 1 ? list_calls : wait_calls; }
 
 uint32_t SCardEstablishContext(uint32_t scope, void *r1, void *r2, uintptr_t *out) {
     if (scope || r1 || r2 || !out) return 0x80100004u;
@@ -73,6 +73,21 @@ uint32_t SCardStatusW(uintptr_t handle, uint16_t *readers, uint32_t *reader_size
     memcpy(out,atr,sizeof(atr)); *size=sizeof(atr); return 0;
 }
 uint32_t SCardGetStatusChangeW(uintptr_t ctx, uint32_t timeout, reader_state *states, uint32_t count) {
+    ++wait_calls;
+    if ((mode==9 || mode==10 || mode==11) && count==3 && ctx==context && states && timeout==250) {
+        if (!states[0].reader || states[0].reader[0]!='R' || states[0].reader[1]!=0xe9 ||
+            states[1].reader[0]!='B' || states[2].reader[0]!=92 || states[2].reader[1]!=92 ||
+            states[0].user || states[1].user || states[2].user ||
+            (states[0].current & 2) || (states[1].current & 2) || states[2].current!=2) return 0x80100004u;
+        if(mode==11) return 0x8010000au;
+        for(uint32_t i=0;i<3;i++) {
+            states[i].event=i==2 ? 0x80000002u : 0x12340022u;
+            states[i].atr_size=i==2 ? 0 : sizeof(atr);
+            memcpy(states[i].atr,atr,sizeof(atr));
+        }
+        if(mode==10) states[1].atr_size=37;
+        return 0;
+    }
     if (ctx!=context || !states || count!=1 || !states->reader || states->user ||
         (states->current & 2) || timeout==UINT32_MAX) return 0x80100004u;
     if (mode==6) return 0x8010000au;

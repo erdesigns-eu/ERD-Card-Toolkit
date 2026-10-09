@@ -5,11 +5,24 @@ interface
 uses System.Classes, System.SysUtils, Vcl.Forms, Vcl.Controls, Vcl.StdCtrls,
   Vcl.ExtCtrls, Vcl.ComCtrls, Vcl.Dialogs, Vcl.Imaging.jpeg,
   ERD.Card.Demo.Job, ERD.Card.Demo.Controller, ERD.Card.Demo.Devices,
-  ERD.Card.Demo.Families, ERD.Card.RFID.Input;
+  ERD.Card.PCSC.Monitor, ERD.Card.PCSC.Api, ERD.Card.Demo.Families, ERD.Card.RFID.Input;
 
 type
   /// <summary>Independent ReaderToolsDemo form; all visual controls belong to its own editable DFM.</summary>
   TReaderToolsDemoForm = class(TForm)
+  published
+    /// <summary>Start native reader arrival/removal notifications without a polling loop.</summary>
+    WatchButton: TButton;
+    /// <summary>Stop observation and discard pending notifications.</summary>
+    StopWatchButton: TButton;
+    /// <summary>Persistent bounded event log, separate from operation results.</summary>
+    EventsMemo: TMemo;
+    /// <summary>Start event observation; no card is automatically connected or written.</summary>
+    /// <param name="Sender">This form's own DFM button.</param>
+    procedure WatchClick(Sender: TObject);
+    /// <summary>Stop native observation before reconfiguration or form destruction.</summary>
+    /// <param name="Sender">This form's own DFM button.</param>
+    procedure StopWatchClick(Sender: TObject);
   published
     /// <summary>Reader discovery and transport guidance.</summary>
     HeaderPanel: TPanel;
@@ -132,6 +145,14 @@ type
     /// <param name="Key">Character consumed by the capture adapter.</param>
     procedure CaptureKey(Sender: TObject; var Key: Char);
   private
+    FMonitor: TSmartCardMonitor;
+    procedure ReaderAdded(Sender: TObject; const Name: UnicodeString);
+    procedure ReaderRemoved(Sender: TObject; const Name: UnicodeString);
+    procedure CardInserted(Sender: TObject; const State: TPcscReaderSnapshot);
+    procedure CardRemoved(Sender: TObject; const State: TPcscReaderSnapshot);
+    procedure MonitorError(Sender: TObject; const Status: Cardinal);
+    procedure LogEvent(const Text: string);
+  private
     FFamily: TCardDemoFamily;
     FActions: TCardFamilyActions;
     FInputs: TArray<TWinControl>;
@@ -171,16 +192,74 @@ implementation
 
 uses Winapi.Windows, ERD.Card.Bytes, ERD.Card.Crypto, ERD.Card.Demo.FamilyOperations;
 
+procedure TReaderToolsDemoForm.LogEvent(const Text: string);
+begin
+  while EventsMemo.Lines.Count >= 1000 do EventsMemo.Lines.Delete(0);
+  EventsMemo.Lines.Add(Text);
+end;
+procedure TReaderToolsDemoForm.WatchClick(Sender: TObject);
+begin
+  if FBusy then Exit;
+  FPreviousAddress := SelectedAddress;
+  try FMonitor.Start;
+    FDevices := nil; ReaderBox.Items.Clear; ReaderBox.ItemIndex := -1;
+    RefreshReadersButton.Enabled := False; WatchButton.Enabled := False; StopWatchButton.Enabled := True;
+    LogEvent('Native reader notifications active.');
+  except on E: Exception do LogEvent('Observation could not start: '+E.ClassName+'.'); end;
+end;
+procedure TReaderToolsDemoForm.StopWatchClick(Sender: TObject);
+begin
+  FMonitor.Stop;
+  WatchButton.Enabled := True; StopWatchButton.Enabled := False;
+  RefreshReadersButton.Enabled := not FBusy;
+end;
+procedure TReaderToolsDemoForm.ReaderAdded(Sender: TObject; const Name: UnicodeString);
+var I,N: Integer;
+begin
+  LogEvent('Reader connected: '+string(Name));
+  for I := 0 to High(FDevices) do if FDevices[I].Address = Name then Exit;
+  N := Length(FDevices); SetLength(FDevices,N+1);
+  FDevices[N].Address := Name; FDevices[N].DisplayName := Name; ReaderBox.Items.Add(string(Name));
+  if Name=FPreviousAddress then ReaderBox.ItemIndex := N; ReaderChanged(nil);
+end;
+procedure TReaderToolsDemoForm.ReaderRemoved(Sender: TObject; const Name: UnicodeString);
+var I,J,Selected: Integer;
+begin
+  LogEvent('Reader disconnected: '+string(Name)); Selected := ReaderBox.ItemIndex;
+  for I := 0 to High(FDevices) do if FDevices[I].Address = Name then begin
+    for J := I to High(FDevices)-1 do FDevices[J] := FDevices[J+1];
+    SetLength(FDevices,Length(FDevices)-1); ReaderBox.Items.Delete(I);
+    if Selected=I then ReaderBox.ItemIndex := -1
+    else if Selected>I then ReaderBox.ItemIndex := Selected-1;
+    ReaderChanged(nil); Exit;
+  end;
+end;
+procedure TReaderToolsDemoForm.CardInserted(Sender: TObject; const State: TPcscReaderSnapshot);
+begin LogEvent('Card offered: '+string(State.ReaderName)+'; ATR '+BytesToHex(State.Atr)); end;
+procedure TReaderToolsDemoForm.CardRemoved(Sender: TObject; const State: TPcscReaderSnapshot);
+begin LogEvent('Card removed: '+string(State.ReaderName)+'; last ATR '+BytesToHex(State.Atr)); end;
+procedure TReaderToolsDemoForm.MonitorError(Sender: TObject; const Status: Cardinal);
+begin
+  WatchButton.Enabled := True; StopWatchButton.Enabled := False;
+  RefreshReadersButton.Enabled := not FBusy;
+  LogEvent('Observation stopped: PC/SC 0x'+IntToHex(Status,8)+'.');
+end;
+
 constructor TReaderToolsDemoForm.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FFamily := dfTools; FActions := CardFamilyActions(FFamily);
   FController := TCardDemoController.Create(ddkPcsc,CreateCardFamilyOperations(FFamily),SetBusy,Complete,Close);
+  FMonitor := TSmartCardMonitor.Create(nil);
+  FMonitor.OnReaderAdded := ReaderAdded; FMonitor.OnReaderRemoved := ReaderRemoved;
+  FMonitor.OnCardInserted := CardInserted; FMonitor.OnCardRemoved := CardRemoved;
+  FMonitor.OnError := MonitorError;
   ActionChanged(nil);
 end;
 
 destructor TReaderToolsDemoForm.Destroy;
 begin
+  FMonitor.Free;
   if WorkerTimer <> nil then WorkerTimer.Enabled := False; StopCapture; FController.Free; inherited Destroy;
 end;
 
@@ -311,7 +390,8 @@ var I: Integer; Frozen: Boolean;
 begin
   FBusy := AValue; Frozen := AValue or (FCapture <> nil);
   ActionPages.Enabled := not Frozen;
-  ReaderBox.Enabled := not Frozen; RefreshReadersButton.Enabled := not Frozen;
+  ReaderBox.Enabled := not Frozen; RefreshReadersButton.Enabled := not Frozen and not FMonitor.Active;
+  WatchButton.Enabled := not Frozen and not FMonitor.Active;
   AcknowledgeCheck.Enabled := not Frozen and FActions[ActionPages.ActivePageIndex].Mutation;
   for I := 0 to High(FInputs) do FInputs[I].Enabled := not Frozen;
   RunButton.Enabled := not AValue;
@@ -384,7 +464,7 @@ begin ReaderBox.Hint := SelectedAddress; end;
 procedure TReaderToolsDemoForm.RefreshReadersClick(Sender: TObject);
 var R: TCardDemoRequest;
 begin
-  if FBusy or (FCapture <> nil) then Exit;
+  if FBusy or (FCapture <> nil) or FMonitor.Active then Exit;
   FPreviousAddress := SelectedAddress;
   R := Default(TCardDemoRequest); R.Operation := cdoDemoDevices;
   try StartRequest(R); except on E: Exception do OutputMemo.Text := 'Discovery could not start: '+E.ClassName+'.'; end;

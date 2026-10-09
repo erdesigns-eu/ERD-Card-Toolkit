@@ -1,4 +1,4 @@
-program NativePcscTests;
+﻿program NativePcscTests;
 
 {$IFDEF FPC}
   {$MODE DELPHI}
@@ -29,6 +29,27 @@ procedure Check(const ACondition: Boolean; const AMessage: string);
 begin
   Inc(Checks);
   if not ACondition then raise Exception.Create(AMessage);
+end;
+
+procedure TestBulkBoundary;
+var Api:IPcscApi;Bulk:IPcscMonitorApi;A,R:TPcscReaderSnapshots;C:TPcscHandle;I:Integer;
+begin
+ Api:=CreateSystemPcscApi;Check(Supports(Api,IPcscMonitorApi,Bulk),'Optional bulk monitoring supported');
+ Configure(9);Check(Api.Establish(C)=0,'Bulk context');SetLength(A,3);
+ A[0].ReaderName:='R'+UnicodeString(WideChar($E9));A[1].ReaderName:='B';A[2].ReaderName:=PcscPnpNotification;
+ for I:=0 to 2 do A[I].State:=PcscStateChanged;
+ Check(Bulk.WaitReaders(C,A,250,R)=0,'Native ordered multi-state ABI and PnP input marker');
+ Check((Length(R)=3) and (R[0].ReaderName=A[0].ReaderName) and (R[1].State=$12340020) and
+  (R[2].State=$80000002) and (Length(R[2].Atr)=0),'Bulk state normalization preserves raw PnP high bits');
+ Check((BytesToHex(R[0].Atr)='3B800181') and (NativeCount(2)=1),'Independent ATR and exactly one bulk wait');
+ Configure(10);Check(Bulk.WaitReaders(C,A,250,R)=PcscInternalError,'Any oversized ATR rejects whole batch');
+ Check(Length(R)=0,'Invalid bulk output cleared');
+ Configure(11);Check(Bulk.WaitReaders(C,A,250,R)=PcscTimeout,'Bulk timeout preserved');Check(Length(R)=0,'Timeout output clear');
+ Configure(9);A[1].ReaderName:=A[0].ReaderName;
+ Check(Bulk.WaitReaders(C,A,250,R)=PcscInvalidParameter,'Duplicate reader names rejected before native call');
+ Check(NativeCount(2)=0,'Invalid bulk input never enters native boundary');
+ A:=nil;Check(Bulk.WaitReaders(C,A,250,R)=PcscInvalidParameter,'Empty bulk wait rejected');
+ Check(Api.Release(C)=0,'Bulk context release');
 end;
 
 procedure TestNativeBoundary;
@@ -95,7 +116,7 @@ end;
 
 begin
   try
-    TestNativeBoundary;
+    TestNativeBoundary; TestBulkBoundary;
     Writeln('PASS: ', Checks, ' assertions against the Linux native PC/SC ABI shim.');
   except
     on E: Exception do

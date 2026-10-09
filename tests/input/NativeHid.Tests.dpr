@@ -9,7 +9,7 @@ procedure Check(const V: Boolean);
 begin Inc(Checks); if not V then raise Exception.Create('Native HID ABI/ownership assertion failed.'); end;
 procedure Run;
 var M,W: Integer; C: TUsbHidReaderWriter; D: IHidReportDevice; Data: TBytes; Kind: THidReportKind;
-  Failed,Uncertain: Boolean; Devices: THidDevices;
+  Failed,Uncertain,TimedOut: Boolean; Devices: THidDevices;
 begin
   Configure(0); Devices := EnumerateWindowsHidDevices;
   Check(Length(Devices) = 1); Check(Devices[0].DevicePath = 'hid:test');
@@ -24,12 +24,13 @@ begin
       begin
         Configure(M); D := CreateWindowsHidReportDevice('hid:test'); C := TUsbHidReaderWriter.Create(nil);
         try
-          C.Device := D; C.TimeoutMs := 123; Failed := False; Uncertain := False;
+          C.Device := D; C.TimeoutMs := 123; Failed := False; Uncertain := False; TimedOut := False;
           try if W = 0 then Data := C.ReadReport(Kind,7) else C.SendReport(Kind,HexToBytes('07010203'));
-          except on E: EHidSendUncertain do begin Failed := True; Uncertain := True; end; on E: EHidError do Failed := True; end;
+          except on E: EHidSendUncertain do begin Failed := True; Uncertain := True; end; on E: EHidReceiveTimeout do begin Failed := True; TimedOut := True; end; on E: EHidError do Failed := True; end;
           if Kind = hrkInterrupt then Check(Failed = (M in [1,2,3,5,7,8,9,11,13]))
           else Check(Failed = (M in [1,2,3,4,11]));
           Check(Uncertain = (Failed and (W = 1) and not (M in [1,2,3])));
+          Check(TimedOut = ((Kind = hrkInterrupt) and (W = 0) and (M = 7)));
           Check(not C.Busy); Check(Count(0) = 1); Check(Count(6) = Ord(M <> 1));
           if not Failed and (W = 0) then Check(BytesEqual(Data,HexToBytes('07010203')));
           if (Kind = hrkInterrupt) and (M in [7,8]) then Check((Count(10) = 1) and (Count(11) = 1));

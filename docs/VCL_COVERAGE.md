@@ -11,9 +11,9 @@ buiten deze componentset.
 | --- | --- |
 | SmartCardDemo | Bestaande gecombineerde PC/SC-, eID-, EMV-, contactless-, memory- en RFID-pagina’s |
 | MagStripeDemo | Tracks en MSR206-7HL reads/geverifieerde writes |
-| ReaderToolsDemo | PC/SC-lijst/status, APDU command/response, ATR/catalog, BER-TLV, EMV-tags en NDEF-codecs |
+| ReaderToolsDemo | Native reader-/kaart-events met eigen DFM-bediening en eventlog; PC/SC-lijst/status, APDU command/response, ATR/catalog, BER-TLV, EMV-tags en NDEF-codecs |
 | RfidInputDemo | Foreground keyboard, boot/ID/fixed-ASCII-reports, ASCII/hex/decimale profielen en byteconversie |
-| UsbHidDemo | Native HID-collecties/VID/PID/usage/lengtes, exact interfacepad, interrupt- en feature-reports lezen/verzenden/exporteren |
+| UsbHidDemo | Reader-hotplug en doorlopende inputreport-events met eigen DFM-bediening/eventlog; native HID-collecties/VID/PID/usage/lengtes, exact interfacepad, interrupt- en feature-reports lezen/verzenden/exporteren |
 | Twn4Demo | PRS/CDC versie/tag, supplied-key Classic en publieke Type 2 reads/geverifieerde writes |
 | MemoryCardDemo | Alle SLE/I²C-modellen, twee ACS-dialecten, snapshots/ranges, PIN, writes, PIN-vervanging en permanente bescherming |
 | SleCounterDemo | Publieke vensters, bit/carry/backup-programmering en ruwe certificaatberekening |

@@ -35,6 +35,9 @@ requires
   designide;
 
 contains
+  ERD.Card.HID.Monitor in '..\..\src\input\ERD.Card.HID.Monitor.pas',
+  ERD.Card.PCSC.Monitor in '..\..\src\pcsc\ERD.Card.PCSC.Monitor.pas',
+  ERD.Card.Events in '..\..\src\core\ERD.Card.Events.pas',
   ERD.Card.MOBIB.Rules in '..\..\src\contactless\ERD.Card.MOBIB.Rules.pas',
   ERD.Card.MOBIB.Subscriptions in '..\..\src\contactless\ERD.Card.MOBIB.Subscriptions.pas',
   ERD.Card.MOBIB.Data in '..\..\src\contactless\ERD.Card.MOBIB.Data.pas',
