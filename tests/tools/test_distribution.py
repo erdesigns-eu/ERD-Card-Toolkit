@@ -42,6 +42,8 @@ class DistributionTests(unittest.TestCase):
         self.assertEqual(distribution.check_registration(distribution.REPO), [])
         for path in list(distribution.REPO.glob('packages/**/*.dproj')) + list(distribution.REPO.glob('examples/vcl/**/*.dproj')) + list(distribution.REPO.glob('packages/**/*.groupproj')) + list(distribution.REPO.glob('examples/vcl/**/*.groupproj')):
             self.assertEqual(distribution.check_project(path), [])
+        for path in distribution.REPO.glob('examples/vcl/**/*.dpr'):
+            self.assertEqual(distribution.check_program(path), [])
         for path in distribution.REPO.glob('examples/vcl/**/*.dfm'):
             self.assertEqual(distribution.check_form(path), [])
 
@@ -78,6 +80,47 @@ class DistributionTests(unittest.TestCase):
             self.assertTrue(any('handler Missing' in e for e in errors))
             self.assertTrue(any('unclosed' in e for e in errors))
 
+    def test_keypress_signature_and_own_form_required(self):
+        with tempfile.TemporaryDirectory() as directory:
+            main = Path(directory) / 'Example.Main.pas'
+            dfm = main.with_suffix('.dfm')
+            source = ('unit Example.Main; interface type TExample = class(TForm) '
+                      'published Edit: TEdit; procedure KeyPress(Sender: TObject; var Key: Char); '
+                      'end; var Example: TExample; implementation {$R *.dfm} '
+                      'procedure TExample.KeyPress(Sender: TObject; var Key: Char); begin end; end.')
+            main.write_text(source)
+            dfm.write_text('object Example: TExample\n object Edit: TEdit\n OnKeyPress = KeyPress\n end\nend\n')
+            self.assertEqual(distribution.check_form(dfm), [])
+            main.write_text(source.replace('var Key: Char', 'Key: Integer'))
+            self.assertTrue(distribution.check_form(dfm))
+            main.write_text(source)
+            program = main.with_name('Example.dpr')
+            program.write_text('Application.CreateForm(TExample, Example);')
+            self.assertEqual(distribution.check_program(program), [])
+            main.write_text(source.replace('class(TForm)', 'class(TSharedForm)'))
+            self.assertTrue(any('direct TForm' in e for e in distribution.check_program(program)))
+            main.write_text(source.replace('begin end; end.', 'begin TButton.Create(nil); end; end.'))
+            self.assertTrue(any('visual demo controls' in e for e in distribution.check_program(program)))
+            main.write_text(source)
+            dfm.unlink()
+            self.assertTrue(any('designer DFM' in e for e in distribution.check_program(program)))
+
+    def test_group_aggregate_covers_every_project(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name in ['A', 'B']:
+                (root / (name + '.dproj')).touch()
+            path = root / 'Example.groupproj'
+            source = ('<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">'
+                      '<ItemGroup><Projects Include="A.dproj"/><Projects Include="B.dproj"/></ItemGroup>'
+                      '<Target Name="Build"><CallTarget Targets="A;B"/></Target></Project>')
+            path.write_bytes(b'\xef\xbb\xbf' + source.encode())
+            self.assertEqual(distribution.check_project(path), [])
+            path.write_bytes(b'\xef\xbb\xbf' + source.replace('Targets="A;B"', 'Targets="A"').encode())
+            self.assertTrue(any('does not cover' in e for e in distribution.check_project(path)))
+            path.write_bytes(b'\xef\xbb\xbf' + source.replace('</Project>', '<Target Name="Build"/></Project>').encode())
+            self.assertTrue(any('duplicate group' in e for e in distribution.check_project(path)))
+
     def test_package_duplicate_ownership_and_design_dependency(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -89,6 +132,17 @@ class DistributionTests(unittest.TestCase):
             errors = distribution.check_packages(root)
             self.assertTrue(any('already belongs' in e for e in errors))
             self.assertTrue(any('runtime depends' in e for e in errors))
+
+    def test_palette_component_descendants(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'src/design').mkdir(parents=True)
+            (root / 'src/Components.pas').write_text('TBase = class(TComponent) end; TChild = class(TBase) end; TGrandChild = class(TChild) end; TCycle = class(TCycle) end;')
+            registration = root / 'src/design/ERD.Card.Design.Register.pas'
+            registration.write_text("RegisterComponents('Cards', [TBase, TChild, TGrandChild]);")
+            self.assertEqual(distribution.check_registration(root), [])
+            registration.write_text("RegisterComponents('Cards', [TBase, TChild]);")
+            self.assertTrue(any('unregistered component TGrandChild' in e for e in distribution.check_registration(root)))
 
     def test_palette_missing_unknown_and_duplicate(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -157,9 +211,23 @@ class DistributionTests(unittest.TestCase):
             shutil.copytree(distribution.REPO / 'packages', root / 'packages')
             shutil.copytree(distribution.REPO / 'src', root / 'src')
             path = root / 'packages/design/ERDCardDesign.dpk'
-            path.write_bytes(path.read_bytes().replace(b'  ERDCardPCSC,\r\n', b''))
+            data = path.read_bytes()
+            data = b'\r\n'.join(line for line in data.split(b'\r\n')
+                                if not line.startswith(b'  ERD.Card.PCSC.Reader in '))
+            path.write_bytes(data)
             errors = distribution.check_packages(root)
             self.assertTrue(any('requires owning package ERDCardPCSC' in e for e in errors))
+
+    def test_design_bundle_cannot_also_load_runtime_owners(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            shutil.copytree(distribution.REPO / 'packages', root / 'packages')
+            shutil.copytree(distribution.REPO / 'src', root / 'src')
+            path = root / 'packages/design/ERDCardDesign.dpk'
+            path.write_bytes(path.read_bytes().replace(b'  designide;',
+                                                       b'  designide, ERDCardCore;'))
+            self.assertTrue(any('source bundle includes dependency-owned unit' in e
+                                for e in distribution.check_packages(root)))
 
     def test_group_call_targets_follow_dependency_order(self):
         with tempfile.TemporaryDirectory() as directory:

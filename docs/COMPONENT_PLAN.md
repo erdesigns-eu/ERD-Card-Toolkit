@@ -99,15 +99,26 @@ are not compatibility requirements.
    access; rotation proves the new key through fresh authentication/version reads.
    See [native DESFire](DESFIRE.md). D40/3DES, LRP, TMAC receipts, key sets/extended
    configuration, originality and physical validation remain pending.
-   **TMemoryCardReaderWriter** remains planned for contact memory-card families and
-   matching readers. Non-Java chips do not share one universal protocol.
+   **TMemoryCardReaderWriter** implements the eight SLE4432/4442/5532/5542 and
+   SLE4418/4428/5518/5528 models plus I2C 1–1024-kilobit geometries through explicit
+   ACR38 CCID/ACR39 profiles. It reads snapshots/retry/protection state, verifies
+   supplied PINs, performs read-back-verified writes, changes two-wire PINs and
+   explicitly locks SLE protection bits. See [memory profiles](MEMORY_CARDS.md).
+   [SLE4404](SLE4404.md) adds distinct guarded code access, bit programming and
+   explicit verified erases. Generic RFID keyboard and host-fed HID report adapters
+   are supplied separately through ERDCardInput. The concrete [TWN4 backend](TWN4.md)
+   adds supplied-key Classic and public Type 2 memory access through PRS/USB-CDC. Further chip families/readers remain planned. Non-Java chips do not share one universal protocol.
 8. **Distribution — source/projects available; Delphi/IDE validation pending.**
-   Eight runtime packages, thirteen-component palette registration, isolated Win32/Win64
+   Eleven runtime packages, nineteen-component standalone palette registration, isolated Win32/Win64
    Debug/Release build projects, console examples and two worker-based VCL read/write
    demos are supplied. See [installation](INSTALLATION.md), [demos](VCL_DEMOS.md) and
    [validation](VALIDATION.md). Published scalar configuration is streamed; interface
    dependencies are supplied at runtime. Actual package installation, designer/Help
    Insight, Windows/DPI and hardware checks remain outstanding.
+
+The next VCL expansion uses separate family demos with shared infrastructure,
+covering the remaining read/write/authentication/administration/tool APIs; see
+[the explicit coverage checklist](VCL_COVERAGE.md).
 
 Magstripe codecs and input adapters now provide a base for concrete native reader/writer integrations.
 
@@ -143,7 +154,12 @@ documentation. Use the same complete scope for upcoming batches:
    management and verified AES key/policy/access administration are implemented. EV1/EV2 AES secure
    file access and EV2 NonFirst through maintained providers are implemented. Then Plus profiles,
    additional ISO 15693 authentication/reader backends,
-   then contact memory chips. Public ISO 15693/Type 5 access is already implemented.
+   then authenticated AT88SC/CryptoMemory and additional reader backends.
+   SLE4404 code access/programming/explicit erases are implemented through ACS38 CCID;
+   [USB-HID RFID input](RFID_HID.md) supplies keyboard and explicit host-fed report profiles.
+   SLE/I2C memory, explicit SLE4406/4436/5536/6636 counter commands and public
+   ISO 15693/Type 5 access are implemented. Chip-specific counter arithmetic and
+   personalisation-code proof remain separate extensions.
 4. **European eID:** BAC and PACE ECDH-GM/AES-128 secure access with complete
    DG1/DG2/COM/SOD reads are implemented. Next: passive/SOD verification, chip/EAC
    authentication, more PACE profiles and concrete Netherlands/Luxembourg/Germany

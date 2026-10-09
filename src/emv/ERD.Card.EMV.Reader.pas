@@ -73,6 +73,12 @@ type
     /// <remarks>No guessed AID fallback. Transport/APDU errors propagate and failed commands
     /// are not replayed. A missing PSE is normal; an application can be selected by explicit AID.</remarks>
     function DiscoverApplications(const ADirectory: TEmvDirectory): TEmvDirectoryData;
+    /// <summary>Selects an exact application and obtains its requested terminal-value DOL without GPO.</summary>
+    /// <param name="AAid">Exact 5..16-byte AID; selected FCI must match.</param>
+    /// <returns>Owned validated PDOL bytes; nil when tag 9F38 is absent.</returns>
+    /// <remarks>One exclusive transaction, no GPO or fabricated terminal values. Use DecodeDol
+    /// to inspect the tag/size requirements before calling ReadApplication.</remarks>
+    function ReadProcessingOptionsDol(const AAid: TBytes): TBytes;
     /// <summary>Selects an exact AID, initializes GPO with supplied PDOL data and reads all AFL records.</summary>
     /// <param name="AAid">Exact AID of 5..16 bytes; selected FCI must return the same identifier.</param>
     /// <param name="ATerminalValues">Explicit PDOL inputs; nil requires that no nonempty values are requested.</param>
@@ -83,6 +89,20 @@ type
     /// may collect its output. SELECT/READ RECORD allow one bounded Le correction per APDU.
     /// No partial snapshot is returned; release failures preserve a primary read error.</remarks>
     function ReadApplication(const AAid: TBytes; const ATerminalValues: TEmvValues): TEmvApplicationData;
+    /// <summary>Reads all AFL records and additionally probes an explicit bounded SFI/record rectangle.</summary>
+    /// <param name="AAid">Exact application identifier, 5..16 bytes.</param>
+    /// <param name="ATerminalValues">Explicit PDOL values used for the single GPO initialization.</param>
+    /// <param name="AFirstSfi">First short file identifier, 1..30.</param>
+    /// <param name="ALastSfi">Last short file identifier, not below the first.</param>
+    /// <param name="AFirstRecord">First absolute record number, 1..255.</param>
+    /// <param name="ALastRecord">Last record number, not below the first.</param>
+    /// <returns>Owned application data, successful extra records and explicit absent/restricted probe statuses.</returns>
+    /// <remarks>One exclusive transaction and one GPO. Scans every requested pair, including gaps;
+    /// never repeats an AFL record. 6A82/6A83 and 6982/6985 are recorded, without authentication attempts.
+    /// MaxRecords bounds both requested probes and total retained records. Unexpected statuses,
+    /// malformed successful EMV records and transport failures abort without a partial snapshot.</remarks>
+    function ReadApplicationWithRecordScan(const AAid: TBytes; const ATerminalValues: TEmvValues;
+      const AFirstSfi, ALastSfi, AFirstRecord, ALastRecord: Integer): TEmvApplicationData;
     /// <summary>Selects an exact AID and retrieves an optional counter or log format without GPO.</summary>
     /// <param name="AAid">Exact application identifier, 5..16 bytes.</param>
     /// <param name="AObject">Explicit supported GET DATA object.</param>
@@ -676,6 +696,72 @@ begin
     Data := ReadInternal(AAid, ATerminalValues);
     Succeeded := True;
   finally EndRead(Transaction, Succeeded); end;
+  Result := Data;
+end;
+
+
+function TEMVCardReader.ReadApplicationWithRecordScan(const AAid: TBytes; const ATerminalValues: TEmvValues;
+  const AFirstSfi, ALastSfi, AFirstRecord, ALastRecord: Integer): TEmvApplicationData;
+var Transaction: ICardTransaction; Data: TEmvApplicationData; Response: TApduResponse;
+  Document: TTlvDocument; Sfi,N,I,Index: Integer; Succeeded,AlreadyRead: Boolean;
+begin
+  Result := Default(TEmvApplicationData);
+  if (Length(AAid) < 5) or (Length(AAid) > 16) then Fail('AID size');
+  if (AFirstSfi < 1) or (ALastSfi > 30) or (ALastSfi < AFirstSfi) or
+    (AFirstRecord < 1) or (ALastRecord > 255) or (ALastRecord < AFirstRecord) then Fail('scan range');
+  if (ALastSfi-AFirstSfi+1)*(ALastRecord-AFirstRecord+1) > FMaxRecords then Fail('scan bound');
+  Transaction := BeginRead; Succeeded := False;
+  try
+    Data := ReadInternal(AAid,ATerminalValues);
+    for Sfi := AFirstSfi to ALastSfi do
+      for N := AFirstRecord to ALastRecord do
+      begin
+        AlreadyRead := False;
+        for I := 0 to High(Data.Records) do
+          if (Data.Records[I].Sfi = Sfi) and (Data.Records[I].Number = N) then AlreadyRead := True;
+        if AlreadyRead then Continue;
+        if Length(Data.Records) >= FMaxRecords then Fail('combined record bound');
+        Response := ReadRecord(Byte(Sfi),Byte(N));
+        Index := Length(Data.Probes); SetLength(Data.Probes,Index+1);
+        Data.Probes[Index].Sfi := Byte(Sfi); Data.Probes[Index].Number := Byte(N);
+        Data.Probes[Index].StatusWord := Response.StatusWord;
+        case Response.StatusWord of
+          $6A82,$6A83,$6982,$6985: Continue;
+          $9000: ;
+        else RequireSuccess(Response); end;
+        if Length(Response.Data) = 0 then Fail('empty scanned record');
+        Index := Length(Data.Records); SetLength(Data.Records,Index+1);
+        Data.Records[Index].Sfi := Byte(Sfi); Data.Records[Index].Number := Byte(N);
+        Data.Records[Index].RawData := Response.Data;
+        if Sfi <= 10 then
+        begin
+          Document := DecodeTemplate(Response.Data,'70');
+          try CollectFields(Document.Roots[0],Data.Fields); finally Document.Free; end;
+        end;
+      end;
+    TEmvCodec.DecodeCardFields(Data); Succeeded := True;
+  finally EndRead(Transaction,Succeeded); end;
+  Result := Data;
+end;
+
+
+function TEMVCardReader.ReadProcessingOptionsDol(const AAid: TBytes): TBytes;
+var Transaction: ICardTransaction; Document: TTlvDocument; Node: TTlvNode;
+  Fci,Data: TBytes; Entries: TEmvDolEntries; Succeeded: Boolean;
+begin
+  Result := nil; Data := nil;
+  if (Length(AAid) < 5) or (Length(AAid) > 16) then Fail('AID size');
+  Transaction := BeginRead; Succeeded := False;
+  try
+    Document := SelectApplicationFci(AAid,Fci);
+    try
+      Node := Child(Child(Document.Roots[0],'A5',True),'9F38',False);
+      if Node <> nil then Data := CopyBytes(Node.Value);
+      Entries := TEmvCodec.DecodeDol(Data);
+      if Length(Entries) > EmvMaxCollectedFields then Fail('PDOL bound');
+    finally Document.Free; end;
+    Succeeded := True;
+  finally EndRead(Transaction,Succeeded); end;
   Result := Data;
 end;
 

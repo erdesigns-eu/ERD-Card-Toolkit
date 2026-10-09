@@ -3,18 +3,32 @@ unit MagStripeDemo.Main;
 interface
 
 uses System.Classes, Vcl.Controls, Vcl.Forms, Vcl.StdCtrls, Vcl.ExtCtrls,
-  ERD.Card.MagStripe.Tracks, ERD.Card.Demo.Job, ERD.Card.Demo.Form;
+  ERD.Card.MagStripe.Tracks, ERD.Card.Demo.Job, ERD.Card.Demo.Controller, ERD.Card.Demo.Devices;
 
 type
   /// <summary>Offline magnetic-track codecs and explicit MSR206-7HL swipe/read-back operations.</summary>
-  TMagStripeDemoForm = class(TCardDemoForm)
+  TMagStripeDemoForm = class(TForm)
+  published
+    /// <summary>Own DFM timer polling this form’s nonvisual controller.</summary>
+    WorkerTimer: TTimer;
+    /// <summary>Discover available serial ports within this demo.</summary>
+    RefreshPortsButton: TButton;
+    /// <summary>Refresh Windows serial aliases without probing the attached encoder.</summary>
+    /// <param name="Sender">VCL event sender.</param>
+    procedure RefreshPortsClick(Sender: TObject);
+    /// <summary>Starts device discovery once when this form is shown.</summary>
+    /// <param name="Sender">VCL event sender.</param>
+    procedure FormShow(Sender: TObject);
+    /// <summary>Polls this form’s own worker from its DFM timer.</summary>
+    /// <param name="Sender">VCL event sender.</param>
+    procedure PollTimer(Sender: TObject);
   published
     /// <summary>Explicit COM, track and operation inputs.</summary>
     InputPanel: TPanel;
     /// <summary>Serial adapter profile label.</summary>
     PortLabel: TLabel;
     /// <summary>Exact Windows COM port.</summary>
-    PortEdit: TEdit;
+    PortBox: TComboBox;
     /// <summary>Swipe timeout label.</summary>
     TimeoutLabel: TLabel;
     /// <summary>Integer timeout in milliseconds.</summary>
@@ -58,15 +72,27 @@ type
     /// <param name="Sender">VCL event sender.</param>
     procedure WriteClick(Sender: TObject);
   private
+    FController: TCardDemoController;
+    FDevices: TCardDemoDevices;
+    FPreviousPort: UnicodeString;
+    FDiscoveryStarted: Boolean;
+    procedure StartRequest(const ARequest: TCardDemoRequest);
+  private
     FSelectedTracks: TMagStripeTrackSet;
     procedure RunOperation(const AOperation: TCardDemoOperation);
   protected
+    /// <summary>Defers close until this form’s owned background operation completes.</summary>
+    /// <returns>True only when inherited close permission and worker lifecycle permit it.</returns>
+    function CloseQuery: Boolean; override;
     /// <summary>Disables operation controls while one swipe is pending.</summary>
     /// <param name="AValue">True while busy.</param>
-    procedure SetBusy(const AValue: Boolean); override;
+    procedure SetBusy(const AValue: Boolean);
     /// <summary>Displays completion and updates only selected track fields.</summary>
     /// <param name="AResult">Owned worker completion data.</param>
-    procedure Complete(const AResult: TCardDemoResult); override;
+    procedure Complete(const AResult: TCardDemoResult);
+  public
+    /// <summary>Stops this form’s timer and joins its worker before destroying controls.</summary>
+    destructor Destroy; override;
   end;
 
 var
@@ -75,12 +101,13 @@ var
 
 implementation
 
-uses System.SysUtils, ERD.Card.MagStripe;
+uses ERD.Card.Demo.Operations, System.SysUtils, ERD.Card.MagStripe;
 
 {$R *.dfm}
 
 procedure TMagStripeDemoForm.FormCreate(Sender: TObject);
 begin
+  FController := TCardDemoController.Create(ddkSerial,CreateCardDemoOperations,SetBusy,Complete,Close);
   CoercivityBox.Items.Text := 'Low coercivity'#13#10'High coercivity';
 end;
 
@@ -100,7 +127,7 @@ begin
     if Track3Check.Checked then Include(R.TrackSelection, mstTrack3);
     R.Tracks[mstTrack1] := Track1Edit.Text; R.Tracks[mstTrack2] := Track2Edit.Text;
     R.Tracks[mstTrack3] := Track3Edit.Text;
-    R.PortName := PortEdit.Text;
+    if (PortBox.ItemIndex >= 0) and (PortBox.ItemIndex < Length(FDevices)) then R.PortName := FDevices[PortBox.ItemIndex].Address;
     if AOperation <> cdoTrackInspect then
     begin
       if not TryStrToInt(TimeoutEdit.Text, Timeout) or (Timeout < 1) or (Timeout > 600000) then
@@ -129,7 +156,21 @@ procedure TMagStripeDemoForm.WriteClick(Sender: TObject);
 begin RunOperation(cdoTrackWrite); end;
 
 procedure TMagStripeDemoForm.Complete(const AResult: TCardDemoResult);
+var I: Integer;
 begin
+  if AResult.Operation = cdoDemoDevices then
+  begin
+    FDevices := nil; PortBox.Items.Clear; PortBox.ItemIndex := -1;
+    if AResult.Success then FDevices := AResult.Devices;
+    for I := 0 to High(FDevices) do
+    begin
+      PortBox.Items.Add(string(FDevices[I].DisplayName));
+      if FDevices[I].Address = FPreviousPort then PortBox.ItemIndex := I;
+    end;
+    if AResult.Success then OutputMemo.Text := 'Choose the connected encoder from the available serial ports.'
+    else OutputMemo.Text := 'Serial discovery failed: '+AResult.ErrorClass+'. Refresh ports to retry discovery.';
+    Exit;
+  end;
   OutputMemo.Lines.Text := AResult.Text;
   if not AResult.Success then
   begin
@@ -144,6 +185,40 @@ begin
     if mstTrack2 in FSelectedTracks then Track2Edit.Text := AResult.Tracks[mstTrack2];
     if mstTrack3 in FSelectedTracks then Track3Edit.Text := AResult.Tracks[mstTrack3];
   end;
+end;
+
+procedure TMagStripeDemoForm.PollTimer(Sender: TObject);
+begin if FController <> nil then FController.Poll; end;
+
+procedure TMagStripeDemoForm.StartRequest(const ARequest: TCardDemoRequest);
+begin FController.StartRequest(ARequest); end;
+
+function TMagStripeDemoForm.CloseQuery: Boolean;
+begin
+
+  Result := inherited CloseQuery;
+  if Result and (FController <> nil) then Result := FController.CanClose;
+  if not Result then Caption := 'Waiting for this demo card operation to finish...';
+end;
+
+destructor TMagStripeDemoForm.Destroy;
+begin
+  if WorkerTimer <> nil then WorkerTimer.Enabled := False;
+  FController.Free; inherited Destroy;
+end;
+
+procedure TMagStripeDemoForm.FormShow(Sender: TObject);
+begin
+  if FDiscoveryStarted then Exit; FDiscoveryStarted := True; RefreshPortsClick(nil);
+end;
+
+procedure TMagStripeDemoForm.RefreshPortsClick(Sender: TObject);
+var R: TCardDemoRequest;
+begin
+  FPreviousPort := '';
+  if (PortBox.ItemIndex >= 0) and (PortBox.ItemIndex < Length(FDevices)) then FPreviousPort := FDevices[PortBox.ItemIndex].Address;
+  R := Default(TCardDemoRequest); R.Operation := cdoDemoDevices;
+  try StartRequest(R); except on E: Exception do OutputMemo.Text := 'Discovery could not start: '+E.ClassName+'.'; end;
 end;
 
 end.

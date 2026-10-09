@@ -1,206 +1,374 @@
-# EMV application-data reader
+# VCL read/write demos
 
-`TEMVCardReader` is an RTL-only non-visual component in `src/emv`. Add `src/core`
-and `src/emv` to the unit search path, plus `src/pcsc` for a Windows reader.
-`ERDCardEMV.dpk` requires only `rtl` and `ERDCardCore`; PC/SC and VCL are not
-dependencies of the protocol component. Assign a connected `ICardTransport`.
+Twenty applications demonstrate implemented APIs: SmartCardDemo, MagStripeDemo
+and nineteen family projects. Each application owns a direct TForm class and
+its own designer-editable Main.dfm, including all action inputs and a reader dropdown.
+Only nonvisual operation, metadata and worker/controller units are shared.
+The complete current/missing coverage is recorded in [VCL_COVERAGE.md](VCL_COVERAGE.md).
 
-`ERD.Card.EMV.Tags` separately provides 46 source-attributed tag descriptions,
-encoding hints and length metadata for inspection tools. These do not replace
-typed field decoders or add payment support; see [the catalog guide](CARD_CATALOGS.md).
+Open `examples/vcl/CardDemos.groupproj` or any application's `.dproj` in RAD
+Studio. They link source directly, so installing the component palette is optional.
+From a RAD Studio command prompt:
 
-## Application discovery and explicit selection
-
-`DiscoverApplications(edContactPse)` selects `1PAY.SYS.DDF01`, obtains its SFI
-and reads directory records through a data-free `6A83` end marker.
-`DiscoverApplications(edContactlessPpse)` selects `2PAY.SYS.DDF01` and reads
-application templates from the FCI. Only directory SELECT status `6A82` means
-`Present=False`; other card errors propagate. There is no guessed AID list or
-automatic fallback, and discovery never selects a payment application.
-
-Entries retain their exact AID, label, optional priority and confirmation bit in
-directory order. The application decides which explicit AID to use. Nested PSE
-DDF directories, scheme-specific contactless kernels, preferred-name code pages
-and issuer catalogs are outside this common profile.
-Flat ADF entries are supported; an unsupported entry fails visibly rather than
-returning an apparently complete discovery result.
-
-```pascal
-uses ERD.Card.EMV.Data, ERD.Card.EMV.Reader;
-
-Emv := TEMVCardReader.Create(nil);
-try
-  Emv.Transport := ConnectedCard.Transport;
-  Directory := Emv.DiscoverApplications(edContactlessPpse);
-  // Choose an exact AID from Directory.Applications according to application policy.
-  Data := Emv.ReadApplication(ChosenAid, TerminalValues);
-finally
-  Emv.Free;
-end;
+```bat
+tools\build-vcl-demos.cmd dcc32
+tools\build-vcl-demos.cmd dcc64
 ```
 
-Declare Emv as `TEMVCardReader`, Directory as `TEmvDirectoryData`, Data as
-`TEmvApplicationData`, ChosenAid as `TBytes` and TerminalValues as `TEmvValues`.
-ConnectedCard is an already connected `TSmartCardReader` or equivalent adapter.
-Do not automatically choose the first directory entry or treat discovery as
-authorization to initiate a payment.
+The scripts build the `.dproj` through MSBuild, including generated application
+resources and the same configuration settings used by the IDE.
+Executables go to `dist/vcl/<Platform>/Debug`, with separate DCUs for each demo.
+IDE/MSBuild Release builds go to the corresponding Release directory. These are
+Windows VCL applications; they have not been built or rendered in the Linux cloud
+environment. The provided scripts are an executable validation path for a Delphi
+host, not evidence that those builds already pass.
 
-## PDOL and GPO
+## Separate family projects
 
-ReadApplication validates the exact AID returned by FCI, extracts PDOL, sends
-GET PROCESSING OPTIONS (GPO), accepts response format 80 or 77 and reads the
-complete validated AFL. GPO initiates application processing and may change card
-state or counters. The component does not send GENERATE AC, VERIFY PIN, issuer
-scripts or payment-completion commands. It is a data reader, not a certified
-payment terminal or contactless kernel.
+All family forms construct without opening hardware. Their first OnShow starts
+background discovery of reader names, HID metadata or COM aliases; no card connection
+or card command is issued. Choose a device in the demo itself and refresh there. Choose one action; its named
+fields appear below. Enum choices have no default card/reader profile. Public
+bytes use hexadecimal text; numeric addresses/counts use decimal unless the label
+says hexadecimal. Credentials are masked, decoded into separate byte buffers,
+copied at the worker boundary, cleared from input controls after submission and
+wiped from owned buffers after execution. Strings/OS/backend copies are outside
+that byte-buffer wiping guarantee. Errors display their class, never backend text.
 
-Supply PDOL values explicitly, using tag bytes and exact requested value lengths:
+| Project | Actual actions |
+| --- | --- |
+| `readertools/ReaderToolsDemo.dproj` | Offline command/response APDU decode/encode, validated ATR/protocol/catalog hints, decoded BER-TLV tree/roundtrip, EMV tag metadata, NDEF roundtrip; PC/SC reader list and connected ATR/protocol |
+| `rfidinput/RfidInputDemo.dproj` | Offline ASCII/hex/decimal identifier inspection and explicit width/order conversion; live foreground keyboard capture; decoding host-provided boot 8-byte, report-ID 9-byte and fixed ASCII reports |
+| `twn4/Twn4Demo.dproj` | Explicit PRS/USB-CDC port, CRC and deadline; version/tag identity, supplied-key Classic block reads/data writes, public Type 2 user-page reads/writes; ID/expected-state/read-back checks |
+| `memorycard/MemoryCardDemo.dproj` | ACS capabilities, all implemented SLE/I2C snapshots/ranges, supplied PIN proof, verified writes with physical I2C page size, supported two-wire PIN replacement, irreversible compare-and-protect |
+| `slecounter/SleCounterDemo.dproj` | Explicit SLE4406/4436/5536/6636/window, public range reads, program/carry/backup modes with expected complete before/after windows, raw certificates; credential-bearing code command validation offline only |
+| `sle4404/Sle4404Demo.dproj` | Known window/layout/retry budgets, reads with optional supplied user code, user-code proof, one-to-zero programming, scratchpad erase and application erase with both supplied codes |
 
-```pascal
-SetLength(TerminalValues, 1);
-TerminalValues[0].Tag := HexToBytes('9F37');
-TerminalValues[0].Value := ApplicationProvidedUnpredictableNumber;
-```
+For PC/SC operations select the reader from **this demo’s own dropdown**.
+Discovery runs on opening and can be refreshed without another application.
+An ACS dialect is a known protocol configuration, not a guess from the name/ATR.
+TWN4 uses its own discovered-COM dropdown and suitable Simple Protocol firmware; it does not
+send memory commands to keyboard-only HID readers. Firmware changes are not made
+by the demo. See [TWN4.md](TWN4.md) and [memory profiles](MEMORY_CARDS.md).
 
-This example needs `ERD.Card.Bytes`. The value must be supplied by the application;
-the unit does not invent amounts, countries, currencies, capabilities or randomness.
-Missing or wrong-sized values fail before GPO. Extra terminal tags are allowed;
-duplicate terminal tags are rejected. Empty PDOL produces `8300`. Zero-length
-requests consume no bytes and need no input value. PDOL lengths are single-byte
-sizes, unlike BER lengths; object 83 uses canonical BER encoding and fits short Lc.
-This strict API does not implement a payment terminal's full DOL padding/truncation
-and unknown-tag zero-filling policy: callers explicitly supply the intended bytes.
+State-changing/code-attempt actions require per-submission acknowledgement. This
+is cleared after each request. Permanent protection, code consumption and erase
+are explicitly named actions, with no automatic retries. Expected-before fields
+must contain the actual bytes from the selected card/window. A counter-mode write
+requires the full expected-after window; the demo does not calculate carry rules.
+An application erase requires known user/memory-counter locations and a non-erased
+expected application area so the component can prove the supplied memory code.
 
-## Optional GET DATA and transaction logs
+Worker preflight runs the actual component's argument validation against an
+acquisition-only rejecting transport/channel. It stops before BeginTransaction or
+Open acquires hardware, then repeats the validated action against the selected
+real adapter once. No simulated successful card response is supplied. Card-state
+checks necessarily happen after connection, under the component's transaction.
+Uncertain writes preserve any independently completed verification; a later
+cleanup failure does not turn them into a clean success.
 
-`ReadDataObject(ChosenAid, edoAtc)` selects and validates an exact AID, then sends
-GET DATA `80 CA 9F 36 00`. Other explicit objects are `edoLastOnlineAtc` (9F13),
-`edoPinTryCounter` (9F17) and `edoLogFormat` (9F4F). This path sends no GPO,
-VERIFY PIN or GENERATE AC. Reading a remaining PIN counter does not attempt a PIN.
-ATC is not a guaranteed payment count; initialization and issuer/scheme behavior
-can affect it, and a card can lack GET DATA support.
+RFID live capture runs on the UI thread and requires focus in its dedicated memo.
+It receives ordinary foreground keyboard events, without device identity/filtering,
+USB enumeration or a global hook. Start freezes configuration until Stop. Enter
+provides CR; boot-report profiles support CR/Tab. The fixed ASCII report profile
+uses each report as a complete field and applies the explicitly configured framing.
+Raw reports must be supplied by a host or pasted for inspection: this is not a
+native USB reader driver.
 
-`TEmvDataObjectResult` retains the status, complete response object and an independent
-value. A present counter has `HasNumericValue=True` and an unsigned big-endian
-`NumericValue`. Only data-free 6A88 (object absent), 6A81 (function unsupported) and
-6D00 (instruction unsupported) return `Present=False`; these statuses remain distinct
-through `StatusWord`. Other failures raise. Success requires exactly the requested
-TLV object and the counter's documented size. Log Format is validated as a DOL with
-a positive total record length no greater than 256 bytes.
+### Family smoke tests on Delphi/Windows
 
-`ReadTransactionLog(ChosenAid)` also selects an exact AID without GPO. Only an FCI
-`A5/BF0C/9F4D` advertises this supported log profile; no guessed SFI or AFL records
-are used. An absent entry returns `Supported=False` and sends no GET DATA. A valid
-entry supplies an unshifted SFI in 11..30 and maximum capacity in 1..255. Capacity
-above `MaxLogRecords` (default 32, configurable 1..255) fails before requesting the
-format or records. Zero capacity is outside this profile.
+1. Build Debug/Release in Win32 and Win64 and open all six projects. ReaderTools'
+   first APDU action and RFID's first text action work without a reader. Other
+   demos must refuse incomplete reader/profile/window/port inputs without I/O.
+2. ReaderTools: confirm `00A4040000`, response `01029000`, ATR `3B00`, TLV
+   `5A021234` and NDEF `D101055402656E4869` round-trip. A corrupt ATR/TLV/NDEF is
+   rejected; known `5A` shows catalog metadata without sending an EMV command.
+3. RFID text: Decimal `001234`, width 4, big endian produces `000004D2`. For boot
+   reports use CR framing and paste `00001E0000000000;0000000000000000;0000280000000000`;
+   exactly one identifier `1` completes. For fixed ASCII choose four report/field
+   bytes, offset zero, no report ID and NUL padding; `30303100` produces `001`.
+4. Live RFID: start CR capture, focus the memo, scan/type a complete identifier.
+   Partial input, malformed input and timeout tails must not emit identifiers.
+   Configuration stays frozen; Stop/close releases capture without a worker thread.
+5. With confirmed ACS hardware, start with public reads and independently compare
+   them to known card bytes. Then use expendable cards and known supplied codes for
+   supported writes/PIN changes/protection/erases. Confirm retry budgets, exact
+   expected windows and independent proof; locked/incorrect states must be refused.
+6. With confirmed TWN4 PRS/CDC firmware, explicitly select port/CRC, inspect version
+   and tag ID, then test the supported memory operations on expendable tags. An
+   incorrect expected ID/prestate must not dispatch a write. Trailer/manufacturer/
+   configuration writes remain refused by the component.
+7. While a hardware worker is active, request another action/close. The form must
+   freeze inputs, refuse concurrent work and wait for completion on close. Exercise
+   disconnect/cleanup errors: uncertainty and completed proof must remain distinct,
+   with no automatic retry or credential-bearing exception text.
 
-The component requires a valid readable Log Format (GET DATA 9F4F), then reads
-records 1 through advertised capacity. Record 1 is newest; a data-free 6A83 ends
-an incompletely filled cyclic log. Reading all advertised records needs no extra
-EOF probe. An advertised empty log has `Supported=True` and no records. A missing
-format, another record failure or an incorrect record size aborts the snapshot.
+The synthetic family executor tests cover offline codecs, valid-action preflight,
+choice/PIN/acknowledgement rejection before hardware, literal memory/counter/SLE4404
+and TWN4 transcripts, uncertain writes and evidence after cleanup failure. Worker
+tests additionally verify nested credential copies/wiping and argument-array
+ownership. They do not compile/render VCL or validate physical cards.
 
-Log records are concatenated values **without a BER template 70**. `LogRecordSize`
-validates the DOL and `DecodeLogRecord` splits exact record bytes in its order,
-retaining unknown/repeated tags and zero-sized entries when total size is positive.
-The supported Log Format value limit is 252 bytes, and total record size is 1..256.
-Amounts, currencies, dates and merchant data remain raw fields: no decimal scaling,
-calendar inference or successful-payment conclusion is guessed. A card's optional
-history is not a processor receipt or a complete account statement.
+## SmartCardDemo
 
-Both new operations use the same transaction, response-chain and cleanup bounds as
-the application reader. Their snapshots are returned only after successful release.
-APDU/BER errors keep their core exception types. GET DATA permits one bounded Le
-correction; transport errors are never replayed.
+The initial operation inspects the included synthetic `Hi` NDEF Text message
+without accessing hardware. `Encode text` generates a UTF-8 Text record with the
+explicit language `en`. `List readers` enumerates PC/SC readers on a worker; it
+does not connect a card or pick a reader automatically. Select or enter its exact
+name before choosing a card operation.
 
-## Data, limits and ownership
+| Operation | Required selection / scope |
+| --- | --- |
+| UID | Explicit PC/SC storage profile using `FF CA`; requires a compatible reader |
+| Belgian eID | Contact-card identity/address/photo through the implemented Belgian profile |
+| ICAO document | Explicit BAC or PACE ECDH-GM/AES-128, MRZ information or CAN, PACE parameter 12/13, and an OpenSSL 3 library matching the executable architecture |
+| EMV PSE / PPSE | Explicit contact/contactless directory discovery; displays AIDs without starting payment or issuing GPO |
+| DESFire | Public native version only; secure administration remains in the console examples |
+| Type 2 NDEF read / replace | Explicit actual Ultralight/EV1/NTAG model, compatible `FF B0`/`FF D6` storage reader |
+| Type 4 NDEF read / replace | Mapping 2.0, uniquely selectable public NDEF file; no automatic formatting or authenticated-file inference |
 
-The snapshot contains original FCI/GPO data, AIP, AFL, all records and primitive
-fields, including unknown/repeated tags. Application records in SFI 1..10 must use
-template 70. SFI 11..30 records are retained as opaque issuer bytes. Convenient
-fields are optional:
+ICAO MRZ input is the 24-character MRZ information string: document-number field
+and check digit, YYMMDD birth date and check digit, YYMMDD expiry and check digit.
+CAN is six decimal digits and requires PACE. Use the ICAO/MRZ codecs when deriving
+this input in your application. Select the access settings explicitly; there is
+no PACE-to-BAC fallback. BAC/PACE provides file access and secure messaging, not
+issuer authenticity. SOD verification and national-service/EAC integration remain
+separate future work; not every European identity card exposes this LDS profile.
 
-- PAN from tag 5A or Track 2 equivalent tag 57, with leading zeroes retained.
-- ExpiryDate from 5F24 as YYMMDD; ExpiryMonth from 5F24 or tag 57 as YYMM.
-  A Track 2-only expiry does not invent a day or century.
-- CardholderName from 5F20, with a byte-preserving Latin-1 rendering.
-- IBAN from 5F53 only when present. An IBAN is not guaranteed on a bank card;
-  its checksum and account ownership are not verified.
-- Raw Track2Equivalent and its three-digit service code. This is packed EMV
-  data, not the magstripe track-wire format.
+Identity text stays in the result memo. JPEG is previewed on the UI thread;
+JPEG 2000 is retained without conversion. `Save encoded photo` writes those acquired
+bytes only after file selection. The demo retains the first ICAO face image; the
+component API returns all images. A new operation clears the previous face result.
 
-Known decimal encodings and lengths are checked. Track 2 separators/padding are
-validated and PAN/expiry sources must agree. Equal repeats of a known field are
-tolerated for inspection; conflicting repeats fail. A payment kernel's stricter
-redundant-object/mandatory-field policy is not implemented. Unknown primitive
-fields and issuer records remain available rather than being assigned guessed meanings.
-No cardholder verification, issuer authenticity, Luhn check, calendar validation,
-certificate verification or bank ownership is inferred from parsed values.
+`Replace ... + verify` explicitly replaces existing NDEF using the component's
+write and independent read-back checks. It does not format unknown tags or unlock
+protected data. Successful replacement shows the canonical wire message that was
+written. An uncertain-write exception is displayed as uncertain; the demo never
+repeats a write automatically.
 
-Decode/read outputs allocate independent byte buffers. Ordinary record assignment
-shares dynamic arrays; deep-copy arrays and nested buffers before modifying an
-assigned copy. The standalone DecodeCardFields helper modifies convenient fields
-in place and can leave some changed if it raises. The component's ReadApplication
-returns a full result only after parsing and transaction release both succeed.
+## Contact-memory page
 
-Limits: short APDUs with at most 256 response data bytes, up to three-byte tags,
-BER depth 16 / 256 nodes per response, 64 directory applications, 32 directory
-record probes by default, 256 AFL records by default and 8192 collected primitive
-fields. Configurable record maxima are 255 directory probes and 1024 AFL records.
-An unproven directory end fails at its configured limit. AFL reserved bits, file
-identifiers, record ranges, authentication counts and overlapping ranges are checked
-before reading records. Empty AFL is represented explicitly, including GPO-only data.
+The exact reader selector remains above both tabs. The new memory tab exposes:
 
-## Transactions and status handling
+| Operation | Inputs and scope |
+| --- | --- |
+| Offline profile capabilities | Explicit ACR38x CCID/ACR39 dialect only; no device is opened or reader support detected |
+| Connected ATR / protocol | Exact reader; displays raw ATR and actual negotiated T=0/T=1, without probing memory commands |
+| Memory snapshot / range | Explicit SLE/I2C model and matching dialect; snapshot includes protection/retry status without attempting a PIN |
+| Verify supplied PIN once | Explicit PIN-equipped model, card-order hexadecimal PIN and minimum remaining attempts |
+| Write range + verify | Explicit range/payload and change acknowledgement; supplied PIN for secured SLE, empty for plain SLE/I2C; explicit physical page size for I2C |
+| SLE4404 snapshot / range | ACR38x CCID and known readable window; public reads only; guarded codes/erases are separate API calls |
+| Counter snapshot / range | SLE4406/4436/5536/6636, ACR38x CCID and application-known readable window; public reads only in this demo |
 
-Construction does not touch hardware. Configure and call on one application thread;
-the component is not reentrant. UseTransactions defaults to true and requires
-`ICardTransaction` for each complete discovery/application/counter/log sequence. Set false only
-when the caller guarantees exclusive access, for example in an externally owned
-transaction. Transactions cannot nest. Release leaves the card powered without a
-reset. A primary read error wins over a subsequent cleanup error; a release failure
-after successful reading propagates.
+No model or dialect is automatically selected. PIN and write payload arrays are
+copied before the worker starts. PIN input and change acknowledgement are cleared
+after starting. PIN bytes and backend exception messages are not displayed.
+Snapshot/range hex and protection are shown only after successful operation cleanup.
+An uncertain memory write remains visible as uncertain; read-back proof is retained
+if only later transaction/connection cleanup fails. The demo does not repeat it.
 
-Every transport failure propagates without replay or reconnection. GPO is sent
-once; a GPO `6Cxx` remains a status error instead of replaying initialization.
-SELECT/READ RECORD/GET DATA allow one bounded Le correction per APDU. Bounded `61xx`
-GET RESPONSE may collect output, including GPO output; total bytes remain within
-the original request and at most 32 exchanges. A correction of zero denotes 256.
-Error statuses carrying data, repeated corrections and malformed responses fail.
-`EEmvStatusError.StatusWord` retains the status; library messages contain no PAN,
-IBAN, cardholder data or APDU payloads. APDU/BER errors keep their core exception types.
+For an initial hardware check, inspect offline capabilities, obtain the connected
+ATR/protocol, then read a known public range. Compare the snapshot to a known image.
+Use disposable cards and a known unlocked location for deliberate writes; check
+protection and retry budget first. Counter programming/carry, permanent locking
+and PIN replacement are component APIs rather than buttons on this page.
 
-## Examples, validation and sources
+## MagStripeDemo
 
-`examples/emv/InspectEmv.dpr` discovers PSE/PPSE or reads an explicitly supplied
-AID with empty terminal input. Cards requesting nonempty PDOL values need the
-application API instead. The example reports which bank fields are available.
-Additional `--log`, `--atc`, `--last-online-atc` and `--pin-tries` modes take an
-explicit AID as a third argument and report availability/status or log record count,
-without printing account details, historical amounts or merchant data.
-`--help` performs no hardware operation.
+`Inspect tracks offline` validates selected unframed payloads and reports bit counts
+including odd parity and LRC. Do not include sentinels or an LRC character in the
+editable track fields. Empty payloads are allowed by the offline codec.
 
-Executable Pascal tests use exact synthetic APDU transcripts for both directories,
-both GPO formats, PDOL order/lengths, AFL bounds, record 255/SFI 30, optional bank
-fields, Track 2 fallback, malformed replies, no GPO replay, GET RESPONSE and cleanup.
-Global field limits are exercised across large synthetic snapshots.
-Additional tests cover counter types/sizes, explicit absence, correction/chaining,
-Annex D log decoding, missing versus empty logs, malformed capacity/format, all
-255 records, record failures and transaction-release exception precedence. No actual
-payment-card/account capture is committed. Delphi/Help Insight, runtime-package
-builds, reader/card hardware and payment-scheme behavior remain unverified.
+Hardware operations use only the explicit **MSR206-7HL** serial adapter at
+9600 baud, seven data bits, odd parity and one stop bit. Select the connected device from this demo’s COM dropdown,
+selected tracks and a timeout between 1 and 600000 ms. `Read one swipe` updates
+only the selected track fields. `Write selected + verify` additionally requires
+nonempty payloads and an explicit low/high coercivity choice. It uses the verified
+writer, which returns independent same-swipe raw read-back rather than treating a
+status acknowledgement as proof of the programmed contents. Firmware and physical
+reader validation are still pending. Other magstripe backends remain accessible
+through the component API and console examples; this demo does not guess their
+physical model or protocol.
 
-Protocol facts were checked on 2026-10-07 against **EMV 4.4 Book 3, October 2022**,
-sections 5.3/5.4, 6.5.7/6.5.8/6.5.11, 7.3, 10.1/10.2 and Annexes A/D, available via a
-[public specification mirror](https://github.com/mvallim/emv-qrcode/blob/8d8ff6fcaac3cf2905e9e659fb6d4cfc4e43cbed/docs/EMV_v4.4_Book_3_Application_Specification.pdf).
-The downloaded PDF SHA-256 was
-`06d64d1b85d64a2939b6fd673273f5b8c3a5a37e6931a2488799ccc161c8f8a3`.
-The [official EMVCo contact-chip page](https://www.emvco.com/emv-technologies/emv-contact-chip/)
-and [specification index](https://www.emvco.com/specifications/) provide current editions.
-This implementation is independently written; no standards PDF or external
-implementation is bundled. This limited inspection profile is not a claim of
-complete EMVCo conformance or certification.
+## Threading and smoke checks
 
-See [the contactless guide](CONTACTLESS.md) for reader profiles and Classic storage;
-see [the payment architecture](PAYMENTS.md) for terminal/provider and direct NFC routes.
+Every operation owns its components, transport and backend on a worker thread.
+`TCardDemoJob` copies access/NDEF bytes before starting, clears its owned access
+password after execution, and moves results to the form once under a lock. Polling
+uses a VCL timer; the worker neither touches controls nor queues callbacks that
+could outlive a form. Closing during an operation waits for completion. There is
+no forced abort, and a blocking driver may extend this wait; the serial swipe
+bound is not a PC/SC timeout. Writes are never cancelled or retried behind the UI.
+Access input is cleared after starting, but this is not a guarantee of erasure
+of the Windows edit control's or Delphi strings' historical allocations.
+
+The job constructor creates a suspended worker. The nonvisual controller calls `StartWork` only
+after construction returns, so Delphi's `TThread.AfterConstruction` finishes before
+the explicit start. Starting inside the constructor caused the reported EThread
+exception in both demos. A second start is refused; freeing a never-started job
+does not execute its request. If starting fails, the controller releases the job and
+restores its controls. This follow-up has passed the headless worker tests; a
+Delphi/Windows rebuild and retest of both demos is still required.
+
+On a Delphi/Windows host, check both platforms: open both forms, inspect/encode
+NDEF and raw tracks offline, enumerate readers with no card, and close while a job
+is active. Then use known disposable test cards and the correct explicit profile
+to verify identity/photo acquisition, NDEF replacement and magstripe read-back.
+Also check missing reader/card, unsupported profile, driver failures, closing while
+waiting for a swipe, and ambiguous write results. Verify designer DFM loading,
+Help Insight for public APIs, and layout at your target DPI. These IDE/hardware
+checks remain outstanding; see [VALIDATION.md](VALIDATION.md).
+
+## RFID keyboard page
+
+Select **RFID keyboard** in SmartCardDemo. Choose the actual output format
+(ASCII, hexadecimal or decimal) and terminator (CR is the default). The four
+settings underneath are exact identifier length (zero means variable), maximum
+inter-character gap in milliseconds, exact prefix and exact suffix. Start capture,
+then scan while the dedicated input box has focus. Stop capture before changing
+configuration or using PC/SC pages. Leading zeros/case are preserved; only explicit
+hexadecimal mode produces bytes. Repeated scans each produce an event.
+
+Test correct scans, wrong length, partial/slow scans, mismatching delimiters and
+recovery after a complete delimiter. This is foreground keyboard input: a physical
+keyboard can also type into it and the source device is not authenticated. Reader
+keyboard layout must match Windows. This page does not open raw USB, configure
+reader firmware or write cards. Raw-report applications can use the distinct
+[host-fed HID profiles](RFID_HID.md). Native Delphi/UI/device checks remain pending.
+
+## SimCardDemo
+
+Gebruik een contact-PC/SC-lezer met SIM-adapter. Kies eerst het exacte klassieke
+SIM- of UICC-profiel; lees ICCID en bij UICC EF.DIR voordat je een volledige AID
+invult. De demo kiest geen applicatie automatisch. Zie [SIM.md](SIM.md) voor paths.
+PIN-input is ASCII-hex (`31323334` voor `1234`), geen BCD.
+
+Test eerst offline ICCID `981032547698103254F6` → `8901234567890123456` en
+alpha `414C494345FF` → `ALICE`. Controleer daarna reader/ICCID, metadata en
+read-only records. Test writes alleen met een test-SIM en exact uitgelezen beforebytes.
+De terugleesstatus en eventuele cleanup-onzekerheid moeten zichtbaar blijven.
+Standalone contacten met CCP/EXT-links worden expliciet geweigerd. De offline SMS-textactie decodeert een compleet EF.SMS-record, inclusief UDH.
+De linked-contactactie gebruikt een expliciet PBR-record/ADN-FID en toont IAP/EXT.
+Ruwe SMS-records blijven volledig behouden; er is geen SMS-verzendactie. Compileer alle twaalf demos
+Win32/Win64: de gedeelde executors gebruiken nu ook `src/sim`.
+
+## MifareClassicDemo, Type2Demo en Type4NdefDemo
+
+Deze projecten gebruiken expliciet het PC/SC storage-profiel (Classic/Type 2)
+of ISO APDU's (Type 4). Readerondersteuning voor dat profiel is vereist.
+
+- Classic: controleer offline layout/trailers, selecteer het werkelijke model,
+  block, reader-slot en aangeleverde A/B-key. Lees eerst. Manufacturer- en
+  trailerwrites blijven door de component geweigerd. De writeactie levert
+  uitsluitend readerstatus; lees zelf opnieuw voor een aparte controle.
+- Type 2: kies het werkelijke Ultralight/EV1/NTAG-model. Lees een fysieke pagina
+  of volledige gebruikerszone. Paginawrites zijn status-only; NDEF vervangen
+  of wissen gebruikt de bestaande volledige terugleescontrole. De ACR122-acties doen een expliciete PWD_AUTH met vier passwordbytes en twee
+  verwachte PACK-bytes; authenticated writes worden teruggelezen.
+- Type 4: inspecteer offline CC `000F20003A00340406E10401000000`. Op hardware
+  kies je mapping 1.0/2.0 expliciet; lees CC en selecteer de werkelijke FID
+  (decimal 57604 voor E104). FID 0 werkt alleen met een ondubbelzinnige CC.
+  Proprietaire toegangsrechten worden niet als publieke NDEF behandeld.
+
+Geen constructor opent hardware. Test ack/ongeldige modellen/keys en beschermde
+pagina’s vóór writes op testkaarten; onzekere uitkomsten mogen niet worden herhaald.
+
+## BelgianEidDemo, IcaoDocumentDemo en EmvDemo
+
+Elk eigen DFM-formulier heeft een selector voor exact acquired files en een expliciete
+Save-dialog met overwrite prompt. Geen automatisch exportpad. Mislukte jobs
+publiceren geen exportbestanden. Belgische eID en ICAO tonen geselecteerde JPEG
+foto's; JPEG2000 blijft exact als .jp2 exporteerbaar zonder codecconversie.
+
+BelgianEidDemo: kies all public sections of identity/address/photo/certificates/
+signatures. Ontbrekende certificaten hebben expliciete states; beschikbare
+certificaten zijn als originele RAW en DER beschikbaar. Geen issuer trustclaim.
+
+IcaoDocumentDemo: kies BAC/PACE, MRZ/CAN, curve en supplied password als ASCII-hex
+plus OpenSSL-library. Read haalt DG1/DG2/COM/SOD en waar toepasselijk CardAccess
+op; elke face image staat in de selector. Offline CardAccess werkt zonder kaart.
+
+EmvDemo: kies PSE/PPSE expliciet; geen directoryfallback. ReadApplication neemt
+AID en terminal values `taghex=valuehex;...` zonder verzonnen PDOL-values.
+GPO initialiseert de uitlezing, geen betaling. FCI/GPO/records zijn exporteerbaar;
+GET DATA counter/logformat en advertised transactionlog blijven optioneel.
+Offline DOL en raw-logdecoding tonen exact tag/values zonder betalingsinterpretatie.
+
+## Iso15693Demo, UidProgrammingDemo en DesfireDemo
+
+ISO 15693 gebruikt het bestaande ACR1552 FF-FB-profiel. Kies ordinary/extended
+block addressing en native-flags/payload-only conform de readerfirmware. Raw writes
+reserveren blokken 0/1; Type 5 verzorgt gestructureerde NDEF-updates.
+
+UID-programmering vereist de werkelijk aanwezige variant en bestaande emulatielayout.
+Gen3/Gen4 gebruiken de ACR122 raw-backend met automatische RATS uit. Gen4 behoudt
+zijn configuratie; USCUID/partial-profielen veranderen geen personalization/fuses.
+FUID is een expliciete eenmalige programmeeractie.
+
+DESFire gebruikt public, EV1 AES of EV2 AES met de aangeleverde sleutel en minimum
+communication. Optioneel geef je de aparte sleutel voor verificatie in de secundaire
+context op. Een transactionele actie kiest expliciet fresh-reset of discard-pending
+en vervolgens commit of abort. Elke job behoudt één sessie; er is geen impliciete
+commit. Create/delete/access/key-acties hebben hun eigen expliciete invoer.
+
+## MagStripeProfilesDemo en UsbHidDemo
+
+MagStripeProfilesDemo ondersteunt offline track-bits/parity/LRC, financiële velden
+(geen betaling), MagTek unencrypted keyboard/HID en de exacte MSR206-3HL Rev G /
+MSR605 Rev B serial profielen. Programming vereist alle drie tracks en high/low
+coercivity. De uitkomst benoemt device status zonder host read-back.
+
+UsbHidDemo somt metadata-readable top-level collections op, ongeacht VID/PID.
+Kopieer het exacte pad, kies interrupt/feature en het descriptor-defined report ID.
+Verzenden vereist de volledige descriptorlengte inclusief byte-zero ID. Interrupt-I/O
+heeft een wait budget en cancel/drain; synchronous feature requests hebben driver-
+gestuurde duur. Een transfer is geen universeel commando om kaartgeheugen te wijzigen.
+Lees [USB_HID.md](USB_HID.md) voor native integratie en reportcontracten.
+
+
+## EMV records and MOBIB
+
+EmvDemo now prints every acquired SFI/record and its raw bytes in the output,
+besides offering individual record exports. Use the application-read page, an
+explicit AID and required terminal values. The new PDOL-inspection page selects
+that AID without GPO and lists the requested tag lengths. For the old CardStudio
+style range sweep, select **AFL plus explicit range**, initially SFI 1–10 and
+records 1–6. Existing AFL records are not repeated; holes and access restrictions
+are reported, while unexpected failures abort. This does not guarantee every
+issuer record is accessible. The range can be increased within component bounds.
+
+MobibDemo is a separate designer form with its own PC/SC dropdown, explicit
+Calypso dialect/record length and bound. Its two actions read the public MOBIB
+file plan or one caller-specified logical file. It displays every actual raw
+record and exports it through the own save dialog. See [MOBIB_CALYPSO.md](MOBIB_CALYPSO.md)
+for the concrete files, status behavior and missing issuer-specific decoders.
+
+The project group's Build/Make/Clean aggregates cover all twenty-one applications,
+including the new project; the standalone build script includes it too.
+
+
+## Inspecting PDOL and reading records outside the AFL
+
+`ReadProcessingOptionsDol(Aid)` selects the exact application and returns its
+validated PDOL without GPO. Decode it with `TEmvCodec.DecodeDol` to obtain the
+terminal tags and byte lengths; absence returns nil. The VCL demo exposes this
+inspection so terminal requirements can be obtained from the card itself.
+
+`ReadApplicationWithRecordScan(Aid, TerminalValues, FirstSfi, LastSfi,
+FirstRecord, LastRecord)` performs the standard complete AFL read and then
+probes the explicit SFI/record rectangle in the same transaction and GPO session.
+The old CardStudio sweep used SFI 1–10 and records 1–6; this is the demo's initial
+scan range. It scans beyond gaps and skips already acquired AFL pairs.
+
+Successful records appear in `Records` and their primitive fields in `Fields`;
+`Probes` retains additional statuses. `6A82`/`6A83` mark absence, `6982`/`6985`
+mark an access/state restriction. No authentication or alternative command is
+attempted. Unexpected statuses and malformed standard records abort without a
+partial snapshot. Proprietary SFI 11–30 records remain raw rather than being
+forced into a BER schema. MaxRecords bounds the requested rectangle and total
+retained records; explicit SFI limits are 1–30 and record limits 1–255.
+
+EmvDemo displays raw records and probe outcomes directly and still supports
+per-record export. AFL-only reading remains the default. Neither a range sweep
+nor a successful read guarantees every issuer field is available. GPO remains
+stateful initialization; this functionality does not execute payments.

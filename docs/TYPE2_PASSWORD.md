@@ -165,3 +165,5 @@ implementation or standards PDF is bundled.
   and [PN532/C1 datasheet](https://www.nxp.com/docs/en/nxp/data-sheets/PN532_C1.pdf),
   manual framing, bounded RF timeouts and register restoration; hashes in
   [RAW_UID.md](RAW_UID.md).
+
+NTAG210/212 layouts and mirror/configuration rules are documented in [NTAG210_212.md](NTAG210_212.md).

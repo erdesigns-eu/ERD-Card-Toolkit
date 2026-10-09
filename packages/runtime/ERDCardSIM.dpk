@@ -1,0 +1,16 @@
+﻿package ERDCardSIM;
+
+{$R *.res}
+{$IMPLICITBUILD ON}
+{$DESCRIPTION 'ERD Card SIM: classic GSM and UICC/USIM files, contacts and verified record writes'}
+{$RUNONLY}
+
+requires
+  rtl,
+  ERDCardCore;
+
+contains
+  ERD.Card.SIM.Data in '..\..\src\sim\ERD.Card.SIM.Data.pas',
+  ERD.Card.SIM.Reader in '..\..\src\sim\ERD.Card.SIM.Reader.pas';
+
+end.

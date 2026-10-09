@@ -1,0 +1,18 @@
+﻿package ERDCardTWN4;
+
+{$R *.res}
+{$IMPLICITBUILD ON}
+{$DESCRIPTION 'ERD Card TWN4: explicit PRS ASCII / USB-CDC memory profile'}
+{$RUNONLY}
+
+requires
+  rtl,
+  ERDCardCore,
+  ERDCardContactless,
+  ERDCardMagStripe;
+
+contains
+  ERD.Card.Reader.TWN4 in '..\..\src\readers\ERD.Card.Reader.TWN4.pas',
+  ERD.Card.Reader.TWN4.Serial in '..\..\src\readers\ERD.Card.Reader.TWN4.Serial.pas';
+
+end.

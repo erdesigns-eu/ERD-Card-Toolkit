@@ -1,4 +1,4 @@
-program NdefTests;
+﻿program NdefTests;
 
 {$IFNDEF FPC}
   {$APPTYPE CONSOLE}
@@ -51,8 +51,8 @@ function CcFor(const M: TType2TagModel): TBytes;
 begin
   Result := HexToBytes('E1100000');
   case M of
-    ttmUltralight, ttmUltralightEv1_48: Result[2] := 6;
-    ttmUltralightEv1_128: Result[2] := $10;
+    ttmUltralight, ttmUltralightEv1_48, ttmNtag210: Result[2] := 6;
+    ttmUltralightEv1_128, ttmNtag212: Result[2] := $10;
     ttmNtag213: Result[2] := $12;
     ttmNtag215: Result[2] := $3E;
     ttmNtag216: Result[2] := $6D;
@@ -340,8 +340,8 @@ begin
     if P = 2 then Data := CopyBytes(StaticLocks)
     else if P = 3 then
     begin Data := CopyBytes(Cc); if CorruptCc and (Writes > 0) then Data[3] := $0F; end
-    else if ((Model = ttmUltralightEv1_48) and (P = 16)) or
-      ((Model <> ttmUltralightEv1_48) and (Model <> ttmUltralight) and
+    else if ((Model in [ttmUltralightEv1_48,ttmNtag210]) and (P = 16)) or
+      (not (Model in [ttmUltralightEv1_48,ttmNtag210]) and (Model <> ttmUltralight) and
        (P = TType2Layout.LastUserPage(Model) + 2)) then Data := CopyBytes(Configuration)
     else if P = TType2Layout.LastUserPage(Model) + 1 then Data := CopyBytes(DynamicLocks)
     else
@@ -457,6 +457,17 @@ begin
       Failed := False;
       try Reader.WriteMessage(ttmUltralight, Records); except on EContactlessWriteUncertain do Failed := True; end;
       Check(Failed and (Script.Writes > 0) and (Script.Ends = 1), 'Status/read-back/full-snapshot/CC/release failures are uncertain');
+    finally Reader.Free; end;
+  end;
+  for I := 0 to 1 do
+  begin
+    if I = 0 then Attach(ttmNtag210, Store(ttmNtag210,nil), Script, Reader)
+    else Attach(ttmNtag212, Store(ttmNtag212,nil), Script, Reader);
+    try
+      Script.Configuration[2] := 4; Script.FinalLength := Length(Wire); Failed := False;
+      try if I = 0 then Reader.WriteMessage(ttmNtag210,Records) else Reader.WriteMessage(ttmNtag212,Records);
+      except on E: EContactlessError do Failed := True; end;
+      Check(Failed and (Script.Writes = 0) and (Script.Ends = 1),'NTAG210/212 MIRROR_PAGE refuses NDEF writes before dispatch');
     finally Reader.Free; end;
   end;
   for I := 0 to 7 do

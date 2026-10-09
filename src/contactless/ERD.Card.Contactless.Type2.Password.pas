@@ -32,7 +32,7 @@ type
   TType2PasswordCodec = class
   public
     /// <summary>Validates an explicit PWD_AUTH model and caller-supplied credentials without I/O.</summary>
-    /// <param name="AModel">Ultralight EV1 48/128 or NTAG213/215/216; original Ultralight is excluded.</param>
+    /// <param name="AModel">Ultralight EV1 48/128 or NTAG210/212/213/215/216; original Ultralight is excluded.</param>
     /// <param name="APassword">Exactly four bytes in card/wire order; never reversed or modified.</param>
     /// <param name="AExpectedPack">Exactly two expected response bytes in card/wire order; never modified.</param>
     /// <exception cref="EType2DataError">Model or credential length is unsupported.</exception>
@@ -54,7 +54,7 @@ type
     class function BuildFastReadCommand(const AModel: TType2TagModel;
       const AFirstPage, APageCount: Integer): TBytes; static;
   end;
-  /// <summary>Nonvisual supplied-password user-memory access for Ultralight EV1 and NTAG213/215/216.</summary>
+  /// <summary>Nonvisual supplied-password user-memory access for Ultralight EV1 and NTAG210/212/213/215/216.</summary>
   /// <remarks>Construction performs no I/O. Each operation acquires one exclusive raw Type A session,
   /// freshly selects, dispatches PWD_AUTH once, validates PACK, and retains authentication until release.
   /// Configure/call on one thread without reentrancy. No password guessing, retries or configuration updates.
@@ -72,7 +72,7 @@ type
     /// <param name="AOwner">Optional component owner; nil requires caller Free.</param>
     constructor Create(AOwner: TComponent); override;
     /// <summary>Authenticates once and reads exactly one user page in the same RF session.</summary>
-    /// <param name="AModel">Caller-identified Ultralight EV1 48/128 or NTAG213/215/216.</param>
+    /// <param name="AModel">Caller-identified Ultralight EV1 48/128 or NTAG210/212/213/215/216.</param>
     /// <param name="APage">Physical user page; manufacturer, lock and configuration pages are excluded.</param>
     /// <param name="APassword">Exactly four supplied card-order bytes; never guessed, retained or modified.</param>
     /// <param name="AExpectedPack">Exactly two supplied card-order PACK bytes; comparison is mandatory.</param>

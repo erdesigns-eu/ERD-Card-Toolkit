@@ -14,7 +14,7 @@ uses
 {$ENDIF}
   ERD.Card.Bytes, ERD.Card.PCSC.Api, ERD.Card.MagStripe.Tracks,
   ERD.Card.MagStripe, ERD.Card.Contactless.Type2, ERD.Card.EID.Access,
-  ERD.Card.Crypto.EAC;
+  ERD.Card.Demo.Devices, ERD.Card.Crypto.EAC, ERD.Card.Memory, ERD.Card.Memory.Counter;
 
 type
 {$IFDEF FPC}
@@ -55,12 +55,46 @@ type
     /// <summary>Read one swipe with the explicit MSR206-7HL adapter.</summary>
     cdoTrackRead,
     /// <summary>Program selected tracks with independent MSR206-7HL read-back verification.</summary>
-    cdoTrackWrite
+    cdoTrackWrite,
+    /// <summary>Inspect explicit ACS memory-profile capabilities offline.</summary>
+    cdoMemoryCapabilities,
+    /// <summary>Read the connected card ATR and negotiated protocol without selecting a memory profile.</summary>
+    cdoReaderStatus,
+    /// <summary>Read ordinary main memory and protection without a PIN attempt.</summary>
+    cdoMemorySnapshot,
+    /// <summary>Read a bounded ordinary-memory range.</summary>
+    cdoMemoryRead,
+    /// <summary>Verify one supplied ordinary-memory PIN using the configured retry budget.</summary>
+    cdoMemoryVerify,
+    /// <summary>Write a selected ordinary-memory range with independent read-back.</summary>
+    cdoMemoryWrite,
+    /// <summary>Read a caller-declared public counter-chip range through ACR38x CCID.</summary>
+    cdoCounterRead,
+    /// <summary>Read an explicit public SLE4404 range through ACR38x CCID.</summary>
+    cdoSle4404Read,
+    /// <summary>Execute one explicit operation in the separately selected family demo.</summary>
+    cdoFamily,
+    /// <summary>Discover devices for the owning demo without selecting or connecting a card.</summary>
+    cdoDemoDevices
   );
+  /// <summary>Non-secret named-form values in catalog field order; strings use copy-on-write.</summary>
+  TCardDemoArguments = array of UnicodeString;
+  /// <summary>Credential buffers aligned with form fields; each worker copy is independently owned and wiped.</summary>
+  TCardDemoCredentials = array of TBytes;
   /// <summary>One explicit request copied by the job before its worker starts.</summary>
   TCardDemoRequest = record
     /// <summary>Single operation, executed once.</summary>
     Operation: TCardDemoOperation;
+    /// <summary>Exact family catalog name; validated against the injected executor.</summary>
+    FamilyName: string;
+    /// <summary>Explicit zero-based catalog operation; no implicit action.</summary>
+    FamilyAction: Integer;
+    /// <summary>Non-secret input values aligned with the selected action's field definitions.</summary>
+    Arguments: TCardDemoArguments;
+    /// <summary>Secret decoded bytes aligned with fields; matching Arguments entries must be empty.</summary>
+    Credentials: TCardDemoCredentials;
+    /// <summary>Explicit per-action acknowledgement of writes, code attempts, erases or permanent changes.</summary>
+    MutationAcknowledged: Boolean;
     /// <summary>Exact PC/SC reader name; no default selection.</summary>
     ReaderName: UnicodeString;
     /// <summary>Complete NDEF message bytes, copied at the thread boundary.</summary>
@@ -73,7 +107,7 @@ type
     PasswordKind: TIcaoPasswordKind;
     /// <summary>PACE ECDH-GM domain parameter 12 or 13.</summary>
     PaceCurve: TCardPaceCurve;
-    /// <summary>ASCII access bytes; the job wipes its owned copy on completion.</summary>
+    /// <summary>ICAO access bytes or card-order memory PIN; the job wipes its owned copy on completion.</summary>
     Password: TBytes;
     /// <summary>OpenSSL 3 library path; empty uses provider default.</summary>
     CryptoLibrary: string;
@@ -87,15 +121,46 @@ type
     Coercivity: TMagStripeCoercivity;
     /// <summary>Serial swipe deadline in milliseconds, from 1 through 600000.</summary>
     TimeoutMs: Cardinal;
+    /// <summary>Explicit ordinary-memory chip geometry.</summary>
+    MemoryModel: TMemoryCardModel;
+    /// <summary>Explicit ACS reader command/response dialect.</summary>
+    MemoryDialect: TAcsMemoryDialect;
+    /// <summary>Known physical I2C page size for writes.</summary>
+    MemoryPageSize: TMemoryCardPageSize;
+    /// <summary>Minimum remaining ordinary SLE PIN attempts before verification or writing.</summary>
+    MinimumPinAttempts: Integer;
+    /// <summary>Zero-based address for an explicit memory range.</summary>
+    MemoryAddress: Integer;
+    /// <summary>Positive byte count for a memory read.</summary>
+    MemoryCount: Integer;
+    /// <summary>Selected write payload, copied before the worker starts.</summary>
+    MemoryBytes: TBytes;
+    /// <summary>Explicit SLE counter-chip profile.</summary>
+    CounterModel: TSleCounterModel;
+    /// <summary>Caller-declared counter/SLE4404 readable window, one through 256 bytes.</summary>
+    CounterReadableBytes: Integer;
   end;
-  /// <summary>Owned completion data moved to the UI exactly once.</summary>
+  /// <summary>One owned acquired/demo file available for explicit local export.</summary>
+  TCardDemoArtifact = record
+    /// <summary>Suggested plain filename generated by the demo, never a caller path.</summary>
+    Name: string;
+    /// <summary>Exact file bytes, retained only for a completed successful result.</summary>
+    Data: TBytes;
+  end;
+  /// <summary>Owned file list; ordinary assignment shares buffers.</summary>
+  TCardDemoArtifacts = array of TCardDemoArtifact;
+  /// <summary>Completed worker output, including explicitly exportable acquired files.</summary>
   TCardDemoResult = record
     /// <summary>Operation that produced this completion.</summary>
     Operation: TCardDemoOperation;
+    /// <summary>Owned transport-specific reader/port labels and exact backend addresses from discovery.</summary>
+    Devices: TCardDemoDevices;
     /// <summary>True only if the operation and its cleanup completed successfully.</summary>
     Success: Boolean;
     /// <summary>True after component write verification, even if later disconnect fails.</summary>
     WriteVerified: Boolean;
+    /// <summary>A dispatched write has an uncertain outcome or cleanup; never retry automatically.</summary>
+    WriteUncertain: Boolean;
     /// <summary>Exception class only; credential-bearing exception messages are not copied.</summary>
     ErrorClass: string;
     /// <summary>Display text; may contain identity or UID data from the selected operation.</summary>
@@ -104,12 +169,18 @@ type
     Readers: TPcscReaderNames;
     /// <summary>First acquired face image, or Belgian photo; empty when absent.</summary>
     Photo: TBytes;
+    /// <summary>Exact successful acquired files for explicit local export, never automatically written.</summary>
+    Artifacts: TCardDemoArtifacts;
     /// <summary>JPEG 2000 when true; JPEG otherwise. No image conversion is attempted.</summary>
     PhotoIsJpeg2000: Boolean;
     /// <summary>Complete acquired or inspected NDEF wire message.</summary>
     NdefBytes: TBytes;
     /// <summary>Acquired swipe or verified written payloads, indexed by track.</summary>
     Tracks: TMagStripeTracks;
+    /// <summary>Owned ordinary-memory data, protection and retry status; no supplied PIN copies.</summary>
+    Memory: TMemoryCardSnapshot;
+    /// <summary>Owned public counter/SLE4404 range; ordinary-memory geometry does not apply.</summary>
+    CounterBytes: TBytes;
   end;
   /// <summary>Worker-only operation executor; implementations must not access VCL controls.</summary>
   ICardDemoOperations = interface
@@ -158,6 +229,7 @@ uses ERD.Card.Crypto;
 
 constructor TCardDemoJob.Create(const ARequest: TCardDemoRequest;
   const AOperations: ICardDemoOperations);
+var I: Integer;
 begin
   inherited Create(True);
   FreeOnTerminate := False;
@@ -169,9 +241,14 @@ begin
   FLockReady := True;
   if AOperations = nil then raise EArgumentException.Create('Worker executor is required.');
   FRequest := ARequest;
-  FRequest.Password := nil; FRequest.NdefBytes := nil;
+  FRequest.Password := nil; FRequest.NdefBytes := nil; FRequest.MemoryBytes := nil;
+  FRequest.Arguments := nil; FRequest.Credentials := nil;
+  FRequest.Arguments := Copy(ARequest.Arguments,0,Length(ARequest.Arguments));
+  SetLength(FRequest.Credentials,Length(ARequest.Credentials));
+  for I := 0 to High(ARequest.Credentials) do FRequest.Credentials[I] := CopyBytes(ARequest.Credentials[I]);
   FRequest.Password := Copy(ARequest.Password, 0, Length(ARequest.Password));
   FRequest.NdefBytes := Copy(ARequest.NdefBytes, 0, Length(ARequest.NdefBytes));
+  FRequest.MemoryBytes := Copy(ARequest.MemoryBytes, 0, Length(ARequest.MemoryBytes));
   FOperations := AOperations;
 end;
 
@@ -183,10 +260,12 @@ begin
 end;
 
 destructor TCardDemoJob.Destroy;
+var I: Integer;
 begin
   if FStarted then WaitFor;
   inherited Destroy;
   TCardCrypto.Clear(FRequest.Password);
+  for I := 0 to High(FRequest.Credentials) do TCardCrypto.Clear(FRequest.Credentials[I]);
   if FLockReady then
 {$IFDEF FPC}
     DoneCriticalSection(FLock);
@@ -214,7 +293,7 @@ begin
 end;
 
 procedure TCardDemoJob.Execute;
-var Completed: TCardDemoResult;
+var Completed: TCardDemoResult; I: Integer;
 begin
   if not FStarted then Exit;
   Completed := Default(TCardDemoResult);
@@ -226,16 +305,18 @@ begin
     on E: Exception do
     begin
       Completed.Success := False;
-      Completed.ErrorClass := E.ClassName;
+      Completed.ErrorClass := E.ClassName; Completed.Artifacts := nil; Completed.Devices := nil;
       if not Completed.WriteVerified then
       begin
         Completed.Text := ''; Completed.Photo := nil;
         Completed.NdefBytes := nil; Completed.Readers := nil;
         Completed.Tracks := Default(TMagStripeTracks);
+        Completed.Memory := Default(TMemoryCardSnapshot); Completed.CounterBytes := nil;
       end;
     end;
   end;
   TCardCrypto.Clear(FRequest.Password);
+  for I := 0 to High(FRequest.Credentials) do TCardCrypto.Clear(FRequest.Credentials[I]);
   FRequest := Default(TCardDemoRequest);
   FOperations := nil;
   Lock;

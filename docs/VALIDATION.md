@@ -1,25 +1,22 @@
 # Library validation record
 
-The complete protocol/component/example suite was rebuilt and rerun in Linux on
-2026-10-08 after the Delphi compiler-warning fixes, starting from the maintainer's
-IDE-saved project changes. All 1,789,463 reported assertions passed, including
-the native adapter shims, demo worker and registration tests. All 32 Python
-regression tests, 21 Pascal readers and distribution checks also passed.
+The complete suite was rebuilt on Linux on 2026-10-09 after finishing SIM/USIM
+management, twenty VCL applications, native USB-HID report transport and
+NTAG210/212 profiles. The full run passed **2,159,328 assertions across 40 program
+configurations**. It includes 74,402 SIM/USIM, 1,857 family-executor, 88 worker,
+341 portable HID and 392 native HID ABI-shim assertions. All 34 Python regressions,
+21 Pascal readers on 166 selected sources and distribution checks for 33 projects,
+two groups and three DFM forms passed. The XML Help Insight reader inspected
+1,796 production declarations and 267 VCL declarations with zero findings.
 
-The maintainer reports successful package compilation and installation in RAD
-Studio 12 (Studio 23.0), Debug/Win32, after the earlier project repair. The supplied
-compiler log is evidence of that build, including the warnings addressed in this
-follow-up. A fresh Delphi build is still needed to confirm that these warnings and
-hints are gone; the Linux run does not establish that.
-
-The maintainer subsequently confirmed warning-free package builds. A separate
-VCL startup failure was then reported in both demos: EThread, "Cannot call Start
-on a running or suspended thread", through `TThread.AfterConstruction`. The demo
-job now remains suspended until the form calls `StartWork` after construction.
-The targeted worker suite was rebuilt and rerun with 45 passing assertions,
-including never-started destruction, duplicate-start and completed-restart
-refusal. The earlier protocol results below remain the full-run baseline;
-Delphi execution of the corrected VCL demos remains pending.
+The maintainer confirmed warning-free compilation and installation of the prior
+packages in RAD Studio 12 (Studio 23.0), Debug/Win32. Both VCL demos subsequently
+reported EThread during startup; the shared post-construction StartWork fix was
+merged. The maintainer also intentionally removed the design package's runtime
+BPL dependencies after an installation failure. This follow-up keeps that choice
+and explicitly bundles all 47 registration/runtime source units. Fresh Delphi
+builds and IDE installation of this new bundle/Memory/Input/TWN4/SIM packages, VCL execution,
+Help Insight and physical memory-card compatibility remain unverified.
 
 | Check | Result |
 | --- | --- |
@@ -36,10 +33,18 @@ Delphi execution of the corrected VCL demos remains pending.
 | Belgian eID decoders and reader | 1821 assertions in seven groups passed using synthetic exact APDU transcripts |
 | ICAO MRZ and DG1/DG2 data codecs | 297 assertions passed: published MRZ examples, synthetic FAC/CBEFF records and malformed inputs |
 | EMV data codecs, application reader and diagnostics | 1605 assertions in nine groups passed, including exact PSE/PPSE/GPO/AFL/GET DATA/log transcripts and resource limits |
-| Contactless Classic/Type 2 storage and programmable UID | 6365 assertions in twelve groups passed, including protected pages, complete snapshots, four/seven-byte Gen2 programming, separate factory FUID one-time writes and uncertain outcomes |
+| TWN4 PRS/CDC memory | 127696 assertions passed: literal ASCII/CRC/tag/Classic/Type 2 chains, all byte-I/O failure boundaries and block/page read-back bits, stale/changed IDs/content, both key types, no-ops, pre/post-dispatch deadlines/reversal, ownership and cleanup; native TWN4 hardware not tested |
+| SIM / USIM | 74402 assertions: independent identity/alpha/ADN/SMS/service/PBR vectors, literal classic/UICC APDU chains, PIN budgets and proof, continuation/length bounds, caller ownership, full-file/record writes, every I/O failure and read-back bit, no replay and cleanup uncertainty |
+| RFID input/report profiles | 65619 assertions passed: exhaustive two-byte decimal conversion plus independent wide/overflow vectors, literal boot/report-ID/ASCII fields, framing/deadlines/discard recovery, held keys/errors, event ownership and reentrancy; no physical USB opening |
+| Native HID report component | 341 assertions passed: endpoint/length/ID checks, read/output ownership, wiping, reentrancy, acquisition/release failures and uncertain submission |
+| Native HID API branch | 392 assertions through the isolated Linux C shim: Unicode SetupDi enumeration, descriptor buffers/sizes, input/output/features, pending I/O, timeout/cancel/drain, incomplete completion, inaccessible metadata and handle cleanup; no Windows driver execution |
+| SLE4404 | 60114 assertions passed: literal code/program/scratchpad/application erase transcripts, budgets/success proof, all I/O boundaries and read-back bits, chunking, stale state, owned caller buffers and release uncertainty; no physical card |
+| Contact memory profiles | 2955 assertions in nine groups passed: nineteen geometries, literal ACR38/ACR39/SLE/PIN/protection/page/bank transcripts, wrong/blocked retry counters, every write/PIN-chain I/O failure, every acknowledgement status/read-back data bit, no-op/locked ranges, release evidence, credential copies and acquisition recovery; no physical chip access |
+| SLE counter chips / capabilities | Full run: 34,280 assertions passed; four explicit models, all write modes/address boundaries, literal select/program/carry/backup/challenge/retrieval commands, every write-chain I/O failure, wrong statuses/lengths, all window data bits, stale preflight, zero-to-one refusal, release evidence, owned input arrays, failed acquisition recovery and mandatory carry dispatch; ACR39 counter support is not claimed |
+| Contactless Classic/Type 2 storage and programmable UID | 6619 assertions in twelve groups passed, including protected pages, complete snapshots, four/seven-byte Gen2 programming, separate factory FUID one-time writes and uncertain outcomes |
 | Raw RF UID programming and ACR122U adapter | 8179 assertions in twenty-three groups passed, including Gen1a/Gen1b/unsealed UFUID, partial UFUID/ZUID/PFUID, Type 2 DirectWrite, Gen3, all six Gen4 layouts, partial writes, USCUID/GDM hidden/public sources, password-command wiping, bit framing and complete adapter-chain transcripts |
-| Password-authenticated Type 2 user memory | 2062 assertions in seven groups passed for both EV1 sizes and NTAG213/215/216, including retained-session PWD_AUTH/PACK, bounded snapshots, verified writes and concrete adapter integration |
-| NDEF codecs, RTDs and public Type 2 access | 36962 assertions in five groups passed: bounded framing/chunks, strict Unicode, factory CC/TLV mapping and guarded write failures |
+| Password-authenticated Type 2 user memory | 2388 assertions in seven groups passed for both EV1 sizes and NTAG210/212/213/215/216, including retained-session PWD_AUTH/PACK, bounded snapshots, verified writes and concrete adapter integration |
+| NDEF codecs, RTDs and public Type 2 access | 38481 assertions in five groups passed: bounded framing/chunks, strict Unicode, factory CC/TLV mapping and guarded write failures |
 | Public Type 4 NDEF files | 48480 assertions in four groups passed: mapping 1.0/2.0 CC/APDU transcripts, whole-file bounds, explicit file selection, MLe/MLc segmentation and every partial/later-command failure |
 | ISO 15693 memory and public Type 5 NDEF | 280409 assertions in five groups passed: literal addressed commands, concrete ACS adapter chains, all block sizes, 65535-byte TLV maximum, cross-block length fields, protected/partial writes and session cleanup |
 | Magstripe codecs, component and MagTek input adapters | 57326 assertions in four groups passed: published parity/LRC vectors, all track lengths and single-bit errors, financial fields, synthetic HID/keyboard frames and verified-write failure contracts |
@@ -48,14 +53,15 @@ Delphi execution of the corrected VCL demos remains pending.
 | Native Windows serial branches | 48 assertions passed against a Linux C ABI shim, including complete 8N1 status programming and 7O1 acquired verified-writing component/adapter/COM transcripts |
 | Native Windows adapter branches | 38 assertions passed against an isolated Linux C ABI shim |
 | Native Windows CNG branches | 51 assertions passed: native argument/length/IV handling, every encrypt/decrypt call failure, handle cleanup and system RNG failure without fallback |
-| Console examples | All fifteen built; hardware-free help/inspection checks passed, including DESFire key/access administration offline help/plan, ICAO help/CardAccess inspection, DESFire management offline help/plan and invalid arguments, APDU/NDEF/Type 4/Type 5/DESFire valid/invalid cases, ATR known/unknown/bad-TCK and EMV known/private tags, magstripe parity and MSR206 frame/status cases |
-| Demo worker and offline operations | 45 assertions passed in the VCL-start follow-up: real worker/caller separation, request ownership, single delivery, join, nil executor, sanitized errors, verified-write evidence, offline operations and hardware preflight, suspended destruction, duplicate start and completed restart |
-| Palette registration / RTL streaming | 14 assertions passed: actual Register routine captures thirteen classes; inactive construction and FPC component stream round-trip for each; DesignIntf capture is not an IDE/ABI test |
-| Distribution / VCL source readers | Eleven MSBuild projects (all four Debug/Release × Win32/Win64 property combinations), two groups and two DFM forms passed: references, package ownership/order, explicit IDE package identity, native Base/configuration/platform activation, GenDll/GenPackage, named DCP dependencies, native integer-overflow/debug settings, BOM/CRLF/resources, runtime/design dependency separation, palette completeness, field/event bindings, form creation and Platform/Config output isolation; no Delphi/VCL execution |
+| Console examples | All nineteen built; hardware-free help/inspection checks passed, including TWN4 offline framing/help and SLE4404 help/window and invalid-before-hardware checks, memory-model geometry and DESFire key/access administration offline help/plan, ICAO help/CardAccess inspection, DESFire management offline help/plan and invalid arguments, APDU/NDEF/Type 4/Type 5/DESFire valid/invalid cases, ATR known/unknown/bad-TCK and EMV known/private tags, magstripe parity and MSR206 frame/status cases |
+| Demo worker and offline operations | 85 assertions passed: nested credential deep copies/wiping, copied argument arrays, real worker/caller separation, request ownership, single delivery, join, nil executor, sanitized errors, verified-write evidence, offline operations and hardware preflight, suspended destruction, duplicate start and completed restart |
+| Family demo executors | 1857 assertions passed: offline APDU command/response, ATR, TLV, EMV metadata, NDEF and RFID conversion/report profiles; all valid device-action preflights; invalid choices, PIN lengths, expected ranges, acknowledgement and credentials in public fields refused before hardware; literal memory/counter/SLE4404 and TWN4 command chains; no replay; uncertain writes and completed proof across transaction/connection/CDC cleanup failures |
+| Palette registration / RTL streaming | 22 assertions passed: actual Register routine captures twenty-one classes; inactive construction and FPC component stream round-trip for each; DesignIntf capture is not an IDE/ABI test |
+| Distribution / VCL source readers | Thirty-three MSBuild projects (all four Debug/Release × Win32/Win64 property combinations), two groups and three DFM forms passed: references, package ownership/order, explicit IDE package identity, native Base/configuration/platform activation, GenDll/GenPackage, named DCP dependencies, native integer-overflow/debug settings, BOM/CRLF/resources, runtime/design dependency separation, palette completeness, field/event bindings, form creation and Platform/Config output isolation; no Delphi/VCL execution |
 | FPC range/overflow/heap checks | Passed; no unfreed allocations in passing test programs |
-| Python checker regression tests | All 32 passed, including seventeen distribution-reader cases; coverage includes IDE package identity, native configuration inheritance, omitted empty IDE platform groups, owning-package dependencies, group target order, named DCPs, resources, BOM/CRLF, compiler property types and bounded condition parsing |
-| Pascalcheck core profile | All 21 readers passed on 103 explicitly selected source files |
-| XML documentation | 1332 visible production API declarations inspected; zero findings; exported test-vector declarations also pass the full profile |
+| Python checker regression tests | All 34 passed, including nineteen distribution-reader cases; coverage includes IDE package identity, native configuration inheritance, omitted empty IDE platform groups, owning-package dependencies, explicit standalone design copies without dependency-owned duplicates, group target order, named DCPs, resources, BOM/CRLF, compiler property types and bounded condition parsing |
+| Pascalcheck core profile | All 21 readers passed on 166 explicitly selected source files |
+| XML documentation | 1796 visible production API declarations and 267 VCL example declarations inspected; zero findings; exported test-vector declarations also pass the full profile |
 | Reference integrity | All 26 retained files match the original Git bytes and manifest hashes |
 | Patch whitespace | `git diff --check` passed |
 
@@ -78,13 +84,13 @@ It uses the host Linux ABI, not Windows calling conventions or an actual driver.
 
 FPC reports an intentional private-constructor warning for the internal TLV
 constructor, a platform-dependent unreachable branch in the test handle factory,
-and unused test-result variable notes. None has been suppressed. Production PC/SC
+and unused test-result variable notes. None has been suppressed. Production TWN4/RFID/SLE4404/PCSC
 and eID/EMV/contactless units compile without additional FPC warnings in the tested branches.
 
-The suite reported 1,789,463 passing assertions across 29 program runs, including
-39 demo worker and 14 inactive registration/streaming assertions.
-The full 21-reader profile covers 103 Pascal sources, including the VCL units.
-Only the non-VCL worker/executor and inactive component registration/streaming
+The current suite reports 2,159,328 passing assertions across 40 configurations.
+Native HID adds portable contract tests and an x64 Linux ABI shim for actual Windows
+imports, descriptor layouts, exact paths/report buffers and cancel/drain lifetime.
+Only the non-VCL workers/executors and inactive component registration/streaming
 were compiled/executed under FPC. The actual forms, MSBuild projects, package BPLs
 and batch scripts require [Delphi/Windows validation](INSTALLATION.md).
 The supplied [VCL smoke-test guide](VCL_DEMOS.md) records the remaining manual steps.
@@ -95,7 +101,7 @@ lengths/padding, exact AID/MF/DF/EF selection, grouped reads, optional certifica
 states, bounded 61xx/6Cxx handling, EOF probes, 15-bit offsets, partial failures,
 no transport replay and transaction-release exception precedence. Its JPEG and
 certificate payloads are synthetic protocol fixtures, not decoded image or X.509
-validation tests. A total of 1789463 Pascal assertions passed across 29 test-program
+validation tests. A total of 2081652 Pascal assertions passed across 37 test-program
 runs, including all three native ABI shims and the crypto/DESFire suites repeated
 through the actual CNG adapter.
 NDEF tests exercise complete MB/ME/chunk framing, independent Text/URI vectors,
@@ -318,9 +324,10 @@ unassigned digit is used. Dead result assignments are removed, EMV log-format
 validation still executes without storing its unused return value, and PC/SC
 discovery assigns its exhausted-retry status after the loop.
 
-W1033 implicit imports are addressed by restoring the six runtime dependencies
-and matching DCP references of the design package, together with its design-only
-role. The maintainer's combined project group is retained with dependencies before
+The earlier W1033 repair restored six runtime dependencies and matching DCP
+references. After the maintainer intentionally removed them for installation,
+the current batch replaces implicit imports with an explicit standalone source
+bundle and retains the design-only role. The maintainer's combined project group is retained with dependencies before
 consumers in both project order and Build/Make/Clean targets. Runtime `.dproj`
 files remain unchanged. No warning/hint directives are disabled.
 
@@ -329,3 +336,293 @@ the required owning DCP and inconsistent group target order. It accepts empty
 platform configuration groups omitted by the IDE while still checking active
 overrides and effective Debug/Release × Win32/Win64 settings. These are bounded
 source readers, not a substitute for Delphi's package linker or IDE.
+
+
+## Contact memory and standalone palette batch
+
+The ACS ACR38x CCID 6.05 and ACR39 Series 1.05 documents are the protocol sources
+for the eight SLE models and eleven I2C geometries. ACR39 two-wire reads require
+an additional four-byte protection trailer; ACR38 CCID reads do not. Authentication
+requires 9007 or 90FF and an independently restored counter, not ordinary 9000.
+The tests use literal synthetic transcripts and cover 64-KiB bank transitions,
+physical I2C pages, whole-range SLE protection preflight, irreversible compare-and-
+lock operations and fresh new-PIN proof after reset. These are implemented profiles,
+not physical reader/firmware certification. See [memory access](MEMORY_CARDS.md).
+
+The new design bundle uses only rtl/vcl/designide SDK dependencies and explicitly
+contains the complete 40-unit registration source closure, including Memory.
+All fifteen inactive components construct and round-trip through the FPC RTL
+streaming test. The bounded reader rejects missing source ownership and a bundle
+that also loads a runtime package owning the same units. This does not test the
+Delphi package linker/loader: the standalone installation change still needs a
+fresh build and install in the user's IDE. Runtime packages remain separate for
+applications. See [installation](INSTALLATION.md).
+
+## VCL memory page and counter scope
+
+The worker copies memory payload/PIN arrays before starting. Synthetic worker tests
+exercise mutation of caller buffers, owned completion arrays, suppression of partial
+ordinary/counter data on failure, offline ACS profile capabilities and invalid
+memory requests before hardware creation. Form/DFM readers inspect both tabs and
+bindings; actual VCL rendering and Delphi compilation remain untested here.
+
+Counter geometry is a caller-declared readable window, not an inferred chip size.
+Programming verifies the expected-before and expected-after window and refuses
+zero-to-one transitions at the programmed address. Carry arithmetic, personalisation
+code proof and host certificate verification are not implemented. The raw code
+builder explicitly documents consumption of the presentation counter; it is never
+automatically executed by the high-level component.
+
+## Separate VCL family batch
+
+An earlier revision shared `ERD.Card.Demo.FamilyForm` across six projects. That
+form has since been removed in favor of the twenty individual designer forms
+documented below. At that revision the family input catalog,
+family executors and the existing post-construction worker lifecycle. The two older
+VCL projects retain their forms. The shared DFM/aliases and all twenty MSBuild
+projects pass the bounded distribution readers with the native BOM/CRLF conventions.
+This does not execute Delphi's resource loader, IDE form designer or VCL controls.
+
+The family executor uses the actual component validation against a rejecting
+acquisition boundary, then opens only the explicitly selected native adapter.
+Scripted tests verify complete command chains and malformed arguments without
+using invented successful preflight card responses. Deep-copied credential arrays
+are wiped on worker success/failure; caller buffers survive. Known write proof and
+uncertainty remain separate when later cleanup fails. RFID raw-report examples are
+host-fed decoding; no native USB enumeration/read/write backend was added.
+
+[The family smoke tests](VCL_DEMOS.md#family-smoke-tests-on-delphiwindows) remain
+pending on Delphi/Windows and real hardware. No payments or additional physical
+card support are claimed by this demo batch.
+
+## SIM follow-up validation
+
+The full 38-program suite passed 2,153,042 assertions before the PBR extension.
+After that extension, the focused SIM suite passed 71,363 (18 additional PBR
+assertions); the final family-executor run passed 1,596 after the extra demos.
+That batch ended at 2,153,192 aggregate assertions. InspectSim was separately built and checked against
+literal ICCID/IMSI/alpha output and help; malformed input exits with failure.
+Source validation, distribution readers and XML documentation were rerun after
+these additions. Physical SIM/USIM and Delphi/Windows tests remain outstanding.
+
+## Additional contactless family demos
+
+The focused family-executor suite passed 1,596 assertions after adding separate
+Classic, public Type 2 and Type 4 projects (132 more). Tests cover every new live
+action's acquisition boundary, required acknowledgements and invalid choices,
+literal key loading/authentication/block/page/CC APDUs and connection/transaction
+lifetime. Status-only block/page writes never set WriteVerified. NDEF operations
+route to the already tested components. The distribution readers passed 25
+projects and the 21-reader source profile passed 147 sources. Native VCL remains
+unexecuted here. This follow-up changes demos, not the underlying card protocols.
+
+## Linked USIM contacts and SMS text (2026-10-09)
+
+The full 38-program run passed 2,154,129 assertions. Final focused reruns add
+two ADN backlink checks and six demo-route checks: SIM 72,302 and family 1,602,
+for 2,154,137 distinct final assertions. Both focused programs report zero leaks.
+The full run also passed all 34 Python regressions, distribution readers and
+21 source checkers; the latter were rerun after the final tests. XML readers
+inspect 1,743 production and 235 VCL declarations with zero findings.
+
+Independent literals cover received GSM text, outgoing UCS-2, UDH-fill alignment,
+concatenation metadata and binary application ports. SMS malformed direction,
+bounds, timestamp/DCS and payload lengths are refused. Linked-contact tests
+cover a complete PBR/ADN/IAP/EMAIL/EXT read under one transaction and every one
+of its 21 I/O failure positions with secondary cleanup errors. Original contact,
+linked field and extension bytes remain owned; loops, out-of-range pointers and
+wrong ADN backlinks are refused. No linked writes, SMS sending or hardware
+validation is claimed. InspectSim's literal --sms-text output was separately
+checked; its check is now in the automated runner.
+
+## EMAIL/ANR and explicit SMS assembly
+
+Focused SIM tests pass 72,312 and the family-executor tests pass 1,604 after this
+follow-up. Literal out-of-order UCS-2 and binary messages assemble correctly;
+binary UDH is removed only from joined payloads, while exact segment bytes remain.
+Missing/duplicate segments, mixed recipients and DCS are refused; caller buffers
+remain independent. EMAIL and ANR have explicit footer layouts and ANR preserves
+unresolved CCP/EXT. Family actions expose the codecs; source and distribution
+checks pass. This batch changes no PIN/write protocol.
+
+## PIN/PUK and linked write plans; three document/EMV demos
+
+The complete 38-program suite passed 2,156,246 assertions after SIM management
+(SIM 74,402, family 1,611). Credential tests cover classic/UICC CHANGE and UNBLOCK
+literal commands, no retries, every transmit failure, cleanup uncertainty and
+owned command wiping. Linked plans check all pre-states before mutation, each
+write pre-state and all final records; one- and two-EF transcripts cover every
+I/O position, partial writes, stale second records and complete proof across
+cleanup failure. Credential success is a command receipt, not fresh-PIN proof.
+
+After adding Belgian/ICAO/EMV projects and acquired-file export, focused family
+tests pass 1,664 and worker tests 88 (56 more final assertions). EMV literal
+directory/GPO/GET DATA/log routes, raw export, offline codecs and Belgian
+preflight pass. Worker failures never publish exportable artifacts. Source and
+distribution readers cover 28 projects. This follows the existing native project
+settings; no Delphi compiler execution is implied.
+
+## Completed PR #28 expansion
+
+SIM/USIM now includes explicit PIN/PUK status, once-only PIN change/unblock receipts,
+linked contact reads and caller-ordered expected-state record plans for linked
+phonebook writes. Every target is compared before the first update; final independent
+read-back covers all records. Partial updates are uncertain and never replayed. No
+automatic record allocation or fabricated reset/new-PIN proof is reported.
+
+The twenty VCL applications include separate eID/ICAO/EMV, DESFire, UID, ISO 15693,
+protected Type 2, SIM/USIM, memory, TWN4, RFID/native HID and magstripe profile paths.
+Tests cover action preflight before acquisition, literal acquired responses and
+exports, native HID selection/submission uncertainty and background result ownership.
+The source-aware reader also caught and corrected a Delphi field-after-method
+ordering issue in the shared artifact form.
+
+NTAG210/212 tests extend model bounds, every excluded page, complete snapshots,
+PWD_AUTH/PACK, NDEF read/write/no-op/clear and explicit MIRROR_PAGE write refusal.
+The layouts/config pages come from NXP's published data sheet, retaining previous
+enum ordinals. All generated native projects use the established BOM/CRLF and
+Delphi Base/configuration/platform settings. See [VCL_COVERAGE.md](VCL_COVERAGE.md),
+[USB_HID.md](USB_HID.md) and [NTAG210_212.md](NTAG210_212.md) for exact boundaries.
+
+
+## Independent designer forms and in-demo reader discovery
+
+The previous shared family form has been removed. All twenty VCL applications
+now own direct TForm descendants and individual Main.dfm resources. Their visual
+controls, action tabs, masked inputs, dropdowns and timers are defined in those
+resources rather than created in Pascal. Only nonvisual worker/protocol code is shared.
+
+PC/SC, serial and native HID demos discover their devices within the application,
+using background reader-name, QueryDosDeviceW COM-alias or HID-metadata enumeration.
+Selection is explicit; refreshing preserves only still-present addresses and clears
+stale choices on failure. Foreground keyboard capture remains OS input, without
+pretending to filter a selected HID keyboard. Device discovery issues no card command.
+
+Controller regression tests exercise all three discovery kinds, dispatch separation,
+owned result delivery, sanitized failures, overlapping-job refusal, caller-thread
+callbacks, deferred closing, failed starts and destruction joining outstanding work.
+The worker tests also reject partial device lists on failure. Distribution regressions
+check keypress signatures, direct TForm ownership, required individual resources and
+visual controls placed in Pascal. These readers complement the headless compiled tests.
+
+Validation after this change: the full FPC range/overflow/heap suite passes
+2,159,475 assertions across 41 configurations (144 controller and 91 worker
+assertions). All 35 Python regressions and 21 Pascal readers pass on 167 sources.
+Distribution checks pass for 33 projects, two groups and twenty DFM resources;
+Help Insight checks cover 1,796 production and 2,367 VCL public declarations with
+zero findings. The Linux checks do not compile or render VCL forms in Delphi.
+
+## EMV record scan, parsed MOBIB and secure-provider boundary
+
+The EMV reader now supports inspecting an application's PDOL without GPO, and
+an explicit bounded extra record sweep after the standard AFL reads. Demo output
+prints each actual record and additional absence/access status, retaining the
+individual exports. Tests cover gaps, skipped duplicate AFL records, exact APDUs,
+required terminal inputs, bounds and unexpected-error cleanup.
+
+`TCalypsoCardReader` adds legacy/revision-3 logical-file and absolute-record reads,
+a standard MOBIB profile and caller-defined file plans. `TMobibCodec` provides
+explicitly matched legacy country/network decoding for holder, events, known
+contract dates and 24-bit counter slots, preserving independently owned raw files.
+`MobibDemo` has its own designer DFM, reader dropdown, layout and FID-plan fields.
+
+A required secure read can use `ICalypsoSecureSessionProvider` and
+`ICalypsoSecureReadSession`: one provider-backed read-only session, authenticated
+transport dispatch, verified completion before snapshot delivery and abort on
+failure. Missing providers fail before I/O; failed verification cannot downgrade
+to a public read. The tests use provider fixtures and do not implement or validate
+Calypso cryptography, real issuer keys or physical SAM hardware. A real SDK/SAM
+adapter and legitimate credentials remain required for protected data.
+
+Final full FPC suite: **2,160,336 assertions across 43 configurations**, including
+1,650 EMV, 192 Calypso, 545 MOBIB codec and 1,935 family-executor assertions.
+All **36 Python regressions** and **21 source-aware Pascal checkers** pass on
+**173 sources**. Distribution readers validate **34 projects, two groups and
+21 independent DFMs**. Aggregate Build/Make/Clean now covers every shipped demo,
+with regressions preventing omissions and duplicate targets. XML Help Insight
+coverage: **1,892 production and 2,434 VCL declarations**, zero findings.
+These headless tests/readers do not replace Delphi compilation or real-card testing.
+
+
+## Native Calypso SAM authentication and MOBIB subscriptions
+
+The built-in `TCalypsoSamSessionProvider` now orchestrates revision-1, revision-2,
+revision-3 compatibility and revision-3.2 extended plaintext sessions through a
+separate provisioned SAM. It requires exclusive SAM ownership, an explicit
+serial/key index/KIF/KVC/class, fresh SAM challenges, exact opening response
+framing and final SAM verification of the card MAC. It includes successful
+read/selection APDUs and full responses in the transcript, excluding Le from
+case-4 commands. The strict profile aborts on failed/chained responses, denies
+all writes, never downgrades, and returns no acquired result on verification
+failure. It does not implement encrypted sessions, PKI or software-only issuer keys.
+
+**609 native SAM assertions** cover four explicit generations, literal independent
+card/SAM command expectations, transcript framing, invalid/mismatched keys,
+malformed challenges, digest/authentication errors, transport failure, abort,
+abandoned sessions, post-close rejection, read-only allowlisting and preservation
+of the primary exception across failed cleanup. Synthetic MACs validate the
+native protocol engine; the SAM performs the actual secret-key cryptography.
+
+**370 MOBIB subscription assertions** cover fixed contract versions 0–3 and
+optional-field version 4, all 32 presence bitmaps, tariff/known product labels,
+price and sale date, duration fields, time-versus-trip counters, zero values,
+unknown versions, strict truncation, deep ownership and absolute-record counter
+association. The legacy codec no longer applies its fixed purchase-date offset
+to newer contracts. Unknown validity/zone/operator rules remain explicit.
+
+The independent MobibDemo DFM adds an authenticated read page with its own SAM
+reader dropdown populated by the existing in-demo discovery. Executor tests
+exercise both real protocol engines through separate injected transports,
+verified file exports, withheld exports on bad MAC and release of both readers.
+**2,041 family-executor assertions** pass.
+
+Final full FPC suite: **2,161,421 assertions across 45 configurations**.
+All **36 Python regressions** and **21 source-aware Pascal checkers** pass on
+**177 sources**. Distribution validation covers **34 projects, two groups and
+21 independent DFM forms**, including the new SAM selector and package source
+closure. English public XML documentation coverage: **1,929 production and
+2,461 VCL declarations**, zero findings. Native project BOM/CRLF conventions remain intact.
+
+
+## Native MOBIB operator-rule assessment
+
+`TMobibRuleEngine` now evaluates explicitly supplied product policies against
+versioned subscriptions and acquired evidence. Exact operator/network/tariff/
+version matching precedes all policy checks. Inclusive start and exclusive end
+can come from explicit validity dates, known activation, contract-specific first
+use or an explicitly sale-based policy. UTC elapsed minutes/hours, operator-local
+calendar days/months/years, midnight-aligned ends and explicit contract-duration
+unit maps are implemented. Gregorian target-month clamping handles leap years.
+
+Fixed or decoded-contract zone sets require every requested journey zone to
+match. An optional remaining-trip condition assesses starting a new journey.
+Independent checks retain unknown evidence separately from proved failures;
+known matched failures dominate unknown conditions, including a future start
+without an end or a past end without a start. Unmatched profiles never evaluate
+as eligible. The engine never acquires a reader, reads a system clock, infers
+card-field meanings or installs an implicit issuer profile.
+
+**1,282 rule-engine assertions** cover temporal boundaries, activation states,
+missing versus invalid evidence, all four duration codes, a Gregorian 400-year
+month-clamping sweep, leap-year and midnight cases, clock-domain mismatch,
+profile identity/version matching, zone subsets, missing/zero trips, invalid
+configuration, nonfinite dates and independent failure precedence.
+
+MobibDemo adds a fourth, independent designer page for offline policy assessment,
+with explicit rule source, acquired timestamps, duration semantics, journey zones
+and counters. Blank zone policy remains unknown; unrestricted zones require an
+explicit `*`. **2,051 family-executor assertions** include actual rule evaluation,
+readable source/check/reason/date output, no card/SAM acquisition, malformed
+civil-date rejection and rejection of nondecimal timestamp fields.
+
+Final full FPC suite: **2,162,713 assertions across 46 configurations**.
+All **36 Python regressions** and **21 source-aware Pascal checkers** pass on
+**179 sources**. Distribution checks pass for **34 projects, two groups and
+21 independent DFM forms**, with runtime/design package source closure and native
+BOM/CRLF conventions preserved. Public English XML documentation covers
+**2,036 production and 2,499 VCL declarations**, with zero findings.
+
+These are native policy mechanics with application-supplied, sourced rules.
+Complete automatic De Lijn/STIB/TEC/NMBS card-field mappings and issuer product
+profiles are not claimed. Public product terms alone do not define the missing
+card bytes; operator-specific activation/zone decoders must supply that evidence.

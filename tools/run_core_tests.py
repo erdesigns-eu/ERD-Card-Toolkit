@@ -32,6 +32,10 @@ def main():
                '-Fu' + str(REPO / 'src/eid'),
                '-Fu' + str(REPO / 'src/emv'),
                '-Fu' + str(REPO / 'src/magstripe'),
+               '-Fu' + str(REPO / 'src/memory'),
+               '-Fu' + str(REPO / 'src/sim'),
+               '-Fu' + str(REPO / 'src/input'),
+               '-Fu' + str(REPO / 'src/readers'),
                '-Fu' + str(REPO / 'src/contactless'),
                '-Fu' + str(REPO / 'src/design'),
                '-Fu' + str(REPO / 'examples/vcl/shared'),
@@ -46,15 +50,16 @@ def main():
             crt_path = Path(crt.stdout.strip())
             if crt_path.is_file():
                 command.append('-Fl' + str(crt_path.parent))
-    for project in ('tests/core/CardCore.Tests.dpr', 'tests/core/ProtocolCore.Tests.dpr',
+    for project in ('tests/sim/SimCard.Tests.dpr', 'examples/sim/InspectSim.dpr', 'examples/readers/InspectTwn4.dpr', 'tests/readers/Twn4.Tests.dpr', 'tests/input/RfidInput.Tests.dpr', 'tests/input/Hid.Tests.dpr', 'tests/memory/Sle4404.Tests.dpr', 'tests/memory/MemoryCounter.Tests.dpr', 'tests/memory/MemoryCard.Tests.dpr', 'examples/memory/InspectMemoryCard.dpr', 'examples/memory/InspectSle4404.dpr',
+                    'tests/core/CardCore.Tests.dpr', 'tests/core/ProtocolCore.Tests.dpr',
                     'tests/core/CardCatalogs.Tests.dpr',
-                    'tests/demos/DemoJob.Tests.dpr',
+                    'tests/demos/Controller.Tests.dpr', 'tests/demos/DemoJob.Tests.dpr', 'tests/demos/FamilyOperations.Tests.dpr',
                     'tests/crypto/EacCrypto.Tests.dpr', 'tests/eid/IcaoDocument.Tests.dpr',
                     'tests/contactless/DesfireManagement.Tests.dpr',
                     'tests/crypto/CardCrypto.Tests.dpr', 'tests/contactless/Desfire.Tests.dpr', 'tests/contactless/DesfireSession.Tests.dpr',
                     'tests/transport/CardTransport.Tests.dpr', 'tests/eid/BelgianEid.Tests.dpr',
                     'tests/eid/Icao.Tests.dpr',
-                    'tests/emv/Emv.Tests.dpr',
+                    'tests/contactless/MobibCodec.Tests.dpr', 'tests/contactless/Calypso.Tests.dpr', 'tests/contactless/CalypsoSam.Tests.dpr', 'tests/contactless/MobibSubscriptions.Tests.dpr', 'tests/contactless/MobibRules.Tests.dpr', 'tests/emv/Emv.Tests.dpr',
                     'tests/contactless/Contactless.Tests.dpr',
                     'tests/contactless/RawUid.Tests.dpr',
                     'tests/contactless/Type2Password.Tests.dpr',
@@ -80,7 +85,7 @@ def main():
     subprocess.run(command + ['-Fu' + str(REPO / 'tests/design'),
                               'tests/design/Registration.Tests.dpr'], cwd=REPO, check=True)
     suffix = '.exe' if os.name == 'nt' else ''
-    for project in ('DemoJob.Tests', 'Registration.Tests', 'EacCrypto.Tests', 'IcaoDocument.Tests', 'DesfireManagement.Tests', 'CardCore.Tests', 'ProtocolCore.Tests', 'CardCatalogs.Tests', 'CardCrypto.Tests', 'Desfire.Tests', 'DesfireSession.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'Iso15693Type5.Tests', 'MagStripe.Tests', 'Msr206.Tests', 'Msr2067HL.Tests'):
+    for project in ('SimCard.Tests', 'Twn4.Tests', 'RfidInput.Tests', 'Hid.Tests', 'Sle4404.Tests', 'MemoryCounter.Tests', 'MemoryCard.Tests', 'Controller.Tests', 'DemoJob.Tests', 'FamilyOperations.Tests', 'Registration.Tests', 'EacCrypto.Tests', 'IcaoDocument.Tests', 'DesfireManagement.Tests', 'CardCore.Tests', 'ProtocolCore.Tests', 'CardCatalogs.Tests', 'CardCrypto.Tests', 'Desfire.Tests', 'DesfireSession.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'MobibCodec.Tests', 'Calypso.Tests', 'CalypsoSam.Tests', 'MobibSubscriptions.Tests', 'MobibRules.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'Iso15693Type5.Tests', 'MagStripe.Tests', 'Msr206.Tests', 'Msr2067HL.Tests'):
         result = subprocess.run([str(build / (project + suffix))], cwd=REPO,
                                 capture_output=True, text=True)
         print(result.stdout, end='', flush=True)
@@ -89,6 +94,19 @@ def main():
         result.check_returncode()
         if re.search(r'\b[1-9][0-9]* unfreed memory blocks', result.stderr):
             raise RuntimeError(project + ' leaked memory according to FPC heaptrc')
+    for args, expected in ((['--help'], 'Offline codecs only.'),
+                           (['--iccid', '981032547698103254F6'], '8901234567890123456'),
+                           (['--imsi', '082980102143658709'], '208011234567890'),
+                           (['--alpha', '414C494345FF'], 'ALICE'),
+                           (['--sms-text', '0300040B912143658709F100006201902143650005E8329BFD06' + 'FF' * 150], 'hello')):
+        result = subprocess.run([str(build / ('InspectSim' + suffix))] + args,
+                                cwd=REPO, capture_output=True, text=True, check=True)
+        if expected not in result.stdout:
+            raise RuntimeError('SIM console literal mismatch')
+    result = subprocess.run([str(build / ('InspectSim' + suffix)), '--iccid', 'FF'],
+                            cwd=REPO, capture_output=True, text=True)
+    if result.returncode != 1:
+        raise RuntimeError('SIM console malformed input was not refused')
     # Exercise the Windows adapter's actual native-call branches against an isolated
     # C shim on Linux x86-64. This tests layout/arguments, not Windows calling conventions.
     if sys.platform.startswith('linux') and shutil.which('gcc'):
@@ -113,6 +131,31 @@ def main():
         native.check_returncode()
         if re.search(r'\b[1-9][0-9]* unfreed memory blocks', native.stderr):
             raise RuntimeError('Native PC/SC shim test leaked memory')
+        hid_build = REPO / 'dist/core/hid-native'
+        hid_build.mkdir(parents=True, exist_ok=True)
+        subprocess.run([gcc, '-std=c11', '-Wall', '-Wextra', '-Werror', '-shared', '-fPIC',
+                        'tests/input/native/hid_stub.c', '-o',
+                        str(hid_build / 'libhid.dll.so')], cwd=REPO, check=True)
+        for library in ('libkernel32.dll.so', 'libsetupapi.dll.so'):
+            target = hid_build / library
+            if target.is_symlink():
+                target.unlink()
+            target.symlink_to('libhid.dll.so')
+        hid_command = [arg for arg in command if not arg.startswith(('-FU', '-FE'))]
+        hid_command.extend(['-dMSWINDOWS', '-Fl' + str(hid_build),
+                            '-FU' + str(hid_build), '-FE' + str(hid_build),
+                            'tests/input/NativeHid.Tests.dpr'])
+        subprocess.run(hid_command, cwd=REPO, check=True)
+        hid_env = os.environ.copy()
+        hid_env['LD_LIBRARY_PATH'] = str(hid_build) + os.pathsep + hid_env.get('LD_LIBRARY_PATH', '')
+        hid_result = subprocess.run([str(hid_build / 'NativeHid.Tests')], cwd=REPO,
+                                    env=hid_env, capture_output=True, text=True)
+        print(hid_result.stdout, end='', flush=True)
+        if hid_result.stderr:
+            print(hid_result.stderr, file=sys.stderr, end='')
+        hid_result.check_returncode()
+        if re.search(r'\b[1-9][0-9]* unfreed memory blocks', hid_result.stderr):
+            raise RuntimeError('Native HID ABI shim test leaked memory')
         serial_build = REPO / 'dist/core/serial-native'
         serial_build.mkdir(parents=True, exist_ok=True)
         subprocess.run([gcc, '-std=c11', '-Wall', '-Wextra', '-Werror', '-shared', '-fPIC',
@@ -159,6 +202,17 @@ def main():
                 raise RuntimeError('Native CNG test leaked memory')
     else:
         print('SKIP: native PC/SC and serial ABI shims requires Linux and GCC.', flush=True)
+    twn4 = str(build / ('InspectTwn4' + suffix))
+    for argv, expected in [(['--help'], 'TWN4 PRS ASCII / USB-CDC'),
+                           (['--frame', '0005'], '303030350D'),
+                           (['--frame', '0005', '--crc'], '30303035313541370D')]:
+        result = subprocess.run([twn4] + argv, capture_output=True, text=True, check=True)
+        if expected not in result.stdout:
+            raise RuntimeError('TWN4 offline example output mismatch')
+    for argv in [[], ['--unknown'], ['--frame', '00'], ['--port', 'COM17', '--frame', '0005']]:
+        result = subprocess.run([twn4] + argv, capture_output=True, text=True)
+        if result.returncode == 0:
+            raise RuntimeError('TWN4 example accepted invalid arguments')
     example = str(build / ('InspectApdu' + suffix))
     valid = subprocess.run([example, '0000000002AABB00'], capture_output=True, text=True, check=True)
     if 'Data bytes: 2' not in valid.stdout or 'Le: 256' not in valid.stdout:
@@ -292,7 +346,21 @@ def main():
     if inspected.returncode != 1 or 'EDesfireError' not in inspected.stdout:
         raise RuntimeError('DESFire management example did not reject invalid arguments')
     print('PASS: DESFire management offline help/plan and invalid arguments.', flush=True)
+    sle4404 = str(build / ('InspectSle4404' + suffix))
+    for bad_args in (['--window', '0'],
+                     ['--window', '52', '--reader', 'must not connect', '--dialect', 'acr39'],
+                     ['--window', '52', '--reader', 'must not connect', '--dialect', 'acr38-ccid',
+                      '--address', '51', '--count', '2']):
+        invalid = subprocess.run([sle4404] + bad_args, capture_output=True, text=True)
+        if invalid.returncode != 1 or 'EMemoryCardError' not in invalid.stdout:
+            raise RuntimeError('SLE4404 example did not reject invalid geometry/dialect before hardware')
     for project, cases in (
+        ('InspectSle4404', [(['--help'], 'InspectSle4404 --window'),
+                            (['--window', '52'], 'Caller-declared readable bytes: 52')]),
+        ('InspectMemoryCard', [(['--help'], 'Usage: InspectMemoryCard'),
+                               (['--model', 'sle4442'], 'Main bytes: 256 PIN bytes: 3'),
+                               (['--model', 'sle4428'], 'Main bytes: 1024 PIN bytes: 2'),
+                               (['--model', 'i2c1024kbit'], 'Main bytes: 131072 PIN bytes: 0')]),
         ('AdminDesfire', [(['--help'], 'Usage: AdminDesfire'), (['--plan'], 'AES administration:')]),
         ('ReadIcaoDocument', [(['--help'], 'Usage: ReadIcaoDocument'),
                              (['--cardaccess', '31143012060A04007F0007020204020202010202010D'], 'supported: TRUE')])):

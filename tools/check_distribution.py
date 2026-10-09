@@ -133,6 +133,18 @@ def check_project(path):
         for ref in refs:
             if not local_path(path.parent, ref.get('Include', '')).is_file():
                 errors.append(f'{path.name}: missing group project {ref.get("Include")}')
+        names = [local_path(path.parent, ref.get('Include', '')).stem for ref in refs]
+        targets = [t.get('Name', '') for t in root.findall('m:Target', NS)]
+        if len(names) != len(set(names)) or len(targets) != len(set(targets)):
+            errors.append(f'{path.name}: duplicate group project/target')
+        for operation, suffix in [('Build', ''), ('Clean', ':Clean'), ('Make', ':Make')]:
+            call = root.find(f"m:Target[@Name='{operation}']/m:CallTarget", NS)
+            if call is not None and call.get('Targets', '').split(';') != [name + suffix for name in names]:
+                errors.append(f'{path.name}: {operation} does not cover projects in group order')
+        if path.name == 'CardDemos.groupproj':
+            included = {local_path(path.parent, ref.get('Include', '')).resolve() for ref in refs}
+            if included != {p.resolve() for p in path.parent.glob('*/*.dproj')}:
+                errors.append(f'{path.name}: demo group does not include every shipped demo')
         return errors
     main = root.findtext('.//m:MainSource', namespaces=NS)
     source = local_path(path.parent, main or '')
@@ -250,11 +262,12 @@ def check_form(path):
         event = re.fullmatch(r'\s*(On\w+)\s*=\s*(\w+)\s*', line)
         if event:
             handler = event.group(2)
-            # The shipped demos use only TNotifyEvent bindings; no event-type inference.
-            signature = r'procedure\s+' + re.escape(handler) + r'\(Sender:\s*TObject\);'
+            parameters = (r'Sender:\s*TObject;\s*var\s+Key:\s*Char'
+                          if event.group(1) == 'OnKeyPress' else r'Sender:\s*TObject')
+            signature = r'procedure\s+' + re.escape(handler) + r'\(' + parameters + r'\);'
             if not re.search(signature, pas, re.I):
                 errors.append(f'{path.name}: missing notify handler {handler}')
-            if not re.search(r'procedure\s+\w+\.' + re.escape(handler) + r'\(Sender:\s*TObject\);', pas, re.I):
+            if not re.search(r'procedure\s+\w+\.' + re.escape(handler) + r'\(' + parameters + r'\);', pas, re.I):
                 errors.append(f'{path.name}: handler implementation {handler} missing')
     if stack:
         errors.append(f'{path.name}: unclosed DFM objects')
@@ -273,29 +286,48 @@ def check_program(path):
         errors.append(f'{path.name}: main form creation/source missing')
     elif not re.search(r'\b' + create.group(2) + r'\s*:\s*' + create.group(1) + r'\s*;', main.read_text()):
         errors.append(f'{path.name}: CreateForm class/global differ')
+    if main.is_file() and create:
+        main_source = main.read_text(encoding='utf-8-sig')
+        if not re.search(r'\b' + re.escape(create.group(1)) + r'\s*=\s*class\(TForm\)', main_source):
+            errors.append(f'{path.name}: demo must own a direct TForm class')
+        if not main.with_suffix('.dfm').is_file() or '{$R *.dfm}' not in main_source:
+            errors.append(f'{path.name}: demo must own its designer DFM resource')
+        if re.search(r'\bT(?:Panel|Label|Edit|ComboBox|Button|Memo|PageControl|TabSheet|ScrollBox|Image|CheckBox)\.Create\(', main_source):
+            errors.append(f'{path.name}: visual demo controls must be declared in its DFM')
     return errors
 
 
 def check_packages(root):
-    errors, owners, deps, contained_sources = [], {}, {}, {}
-    for path in sorted((root / 'packages').rglob('*.dpk')):
+    errors, owners, deps, contained_sources, contained_units = [], {}, {}, {}, {}
+    # Runtime ownership is unique. A standalone design source bundle may contain
+    # its own explicit copies, because it intentionally loads no runtime BPLs.
+    paths = sorted((root / 'packages').rglob('*.dpk'),
+                   key=lambda path: (path.parent.name == 'design', str(path)))
+    for path in paths:
         source = path.read_text(encoding='utf-8-sig')
         errors.extend(check_delphi_text(path))
         requires = re.search(r'\brequires\s+(.+?);', source, re.I | re.S)
         deps[path.stem] = re.findall(r'\b\w+\b', requires.group(1)) if requires else []
         contained_sources[path.stem] = []
+        contained_units[path.stem] = set()
         design = path.parent.name == 'design'
         if ('{$DESIGNONLY}' if design else '{$RUNONLY}') not in source:
             errors.append(f'{path.name}: package role directive missing')
         if not design and any(d.lower() in ('vcl', 'designide', 'erdcarddesign') for d in deps[path.stem]):
             errors.append(f'{path.name}: runtime depends on VCL/design-time code')
         for unit, ref in re.findall(r"(ERD\.[\w.]+)\s+in\s+'([^']+)'", source):
+            if unit.lower() in contained_units[path.stem]:
+                errors.append(f'{path.name}: duplicate contained unit {unit}')
+            contained_units[path.stem].add(unit.lower())
             contained_sources[path.stem].append(local_path(path.parent, ref))
             if not local_path(path.parent, ref).is_file():
                 errors.append(f'{path.name}: missing contained source {ref}')
-            if unit.lower() in owners:
+            if not design and unit.lower() in owners:
                 errors.append(f'{path.name}: unit {unit} already belongs to {owners[unit.lower()]}')
-            owners[unit.lower()] = path.stem
+            if not design:
+                owners[unit.lower()] = path.stem
+            elif owners.get(unit.lower()) in deps[path.stem]:
+                errors.append(f'{path.name}: source bundle includes dependency-owned unit {unit}')
     known = set(deps) | {'rtl', 'vcl', 'designide'}
     for name, references in deps.items():
         for ref in references:
@@ -310,7 +342,8 @@ def check_packages(root):
             for uses in re.findall(r'\buses\s+(.+?);', source, re.I | re.S):
                 for unit in re.findall(r'\bERD\.[\w.]+', uses):
                     owner = owners.get(unit.lower())
-                    if owner and owner != name and owner not in references:
+                    if (owner and owner != name and owner not in references
+                            and unit.lower() not in contained_units[name]):
                         errors.append(f'{name}: unit {unit} requires owning package {owner}')
     group = root / 'packages/ERDCards.groupproj'
     if group.is_file():
@@ -342,9 +375,18 @@ def check_registration(root):
     path = root / 'src/design/ERD.Card.Design.Register.pas'
     if not path.is_file():
         return ['palette registration source missing']
-    expected = set()
+    ancestry = {}
     for unit in (root / 'src').rglob('*.pas'):
-        expected.update(re.findall(r'\b(T\w+)\s*=\s*class\(TComponent\)', unit.read_text(), re.I))
+        for name, base in re.findall(r'\b(T\w+)\s*=\s*class\((T\w+)\)', unit.read_text(), re.I):
+            ancestry[name] = base.casefold()
+    expected = set()
+    known = {'tcomponent'}
+    while True:
+        discovered = {name for name, base in ancestry.items() if base in known} - expected
+        if not discovered:
+            break
+        expected.update(discovered)
+        known.update(name.casefold() for name in discovered)
     declared = []
     for names in re.findall(r"RegisterComponents\('[^']+',\s*\[([^]]+)\]\)", path.read_text(), re.S):
         declared.extend(re.findall(r'\bT\w+\b', names))
