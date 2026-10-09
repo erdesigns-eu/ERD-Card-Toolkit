@@ -1,5 +1,11 @@
 # Library validation record
 
+> This page records a specific validation run; the figures below are what that run
+> measured. The repository has grown since then (21 VCL applications, 34 MSBuild
+> projects, 21 DFM forms, 25 palette components and 36 Python regressions), and
+> those additions are not reflected in the counts below until the next full run.
+> To reproduce the Delphi-free checks, see [Building and testing](../README.md#building-and-testing).
+
 The complete suite was rebuilt on Linux on 2026-10-09 after finishing SIM/USIM
 management, twenty VCL applications, native USB-HID report transport and
 NTAG210/212 profiles. The full run passed **2,159,328 assertions across 40 program

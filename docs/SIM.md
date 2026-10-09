@@ -1,68 +1,87 @@
-# SIM / USIM-kaarten
+# SIM / USIM cards
 
-`TSimCardReaderWriter` is een inactieve, VCL-onafhankelijke component in
-`ERDCardSIM`. Gebruik een PC/SC-lezer met een passende fysieke SIM-adapter.
-Een keyboard-RFID-lezer en een gewone contactless NFC-lezer bieden hiervoor geen
-contactinterface. Een geschikte lezer transporteert APDU's; de SIM bepaalt de rechten.
+`TSimCardReaderWriter` is an inactive, VCL-independent component in the
+`ERD.Card.SIM.Reader` unit (`ERDCardSIM` package). Use a PC/SC reader with a
+suitable physical SIM adapter. A keyboard RFID reader and a normal contactless
+NFC reader do not provide the required contact interface. A suitable reader
+transports APDUs; the SIM determines the rights.
 
-## Aanwezig
+## Available
 
-- Expliciete klassieke GSM SIM (`A0`) en UICC/USIM (`00`) profielen.
-- ICCID, IMSI, service-providernaam en SST/UST-servicebits uitlezen.
-- UICC EF.DIR-applicaties enumereren; de volledige USIM AID zelf kiezen.
-- Bestandstype, grootte en recordgeometrie inspecteren; transparante bestanden,
-  bereiken en absolute linear-fixed/cyclic records uitlezen.
-- Transparante bestanden en linear-fixed records vervangen met exacte verwachte
-  begininhoud en onafhankelijke terugleescontrole. Geen automatische write-herhaling.
-- Standalone ADN-contacten lezen, schrijven en wissen; GSM/UCS-2 namen en TBCD-nummers.
-- USIM PBR-decoder met expliciete A8/A9/AA-templates, file-role/FID/SFI en IAP-posities; gekoppelde writes worden nog niet automatisch beheerd.
-- Gekoppelde USIM-contacten lezen: expliciet ADN-FID/PBR-record, IAP-posities, ruwe gekoppelde velden en gevalideerde EXT-nummerketens in één transactie.
-- SMS-tekstdecoder voor DELIVER/SUBMIT: GSM zeven-bit, UCS-2, binaire payloadbehoud, UDH/segmentreferenties en applicatiepoorten; expliciete volledige segmentsets samenvoegen zonder automatisch berichten te groeperen.
-- SMS-recordcodec met status en behoud van alle 175 bodybytes (SMSC/TPDU/padding).
-  SMS-geheugen lezen/schrijven via de expliciete recordmethoden.
-- Een aangeleverde PIN één keer presenteren als het resterende budget bekend en
-  voldoende is. PIN-status opvragen zonder een codepoging.
-- Offline ICCID/IMSI, GSM/UCS-2, SPN, ADN, SMS, EF.DIR en bestandsmetadata-codecs.
+- Explicit classic GSM SIM (`A0`) and UICC/USIM (`00`) profiles.
+- Read ICCID, IMSI, service-provider name and SST/UST service bits via
+  `ReadIccid`, `ReadImsi`, `ReadSpn` and `ReadServices`.
+- Enumerate UICC EF.DIR applications with `ReadApplications`; choose the full
+  USIM AID yourself.
+- Inspect file type, size and record geometry with `InspectFile`; read
+  transparent files, ranges and absolute linear-fixed/cyclic records with
+  `ReadFile`, `ReadBinaryRange`, `ReadRecord` and `ReadRecords`.
+- Replace transparent files and linear-fixed records with `WriteFile` and
+  `WriteRecord`, using exact expected initial content and independent read-back
+  verification. No automatic write retry.
+- Read, write and delete standalone ADN contacts with `ReadPhonebook`,
+  `WritePhonebookContact` and `DeletePhonebookContact`; GSM/UCS-2 names and
+  TBCD numbers.
+- USIM PBR decoder with explicit A8/A9/AA templates, file role/FID/SFI and IAP
+  positions; linked writes are still not managed automatically.
+- Read linked USIM contacts with `ReadLinkedUsimContact`: explicit ADN FID/PBR
+  record, IAP positions, raw linked fields and validated EXT number chains in
+  one transaction.
+- Apply explicit caller-planned linked phonebook record changes with
+  `WriteLinkedPhonebookRecords`; no free record or link is guessed.
+- SMS text decoder for DELIVER/SUBMIT: GSM seven-bit, UCS-2, binary payload
+  preservation, UDH/segment references and application ports; explicit complete
+  segment sets can be assembled without automatic message grouping.
+- SMS record codec with status and preservation of all 175 body bytes
+  (SMSC/TPDU/padding). SMS memory can be read/written through the explicit
+  record methods.
+- Present a supplied PIN once with `VerifyPin` when the remaining budget is
+  known and sufficient. Query PIN status with `GetPinStatus` without a code
+  attempt.
+- Query PUK status with `GetPukStatus` and unblock/change credentials once with
+  `UnblockPin` or `ChangePin`, using guarded known budgets.
+- Offline ICCID/IMSI, GSM/UCS-2, SPN, ADN, SMS, EF.DIR and file-metadata codecs.
 
-De component vereist `ICardTransport` met `ICardTransaction`; iedere actie bezit
-één exclusieve transactie. Inputs worden voor acquisitie gekopieerd. PIN- en
-commandokopieën worden gewist. Na een verzonden UPDATE blijft een fout expliciet
-`ESimCardWriteUncertain`, inclusief `VerifiedReadBack` wanneer alle bytes al bewezen
-zijn maar de afsluiting mislukte. Een geslaagde UPDATE-status alleen is geen writebewijs.
+The component requires `ICardTransport` with `ICardTransaction`; every action
+owns one exclusive transaction. Inputs are copied before acquisition. PIN and
+command copies are wiped. After a dispatched UPDATE, an error remains explicitly
+`ESimCardWriteUncertain`, including `VerifiedReadBack` when all bytes had
+already been proven but cleanup failed. A successful UPDATE status alone is not
+write proof.
 
-## Adressen en authenticatie
+## Addresses and authentication
 
-`TSimCodec.FileAddress` neemt een expliciete root en één tot acht FIDs. Voeg `3F00`
-niet toe aan het pad: de component selecteert het masterbestand zelf.
+`TSimCodec.FileAddress` takes an explicit root and one to eight FIDs. Do not add
+`3F00` to the path: the component selects the master file itself.
 
-| Bestand | Klassieke SIM vanaf master | UICC/USIM |
+| File | Classic SIM from master | UICC/USIM |
 | --- | --- | --- |
 | ICCID | `2FE2` | Master: `2FE2` |
-| Applicatiecatalogus | Niet aangeboden | Master: `2F00` |
-| IMSI | `7F20/6F07` | Geselecteerde USIM-applicatie: `6F07` |
+| Application catalog | Not offered | Master: `2F00` |
+| IMSI | `7F20/6F07` | Selected USIM application: `6F07` |
 | SPN | `7F20/6F46` | USIM: `6F46` |
 | SST / UST | `7F20/6F38` | USIM: `6F38` |
-| ADN | `7F10/6F3A`, indien aanwezig | Werkelijke EF uit PBR zelf aanleveren |
-| SMS | `7F10/6F3C`, indien aanwezig | USIM: `6F3C`, indien aanwezig |
+| ADN | `7F10/6F3A`, if present | Supply the actual EF from PBR yourself |
+| SMS | `7F10/6F3C`, if present | USIM: `6F3C`, if present |
 
-Aanwezigheid en toegang variëren per operator. USIM-contacten worden **niet**
-automatisch op `6F3A` verondersteld. Lees zo nodig `5F3A/4F30` (PBR), decodeer met `DecodePhonebookReferences` en gebruik
-het daadwerkelijke ADN-pad. Hoge niveau contactwrites weigeren bestaande CCP/EXT-links
-om verlies van gekoppelde gegevens te voorkomen. De generieke record-API behoudt
-het door de applicatie aangeleverde volledige record.
+Presence and access vary by operator. USIM contacts are **not** automatically
+assumed to be on `6F3A`. If needed, read `5F3A/4F30` (PBR), decode it with
+`DecodePhonebookReferences` and use the actual ADN path. High-level contact
+writes refuse existing CCP/EXT links to prevent loss of linked data. The generic
+record API preserves the full record supplied by the application.
 
-Een PIN bestaat uit vier tot acht ASCII-cijferbytes. In de VCL-demo wordt hij als
-hex ingevoerd: `1234` wordt `31323334`. Dit is geen numerieke BCD-PIN.
-UICC-applicatietoegang vereist de gekozen volledige AID; een aangeleverde USIM-PIN
-wordt niet gebruikt voor master-rootbestanden. Een reeds geverifieerde UICC-sessie
-mag voor toegang worden hergebruikt; dat bewijst geen opnieuw aangeleverde PIN.
-`VerifyPin` weigert zo'n sessie en weigert onbekende budgets. De bibliotheek raadt
-geen PIN/ADM-code en verlaagt nooit automatisch de ingestelde retrygrens.
+A PIN consists of four to eight ASCII digit bytes. In the VCL demo it is entered
+as hex: `1234` becomes `31323334`. This is not a numeric BCD PIN. UICC
+application access requires the selected full AID; a supplied USIM PIN is not
+used for master-root files. An already verified UICC session may be reused for
+access; that does not prove a newly supplied PIN. `VerifyPin` refuses such a
+session and refuses unknown budgets. The library does not guess a PIN/ADM code
+and never automatically lowers the configured retry threshold.
 
-SST toont afzonderlijk allocated/active-bits. UST toont beschikbaarheid; zijn
-`Active`-veld spiegelt beschikbaarheid en beweert geen EF.EST-activatiestatus.
+SST shows allocated/active bits separately. UST shows availability; its `Active`
+field mirrors availability and does not claim EF.EST activation status.
 
-## Delphi-voorbeeld
+## Delphi example
 
 ```pascal
 Sim := TSimCardReaderWriter.Create(nil);
@@ -79,93 +98,104 @@ finally
 end;
 ```
 
-`SimCardDemo` biedt alle kaartmethoden, expliciete paths, verwachte bytes,
-terugleesbewijs en offline decoders. Geen verbinding of PIN-poging bij opstarten.
+`SimCardDemo` exposes all card methods, explicit paths, expected bytes,
+read-back proof and offline decoders. It makes no connection or PIN attempt at
+startup.
 
-## Grenzen en verdere uitbreidingen
+## Limits and further extensions
 
-Dit is geen telefonie-stack: geen netwerkregistratie, telefoonmodem, SMS verzenden,
-GSM/AKA-authenticatie, Ki-uitlezing, eSIM-download/provisioning of SIM Toolkit.
-ADM-authenticatie, automatische recordallocatie voor USIM-contacten,
-automatische SMS-berichtgroepering, nationale taaltabellen en extra telefoonbestanden zijn vervolgstappen.
-Cyclic-recordwrites ontbreken; absolute cyclic reads zijn aanwezig. Binary-offsets
-zijn beperkt tot 32767; volledige transparante files tot 32768 bytes. Records zijn
-maximaal 255 bytes/255 records. Grotere profielen worden geweigerd, niet afgekapt.
+This is not a telephony stack: no network registration, phone modem, SMS
+sending, GSM/AKA authentication, Ki readout, eSIM download/provisioning or SIM
+Toolkit. ADM authentication, automatic record allocation for USIM contacts,
+automatic SMS message grouping, national language tables and additional
+phonebook files are next steps. Cyclic-record writes are absent; absolute cyclic
+reads are available. Binary offsets are limited to 32767; complete transparent
+files to 32768 bytes. Records are limited to 255 bytes/255 records. Larger
+profiles are refused, not truncated.
 
-Praktische volgende uitbreidingen: eerst automatische link-/recordallocatie,
-daarna automatische recordallocatie/telefoniebestandprofielen waar een concreet protocol beschikbaar is.
-Andere kaartfamilies: de resterende VCL-demo's, native USB-HID-bronnen, MIFARE Plus
-of CryptoMemory vereisen elk hun eigen reader/protocolprofiel; betalingen blijven buiten scope.
+Practical next extensions: first automatic link/record allocation, then
+automatic record allocation/phonebook file profiles where a concrete protocol is
+available. Other card families--the remaining VCL demos, native USB-HID sources,
+MIFARE Plus or CryptoMemory--each require their own reader/protocol profile;
+payments remain out of scope.
 
-## Validatie en bronnen
+## Validation and sources
 
-De protocolindeling volgt ETSI TS 151 011 / 3GPP TS 51.011 (klassieke SIM),
-ETSI TS 102 221 (UICC), TS 131 102 / 3GPP TS 31.102 (USIM) en
-3GPP TS 23.038 (tekencodering). Publieke pySim-protocoldefinities zijn gebruikt
-als secundaire crosscheck; de Pascal-implementatie is zelfstandig geschreven.
+The protocol layout follows ETSI TS 151 011 / 3GPP TS 51.011 (classic SIM),
+ETSI TS 102 221 (UICC), TS 131 102 / 3GPP TS 31.102 (USIM) and 3GPP TS 23.038
+(character encoding). Public pySim protocol definitions were used as a secondary
+cross-check; the Pascal implementation was written independently.
 
-74.402 SIM/USIM-assertions zijn uitgevoerd onder FPC met range/overflow/heapchecks:
-literal APDU's/codecs, PIN-budgetten, buffers, elke write-I/O-grens, volledige
-terugleesbits, chunking en cleanup-onzekerheid. De aparte familie-executor heeft
-ook literal SIM-leesroutes en preflighttests. **Delphi/Windows en fysieke SIMs zijn
-nog niet getest.** Bronvalidatiescripts vervangen die tests niet.
+74,402 SIM/USIM assertions have been run under FPC with range/overflow/heap
+checks: literal APDUs/codecs, PIN budgets, buffers, every write I/O boundary,
+complete read-back bits, chunking and cleanup uncertainty. The separate family
+executor also covers literal SIM read paths and preflight tests.
+**Delphi/Windows and physical SIMs have not been tested yet.** Source validation
+scripts do not replace those tests.
 
-## Gekoppelde contacten en SMS-tekst
+## Linked contacts and SMS text
 
-`ReadLinkedUsimContact(PbrRecord, ActualAdnFid, Record, Pin)` leest de gerefereerde
-linear-fixed EFs onder één exclusieve transactie. De ADN-keuze is expliciet;
-ontbrekende/ambigue IAP/EXT-referenties, pointers buiten het bestand en loops worden
-geweigerd. EXT type 2 wordt als extra nummerdigits gevolgd; overige gekoppelde
-velden blijven volledige bytes inclusief footer. EMAIL/ANR-codecs vereisen een expliciete footer-layout; ANR retourneert het inline nummer en behoudt CCP/EXT-verwijzingen.
-Gekoppelde writes gebruiken een expliciet caller-plan; er wordt geen vrije record/link gegokt. Dit profiel vereist precies één ADN en ondubbelzinnige IAP/EXT-referenties in het gekozen PBR-record. Type-2 EMAIL/ANR/SNE-terugverwijzingen worden tegen de gekozen ADN-record/SFI gecontroleerd.
-Maximaal 32 verschillende EFs worden
-ingelezen. Type-3 referenties worden alleen gevolgd voor de ondersteunde EXT-keten.
+`ReadLinkedUsimContact(PbrRecord, ActualAdnFid, Record, Pin)` reads the
+referenced linear-fixed EFs under one exclusive transaction. The ADN choice is
+explicit; missing/ambiguous IAP/EXT references, pointers outside the file and
+loops are refused. EXT type 2 is followed as extra number digits; other linked
+fields remain complete bytes including footer. EMAIL/ANR codecs require an
+explicit footer layout; ANR returns the inline number and preserves CCP/EXT
+references. Linked writes use an explicit caller plan; no free record/link is
+guessed. This profile requires exactly one ADN and unambiguous IAP/EXT
+references in the selected PBR record. Type-2 EMAIL/ANR/SNE back-references are
+checked against the selected ADN record/SFI. At most 32 different EFs are read.
+Type-3 references are followed only for the supported EXT chain.
 
-`DecodeSmsMessage` accepteert een volledig toegewezen 176-byte EF.SMS-record en
-controleert dat DELIVER/SUBMIT overeenkomt met de opgeslagen richting. GSM-text
-wordt met UDH-fillbits gedecodeerd. UCS-2 behoudt ook nul/FF-codepunten; surrogates
-worden geweigerd. Acht-bit berichten geven `TextDecoded=False` en exacte user data.
-SCTS blijft origineel in `TimestampBytes`; er wordt geen UTC/jaartal geraden.
-Ondersteunde DCS-groepen: algemene ongecomprimeerde 00..3F, geldige C/D/E message-waiting en F0..F7 class-coding.
-Onbekende UDH-elementen blijven behouden, maar nationale language-shift-IEs,
-gecomprimeerde/reserved DCS, enhanced validity en STATUS-REPORT TPDUs worden
-expliciet geweigerd. `AssembleSms` voegt expliciet aangeleverde volledige sets samen; ontbrekende, dubbele of gemengde richting/adres/DCS/PID/UDH worden geweigerd. Acht- en zestien-bit referenties worden onderscheiden.
+`DecodeSmsMessage` accepts a complete allocated 176-byte EF.SMS record and
+checks that DELIVER/SUBMIT matches the stored direction. GSM text is decoded
+with UDH fill bits. UCS-2 also preserves zero/FF code points; surrogates are
+refused. Eight-bit messages return `TextDecoded=False` and exact user data. SCTS
+stays original in `TimestampBytes`; no UTC/year is guessed. Supported DCS
+groups: general uncompressed 00..3F, valid C/D/E message-waiting and F0..F7
+class coding. Unknown UDH elements are preserved, but national language-shift
+IEs, compressed/reserved DCS, enhanced validity and STATUS-REPORT TPDUs are
+explicitly refused. `AssembleSms` assembles explicitly supplied complete sets;
+missing, duplicate or mixed direction/address/DCS/PID/UDH records are refused.
+Eight- and sixteen-bit references are distinguished.
 
-`InspectSim --sms-text <complete-record-hex>` en de offline SMS-textactie in
-`SimCardDemo` tonen de inhoud. De linked-contactactie toont originele ADN, exact
-gelinkte records en EXT-keten. Gebruik de werkelijke USIM AID en decimal ADN-FID.
+`InspectSim --sms-text <complete-record-hex>` and the offline SMS text action in
+`SimCardDemo` show the content. The linked-contact action shows the original ADN,
+exact linked records and EXT chain. Use the actual USIM AID and decimal ADN FID.
 
-De offline VCL-acties EMAIL, ANR en SMS-join tonen deze codecs. SMS-join neemt
-complete EF.SMS-records gescheiden door puntkomma en ordent de segmenten.
-Onbekende UDH-elementen moeten gelijk zijn voor de hele set. Bij binaire SMS
-worden de payloads zonder hun headers samengevoegd; originele segmentbytes blijven
-in `Segments` beschikbaar. De caller bepaalt welk bericht de set vormt.
+The offline VCL actions EMAIL, ANR and SMS-join show these codecs. SMS-join takes
+complete EF.SMS records separated by semicolons and orders the segments. Unknown
+UDH elements must be identical across the whole set. For binary SMS, payloads are
+joined without their headers; original segment bytes remain available in
+`Segments`. The caller decides which message forms the set.
 
-## PIN/PUK-beheer en gekoppelde writes
+## PIN/PUK management and linked writes
 
-`GetPukStatus` leest classic PUK-counters of gebruikt een expliciete UICC
-RESET RETRY query. Kaarten die daarbij geen bekend budget rapporteren worden
-voor unblock geweigerd; er wordt geen codepoging gebruikt om het budget te raden.
-`ChangePin` en `UnblockPin` sturen één CHANGE/UNBLOCK met supplied ASCII-cijfers.
-`MinimumPinAttempts` geldt ook voor het bekende PUK-budget. Geen voorafgaande
-VERIFY die een extra poging kan verbruiken. Zowel caller-input als backend errors
-worden beschermd door owned/wiped commandokopieën en gesaniteerde fouten.
+`GetPukStatus` reads classic PUK counters or uses an explicit UICC RESET RETRY
+query. Cards that do not report a known budget there are refused for unblock; no
+code attempt is used to guess the budget. `ChangePin` and `UnblockPin` send one
+CHANGE/UNBLOCK with supplied ASCII digits. `MinimumPinAttempts` also applies to
+the known PUK budget. There is no preceding VERIFY that could consume an extra
+attempt. Both caller input and backend errors are protected by owned/wiped
+command copies and sanitized errors.
 
-De returnwaarde `TSimCredentialReceipt.CommandAccepted` is uitsluitend het
-commandostatusbewijs na geslaagde afsluiting. **Geen nieuw-PIN-bewijs wordt geclaimd.**
-Een applicatie kan na een expliciete reset/nieuwe sessie `VerifyPin` gebruiken.
-De component doet zelf geen reset, automatische retry of tweede codepoging.
+The return value `TSimCredentialReceipt.CommandAccepted` is only command-status
+proof after successful cleanup. **No new-PIN proof is claimed.** An application
+can use `VerifyPin` after an explicit reset/new session. The component does not
+reset, automatically retry or make a second code attempt itself.
 
-`WriteLinkedPhonebookRecords` neemt één tot 32 expliciet geordende veranderingen
-met USIM `5F3A/FID`, record, exacte before/data. Alle beginrecords worden onder één
-transactie gecheckt vóór de eerste UPDATE; elk gewijzigd record opnieuw vlak vóór
-zijn write; alle eindrecords worden onafhankelijk teruggelezen. De volgorde is
-caller-defined, bijvoorbeeld eerst een nieuwe EMAIL/EXT-recordinhoud en pas daarna
-de IAP/ADN-link. Meerdere writes zijn **niet atomair**. Na partial dispatch geen
-rollback/replay: `ESimCardWriteUncertain` blijft expliciet, met readback proof waar
-aanwezig. PBR-wijzigingen, duplicate records en onbekende geometrie zijn geweigerd.
-Geen automatische allocatie of impliciete wijziging van andere contacten.
+`WriteLinkedPhonebookRecords` takes one to 32 explicitly ordered changes with
+USIM `5F3A/FID`, record, exact before/data. All initial records are checked under
+one transaction before the first UPDATE; each changed record is checked again
+immediately before its write; all final records are independently read back. The
+order is caller-defined, for example new EMAIL/EXT record content first and only
+then the IAP/ADN link. Multiple writes are **not atomic**. After partial dispatch
+there is no rollback/replay: `ESimCardWriteUncertain` remains explicit, with
+read-back proof where present. PBR changes, duplicate records and unknown
+geometry are refused. There is no automatic allocation or implicit change to
+other contacts.
 
-De VCL-planactie gebruikt `FIDhex:record:beforehex:datahex` per puntkommaregel,
-bijvoorbeeld `4F50:1:41420101:42420101`. PIN/PUK wordt uitsluitend als ASCII-hex
-ingevoerd; credential-acties tonen statusreceipt, linked writes volledig readback.
+The VCL plan action uses `FIDhex:record:beforehex:datahex` per semicolon line,
+for example `4F50:1:41420101:42420101`. PIN/PUK is entered only as ASCII hex;
+credential actions show the status receipt, and linked writes show complete
+read-back.

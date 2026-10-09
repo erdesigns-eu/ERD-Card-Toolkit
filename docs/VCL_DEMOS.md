@@ -1,10 +1,12 @@
 # VCL read/write demos
 
-Twenty applications demonstrate implemented APIs: SmartCardDemo, MagStripeDemo
-and nineteen family projects. Each application owns a direct TForm class and
-its own designer-editable Main.dfm, including all action inputs and a reader dropdown.
+Twenty-one applications demonstrate implemented APIs: SmartCardDemo,
+MagStripeDemo and nineteen family projects. Each application owns a direct TForm
+class and its own designer-editable Main.dfm, including all action inputs and a
+reader dropdown.
 Only nonvisual operation, metadata and worker/controller units are shared.
-The complete current/missing coverage is recorded in [VCL_COVERAGE.md](VCL_COVERAGE.md).
+The complete current/missing coverage is recorded in
+[VCL_COVERAGE.md](VCL_COVERAGE.md).
 
 Open `examples/vcl/CardDemos.groupproj` or any application's `.dproj` in RAD
 Studio. They link source directly, so installing the component palette is optional.
@@ -26,10 +28,11 @@ host, not evidence that those builds already pass.
 ## Separate family projects
 
 All family forms construct without opening hardware. Their first OnShow starts
-background discovery of reader names, HID metadata or COM aliases; no card connection
-or card command is issued. Choose a device in the demo itself and refresh there. Choose one action; its named
-fields appear below. Enum choices have no default card/reader profile. Public
-bytes use hexadecimal text; numeric addresses/counts use decimal unless the label
+background discovery of reader names, HID metadata or COM aliases; no card
+connection or card command is issued. Choose a device in the demo itself and
+refresh there. Choose one action; its named fields appear below. Enum choices
+have no default card/reader profile. Public bytes use hexadecimal text; numeric
+addresses/counts use decimal unless the label
 says hexadecimal. Credentials are masked, decoded into separate byte buffers,
 copied at the worker boundary, cleared from input controls after submission and
 wiped from owned buffers after execution. Strings/OS/backend copies are outside
@@ -43,13 +46,27 @@ that byte-buffer wiping guarantee. Errors display their class, never backend tex
 | `memorycard/MemoryCardDemo.dproj` | ACS capabilities, all implemented SLE/I2C snapshots/ranges, supplied PIN proof, verified writes with physical I2C page size, supported two-wire PIN replacement, irreversible compare-and-protect |
 | `slecounter/SleCounterDemo.dproj` | Explicit SLE4406/4436/5536/6636/window, public range reads, program/carry/backup modes with expected complete before/after windows, raw certificates; credential-bearing code command validation offline only |
 | `sle4404/Sle4404Demo.dproj` | Known window/layout/retry budgets, reads with optional supplied user code, user-code proof, one-to-zero programming, scratchpad erase and application erase with both supplied codes |
+| `simcard/SimCardDemo.dproj` | Classic SIM/UICC-USIM files, records, identities and services; PIN/PUK status, verify/change/unblock, ADN contact writes, PBR/IAP/EXT contact reads, explicit linked-record plans, alpha/EMAIL/ANR/SMS/segment codecs |
+| `mifareclassic/MifareClassicDemo.dproj` | UID, offline layout/trailer inspection, supplied-key block reads and status-only data writes |
+| `type2/Type2Demo.dproj` | Ultralight/EV1/NTAG210/212/213/215/216 UID, page and memory reads, public NDEF, ACR122 PWD_AUTH/PACK page and memory operations, verified page writes |
+| `type4ndef/Type4NdefDemo.dproj` | Offline CC, mapping 1.0/2.0, file descriptors/FID, public NDEF read/write/clear |
+| `emv/EmvDemo.dproj` | PSE/PPSE, PDOL inspection, explicit AID/terminal values, GPO/AFL records, bounded SFI/record scan, raw records/statuses, GET DATA, advertised logs, DOL/log decoders and exact exports |
+| `belgianeid/BelgianEidDemo.dproj` | Public sections, identity/address/photo, JPEG preview, RAW/DER certificates and raw signature exports |
+| `icaodocument/IcaoDocumentDemo.dproj` | BAC/PACE with MRZ/CAN/curve/provider, document sections and face images, CardAccess/DG1/DG2/COM/SOD exports, JPEG preview and JPEG2000 export |
+| `iso15693/Iso15693Demo.dproj` | ACR1552 explicit address/response dialects, UID/geometry, block reads/verified writes and Type 5 NDEF read/write/clear |
+| `uid/UidProgrammingDemo.dproj` | PC/SC Gen2/FUID; ACR122 Gen1a/Gen1b/unsealed UFUID, DirectWrite, Gen3, six Gen4 layouts, USCUID/GDM and partial UFUID/ZUID/PFUID |
+| `desfire/DesfireDemo.dproj` | Public/EV1/EV2 AES, directories/data/values/records, standard writes, backup/value/record transactions with commit/abort, application/file/key/access management |
+| `magstripeprofiles/MagStripeProfilesDemo.dproj` | Track-bit/parity/LRC and financial decoders, MagTek keyboard/HID, MSR206/MSR605 reads and status-only all-track programming |
+| `usbhid/UsbHidDemo.dproj` | Reader hotplug and continuous input-report events, native HID collection metadata/VID/PID/usage/lengths, exact interface path, interrupt and feature reports read/send/export |
+| `mobib/MobibDemo.dproj` | Calypso legacy-94/revision-3-00, MOBIB file profile and explicit FID plan, holder/events and subscription decoding, two-reader SAM authentication, offline activation/validity/zone assessment, raw exports |
 
 For PC/SC operations select the reader from **this demo’s own dropdown**.
 Discovery runs on opening and can be refreshed without another application.
 An ACS dialect is a known protocol configuration, not a guess from the name/ATR.
-TWN4 uses its own discovered-COM dropdown and suitable Simple Protocol firmware; it does not
-send memory commands to keyboard-only HID readers. Firmware changes are not made
-by the demo. See [TWN4.md](TWN4.md) and [memory profiles](MEMORY_CARDS.md).
+TWN4 uses its own discovered-COM dropdown and suitable Simple Protocol firmware;
+it does not send memory commands to keyboard-only HID readers. Firmware changes
+are not made by the demo. See [TWN4.md](TWN4.md) and
+[memory profiles](MEMORY_CARDS.md).
 
 State-changing/code-attempt actions require per-submission acknowledgement. This
 is cleared after each request. Permanent protection, code consumption and erase
@@ -77,9 +94,10 @@ native USB reader driver.
 
 ### Family smoke tests on Delphi/Windows
 
-1. Build Debug/Release in Win32 and Win64 and open all six projects. ReaderTools'
-   first APDU action and RFID's first text action work without a reader. Other
-   demos must refuse incomplete reader/profile/window/port inputs without I/O.
+1. Build Debug/Release in Win32 and Win64 and open the family projects you are
+   validating. ReaderTools' first APDU action and RFID's first text action work
+   without a reader. Other demos must refuse incomplete reader/profile/window/port
+   inputs without I/O.
 2. ReaderTools: confirm `00A4040000`, response `01029000`, ATR `3B00`, TLV
    `5A021234` and NDEF `D101055402656E4869` round-trip. A corrupt ATR/TLV/NDEF is
    rejected; known `5A` shows catalog metadata without sending an EMV command.
@@ -180,10 +198,11 @@ including odd parity and LRC. Do not include sentinels or an LRC character in th
 editable track fields. Empty payloads are allowed by the offline codec.
 
 Hardware operations use only the explicit **MSR206-7HL** serial adapter at
-9600 baud, seven data bits, odd parity and one stop bit. Select the connected device from this demo’s COM dropdown,
-selected tracks and a timeout between 1 and 600000 ms. `Read one swipe` updates
-only the selected track fields. `Write selected + verify` additionally requires
-nonempty payloads and an explicit low/high coercivity choice. It uses the verified
+9600 baud, seven data bits, odd parity and one stop bit. Select the connected
+device from this demo’s COM dropdown, selected tracks and a timeout between
+1 and 600000 ms. `Read one swipe` updates only the selected track fields.
+`Write selected + verify` additionally requires nonempty payloads and an
+explicit low/high coercivity choice. It uses the verified
 writer, which returns independent same-swipe raw read-back rather than treating a
 status acknowledgement as proof of the programmed contents. Firmware and physical
 reader validation are still pending. Other magstripe backends remain accessible
@@ -202,12 +221,13 @@ bound is not a PC/SC timeout. Writes are never cancelled or retried behind the U
 Access input is cleared after starting, but this is not a guarantee of erasure
 of the Windows edit control's or Delphi strings' historical allocations.
 
-The job constructor creates a suspended worker. The nonvisual controller calls `StartWork` only
-after construction returns, so Delphi's `TThread.AfterConstruction` finishes before
-the explicit start. Starting inside the constructor caused the reported EThread
-exception in both demos. A second start is refused; freeing a never-started job
-does not execute its request. If starting fails, the controller releases the job and
-restores its controls. This follow-up has passed the headless worker tests; a
+The job constructor creates a suspended worker. The nonvisual controller calls
+`StartWork` only after construction returns, so Delphi's
+`TThread.AfterConstruction` finishes before the explicit start. Starting inside
+the constructor caused the reported EThread exception in both demos. A second
+start is refused; freeing a never-started job does not execute its request. If
+starting fails, the controller releases the job and restores its controls. This
+follow-up has passed the headless worker tests; a
 Delphi/Windows rebuild and retest of both demos is still required.
 
 On a Delphi/Windows host, check both platforms: open both forms, inspect/encode
@@ -238,92 +258,98 @@ reader firmware or write cards. Raw-report applications can use the distinct
 
 ## SimCardDemo
 
-Gebruik een contact-PC/SC-lezer met SIM-adapter. Kies eerst het exacte klassieke
-SIM- of UICC-profiel; lees ICCID en bij UICC EF.DIR voordat je een volledige AID
-invult. De demo kiest geen applicatie automatisch. Zie [SIM.md](SIM.md) voor paths.
-PIN-input is ASCII-hex (`31323334` voor `1234`), geen BCD.
+Use a contact PC/SC reader with a SIM adapter. First choose the exact classic SIM
+or UICC profile; read ICCID and, for UICC, EF.DIR before entering a complete AID.
+The demo does not choose an application automatically. See [SIM.md](SIM.md) for
+paths. PIN input is ASCII hex (`31323334` for `1234`), not BCD.
 
-Test eerst offline ICCID `981032547698103254F6` → `8901234567890123456` en
-alpha `414C494345FF` → `ALICE`. Controleer daarna reader/ICCID, metadata en
-read-only records. Test writes alleen met een test-SIM en exact uitgelezen beforebytes.
-De terugleesstatus en eventuele cleanup-onzekerheid moeten zichtbaar blijven.
-Standalone contacten met CCP/EXT-links worden expliciet geweigerd. De offline SMS-textactie decodeert een compleet EF.SMS-record, inclusief UDH.
-De linked-contactactie gebruikt een expliciet PBR-record/ADN-FID en toont IAP/EXT.
-Ruwe SMS-records blijven volledig behouden; er is geen SMS-verzendactie. Compileer alle twaalf demos
-Win32/Win64: de gedeelde executors gebruiken nu ook `src/sim`.
+First test offline ICCID `981032547698103254F6` → `8901234567890123456` and
+alpha `414C494345FF` → `ALICE`. Then check reader/ICCID, metadata and read-only
+records. Test writes only with a test SIM and the exact before-bytes that were
+read back. The read-back status and any cleanup uncertainty must remain visible.
+Standalone contacts with CCP/EXT links are explicitly refused. The offline SMS
+text action decodes a complete EF.SMS record, including UDH. The linked-contact
+action uses an explicit PBR record/ADN FID and shows IAP/EXT. Raw SMS records are
+fully preserved; there is no SMS send action. Build the demo group for
+Win32/Win64; the shared executors now also use `src/sim`.
 
-## MifareClassicDemo, Type2Demo en Type4NdefDemo
+## MifareClassicDemo, Type2Demo and Type4NdefDemo
 
-Deze projecten gebruiken expliciet het PC/SC storage-profiel (Classic/Type 2)
-of ISO APDU's (Type 4). Readerondersteuning voor dat profiel is vereist.
+These projects explicitly use the PC/SC storage profile (Classic/Type 2) or ISO
+APDUs (Type 4). Reader support for that profile is required.
 
-- Classic: controleer offline layout/trailers, selecteer het werkelijke model,
-  block, reader-slot en aangeleverde A/B-key. Lees eerst. Manufacturer- en
-  trailerwrites blijven door de component geweigerd. De writeactie levert
-  uitsluitend readerstatus; lees zelf opnieuw voor een aparte controle.
-- Type 2: kies het werkelijke Ultralight/EV1/NTAG-model. Lees een fysieke pagina
-  of volledige gebruikerszone. Paginawrites zijn status-only; NDEF vervangen
-  of wissen gebruikt de bestaande volledige terugleescontrole. De ACR122-acties doen een expliciete PWD_AUTH met vier passwordbytes en twee
-  verwachte PACK-bytes; authenticated writes worden teruggelezen.
-- Type 4: inspecteer offline CC `000F20003A00340406E10401000000`. Op hardware
-  kies je mapping 1.0/2.0 expliciet; lees CC en selecteer de werkelijke FID
-  (decimal 57604 voor E104). FID 0 werkt alleen met een ondubbelzinnige CC.
-  Proprietaire toegangsrechten worden niet als publieke NDEF behandeld.
+- Classic: check the offline layout/trailers, select the actual model, block,
+  reader slot and supplied A/B key. Read first. Manufacturer and trailer writes
+  remain refused by the component. The write action returns reader status only;
+  read again yourself for separate verification.
+- Type 2: choose the actual Ultralight/EV1/NTAG model. Read a physical page or
+  the full user area. Page writes are status-only; replacing or clearing NDEF
+  uses the existing full read-back verification. The ACR122 actions perform an
+  explicit PWD_AUTH with four password bytes and two expected PACK bytes;
+  authenticated writes are read back.
+- Type 4: inspect offline CC `000F20003A00340406E10401000000`. On hardware,
+  choose mapping 1.0/2.0 explicitly; read CC and select the actual FID
+  (decimal 57604 for E104). FID 0 works only with an unambiguous CC. Proprietary
+  access rights are not treated as public NDEF.
 
-Geen constructor opent hardware. Test ack/ongeldige modellen/keys en beschermde
-pagina’s vóór writes op testkaarten; onzekere uitkomsten mogen niet worden herhaald.
+No constructor opens hardware. Test acknowledgement, invalid models/keys and
+protected pages before writes on test cards; uncertain outcomes must not be
+repeated.
 
-## BelgianEidDemo, IcaoDocumentDemo en EmvDemo
+## BelgianEidDemo, IcaoDocumentDemo and EmvDemo
 
-Elk eigen DFM-formulier heeft een selector voor exact acquired files en een expliciete
-Save-dialog met overwrite prompt. Geen automatisch exportpad. Mislukte jobs
-publiceren geen exportbestanden. Belgische eID en ICAO tonen geselecteerde JPEG
-foto's; JPEG2000 blijft exact als .jp2 exporteerbaar zonder codecconversie.
+Each dedicated DFM form has a selector for exactly acquired files and an explicit
+Save dialog with an overwrite prompt. There is no automatic export path. Failed
+jobs publish no export files. Belgian eID and ICAO show selected JPEG photos;
+JPEG2000 remains exactly exportable as .jp2 without codec conversion.
 
-BelgianEidDemo: kies all public sections of identity/address/photo/certificates/
-signatures. Ontbrekende certificaten hebben expliciete states; beschikbare
-certificaten zijn als originele RAW en DER beschikbaar. Geen issuer trustclaim.
+BelgianEidDemo: choose all public sections or identity/address/photo/certificates/
+signatures. Missing certificates have explicit states; available certificates can
+be exported as original RAW and DER. There is no issuer trust claim.
 
-IcaoDocumentDemo: kies BAC/PACE, MRZ/CAN, curve en supplied password als ASCII-hex
-plus OpenSSL-library. Read haalt DG1/DG2/COM/SOD en waar toepasselijk CardAccess
-op; elke face image staat in de selector. Offline CardAccess werkt zonder kaart.
+IcaoDocumentDemo: choose BAC/PACE, MRZ/CAN, curve and supplied password as
+ASCII hex plus the OpenSSL library. Read obtains DG1/DG2/COM/SOD and, where
+applicable, CardAccess; every face image appears in the selector. Offline
+CardAccess works without a card.
 
-EmvDemo: kies PSE/PPSE expliciet; geen directoryfallback. ReadApplication neemt
-AID en terminal values `taghex=valuehex;...` zonder verzonnen PDOL-values.
-GPO initialiseert de uitlezing, geen betaling. FCI/GPO/records zijn exporteerbaar;
-GET DATA counter/logformat en advertised transactionlog blijven optioneel.
-Offline DOL en raw-logdecoding tonen exact tag/values zonder betalingsinterpretatie.
+EmvDemo: choose PSE/PPSE explicitly; there is no directory fallback.
+ReadApplication takes AID and terminal values `taghex=valuehex;...` without
+invented PDOL values. GPO initializes reading, not payment. FCI/GPO/records are
+exportable; GET DATA counter/log format and advertised transaction log remain
+optional. Offline DOL and raw-log decoding show exact tags/values without payment
+interpretation.
 
-## Iso15693Demo, UidProgrammingDemo en DesfireDemo
+## Iso15693Demo, UidProgrammingDemo and DesfireDemo
 
-ISO 15693 gebruikt het bestaande ACR1552 FF-FB-profiel. Kies ordinary/extended
-block addressing en native-flags/payload-only conform de readerfirmware. Raw writes
-reserveren blokken 0/1; Type 5 verzorgt gestructureerde NDEF-updates.
+ISO 15693 uses the existing ACR1552 FF-FB profile. Choose ordinary/extended block
+addressing and native-flags/payload-only according to the reader firmware. Raw
+writes reserve blocks 0/1; Type 5 handles structured NDEF updates.
 
-UID-programmering vereist de werkelijk aanwezige variant en bestaande emulatielayout.
-Gen3/Gen4 gebruiken de ACR122 raw-backend met automatische RATS uit. Gen4 behoudt
-zijn configuratie; USCUID/partial-profielen veranderen geen personalization/fuses.
-FUID is een expliciete eenmalige programmeeractie.
+UID programming requires the actually present variant and existing emulation
+layout. Gen3/Gen4 use the ACR122 raw backend with automatic RATS off. Gen4
+preserves its configuration; USCUID/partial profiles do not change
+personalization/fuses. FUID is an explicit one-time programming action.
 
-DESFire gebruikt public, EV1 AES of EV2 AES met de aangeleverde sleutel en minimum
-communication. Optioneel geef je de aparte sleutel voor verificatie in de secundaire
-context op. Een transactionele actie kiest expliciet fresh-reset of discard-pending
-en vervolgens commit of abort. Elke job behoudt één sessie; er is geen impliciete
-commit. Create/delete/access/key-acties hebben hun eigen expliciete invoer.
+DESFire uses public, EV1 AES or EV2 AES with the supplied key and minimum
+communication. Optionally enter the separate key for verification in the
+secondary context. A transactional action explicitly chooses fresh-reset or
+discard-pending, then commit or abort. Each job keeps one session; there is no
+implicit commit. Create/delete/access/key actions have their own explicit input.
 
-## MagStripeProfilesDemo en UsbHidDemo
+## MagStripeProfilesDemo and UsbHidDemo
 
-MagStripeProfilesDemo ondersteunt offline track-bits/parity/LRC, financiële velden
-(geen betaling), MagTek unencrypted keyboard/HID en de exacte MSR206-3HL Rev G /
-MSR605 Rev B serial profielen. Programming vereist alle drie tracks en high/low
-coercivity. De uitkomst benoemt device status zonder host read-back.
+MagStripeProfilesDemo supports offline track bits/parity/LRC, financial fields
+(no payment), MagTek unencrypted keyboard/HID and the exact MSR206-3HL Rev G /
+MSR605 Rev B serial profiles. Programming requires all three tracks and high/low
+coercivity. The outcome names device status without host read-back.
 
-UsbHidDemo somt metadata-readable top-level collections op, ongeacht VID/PID.
-Kopieer het exacte pad, kies interrupt/feature en het descriptor-defined report ID.
-Verzenden vereist de volledige descriptorlengte inclusief byte-zero ID. Interrupt-I/O
-heeft een wait budget en cancel/drain; synchronous feature requests hebben driver-
-gestuurde duur. Een transfer is geen universeel commando om kaartgeheugen te wijzigen.
-Lees [USB_HID.md](USB_HID.md) voor native integratie en reportcontracten.
+UsbHidDemo enumerates metadata-readable top-level collections regardless of
+VID/PID. Copy the exact path, choose interrupt/feature and the descriptor-defined
+report ID. Sending requires the full descriptor length including the byte-zero
+ID. Interrupt I/O has a wait budget and cancel/drain; synchronous feature
+requests have driver-controlled duration. A transfer is not a universal command
+to change card memory. Read [USB_HID.md](USB_HID.md) for native integration and
+report contracts.
 
 
 ## EMV records and MOBIB
@@ -341,17 +367,20 @@ MobibDemo is a separate designer form with its own PC/SC dropdown, explicit
 Calypso dialect/record length and bound. Its three hardware actions read the MOBIB
 file plan (editable FIDs), one caller-specified logical file, or one authenticated
 logical file through a separately selected provisioned SAM. The SAM dropdown
-is populated from the same in-demo PC/SC discovery. Both connections run in the worker. An explicit layout
-selector enables known holder/events/counter and versioned subscription decoding,
-including tariff, known product names, sale price/date, optional duration and
+is populated from the same in-demo PC/SC discovery. Both connections run in the
+worker. An explicit layout selector enables known holder/events/counter and
+versioned subscription decoding, including tariff, known product names,
+sale price/date, optional duration and
 associated remaining-trip counters. The authenticated action requires explicit
 revision, eight-byte serial, key index, KIF/KVC and an exact existing-record count;
-it aborts on missing/restricted/chained responses rather than guessing a MAC transcript. It displays every actual raw
-record and exports it through the own save dialog. See [MOBIB_CALYPSO.md](MOBIB_CALYPSO.md)
-for the concrete files, status behavior, parsed fields, secure-provider integration and remaining issuer-specific schemas.
+it aborts on missing/restricted/chained responses rather than guessing a MAC
+transcript. It displays every actual raw record and exports it through its own
+save dialog. See [MOBIB_CALYPSO.md](MOBIB_CALYPSO.md) for the concrete files,
+status behavior, parsed fields, secure-provider integration and remaining
+issuer-specific schemas.
 
-The project group's Build/Make/Clean aggregates cover all twenty-one applications,
-including the new project; the standalone build script includes it too.
+The project group's Build/Make/Clean aggregates cover all twenty-one applications;
+the standalone build script includes them too.
 
 
 MobibDemo also has a fourth independent DFM page for offline operator-rule
