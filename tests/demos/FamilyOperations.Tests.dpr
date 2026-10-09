@@ -438,6 +438,31 @@ begin
   end;
 end;
 
+procedure TestFelicaFamilyPreflight;
+var A:TCardFamilyActions;R:TCardDemoRequest;D:TCardDemoResult;H:THardware;Hardware:ICardFamilyHardware;
+ I,Before:Integer;Reached,Failed:Boolean;
+begin
+ H:=THardware.Create;Hardware:=H;A:=CardFamilyActions(dfFelica);
+ for I:=0 to High(A) do begin
+  R:=Request(dfFelica,A[I].Id);
+  Put(R,dfFelica,'before','00000000000000000000000000000000');
+  Put(R,dfFelica,'data','0102030405060708090A0B0C0D0E0F10');
+  if A[I].Id='writendef' then Put(R,dfFelica,'before','100302012C000000000001000008004B');
+  Put(R,dfFelica,'ndef','D101045402656E41');Reached:=False;
+  try CreateCardFamilyOperations(dfFelica,Hardware).Run(R,D);except on E:EReachedHardware do Reached:=True;end;
+  Check(Reached,'FeliCa/Type 3 valid action reaches hardware acquisition');Before:=H.Acquires;
+  Put(R,dfFelica,'bitrate','-1');Failed:=False;
+  try CreateCardFamilyOperations(dfFelica,Hardware).Run(R,D);except on E:EArgumentException do Failed:=True;end;
+  Check(Failed and (H.Acquires=Before),'Unsupported FeliCa bitrate rejected before hardware');
+  Put(R,dfFelica,'bitrate','0');
+  if A[I].Mutation then begin
+   R.MutationAcknowledged:=False;Failed:=False;
+   try CreateCardFamilyOperations(dfFelica,Hardware).Run(R,D);except on E:EArgumentException do Failed:=True;end;
+   Check(Failed and (H.Acquires=Before),'FeliCa/Type 3 mutation acknowledgement before acquisition');
+  end;
+ end;
+end;
+
 procedure TestStorageDemos;
 var F: TCardDemoFamily; Actions: TCardFamilyActions; R: TCardDemoRequest; D: TCardDemoResult;
   H: THardware; Hardware: ICardFamilyHardware; S: TScript; T: ICardTransport; I,J,K,Prev: Integer; Reached,Failed: Boolean;
@@ -450,7 +475,7 @@ begin
       begin
         R := Request(F,Actions[I].Id); Put(R,F,'key','000102030405');
         if F = dfClassic then Put(R,F,'data','000102030405060708090A0B0C0D0E0F');
-        if F = dfType2 then begin Put(R,F,'data','00010203'); Put(R,F,'page','4'); Put(R,F,'type2model','3'); Put(R,F,'password','01020304'); Put(R,F,'pack','0102'); end; Put(R,F,'ndef','D101055402656E4869');
+        if F = dfType2 then begin Put(R,F,'data','00010203'); Put(R,F,'page','4'); Put(R,F,'type2model','3'); Put(R,F,'password','01020304'); Put(R,F,'pack','0102'); Put(R,F,'before','000000FF00000000'); Put(R,F,'newpassword','05060708'); Put(R,F,'newpack','0304'); end; Put(R,F,'ndef','D101055402656E4869');
         Reached := False; try CreateCardFamilyOperations(F,Hardware).Run(R,D); except on E: EReachedHardware do Reached := True; end;
         Check(Reached,'Valid storage action acquisition '+Actions[I].Id);
         Prev := H.Acquires;
@@ -757,7 +782,7 @@ end;
 
 begin
   try
-    TestMobibParsedDemo; TestNativeSamDemo; TestMobibRulesDemo; TestRecordAcquisitionDemos; TestNativeHidDemo; TestAdditionalFamilies; TestDocumentAndEmvDemos; TestExtendedSimDemo; TestStorageDemos; TestSimRoutes; TestOffline; TestLegacyProfilePreflight; TestPreflight; TestCounterAndSleRoutes;
+    TestMobibParsedDemo; TestNativeSamDemo; TestMobibRulesDemo; TestRecordAcquisitionDemos; TestNativeHidDemo; TestAdditionalFamilies; TestDocumentAndEmvDemos; TestExtendedSimDemo; TestFelicaFamilyPreflight; TestStorageDemos; TestSimRoutes; TestOffline; TestLegacyProfilePreflight; TestPreflight; TestCounterAndSleRoutes;
     TestTwnRoutes(0,False); TestTwnRoutes(1,False); TestTwnRoutes(2,False); TestTwnRoutes(3,False); TestTwnRoutes(3,True);
     TestMemoryWrite(-1,False,False); TestMemoryWrite(6,False,False);
     TestMemoryWrite(7,False,False); TestMemoryWrite(-1,True,False); TestMemoryWrite(-1,False,True);

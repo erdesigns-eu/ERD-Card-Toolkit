@@ -11,6 +11,134 @@ type
   /// <summary>Independent Type2Demo form; all visual controls belong to its own editable DFM.</summary>
   TType2DemoForm = class(TForm)
   published
+    /// <summary>Read authentication configuration.</summary>
+    ActPwdconfigTab: TTabSheet;
+    /// <summary>Read authentication configuration inputs.</summary>
+    ActPwdconfigInputs: TScrollBox;
+    /// <summary>Explicit password-capable Type 2 model label.</summary>
+    ActPwdconfigType2modelLabel: TLabel;
+    /// <summary>Explicit password-capable Type 2 model.</summary>
+    ActPwdconfigType2modelBox: TComboBox;
+    /// <summary>Current four-byte password (hex) label.</summary>
+    ActPwdconfigPasswordLabel: TLabel;
+    /// <summary>Current four-byte password (hex).</summary>
+    ActPwdconfigPasswordEdit: TEdit;
+    /// <summary>Expected two-byte PACK (hex) label.</summary>
+    ActPwdconfigPackLabel: TLabel;
+    /// <summary>Expected two-byte PACK (hex).</summary>
+    ActPwdconfigPackEdit: TEdit;
+    /// <summary>Configure authentication + fresh RF proof.</summary>
+    ActPwdconfigureTab: TTabSheet;
+    /// <summary>Configure authentication + fresh RF proof inputs.</summary>
+    ActPwdconfigureInputs: TScrollBox;
+    /// <summary>Explicit password-capable Type 2 model label.</summary>
+    ActPwdconfigureType2modelLabel: TLabel;
+    /// <summary>Explicit password-capable Type 2 model.</summary>
+    ActPwdconfigureType2modelBox: TComboBox;
+    /// <summary>AUTH0 byte (decimal; 255 disables protection) label.</summary>
+    ActPwdconfigureFirstpageLabel: TLabel;
+    /// <summary>AUTH0 byte (decimal; 255 disables protection).</summary>
+    ActPwdconfigureFirstpageEdit: TEdit;
+    /// <summary>Protection scope label.</summary>
+    ActPwdconfigureProtectreadsLabel: TLabel;
+    /// <summary>Protection scope.</summary>
+    ActPwdconfigureProtectreadsBox: TComboBox;
+    /// <summary>AUTHLIM (0..7; 0 disables limit) label.</summary>
+    ActPwdconfigureAuthlimLabel: TLabel;
+    /// <summary>AUTHLIM (0..7; 0 disables limit).</summary>
+    ActPwdconfigureAuthlimEdit: TEdit;
+    /// <summary>Exact eight-byte configuration preimage (hex) label.</summary>
+    ActPwdconfigureBeforeLabel: TLabel;
+    /// <summary>Exact eight-byte configuration preimage (hex).</summary>
+    ActPwdconfigureBeforeEdit: TEdit;
+    /// <summary>Current four-byte password (hex) label.</summary>
+    ActPwdconfigurePasswordLabel: TLabel;
+    /// <summary>Current four-byte password (hex).</summary>
+    ActPwdconfigurePasswordEdit: TEdit;
+    /// <summary>Expected two-byte PACK (hex) label.</summary>
+    ActPwdconfigurePackLabel: TLabel;
+    /// <summary>Expected two-byte PACK (hex).</summary>
+    ActPwdconfigurePackEdit: TEdit;
+    /// <summary>Replace password/PACK + fresh RF proof.</summary>
+    ActPwdcredentialsTab: TTabSheet;
+    /// <summary>Replace password/PACK + fresh RF proof inputs.</summary>
+    ActPwdcredentialsInputs: TScrollBox;
+    /// <summary>Explicit password-capable Type 2 model label.</summary>
+    ActPwdcredentialsType2modelLabel: TLabel;
+    /// <summary>Explicit password-capable Type 2 model.</summary>
+    ActPwdcredentialsType2modelBox: TComboBox;
+    /// <summary>Current four-byte password (hex) label.</summary>
+    ActPwdcredentialsPasswordLabel: TLabel;
+    /// <summary>Current four-byte password (hex).</summary>
+    ActPwdcredentialsPasswordEdit: TEdit;
+    /// <summary>Expected two-byte PACK (hex) label.</summary>
+    ActPwdcredentialsPackLabel: TLabel;
+    /// <summary>Expected two-byte PACK (hex).</summary>
+    ActPwdcredentialsPackEdit: TEdit;
+    /// <summary>New four-byte password (hex) label.</summary>
+    ActPwdcredentialsNewpasswordLabel: TLabel;
+    /// <summary>New four-byte password (hex).</summary>
+    ActPwdcredentialsNewpasswordEdit: TEdit;
+    /// <summary>New two-byte PACK (hex) label.</summary>
+    ActPwdcredentialsNewpackLabel: TLabel;
+    /// <summary>New two-byte PACK (hex).</summary>
+    ActPwdcredentialsNewpackEdit: TEdit;
+    /// <summary>Read supported 24-bit counter.</summary>
+    ActPwdcounterTab: TTabSheet;
+    /// <summary>Read supported 24-bit counter inputs.</summary>
+    ActPwdcounterInputs: TScrollBox;
+    /// <summary>Explicit password-capable Type 2 model label.</summary>
+    ActPwdcounterType2modelLabel: TLabel;
+    /// <summary>Explicit password-capable Type 2 model.</summary>
+    ActPwdcounterType2modelBox: TComboBox;
+    /// <summary>Counter (EV1: 0..2; NTAG213/215/216: 2) label.</summary>
+    ActPwdcounterCounterLabel: TLabel;
+    /// <summary>Counter (EV1: 0..2; NTAG213/215/216: 2).</summary>
+    ActPwdcounterCounterEdit: TEdit;
+    /// <summary>Current four-byte password (hex) label.</summary>
+    ActPwdcounterPasswordLabel: TLabel;
+    /// <summary>Current four-byte password (hex).</summary>
+    ActPwdcounterPasswordEdit: TEdit;
+    /// <summary>Expected two-byte PACK (hex) label.</summary>
+    ActPwdcounterPackLabel: TLabel;
+    /// <summary>Expected two-byte PACK (hex).</summary>
+    ActPwdcounterPackEdit: TEdit;
+    /// <summary>Read and parse protected NDEF.</summary>
+    ActPwdreadndefTab: TTabSheet;
+    /// <summary>Read and parse protected NDEF inputs.</summary>
+    ActPwdreadndefInputs: TScrollBox;
+    /// <summary>Explicit password-capable Type 2 model label.</summary>
+    ActPwdreadndefType2modelLabel: TLabel;
+    /// <summary>Explicit password-capable Type 2 model.</summary>
+    ActPwdreadndefType2modelBox: TComboBox;
+    /// <summary>Current four-byte password (hex) label.</summary>
+    ActPwdreadndefPasswordLabel: TLabel;
+    /// <summary>Current four-byte password (hex).</summary>
+    ActPwdreadndefPasswordEdit: TEdit;
+    /// <summary>Expected two-byte PACK (hex) label.</summary>
+    ActPwdreadndefPackLabel: TLabel;
+    /// <summary>Expected two-byte PACK (hex).</summary>
+    ActPwdreadndefPackEdit: TEdit;
+    /// <summary>Replace/clear protected NDEF + verify.</summary>
+    ActPwdwritendefTab: TTabSheet;
+    /// <summary>Replace/clear protected NDEF + verify inputs.</summary>
+    ActPwdwritendefInputs: TScrollBox;
+    /// <summary>Explicit password-capable Type 2 model label.</summary>
+    ActPwdwritendefType2modelLabel: TLabel;
+    /// <summary>Explicit password-capable Type 2 model.</summary>
+    ActPwdwritendefType2modelBox: TComboBox;
+    /// <summary>Complete NDEF bytes (hex; empty clears existing TLV) label.</summary>
+    ActPwdwritendefNdefLabel: TLabel;
+    /// <summary>Complete NDEF bytes (hex; empty clears existing TLV).</summary>
+    ActPwdwritendefNdefEdit: TEdit;
+    /// <summary>Current four-byte password (hex) label.</summary>
+    ActPwdwritendefPasswordLabel: TLabel;
+    /// <summary>Current four-byte password (hex).</summary>
+    ActPwdwritendefPasswordEdit: TEdit;
+    /// <summary>Expected two-byte PACK (hex) label.</summary>
+    ActPwdwritendefPackLabel: TLabel;
+    /// <summary>Expected two-byte PACK (hex).</summary>
+    ActPwdwritendefPackEdit: TEdit;
     /// <summary>Reader discovery and transport guidance.</summary>
     HeaderPanel: TPanel;
     /// <summary>Native card offered/removed status, independent of operation output.</summary>
@@ -327,12 +455,76 @@ begin
       FInputs[3] := ActPwdwritePackEdit;
       FInputs[4] := ActPwdwriteDataEdit;
     end;
+    10:
+    begin
+      SetLength(FInputs,3);
+      FInputs[0] := ActPwdconfigType2modelBox;
+      FInputs[1] := ActPwdconfigPasswordEdit;
+      FInputs[2] := ActPwdconfigPackEdit;
+    end;
+    11:
+    begin
+      SetLength(FInputs,7);
+      FInputs[0] := ActPwdconfigureType2modelBox;
+      FInputs[1] := ActPwdconfigureFirstpageEdit;
+      FInputs[2] := ActPwdconfigureProtectreadsBox;
+      FInputs[3] := ActPwdconfigureAuthlimEdit;
+      FInputs[4] := ActPwdconfigureBeforeEdit;
+      FInputs[5] := ActPwdconfigurePasswordEdit;
+      FInputs[6] := ActPwdconfigurePackEdit;
+    end;
+    12:
+    begin
+      SetLength(FInputs,5);
+      FInputs[0] := ActPwdcredentialsType2modelBox;
+      FInputs[1] := ActPwdcredentialsPasswordEdit;
+      FInputs[2] := ActPwdcredentialsPackEdit;
+      FInputs[3] := ActPwdcredentialsNewpasswordEdit;
+      FInputs[4] := ActPwdcredentialsNewpackEdit;
+    end;
+    13:
+    begin
+      SetLength(FInputs,4);
+      FInputs[0] := ActPwdcounterType2modelBox;
+      FInputs[1] := ActPwdcounterCounterEdit;
+      FInputs[2] := ActPwdcounterPasswordEdit;
+      FInputs[3] := ActPwdcounterPackEdit;
+    end;
+    14:
+    begin
+      SetLength(FInputs,3);
+      FInputs[0] := ActPwdreadndefType2modelBox;
+      FInputs[1] := ActPwdreadndefPasswordEdit;
+      FInputs[2] := ActPwdreadndefPackEdit;
+    end;
+    15:
+    begin
+      SetLength(FInputs,4);
+      FInputs[0] := ActPwdwritendefType2modelBox;
+      FInputs[1] := ActPwdwritendefNdefEdit;
+      FInputs[2] := ActPwdwritendefPasswordEdit;
+      FInputs[3] := ActPwdwritendefPackEdit;
+    end;
   else Exit; end;
   AcknowledgeCheck.Enabled := FActions[ActionPages.ActivePageIndex].Mutation;
 end;
 
 procedure TType2DemoForm.ClearCredentials;
 begin
+  ActPwdconfigPasswordEdit.Clear;
+  ActPwdconfigPackEdit.Clear;
+  ActPwdconfigurePasswordEdit.Clear;
+  ActPwdconfigurePackEdit.Clear;
+  ActPwdcredentialsPasswordEdit.Clear;
+  ActPwdcredentialsPackEdit.Clear;
+  ActPwdcredentialsNewpasswordEdit.Clear;
+  ActPwdcredentialsNewpackEdit.Clear;
+  ActPwdcounterPasswordEdit.Clear;
+  ActPwdcounterPackEdit.Clear;
+  ActPwdreadndefPasswordEdit.Clear;
+  ActPwdreadndefPackEdit.Clear;
+  ActPwdwritendefPasswordEdit.Clear;
+  ActPwdwritendefPackEdit.Clear;
   ActPwdpagePasswordEdit.Clear;
   ActPwdpagePackEdit.Clear;
   ActPwdmemoryPasswordEdit.Clear;

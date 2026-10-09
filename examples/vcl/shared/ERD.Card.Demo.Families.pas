@@ -48,7 +48,9 @@ type
     /// <summary>Public Calypso / MOBIB file-record demonstration.</summary>
     dfMobib,
     /// <summary>Authenticated Ultralight C user-memory demonstration.</summary>
-    dfUltralightC
+    dfUltralightC,
+    /// <summary>Explicit FeliCa services and NFC Forum Type 3 NDEF demonstration.</summary>
+    dfFelica
   );
   /// <summary>One named form input; secrets are decoded to owned buffers, never stored as public arguments.</summary>
   TCardFamilyField = record
@@ -113,6 +115,7 @@ begin
     dfClassic: Result := 'MifareClassicDemo';
     dfType2: Result := 'Type2Demo';
     dfUltralightC: Result := 'UltralightCDemo';
+    dfFelica: Result := 'FelicaDemo';
     dfType4: Result := 'Type4NdefDemo';
     dfMobib: Result := 'MobibDemo';
     dfEmv: Result := 'EmvDemo';
@@ -1049,9 +1052,71 @@ begin
       Result[5].Fields[1].DefaultText := ''; Result[5].Fields[1].Secret := True; Result[5].Fields[1].Choices := '';
 
     end;
+    dfFelica:
+    begin
+      SetLength(Result,6);
+      Result[0].Id := 'target'; Result[0].LabelText := 'Fresh FeliCa target information';
+      Result[0].Mutation := False; Result[0].Pcsc := True;
+      SetLength(Result[0].Fields,2);
+      Result[0].Fields[0].Name := 'bitrate'; Result[0].Fields[0].LabelText := 'Explicit FeliCa bitrate';
+      Result[0].Fields[0].DefaultText := '0'; Result[0].Fields[0].Secret := False; Result[0].Fields[0].Choices := '212 kbit/s|424 kbit/s';
+      Result[0].Fields[1].Name := 'system'; Result[0].Fields[1].LabelText := 'System code (decimal; 65535 = any)';
+      Result[0].Fields[1].DefaultText := '65535'; Result[0].Fields[1].Secret := False; Result[0].Fields[1].Choices := '';
+      Result[1].Id := 'read'; Result[1].LabelText := 'Read explicit unencrypted service blocks';
+      Result[1].Mutation := False; Result[1].Pcsc := True;
+      SetLength(Result[1].Fields,5);
+      Result[1].Fields[0].Name := 'bitrate'; Result[1].Fields[0].LabelText := 'Explicit FeliCa bitrate';
+      Result[1].Fields[0].DefaultText := '0'; Result[1].Fields[0].Secret := False; Result[1].Fields[0].Choices := '212 kbit/s|424 kbit/s';
+      Result[1].Fields[1].Name := 'system'; Result[1].Fields[1].LabelText := 'System code (decimal; 65535 = any)';
+      Result[1].Fields[1].DefaultText := '65535'; Result[1].Fields[1].Secret := False; Result[1].Fields[1].Choices := '';
+      Result[1].Fields[2].Name := 'readservice'; Result[1].Fields[2].LabelText := 'Read service code (decimal)';
+      Result[1].Fields[2].DefaultText := '11'; Result[1].Fields[2].Secret := False; Result[1].Fields[2].Choices := '';
+      Result[1].Fields[3].Name := 'firstblock'; Result[1].Fields[3].LabelText := 'First block number (decimal, including 16-bit addresses)';
+      Result[1].Fields[3].DefaultText := '0'; Result[1].Fields[3].Secret := False; Result[1].Fields[3].Choices := '';
+      Result[1].Fields[4].Name := 'count'; Result[1].Fields[4].LabelText := 'Contiguous block count';
+      Result[1].Fields[4].DefaultText := '1'; Result[1].Fields[4].Secret := False; Result[1].Fields[4].Choices := '';
+      Result[2].Id := 'write'; Result[2].LabelText := 'Write explicit service blocks + independent verification';
+      Result[2].Mutation := True; Result[2].Pcsc := True;
+      SetLength(Result[2].Fields,8);
+      Result[2].Fields[0].Name := 'bitrate'; Result[2].Fields[0].LabelText := 'Explicit FeliCa bitrate';
+      Result[2].Fields[0].DefaultText := '0'; Result[2].Fields[0].Secret := False; Result[2].Fields[0].Choices := '212 kbit/s|424 kbit/s';
+      Result[2].Fields[1].Name := 'system'; Result[2].Fields[1].LabelText := 'System code (decimal; 65535 = any)';
+      Result[2].Fields[1].DefaultText := '65535'; Result[2].Fields[1].Secret := False; Result[2].Fields[1].Choices := '';
+      Result[2].Fields[2].Name := 'writeservice'; Result[2].Fields[2].LabelText := 'Write service code (decimal)';
+      Result[2].Fields[2].DefaultText := '9'; Result[2].Fields[2].Secret := False; Result[2].Fields[2].Choices := '';
+      Result[2].Fields[3].Name := 'readservice'; Result[2].Fields[3].LabelText := 'Verification read service code (decimal)';
+      Result[2].Fields[3].DefaultText := '11'; Result[2].Fields[3].Secret := False; Result[2].Fields[3].Choices := '';
+      Result[2].Fields[4].Name := 'firstblock'; Result[2].Fields[4].LabelText := 'First block number (decimal, including 16-bit addresses)';
+      Result[2].Fields[4].DefaultText := '0'; Result[2].Fields[4].Secret := False; Result[2].Fields[4].Choices := '';
+      Result[2].Fields[5].Name := 'count'; Result[2].Fields[5].LabelText := 'Contiguous block count';
+      Result[2].Fields[5].DefaultText := '1'; Result[2].Fields[5].Secret := False; Result[2].Fields[5].Choices := '';
+      Result[2].Fields[6].Name := 'before'; Result[2].Fields[6].LabelText := 'Exact current block preimage (hex)';
+      Result[2].Fields[6].DefaultText := ''; Result[2].Fields[6].Secret := False; Result[2].Fields[6].Choices := '';
+      Result[2].Fields[7].Name := 'data'; Result[2].Fields[7].LabelText := 'Replacement block bytes (16 per block, hex)';
+      Result[2].Fields[7].DefaultText := ''; Result[2].Fields[7].Secret := False; Result[2].Fields[7].Choices := '';
+      Result[3].Id := 'attribute'; Result[3].LabelText := 'Read Type 3 attribute information';
+      Result[3].Mutation := False; Result[3].Pcsc := True;
+      SetLength(Result[3].Fields,1);
+      Result[3].Fields[0].Name := 'bitrate'; Result[3].Fields[0].LabelText := 'Explicit FeliCa bitrate';
+      Result[3].Fields[0].DefaultText := '0'; Result[3].Fields[0].Secret := False; Result[3].Fields[0].Choices := '212 kbit/s|424 kbit/s';
+      Result[4].Id := 'readndef'; Result[4].LabelText := 'Read and parse Type 3 NDEF';
+      Result[4].Mutation := False; Result[4].Pcsc := True;
+      SetLength(Result[4].Fields,1);
+      Result[4].Fields[0].Name := 'bitrate'; Result[4].Fields[0].LabelText := 'Explicit FeliCa bitrate';
+      Result[4].Fields[0].DefaultText := '0'; Result[4].Fields[0].Secret := False; Result[4].Fields[0].Choices := '212 kbit/s|424 kbit/s';
+      Result[5].Id := 'writendef'; Result[5].LabelText := 'Replace/clear Type 3 NDEF + verify';
+      Result[5].Mutation := True; Result[5].Pcsc := True;
+      SetLength(Result[5].Fields,3);
+      Result[5].Fields[0].Name := 'bitrate'; Result[5].Fields[0].LabelText := 'Explicit FeliCa bitrate';
+      Result[5].Fields[0].DefaultText := '0'; Result[5].Fields[0].Secret := False; Result[5].Fields[0].Choices := '212 kbit/s|424 kbit/s';
+      Result[5].Fields[1].Name := 'before'; Result[5].Fields[1].LabelText := 'Exact sixteen-byte attribute preimage (hex)';
+      Result[5].Fields[1].DefaultText := ''; Result[5].Fields[1].Secret := False; Result[5].Fields[1].Choices := '';
+      Result[5].Fields[2].Name := 'ndef'; Result[5].Fields[2].LabelText := 'Complete NDEF bytes (hex; empty clears message)';
+      Result[5].Fields[2].DefaultText := ''; Result[5].Fields[2].Secret := False; Result[5].Fields[2].Choices := '';
+    end;
     dfType2:
     begin
-      SetLength(Result,10);
+      SetLength(Result,16);
       Result[0].Id := 'uid'; Result[0].LabelText := 'Read reader-order UID';
       Result[0].Mutation := False; Result[0].Pcsc := True;
       SetLength(Result[0].Fields,0);
@@ -1126,6 +1191,77 @@ begin
       Result[9].Fields[3].DefaultText := ''; Result[9].Fields[3].Secret := True; Result[9].Fields[3].Choices := '';
       Result[9].Fields[4].Name := 'data'; Result[9].Fields[4].LabelText := 'Replacement bytes (hex)';
       Result[9].Fields[4].DefaultText := ''; Result[9].Fields[4].Secret := False; Result[9].Fields[4].Choices := '';
+      Result[10].Id := 'pwdconfig'; Result[10].LabelText := 'Read authentication configuration';
+      Result[10].Mutation := True; Result[10].Pcsc := True;
+      SetLength(Result[10].Fields,3);
+      Result[10].Fields[0].Name := 'type2model'; Result[10].Fields[0].LabelText := 'Explicit password-capable Type 2 model';
+      Result[10].Fields[0].DefaultText := ''; Result[10].Fields[0].Secret := False; Result[10].Fields[0].Choices := 'Ultralight (no PWD_AUTH)|EV1 48|EV1 128|NTAG213|NTAG215|NTAG216|NTAG210|NTAG212';
+      Result[10].Fields[1].Name := 'password'; Result[10].Fields[1].LabelText := 'Current four-byte password (hex)';
+      Result[10].Fields[1].DefaultText := ''; Result[10].Fields[1].Secret := True; Result[10].Fields[1].Choices := '';
+      Result[10].Fields[2].Name := 'pack'; Result[10].Fields[2].LabelText := 'Expected two-byte PACK (hex)';
+      Result[10].Fields[2].DefaultText := ''; Result[10].Fields[2].Secret := True; Result[10].Fields[2].Choices := '';
+      Result[11].Id := 'pwdconfigure'; Result[11].LabelText := 'Configure authentication + fresh RF proof';
+      Result[11].Mutation := True; Result[11].Pcsc := True;
+      SetLength(Result[11].Fields,7);
+      Result[11].Fields[0].Name := 'type2model'; Result[11].Fields[0].LabelText := 'Explicit password-capable Type 2 model';
+      Result[11].Fields[0].DefaultText := ''; Result[11].Fields[0].Secret := False; Result[11].Fields[0].Choices := 'Ultralight (no PWD_AUTH)|EV1 48|EV1 128|NTAG213|NTAG215|NTAG216|NTAG210|NTAG212';
+      Result[11].Fields[1].Name := 'firstpage'; Result[11].Fields[1].LabelText := 'AUTH0 byte (decimal; 255 disables protection)';
+      Result[11].Fields[1].DefaultText := '255'; Result[11].Fields[1].Secret := False; Result[11].Fields[1].Choices := '';
+      Result[11].Fields[2].Name := 'protectreads'; Result[11].Fields[2].LabelText := 'Protection scope';
+      Result[11].Fields[2].DefaultText := '0'; Result[11].Fields[2].Secret := False; Result[11].Fields[2].Choices := 'Writes only|Reads and writes';
+      Result[11].Fields[3].Name := 'authlim'; Result[11].Fields[3].LabelText := 'AUTHLIM (0..7; 0 disables limit)';
+      Result[11].Fields[3].DefaultText := '0'; Result[11].Fields[3].Secret := False; Result[11].Fields[3].Choices := '';
+      Result[11].Fields[4].Name := 'before'; Result[11].Fields[4].LabelText := 'Exact eight-byte configuration preimage (hex)';
+      Result[11].Fields[4].DefaultText := ''; Result[11].Fields[4].Secret := False; Result[11].Fields[4].Choices := '';
+      Result[11].Fields[5].Name := 'password'; Result[11].Fields[5].LabelText := 'Current four-byte password (hex)';
+      Result[11].Fields[5].DefaultText := ''; Result[11].Fields[5].Secret := True; Result[11].Fields[5].Choices := '';
+      Result[11].Fields[6].Name := 'pack'; Result[11].Fields[6].LabelText := 'Expected two-byte PACK (hex)';
+      Result[11].Fields[6].DefaultText := ''; Result[11].Fields[6].Secret := True; Result[11].Fields[6].Choices := '';
+      Result[12].Id := 'pwdcredentials'; Result[12].LabelText := 'Replace password/PACK + fresh RF proof';
+      Result[12].Mutation := True; Result[12].Pcsc := True;
+      SetLength(Result[12].Fields,5);
+      Result[12].Fields[0].Name := 'type2model'; Result[12].Fields[0].LabelText := 'Explicit password-capable Type 2 model';
+      Result[12].Fields[0].DefaultText := ''; Result[12].Fields[0].Secret := False; Result[12].Fields[0].Choices := 'Ultralight (no PWD_AUTH)|EV1 48|EV1 128|NTAG213|NTAG215|NTAG216|NTAG210|NTAG212';
+      Result[12].Fields[1].Name := 'password'; Result[12].Fields[1].LabelText := 'Current four-byte password (hex)';
+      Result[12].Fields[1].DefaultText := ''; Result[12].Fields[1].Secret := True; Result[12].Fields[1].Choices := '';
+      Result[12].Fields[2].Name := 'pack'; Result[12].Fields[2].LabelText := 'Expected two-byte PACK (hex)';
+      Result[12].Fields[2].DefaultText := ''; Result[12].Fields[2].Secret := True; Result[12].Fields[2].Choices := '';
+      Result[12].Fields[3].Name := 'newpassword'; Result[12].Fields[3].LabelText := 'New four-byte password (hex)';
+      Result[12].Fields[3].DefaultText := ''; Result[12].Fields[3].Secret := True; Result[12].Fields[3].Choices := '';
+      Result[12].Fields[4].Name := 'newpack'; Result[12].Fields[4].LabelText := 'New two-byte PACK (hex)';
+      Result[12].Fields[4].DefaultText := ''; Result[12].Fields[4].Secret := True; Result[12].Fields[4].Choices := '';
+      Result[13].Id := 'pwdcounter'; Result[13].LabelText := 'Read supported 24-bit counter';
+      Result[13].Mutation := True; Result[13].Pcsc := True;
+      SetLength(Result[13].Fields,4);
+      Result[13].Fields[0].Name := 'type2model'; Result[13].Fields[0].LabelText := 'Explicit password-capable Type 2 model';
+      Result[13].Fields[0].DefaultText := ''; Result[13].Fields[0].Secret := False; Result[13].Fields[0].Choices := 'Ultralight (no PWD_AUTH)|EV1 48|EV1 128|NTAG213|NTAG215|NTAG216|NTAG210|NTAG212';
+      Result[13].Fields[1].Name := 'counter'; Result[13].Fields[1].LabelText := 'Counter (EV1: 0..2; NTAG213/215/216: 2)';
+      Result[13].Fields[1].DefaultText := '2'; Result[13].Fields[1].Secret := False; Result[13].Fields[1].Choices := '';
+      Result[13].Fields[2].Name := 'password'; Result[13].Fields[2].LabelText := 'Current four-byte password (hex)';
+      Result[13].Fields[2].DefaultText := ''; Result[13].Fields[2].Secret := True; Result[13].Fields[2].Choices := '';
+      Result[13].Fields[3].Name := 'pack'; Result[13].Fields[3].LabelText := 'Expected two-byte PACK (hex)';
+      Result[13].Fields[3].DefaultText := ''; Result[13].Fields[3].Secret := True; Result[13].Fields[3].Choices := '';
+      Result[14].Id := 'pwdreadndef'; Result[14].LabelText := 'Read and parse protected NDEF';
+      Result[14].Mutation := True; Result[14].Pcsc := True;
+      SetLength(Result[14].Fields,3);
+      Result[14].Fields[0].Name := 'type2model'; Result[14].Fields[0].LabelText := 'Explicit password-capable Type 2 model';
+      Result[14].Fields[0].DefaultText := ''; Result[14].Fields[0].Secret := False; Result[14].Fields[0].Choices := 'Ultralight (no PWD_AUTH)|EV1 48|EV1 128|NTAG213|NTAG215|NTAG216|NTAG210|NTAG212';
+      Result[14].Fields[1].Name := 'password'; Result[14].Fields[1].LabelText := 'Current four-byte password (hex)';
+      Result[14].Fields[1].DefaultText := ''; Result[14].Fields[1].Secret := True; Result[14].Fields[1].Choices := '';
+      Result[14].Fields[2].Name := 'pack'; Result[14].Fields[2].LabelText := 'Expected two-byte PACK (hex)';
+      Result[14].Fields[2].DefaultText := ''; Result[14].Fields[2].Secret := True; Result[14].Fields[2].Choices := '';
+      Result[15].Id := 'pwdwritendef'; Result[15].LabelText := 'Replace/clear protected NDEF + verify';
+      Result[15].Mutation := True; Result[15].Pcsc := True;
+      SetLength(Result[15].Fields,4);
+      Result[15].Fields[0].Name := 'type2model'; Result[15].Fields[0].LabelText := 'Explicit password-capable Type 2 model';
+      Result[15].Fields[0].DefaultText := ''; Result[15].Fields[0].Secret := False; Result[15].Fields[0].Choices := 'Ultralight (no PWD_AUTH)|EV1 48|EV1 128|NTAG213|NTAG215|NTAG216|NTAG210|NTAG212';
+      Result[15].Fields[1].Name := 'ndef'; Result[15].Fields[1].LabelText := 'Complete NDEF bytes (hex; empty clears existing TLV)';
+      Result[15].Fields[1].DefaultText := ''; Result[15].Fields[1].Secret := False; Result[15].Fields[1].Choices := '';
+      Result[15].Fields[2].Name := 'password'; Result[15].Fields[2].LabelText := 'Current four-byte password (hex)';
+      Result[15].Fields[2].DefaultText := ''; Result[15].Fields[2].Secret := True; Result[15].Fields[2].Choices := '';
+      Result[15].Fields[3].Name := 'pack'; Result[15].Fields[3].LabelText := 'Expected two-byte PACK (hex)';
+      Result[15].Fields[3].DefaultText := ''; Result[15].Fields[3].Secret := True; Result[15].Fields[3].Choices := '';
+
     end;
     dfType4:
     begin

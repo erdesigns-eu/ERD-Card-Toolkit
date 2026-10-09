@@ -180,6 +180,9 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Felica.pas" />
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.ACR122.Felica.pas" />
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Type3.Ndef.pas" />
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.UltralightC.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.DESFire.DES.pas"/>
         <DCCReference Include="rtl.dcp"/>

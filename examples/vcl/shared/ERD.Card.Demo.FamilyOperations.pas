@@ -71,7 +71,7 @@ uses
   ERD.Card.MOBIB.Rules, ERD.Card.Contactless.Calypso.SAM, ERD.Card.MOBIB.Subscriptions, ERD.Card.MOBIB.Data, ERD.Card.Contactless.Calypso, ERD.Card.EMV.Data, ERD.Card.EMV.Reader, ERD.Card.EID.Data, ERD.Card.EID.Reader,
   ERD.Card.EID.DocumentReader, ERD.Card.EID.ICAO, ERD.Card.Crypto.EAC, ERD.Card.Crypto.EAC.OpenSSL,
   ERD.Card.EID.Access, ERD.Card.Bytes, ERD.Card.APDU, ERD.Card.ATR, ERD.Card.ATR.Catalog,
-  ERD.Card.TLV, ERD.Card.EMV.Tags, ERD.Card.Ndef,
+  ERD.Card.TLV, ERD.Card.EMV.Tags, ERD.Card.Ndef, ERD.Card.Ndef.Records,
   ERD.Card.Memory, ERD.Card.Memory.Counter, ERD.Card.Memory.Sle4404,
   ERD.Card.SIM.Data, ERD.Card.SIM.Reader, ERD.Card.Memory.Capabilities, ERD.Card.PCSC.Reader,
   ERD.Card.MagStripe, ERD.Card.MagStripe.Tracks, ERD.Card.MagStripe.MSR206,
@@ -79,6 +79,7 @@ uses
   ERD.Card.Contactless.Raw, ERD.Card.Contactless.ACR122, ERD.Card.Contactless.UID,
   ERD.Card.Contactless.UID.Profiles, ERD.Card.Contactless.UID.USCUID, ERD.Card.Contactless.UID.Partial,
   ERD.Card.Contactless.ISO15693, ERD.Card.Contactless.Type5.Ndef, ERD.Card.Contactless.Type2.Password,
+  ERD.Card.Contactless.Felica, ERD.Card.Contactless.ACR122.Felica, ERD.Card.Contactless.Type3.Ndef,
   ERD.Card.Contactless.Type2.Ndef, ERD.Card.Contactless.Type4.Ndef,
   ERD.Card.Contactless, ERD.Card.Contactless.Type2, ERD.Card.RFID.HID,
   ERD.Card.Reader.TWN4.Serial, ERD.Card.Demo.Operations;
@@ -129,6 +130,23 @@ begin raise EArgumentException.Create('Check the explicit action inputs and ackn
 
 procedure Wipe(var B: TBytes);
 begin if Length(B) > 0 then FillChar(B[0],Length(B),0); B := nil; end;
+
+function DescribeNdef(const Records: TNdefMessage): string;
+var I: Integer; T: TNdefText;
+begin
+  Result := 'Records: '+IntToStr(Length(Records))+sLineBreak;
+  for I := 0 to High(Records) do
+  begin
+    Result := Result+'Record '+IntToStr(I+1)+' TNF '+IntToStr(Ord(Records[I].Tnf))+
+      ' type '+BytesToHex(Records[I].RecordType)+' id '+BytesToHex(Records[I].Id)+sLineBreak+
+      'Payload: '+BytesToHex(Records[I].Payload)+sLineBreak;
+    try
+      if TNdefRecords.IsType(Records[I],ntfWellKnown,'T') then
+      begin T := TNdefRecords.DecodeText(Records[I]); Result := Result+'Text ('+string(T.Language)+'): '+string(T.Text)+sLineBreak; end
+      else if TNdefRecords.IsType(Records[I],ntfWellKnown,'U') then Result := Result+'URI: '+string(TNdefRecords.DecodeUri(Records[I]))+sLineBreak;
+    except on E: ENdefError do Result := Result+'RTD interpretation unavailable: '+E.ClassName+sLineBreak; end;
+  end;
+end;
 
 function Action(const F: TCardDemoFamily; const R: TCardDemoRequest): TCardFamilyAction;
 var Catalog: TCardFamilyActions; I, J, Choices: Integer;
@@ -320,6 +338,8 @@ var Hid: TUsbHidReaderWriter; HidHardware: ICardFamilyHidHardware; Devices: THid
   Desfire: TDesfireCardReader; Session: IDesfireSession; Management: IDesfireManagement; ApplicationManagement: IDesfireApplicationManagement; DesManagement: IDesfireDesManagement;
   Definition: TDesfireFileDefinition; Files: TDesfireFiles; Applications: TDesfireApplicationIds;
   Aes: ICardAesProvider; Aid: Cardinal; Settings: TDesfireFileSettings;
+  Felica: TFelicaCardReader; Type3: TType3NdefCardReader; FelicaReader: IFelicaReader; FelicaTarget: TFelicaTarget; FelicaBlocks: TFelicaBlocks; Type3Snapshot: TType3NdefSnapshot; Type3Attribute: TType3NdefAttribute;
+  Type2Configuration: TType2AuthenticationConfiguration;
   Ulc: TUltralightCCardReaderWriter; UlcConfiguration: TUltralightCConfiguration; Des: ICardDesProvider;
   PasswordReader: TType2PasswordCardReader; RawUid: TRawUidProgrammer;
   IsoReader: TIso15693CardReader; Type5: TType5NdefCardReader; IsoSession: IIso15693Session; IsoInfo: TIso15693SystemInfo; Type5Snapshot: TType5NdefSnapshot;
@@ -932,6 +952,49 @@ begin
         end;
         D.WriteVerified := True; Output := 'Fresh RF UID independently verified: '+BytesToHex(Data);
       end;
+      dfFelica:
+      begin
+        J := Number(R,A,'bitrate',0,1); Felica := TFelicaCardReader.Create(nil); Type3 := TType3NdefCardReader.Create(nil);
+        try
+          if (A.Id = 'target') or (A.Id = 'read') or (A.Id = 'write') then
+          begin
+            N := Number(R,A,'system',0,65535);
+            if A.Id <> 'target' then
+            begin
+              Address := Number(R,A,'firstblock',0,65535); Count := Number(R,A,'count',1,15);
+              if Address > 65536-Count then Fail;
+              SetLength(FelicaBlocks,Count); for I := 0 to Count-1 do FelicaBlocks[I] := Address+I;
+              TagId := Number(R,A,'readservice',0,65535);
+              if A.Id = 'write' then begin P := Bytes(R,A,'before'); NewP := Bytes(R,A,'data'); Aid := Number(R,A,'writeservice',0,65535); TFelicaCodec.BlockCommand(HexToBytes('0000000000000000'),Aid,FelicaBlocks,True,NewP); if Length(P) <> Length(NewP) then Fail; end;
+            end;
+            FelicaReader := TAcr122FelicaReader.Create(T,TFelicaBitrate(J)); Felica.Reader := FelicaReader;
+            if A.Id = 'target' then begin FelicaTarget := Felica.ReadTarget(N); Output := 'IDm: '+BytesToHex(FelicaTarget.Idm)+sLineBreak+'PMm: '+BytesToHex(FelicaTarget.Pmm)+sLineBreak+'System: '+IntToHex(FelicaTarget.SystemCode,4); end
+            else begin
+              if A.Id = 'read' then Data := Felica.ReadBlocks(N,TagId,FelicaBlocks)
+              else begin Data := Felica.WriteBlocksVerified(N,Aid,TagId,FelicaBlocks,P,NewP); D.WriteVerified := True; end;
+              Output := BytesToHex(Data); Artifact(D,'service-blocks.bin',Data);
+            end;
+          end
+          else
+          begin
+            if A.Id = 'writendef' then begin P := Bytes(R,A,'before'); TType3NdefMapping.DecodeAttribute(P); end;
+            FelicaReader := TAcr122FelicaReader.Create(T,TFelicaBitrate(J)); Type3.Reader := FelicaReader;
+            if A.Id = 'attribute' then Type3Attribute := Type3.ReadAttribute
+            else begin
+              if A.Id = 'readndef' then Type3Snapshot := Type3.ReadMessage
+              else if A.Id = 'writendef' then begin Type3Snapshot := Type3.WriteMessageVerified(P,Bytes(R,A,'ndef')); D.WriteVerified := True; end
+              else Fail;
+              Type3Attribute := Type3Snapshot.Attribute;
+              Output := 'IDm: '+BytesToHex(Type3Snapshot.Target.Idm)+sLineBreak+DescribeNdef(Type3Snapshot.Records)+'NDEF: '+BytesToHex(Type3Snapshot.MessageBytes)+sLineBreak;
+              Artifact(D,'message.ndef',Type3Snapshot.MessageBytes);
+            end;
+            Output := Output+'Capacity: '+IntToStr(Integer(Type3Attribute.MaxBlocks)*16)+sLineBreak+
+              'Published bytes: '+IntToStr(Type3Attribute.MessageBytes)+sLineBreak+'Read only: '+BoolToStr(Type3Attribute.ReadOnly,True)+sLineBreak+
+              'Update in progress: '+BoolToStr(Type3Attribute.Updating,True)+sLineBreak+'Attribute preimage: '+BytesToHex(Type3Attribute.RawBytes);
+            Artifact(D,'attribute-block.bin',Type3Attribute.RawBytes);
+          end;
+        finally Felica.Free; Type3.Free; FelicaReader := nil; end;
+      end;
       dfUltralightC:
       begin
         Ulc := TUltralightCCardReaderWriter.Create(nil);
@@ -994,7 +1057,7 @@ begin
             else if A.Id = 'writepage' then begin Contact.WriteType2UserPage(TType2TagModel(I),Number(R,A,'page',0,255),Bytes(R,A,'data')); Output := 'Reader write status accepted; independent read-back has not been performed.'; end
             else if A.Id = 'readndef' then begin T2Snapshot := T2.ReadMessage(TType2TagModel(I)); Output := BytesToHex(T2Snapshot.MessageBytes); end
             else if A.Id = 'writendef' then begin Ndef := TNdefCodec.Decode(Bytes(R,A,'ndef')); T2.WriteMessage(TType2TagModel(I),Ndef); D.WriteVerified := True; Output := 'Type 2 NDEF independently verified.'; end
-            else if (A.Id = 'pwdpage') or (A.Id = 'pwdmemory') or (A.Id = 'pwdwrite') then
+            else if Pos('pwd',A.Id)=1 then
             begin
               P := Bytes(R,A,'password'); Key := Bytes(R,A,'pack');
               PasswordReader := TType2PasswordCardReader.Create(nil);
@@ -1002,6 +1065,29 @@ begin
                 PasswordReader.Reader := TAcr122RawReader.Create(T);
                 if A.Id = 'pwdpage' then begin Data := PasswordReader.ReadUserPage(TType2TagModel(I),Number(R,A,'page',4,225),P,Key); Output := BytesToHex(Data); Artifact(D,'page.bin',Data); end
                 else if A.Id = 'pwdmemory' then begin UserMemory := PasswordReader.ReadUserMemory(TType2TagModel(I),P,Key); Output := BytesToHex(UserMemory.Data); Artifact(D,'user-memory.bin',UserMemory.Data); end
+                else if (A.Id = 'pwdconfig') or (A.Id = 'pwdconfigure') then
+                begin
+                  if A.Id = 'pwdconfig' then Type2Configuration := PasswordReader.ReadConfiguration(TType2TagModel(I),P,Key)
+                  else begin Type2Configuration := PasswordReader.ConfigureAuthenticationVerified(TType2TagModel(I),Number(R,A,'firstpage',0,255),Number(R,A,'protectreads',0,1)=1,Number(R,A,'authlim',0,7),Bytes(R,A,'before'),P,Key); D.WriteVerified := True; end;
+                  Artifact(D,'authentication-configuration.bin',Type2Configuration.RawPages);
+                  Output := 'AUTH0: '+IntToStr(Type2Configuration.FirstProtectedPage)+sLineBreak+
+                    'Protect reads: '+BoolToStr(Type2Configuration.ProtectReads,True)+sLineBreak+
+                    'AUTHLIM: '+IntToStr(Type2Configuration.AuthenticationLimit)+sLineBreak+
+                    'Configuration locked: '+BoolToStr(Type2Configuration.ConfigurationLocked,True)+sLineBreak+
+                    'Mirror configured: '+BoolToStr(Type2Configuration.MirrorConfigured,True)+sLineBreak+
+                    'NFC counter enabled: '+BoolToStr(Type2Configuration.NfcCounterEnabled,True)+sLineBreak+
+                    'Exact preimage: '+BytesToHex(Type2Configuration.RawPages);
+                end
+                else if A.Id = 'pwdcredentials' then
+                begin NewP := Bytes(R,A,'newpassword'); Wire := Bytes(R,A,'newpack'); D.WriteVerified := PasswordReader.ChangeCredentialsVerified(TType2TagModel(I),P,Key,NewP,Wire); Output := 'Replacement credentials verified after same-UID RF activation.'; end
+                else if A.Id = 'pwdcounter' then Output := IntToStr(PasswordReader.ReadCounter(TType2TagModel(I),Number(R,A,'counter',0,2),P,Key))
+                else if (A.Id = 'pwdreadndef') or (A.Id = 'pwdwritendef') then
+                begin
+                  if A.Id = 'pwdreadndef' then T2Snapshot := PasswordReader.ReadNdef(TType2TagModel(I),P,Key)
+                  else begin T2Snapshot := PasswordReader.WriteNdefVerified(TType2TagModel(I),Bytes(R,A,'ndef'),P,Key); D.WriteVerified := True; end;
+                  Output := DescribeNdef(T2Snapshot.Records)+'NDEF: '+BytesToHex(T2Snapshot.MessageBytes);
+                  Artifact(D,'message.ndef',T2Snapshot.MessageBytes);
+                end
                 else begin PasswordReader.WriteUserPage(TType2TagModel(I),Number(R,A,'page',4,225),P,Key,Bytes(R,A,'data')); D.WriteVerified := True; Output := 'Authenticated user page independently verified.'; end;
               finally PasswordReader.Free; end;
             end

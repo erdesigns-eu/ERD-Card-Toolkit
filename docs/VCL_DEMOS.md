@@ -1,7 +1,7 @@
 # VCL read/write demos
 
-Twenty-two applications demonstrate implemented APIs: SmartCardDemo,
-MagStripeDemo and twenty family projects. Each application owns a direct TForm
+Twenty-three applications demonstrate implemented APIs: SmartCardDemo,
+MagStripeDemo and twenty-one family projects. Each application owns a direct TForm
 class and its own designer-editable Main.dfm, including all action inputs and a
 reader dropdown.
 Only nonvisual operation, metadata and worker/controller units are shared.
@@ -54,7 +54,8 @@ that byte-buffer wiping guarantee. Errors display their class, never backend tex
 | `sle4404/Sle4404Demo.dproj` | Known window/layout/retry budgets, reads with optional supplied user code, user-code proof, one-to-zero programming, scratchpad erase and application erase with both supplied codes |
 | `simcard/SimCardDemo.dproj` | Classic SIM/UICC-USIM files, records, identities and services; PIN/PUK status, verify/change/unblock, ADN contact writes, PBR/IAP/EXT contact reads, explicit linked-record plans, alpha/EMAIL/ANR/SMS/segment codecs |
 | `mifareclassic/MifareClassicDemo.dproj` | UID, offline layout/trailer inspection, supplied-key block reads and status-only data writes |
-| `type2/Type2Demo.dproj` | Ultralight/EV1/NTAG210/212/213/215/216 UID, page and memory reads, public NDEF, ACR122 PWD_AUTH/PACK page and memory operations, verified page writes |
+| `felica/FelicaDemo.dproj` | Explicit 212/424 kbit FeliCa polling, service block reads/verified writes and Type 3 attribute/NDEF read/replace/clear |
+| `type2/Type2Demo.dproj` | Ultralight/EV1/NTAG210/212/213/215/216 UID, page and memory reads, public NDEF, ACR122 PWD_AUTH/PACK user access, verified configuration/credential updates, counters and protected NDEF |
 | `ultralightc/UltralightCDemo.dproj` | Supplied-key 2K3DES authentication, exact user-page/full-memory reads and independently verified page writes |
 | `type4ndef/Type4NdefDemo.dproj` | Offline CC, mapping 1.0/2.0, file descriptors/FID, public NDEF read/write/clear |
 | `emv/EmvDemo.dproj` | PSE/PPSE, PDOL inspection, explicit AID/terminal values, GPO/AFL records, bounded SFI/record scan, raw records/statuses, GET DATA, advertised logs, DOL/log decoders and exact exports |
@@ -386,7 +387,7 @@ save dialog. See [MOBIB_CALYPSO.md](MOBIB_CALYPSO.md) for the concrete files,
 status behavior, parsed fields, secure-provider integration and remaining
 issuer-specific schemas.
 
-The project group's Build/Make/Clean aggregates cover all twenty-one applications;
+The project group's Build/Make/Clean aggregates cover all twenty-three applications;
 the standalone build script includes them too.
 
 

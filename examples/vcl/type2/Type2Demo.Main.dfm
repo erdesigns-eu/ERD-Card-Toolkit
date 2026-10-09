@@ -805,6 +805,613 @@ object Type2DemoForm: TType2DemoForm
         end
       end
     end
+    object ActPwdconfigTab: TTabSheet
+      Left = 4
+      Top = 44
+      Width = 1072
+      Height = 438
+      Caption = 'Read authentication configuration'
+      Tag = 10
+      object ActPwdconfigInputs: TScrollBox
+        Left = 0
+        Top = 0
+        Width = 1072
+        Height = 438
+        Align = alClient
+        BorderStyle = bsNone
+        TabOrder = 0
+        object ActPwdconfigType2modelLabel: TLabel
+          Left = 16
+          Top = 8
+          Width = 940
+          Height = 18
+          Caption = 'Explicit password-capable Type 2 model'
+        end
+        object ActPwdconfigType2modelBox: TComboBox
+          Left = 16
+          Top = 30
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 0
+          Style = csDropDownList
+          ItemIndex = -1
+          Items.Strings = (
+            'Ultralight (no PWD_AUTH)'
+            'EV1 48'
+            'EV1 128'
+            'NTAG213'
+            'NTAG215'
+            'NTAG216'
+            'NTAG210'
+            'NTAG212'
+          )
+        end
+        object ActPwdconfigPasswordLabel: TLabel
+          Left = 16
+          Top = 70
+          Width = 940
+          Height = 18
+          Caption = 'Current four-byte password (hex)'
+        end
+        object ActPwdconfigPasswordEdit: TEdit
+          Left = 16
+          Top = 92
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 1
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+        object ActPwdconfigPackLabel: TLabel
+          Left = 16
+          Top = 132
+          Width = 940
+          Height = 18
+          Caption = 'Expected two-byte PACK (hex)'
+        end
+        object ActPwdconfigPackEdit: TEdit
+          Left = 16
+          Top = 154
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 2
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+      end
+    end
+    object ActPwdconfigureTab: TTabSheet
+      Left = 4
+      Top = 44
+      Width = 1072
+      Height = 438
+      Caption = 'Configure authentication + fresh RF proof'
+      Tag = 11
+      object ActPwdconfigureInputs: TScrollBox
+        Left = 0
+        Top = 0
+        Width = 1072
+        Height = 438
+        Align = alClient
+        BorderStyle = bsNone
+        TabOrder = 0
+        object ActPwdconfigureType2modelLabel: TLabel
+          Left = 16
+          Top = 8
+          Width = 940
+          Height = 18
+          Caption = 'Explicit password-capable Type 2 model'
+        end
+        object ActPwdconfigureType2modelBox: TComboBox
+          Left = 16
+          Top = 30
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 0
+          Style = csDropDownList
+          ItemIndex = -1
+          Items.Strings = (
+            'Ultralight (no PWD_AUTH)'
+            'EV1 48'
+            'EV1 128'
+            'NTAG213'
+            'NTAG215'
+            'NTAG216'
+            'NTAG210'
+            'NTAG212'
+          )
+        end
+        object ActPwdconfigureFirstpageLabel: TLabel
+          Left = 16
+          Top = 70
+          Width = 940
+          Height = 18
+          Caption = 'AUTH0 byte (decimal; 255 disables protection)'
+        end
+        object ActPwdconfigureFirstpageEdit: TEdit
+          Left = 16
+          Top = 92
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 1
+          MaxLength = 262144
+          Text = '255'
+        end
+        object ActPwdconfigureProtectreadsLabel: TLabel
+          Left = 16
+          Top = 132
+          Width = 940
+          Height = 18
+          Caption = 'Protection scope'
+        end
+        object ActPwdconfigureProtectreadsBox: TComboBox
+          Left = 16
+          Top = 154
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 2
+          Style = csDropDownList
+          ItemIndex = 0
+          Items.Strings = (
+            'Writes only'
+            'Reads and writes'
+          )
+          Text = 'Writes only'
+        end
+        object ActPwdconfigureAuthlimLabel: TLabel
+          Left = 16
+          Top = 194
+          Width = 940
+          Height = 18
+          Caption = 'AUTHLIM (0..7; 0 disables limit)'
+        end
+        object ActPwdconfigureAuthlimEdit: TEdit
+          Left = 16
+          Top = 216
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 3
+          MaxLength = 262144
+          Text = '0'
+        end
+        object ActPwdconfigureBeforeLabel: TLabel
+          Left = 16
+          Top = 256
+          Width = 940
+          Height = 18
+          Caption = 'Exact eight-byte configuration preimage (hex)'
+        end
+        object ActPwdconfigureBeforeEdit: TEdit
+          Left = 16
+          Top = 278
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 4
+          MaxLength = 262144
+        end
+        object ActPwdconfigurePasswordLabel: TLabel
+          Left = 16
+          Top = 318
+          Width = 940
+          Height = 18
+          Caption = 'Current four-byte password (hex)'
+        end
+        object ActPwdconfigurePasswordEdit: TEdit
+          Left = 16
+          Top = 340
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 5
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+        object ActPwdconfigurePackLabel: TLabel
+          Left = 16
+          Top = 380
+          Width = 940
+          Height = 18
+          Caption = 'Expected two-byte PACK (hex)'
+        end
+        object ActPwdconfigurePackEdit: TEdit
+          Left = 16
+          Top = 402
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 6
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+      end
+    end
+    object ActPwdcredentialsTab: TTabSheet
+      Left = 4
+      Top = 44
+      Width = 1072
+      Height = 438
+      Caption = 'Replace password/PACK + fresh RF proof'
+      Tag = 12
+      object ActPwdcredentialsInputs: TScrollBox
+        Left = 0
+        Top = 0
+        Width = 1072
+        Height = 438
+        Align = alClient
+        BorderStyle = bsNone
+        TabOrder = 0
+        object ActPwdcredentialsType2modelLabel: TLabel
+          Left = 16
+          Top = 8
+          Width = 940
+          Height = 18
+          Caption = 'Explicit password-capable Type 2 model'
+        end
+        object ActPwdcredentialsType2modelBox: TComboBox
+          Left = 16
+          Top = 30
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 0
+          Style = csDropDownList
+          ItemIndex = -1
+          Items.Strings = (
+            'Ultralight (no PWD_AUTH)'
+            'EV1 48'
+            'EV1 128'
+            'NTAG213'
+            'NTAG215'
+            'NTAG216'
+            'NTAG210'
+            'NTAG212'
+          )
+        end
+        object ActPwdcredentialsPasswordLabel: TLabel
+          Left = 16
+          Top = 70
+          Width = 940
+          Height = 18
+          Caption = 'Current four-byte password (hex)'
+        end
+        object ActPwdcredentialsPasswordEdit: TEdit
+          Left = 16
+          Top = 92
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 1
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+        object ActPwdcredentialsPackLabel: TLabel
+          Left = 16
+          Top = 132
+          Width = 940
+          Height = 18
+          Caption = 'Expected two-byte PACK (hex)'
+        end
+        object ActPwdcredentialsPackEdit: TEdit
+          Left = 16
+          Top = 154
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 2
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+        object ActPwdcredentialsNewpasswordLabel: TLabel
+          Left = 16
+          Top = 194
+          Width = 940
+          Height = 18
+          Caption = 'New four-byte password (hex)'
+        end
+        object ActPwdcredentialsNewpasswordEdit: TEdit
+          Left = 16
+          Top = 216
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 3
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+        object ActPwdcredentialsNewpackLabel: TLabel
+          Left = 16
+          Top = 256
+          Width = 940
+          Height = 18
+          Caption = 'New two-byte PACK (hex)'
+        end
+        object ActPwdcredentialsNewpackEdit: TEdit
+          Left = 16
+          Top = 278
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 4
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+      end
+    end
+    object ActPwdcounterTab: TTabSheet
+      Left = 4
+      Top = 44
+      Width = 1072
+      Height = 438
+      Caption = 'Read supported 24-bit counter'
+      Tag = 13
+      object ActPwdcounterInputs: TScrollBox
+        Left = 0
+        Top = 0
+        Width = 1072
+        Height = 438
+        Align = alClient
+        BorderStyle = bsNone
+        TabOrder = 0
+        object ActPwdcounterType2modelLabel: TLabel
+          Left = 16
+          Top = 8
+          Width = 940
+          Height = 18
+          Caption = 'Explicit password-capable Type 2 model'
+        end
+        object ActPwdcounterType2modelBox: TComboBox
+          Left = 16
+          Top = 30
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 0
+          Style = csDropDownList
+          ItemIndex = -1
+          Items.Strings = (
+            'Ultralight (no PWD_AUTH)'
+            'EV1 48'
+            'EV1 128'
+            'NTAG213'
+            'NTAG215'
+            'NTAG216'
+            'NTAG210'
+            'NTAG212'
+          )
+        end
+        object ActPwdcounterCounterLabel: TLabel
+          Left = 16
+          Top = 70
+          Width = 940
+          Height = 18
+          Caption = 'Counter (EV1: 0..2; NTAG213/215/216: 2)'
+        end
+        object ActPwdcounterCounterEdit: TEdit
+          Left = 16
+          Top = 92
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 1
+          MaxLength = 262144
+          Text = '2'
+        end
+        object ActPwdcounterPasswordLabel: TLabel
+          Left = 16
+          Top = 132
+          Width = 940
+          Height = 18
+          Caption = 'Current four-byte password (hex)'
+        end
+        object ActPwdcounterPasswordEdit: TEdit
+          Left = 16
+          Top = 154
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 2
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+        object ActPwdcounterPackLabel: TLabel
+          Left = 16
+          Top = 194
+          Width = 940
+          Height = 18
+          Caption = 'Expected two-byte PACK (hex)'
+        end
+        object ActPwdcounterPackEdit: TEdit
+          Left = 16
+          Top = 216
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 3
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+      end
+    end
+    object ActPwdreadndefTab: TTabSheet
+      Left = 4
+      Top = 44
+      Width = 1072
+      Height = 438
+      Caption = 'Read and parse protected NDEF'
+      Tag = 14
+      object ActPwdreadndefInputs: TScrollBox
+        Left = 0
+        Top = 0
+        Width = 1072
+        Height = 438
+        Align = alClient
+        BorderStyle = bsNone
+        TabOrder = 0
+        object ActPwdreadndefType2modelLabel: TLabel
+          Left = 16
+          Top = 8
+          Width = 940
+          Height = 18
+          Caption = 'Explicit password-capable Type 2 model'
+        end
+        object ActPwdreadndefType2modelBox: TComboBox
+          Left = 16
+          Top = 30
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 0
+          Style = csDropDownList
+          ItemIndex = -1
+          Items.Strings = (
+            'Ultralight (no PWD_AUTH)'
+            'EV1 48'
+            'EV1 128'
+            'NTAG213'
+            'NTAG215'
+            'NTAG216'
+            'NTAG210'
+            'NTAG212'
+          )
+        end
+        object ActPwdreadndefPasswordLabel: TLabel
+          Left = 16
+          Top = 70
+          Width = 940
+          Height = 18
+          Caption = 'Current four-byte password (hex)'
+        end
+        object ActPwdreadndefPasswordEdit: TEdit
+          Left = 16
+          Top = 92
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 1
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+        object ActPwdreadndefPackLabel: TLabel
+          Left = 16
+          Top = 132
+          Width = 940
+          Height = 18
+          Caption = 'Expected two-byte PACK (hex)'
+        end
+        object ActPwdreadndefPackEdit: TEdit
+          Left = 16
+          Top = 154
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 2
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+      end
+    end
+    object ActPwdwritendefTab: TTabSheet
+      Left = 4
+      Top = 44
+      Width = 1072
+      Height = 438
+      Caption = 'Replace/clear protected NDEF + verify'
+      Tag = 15
+      object ActPwdwritendefInputs: TScrollBox
+        Left = 0
+        Top = 0
+        Width = 1072
+        Height = 438
+        Align = alClient
+        BorderStyle = bsNone
+        TabOrder = 0
+        object ActPwdwritendefType2modelLabel: TLabel
+          Left = 16
+          Top = 8
+          Width = 940
+          Height = 18
+          Caption = 'Explicit password-capable Type 2 model'
+        end
+        object ActPwdwritendefType2modelBox: TComboBox
+          Left = 16
+          Top = 30
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 0
+          Style = csDropDownList
+          ItemIndex = -1
+          Items.Strings = (
+            'Ultralight (no PWD_AUTH)'
+            'EV1 48'
+            'EV1 128'
+            'NTAG213'
+            'NTAG215'
+            'NTAG216'
+            'NTAG210'
+            'NTAG212'
+          )
+        end
+        object ActPwdwritendefNdefLabel: TLabel
+          Left = 16
+          Top = 70
+          Width = 940
+          Height = 18
+          Caption = 'Complete NDEF bytes (hex; empty clears existing TLV)'
+        end
+        object ActPwdwritendefNdefEdit: TEdit
+          Left = 16
+          Top = 92
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 1
+          MaxLength = 262144
+        end
+        object ActPwdwritendefPasswordLabel: TLabel
+          Left = 16
+          Top = 132
+          Width = 940
+          Height = 18
+          Caption = 'Current four-byte password (hex)'
+        end
+        object ActPwdwritendefPasswordEdit: TEdit
+          Left = 16
+          Top = 154
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 2
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+        object ActPwdwritendefPackLabel: TLabel
+          Left = 16
+          Top = 194
+          Width = 940
+          Height = 18
+          Caption = 'Expected two-byte PACK (hex)'
+        end
+        object ActPwdwritendefPackEdit: TEdit
+          Left = 16
+          Top = 216
+          Width = 940
+          Height = 25
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 3
+          MaxLength = 128
+          PasswordChar = '*'
+        end
+      end
+    end
   end
   object ExportDialog: TSaveDialog
     Options = [ofOverwritePrompt, ofPathMustExist]
