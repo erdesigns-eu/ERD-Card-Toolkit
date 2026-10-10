@@ -757,15 +757,21 @@ begin
   Check(D.Success and (H.Acquires = 1) and (H.Releases = 1),'Readable snapshot runs once');
   Check(Pos('CONTRACTS (1 decoded)',string(D.Text)) > 0,'Empty contracts omitted from summary');
   Check(Pos('Purchase price: EUR 62.00',string(D.Text)) > 0,'Euro cents formatted as price');
-  Check(Pos('Purchase date: 1997-01-02',string(D.Text)) > 0,'Purchase date formatted');
-  Check(Pos('unidentified (tariff 0x000F)',string(D.Text)) > 0,'Unknown product keeps tariff');
-  Check(Pos('unit code 3; unit not mapped',string(D.Text)) > 0,'Unknown duration not guessed');
-  Check(Pos('Associated counter: 0 (counter-use code 0)',string(D.Text)) > 0,'Present zero counter shown separately');
+  Check(Pos('Valid from: 1997-01-02 [observed]',string(D.Text)) > 0,'Start date formatted with confidence');
+  Check(Pos('Valid until: 2041-',string(D.Text)) > 0,'Inverted end date decoded');
+  Check(Pos('Kind: period pass [observed]',string(D.Text)) > 0,'Counter-use 0 is not a trip product');
+  Check(Pos('Product: unknown (tariff 0x000F)',string(D.Text)) > 0,'Unknown product keeps tariff');
+  Check(Pos('Duration: 1 month (unit code 3) [observed]',string(D.Text)) > 0,'Observed duration unit labelled');
+  Check(Pos('Associated counter: 0 (counter-use code 0, file 2069)',string(D.Text)) > 0,'Present zero counter shown with source file');
+  Check((Pos('00082B0008',string(D.Text)) = 0) and ((Pos('Record 1: [masked]',string(D.Text)) > 0) = (RawMode = 1)),
+    'Personal raw records masked by default');
   Check(Pos('Remaining trips:',string(D.Text)) = 0,'Unknown product does not imply trip entitlement');
   Check(Pos('2 records acquired, 1 zero-filled',string(D.Text)) > 0,'Empty file records counted');
   Check(Pos('Holder (2002): not present',string(D.Text)) > 0,'Missing file explained');
   Check((Pos(BytesToHex(Contract),string(D.Text)) > 0) = (RawMode = 1),'Raw hexadecimal display follows selector');
-  Check((Length(D.Artifacts) = 4) and BytesEqual(D.Artifacts[1].Data,Contract),'All bytes exported in either display mode');
+  Check((Length(D.Artifacts) = 5) and BytesEqual(D.Artifacts[1].Data,Contract),'All bytes exported in either display mode');
+  Check((D.Artifacts[4].Name = 'mobib-report.json') and (Length(D.Artifacts[4].Data) > 40) and
+    BytesEqual(Copy(D.Artifacts[4].Data,0,9),HexToBytes('7B22666F726D617422')),'JSON report exported');
   Check((S.Position = Length(S.Steps)) and (S.Begins = 1) and (S.Ends = 1),'No validation replay or extra transaction');
  end;
 end;
@@ -787,7 +793,22 @@ begin
  Check(D.Success and (S.Position = 11) and (S.Begins = 1) and (S.Ends = 1),'Parsed MOBIB demo executes complete file plan');
  Check((Pos('Data profile: MOBIB 056/001 (matched)',string(D.Text)) > 0) and
    (Pos('Country: Belgium (056)',string(D.Text)) > 0) and (Pos('Network: 001',string(D.Text)) > 0),'Parsed MOBIB demo displays network and match state');
- Check((Length(D.Artifacts) = 1) and (D.Artifacts[0].Name = 'file-2001-record-1.bin'),'Parsed view retains original export');
+ Check((Length(D.Artifacts) = 2) and (D.Artifacts[0].Name = 'file-2001-record-1.bin') and
+   (D.Artifacts[1].Name = 'mobib-report.json'),'Parsed view retains original export');
+ S := TScript.Create; T := S; H := THardware.Create; Hardware := H; H.Transport := T;
+ S.Add('00A4040008315449432E49434100','6A82'); S.Add('94A4000002200000','9000');
+ S.Add('94A4000002200100','6F198517070402300100000000000000000020010000000000200100009000');
+ S.Add('94B2010430','0C'+StringOfChar('5',94)+'9000');
+ R := Request(dfMobib,'snapshot'); Put(R,dfMobib,'layout','1'); Put(R,dfMobib,'files','2001');
+ Put(R,dfMobib,'raw','1'); Put(R,dfMobib,'plan','1'); Put(R,dfMobib,'recordsize','1');
+ Put(R,dfMobib,'personal','1'); Put(R,dfMobib,'operator','2');
+ CreateCardFamilyOperations(dfMobib,Hardware).Run(R,D);
+ Check(D.Success and (S.Position = 4) and (S.Begins = 1) and (S.Ends = 1),'MOBIB plan with application select and card record size');
+ Check((Pos('application not selected (SW 6A82)',string(D.Text)) > 0) and
+   (Pos('Operator context: De Lijn',string(D.Text)) > 0) and
+   (Pos('Record 1: 0C'+StringOfChar('5',94),string(D.Text)) > 0) and
+   (Pos('Environment (2001): linear, SFI 07, 1 records of 48 bytes',string(D.Text)) > 0),'MOBIB plan options displayed');
+ Check((Length(D.Artifacts) = 3) and (D.Artifacts[2].Name = 'mobib-report.json'),'MOBIB plan exports');
 end;
 
 procedure TestAdditionalFamilies;

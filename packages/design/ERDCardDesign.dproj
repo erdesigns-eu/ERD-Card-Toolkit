@@ -153,9 +153,14 @@
         <DCCReference Include="..\..\src\input\ERD.Card.HID.Monitor.pas"/>
         <DCCReference Include="..\..\src\pcsc\ERD.Card.PCSC.Monitor.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Events.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.EN1545.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Rules.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Subscriptions.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Data.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Brussels.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Lookup.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Calypso.Networks.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Report.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Calypso.SAM.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Calypso.pas"/>
         <DCCReference Include="..\..\src\sim\ERD.Card.SIM.Data.pas"/>

@@ -223,6 +223,34 @@ object MobibDemoForm: TMobibDemoForm
           Height = 13
           Caption = 'Include raw hexadecimal records in output'
         end
+        object ActSnapshotOperatorLabel: TLabel
+          Left = 16
+          Top = 380
+          Width = 280
+          Height = 13
+          Caption = 'Operator context (the card does not name the operator)'
+        end
+        object ActSnapshotPersonalLabel: TLabel
+          Left = 16
+          Top = 442
+          Width = 350
+          Height = 13
+          Caption = 'Personal fields (card number, birth date, postal code, holder files)'
+        end
+        object ActSnapshotRecordsizeLabel: TLabel
+          Left = 16
+          Top = 504
+          Width = 65
+          Height = 13
+          Caption = 'Record size'
+        end
+        object ActSnapshotPlanLabel: TLabel
+          Left = 16
+          Top = 566
+          Width = 60
+          Height = 13
+          Caption = 'Read plan'
+        end
         object ActSnapshotDialectBox: TComboBox
           Left = 16
           Top = 30
@@ -292,6 +320,66 @@ object MobibDemoForm: TMobibDemoForm
           Items.Strings = (
             'Summary only'
             'Summary and raw records')
+        end
+        object ActSnapshotOperatorBox: TComboBox
+          Left = 16
+          Top = 402
+          Width = 940
+          Height = 21
+          Style = csDropDownList
+          Anchors = [akLeft, akTop, akRight]
+          ItemIndex = 0
+          TabOrder = 6
+          Text = 'Unspecified'
+          Items.Strings = (
+            'Unspecified'
+            'STIB-MIVB'
+            'De Lijn'
+            'TEC'
+            'SNCB-NMBS')
+        end
+        object ActSnapshotPersonalBox: TComboBox
+          Left = 16
+          Top = 464
+          Width = 940
+          Height = 21
+          Style = csDropDownList
+          Anchors = [akLeft, akTop, akRight]
+          ItemIndex = 0
+          TabOrder = 7
+          Text = 'Masked'
+          Items.Strings = (
+            'Masked'
+            'Shown')
+        end
+        object ActSnapshotRecordsizeBox: TComboBox
+          Left = 16
+          Top = 526
+          Width = 940
+          Height = 21
+          Style = csDropDownList
+          Anchors = [akLeft, akTop, akRight]
+          ItemIndex = 0
+          TabOrder = 8
+          Text = 'Use initial expected bytes'
+          Items.Strings = (
+            'Use initial expected bytes'
+            'Use size reported by card')
+        end
+        object ActSnapshotPlanBox: TComboBox
+          Left = 16
+          Top = 588
+          Width = 940
+          Height = 21
+          Style = csDropDownList
+          Anchors = [akLeft, akTop, akRight]
+          ItemIndex = 0
+          TabOrder = 9
+          Text = 'Files listed'
+          Items.Strings = (
+            'Files listed'
+            'Files listed after selecting application 1TIC.ICA'
+            'MOBIB inventory plan after selecting application 1TIC.ICA')
         end
       end
     end

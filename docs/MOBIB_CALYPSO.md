@@ -7,6 +7,17 @@
 SAM. These units are in `ERDCardContactless` and the standalone design package.
 `MobibDemo` has its own DFM and its own PC/SC reader selection.
 
+Newer units extend this:
+
+- `ERD.Card.EN1545` is a table-driven EN1545 bit decoder. Each field reports
+  its offset, width, raw value, decoded value and confidence.
+- `ERD.Card.MOBIB.Lookup` holds operator contexts and stop and tariff names.
+  `ERD.Card.MOBIB.Brussels` contains the bundled Brussels stop tables.
+- `ERD.Card.MOBIB.Report` builds a result tree, text and JSON output, and
+  masks personal fields by default.
+- `ERD.Card.Calypso.Networks` recommends and applies EN1545 profiles for other
+  Calypso networks.
+
 A contactless smart-card reader must support ISO 7816 APDUs. A reader that only
 passes a card number through as keyboard input cannot read these files.
 
@@ -32,6 +43,43 @@ CLA `00`/SELECT P1 `09`. Record Le is 29 bytes by default; one `6Cxx` correction
 and bounded `61xx` response chaining are supported. There is no dialect
 fallback.
 
+### Application selection, file information and read plans
+
+- **Application select.** `SelectApplication('1TIC.ICA')`, or setting
+  `ApplicationName` before `ReadMobibPlan`, sends an ISO SELECT by DF name
+  (`00 A4 04 00`). `TCalypsoApplicationInfo` holds:
+  - the 8-byte serial number and the startup information;
+  - the product (revision 2, revision 3, Light or Basic);
+  - PIN, stored-value, extended-mode, PKI and HCE flags;
+  - the session buffer size;
+  - a **recommended** dialect. The reader never applies it; you set `Dialect`
+    yourself.
+
+  A missing application (`6A82`/`6A81`) is recorded in `StatusWord` and the
+  read continues. Any other unexpected status raises an error.
+- **File information.** Every successful SELECT response is decoded into
+  `TCalypsoFile.Info`. That covers the tag `85` header: SFI, file kind,
+  linear/cyclic/counter structure, record size and count, access conditions,
+  key indexes, DF status and LID.
+- **Card record size.** `RecordSizeFromCard := True` (opt-in) reads each file
+  with the record size from its header and stops at the record count in the
+  header. Some revision-3 MOBIB cards use 48-byte records for `2001`, `2010`,
+  `2020` and `3F1C`, so a 29-byte read cuts them short. When the header is
+  missing, `RecordBytes` is used.
+- **Read plans.** `ReadMobibPlan` reads an explicit list of entries in one
+  transaction and secure session. Each entry is either a folder plus logical
+  ID (`FileRef`) or a folder plus SFI (`SfiRef`). The folder can be ticketing
+  `2000`, the master file `3F00` (`0002` ICC, `0003` ID), or another folder
+  under `3F00`, such as `1000` for the purse logs `1014`/`1015`. A folder that
+  cannot be selected is recorded as that entry's status. SFI reads use
+  READ RECORD with P2 = `SFI<<3 | 4` and do not send a SELECT.
+- **Built-in plans.** `MobibInventoryPlan` is the bounded list of known
+  ticketing, ICC, ID and purse-log files. `SfiSweepPlan(folder, 1, 30)` is an
+  explicit SFI sweep. Neither plan guesses files outside its list.
+
+Folder selection through the master file has been tested against APDU
+transcripts only. It has not been checked against a physical MOBIB card.
+
 ## Parsed data
 
 In MobibDemo, choose **Legacy MOBIB 056/001** for the published legacy layout.
@@ -52,6 +100,34 @@ The current typed results contain:
 - The known purchase-date field per contract and the contract-list count.
 - Separate big-endian 24-bit counters. They are not summed or automatically
   interpreted as remaining trips; the contract association can differ.
+
+Fields added by the EN1545-based decoder:
+
+- **Environment.** The version selects the layout. The decoder reads the card
+  expiry date, the 19-digit card number, the birth date and the postal code.
+  A card counts as personal when one of these personal fields is set.
+  - The card number is shown in the grouping printed on De Lijn cards: six
+    digits, then `4 4 4 1` (`123456 / 7890 1234 5678 9`). On the checked card
+    the last digit was a valid Luhn check digit.
+  - On one De Lijn card the printed "valid until" date was **one day before**
+    the stored expiry date. The stored date is therefore treated as the first
+    day the card is no longer valid. The report shows both values, and labels
+    the printed date *observed*.
+- **Events.** Validation events (`2010`) and special events (`2040`) use the
+  layout for versions 0–2, or the bitmap layout for version 3 and later. The
+  bitmap layout adds passenger count, route number, bus or station location
+  (zone / sub-zone / station), serial number and transfer number. Unknown
+  versions are counted in `UnsupportedEventCount` and stay raw.
+- **Counters.** When `2069` is missing, the counters come from `202A`–`202D`.
+  `SourceFileId` records which file each counter came from.
+- **Holder.** `3F1C` accepts 29- and 48-byte records.
+- **Other files:**
+  - ICC (`3F00/0002`): chip serial number, manufacturer, manufacture country
+    and date;
+  - card purchase date from the purse load log;
+  - the contract list (`2050`) as a count plus a candidate split into 28-bit
+    entries. That split is marked *observed* because no layout has been
+    published.
 
 `TMobibData.Raw` remains an independent copy of **all** acquired data, including
 unknown fields. Unknown networks do not receive an invented name, product,
@@ -171,6 +247,27 @@ All original bytes remain independently available in `Raw`.
 | Price | 16 bits from bit 103 | 16 bits from bit 89 |
 | Purchase date | 14 bits from bit 41 | optional, presence-bitmap bit 2 |
 | Duration | not published | optional, bitmap bit 3: unit code 2 bits + value 8 bits |
+| End date | not published | bits 6–19, bit-inverted 14-bit date (*observed*) |
+
+On real version-4 contracts, the inverted end date always equalled the stored
+"purchase date" plus the recorded duration. So when an end date is present,
+the "purchase date" works as a **validity start** (`StartDate`), and duration
+unit code `3` maps to **months**. Both facts are marked *observed*: they come
+from card data, not from a published layout. The holder of the De Lijn card
+behind these observations confirmed that it carries a monthly subscription.
+Whether the stored end date is the last valid day or the first invalid day
+(as for the card expiry) is not yet confirmed. `StatusAt` treats it as the
+last valid day. Counter-use code `0` with an end
+date is reported as a period pass (`mskPeriod`), not as a trip product with
+zero trips.
+
+`TMobibSubscriptionCodec.StatusAt(contract, Now)` returns active, expired,
+future or unknown, using only the start and end dates stored on the card and
+an explicit `Now` that you supply. It deliberately skips `TMobibRuleEngine`,
+because that engine needs an operator profile, and no profile is published
+for this check. `DuplicateOf` flags a contract record that is byte-identical
+to an earlier one, so it isn't counted twice. `CounterSourceFileId` names the
+counter file that was used.
 
 The five-bit bitmap at bit 111 uses bit 0 as the first optional field; the
 unknown optional fields are also skipped correctly. Unknown contract versions
@@ -209,6 +306,101 @@ assuming they represent remaining trips. Duration unit codes are retained until
 an operator profile supplies their meaning. A purchase date does not by itself
 establish activation or expiry; the offline rule page accepts the evidence and
 operator rules needed to assess those separately.
+
+Since the report unit was added, the demo summary comes from
+`TMobibReport` (see below):
+
+- unknown tariffs read `unknown (tariff 0x000F)`;
+- version-4 contracts show `Valid from`, `Valid until`, a `Kind`, and a status
+  on the current date;
+- observed fields carry an `[observed]` label;
+- the duration reads, for example, `1 month (unit code 3) [observed]`.
+
+Additional snapshot options:
+
+- **Operator context:** Unspecified, STIB-MIVB, De Lijn, TEC or SNCB-NMBS.
+- **Personal fields:** Masked (default) or Shown.
+- **Record size:** the initial expected bytes, or the size the card reports.
+- **Read plan:**
+  - the listed files;
+  - the listed files after selecting `1TIC.ICA`;
+  - the MOBIB inventory plan after selecting `1TIC.ICA`.
+
+With masking on, the raw lines of `2001`, `2002`, `3F1C` and `3F00/0003` read
+`[masked]`. The exported `.bin` artifacts still contain every acquired byte;
+handle them as personal data. A `mobib-report.json` artifact holds the
+structured report, masked in the same way as the text.
+
+## Operator context and De Lijn
+
+MOBIB network `056/001` is shared by STIB-MIVB, De Lijn, TEC and SNCB-NMBS. The
+card does not record which operator sold a contract, so you pass a context to
+`TMobibLookup`; nothing is inferred from the card.
+
+- **STIB-MIVB:** the 69 metro stations and the bus stops from MOBIB-Extractor
+  (2009) are bundled in `ERD.Card.MOBIB.Brussels`. That data is under the project's
+  permissive zlib-style licence; see `docs/third_party/MOBIB-Extractor-LICENSE.txt`. The
+  generator dropped 442 bus rows whose stop code is above 4095, because the
+  12-bit event field can never contain them. Stops and line changes after 2009
+  are missing.
+- **De Lijn, TEC, SNCB-NMBS:** none of them publishes a stop-code or
+  tariff-code table for MOBIB, and the library doesn't invent one. The one
+  exception: in the De Lijn context, tariff `0x000F` is named "De Lijn monthly
+  subscription (confirmed on one card)", because the holder of a De Lijn card
+  confirmed it. The product variant (for example Buzzy Pazz or Omnipas) is not
+  stored in any known field. All other De Lijn tariff codes read `unknown`.
+- **Your own tables:** use `TMobibLookup.LoadCsv` to load stop or tariff
+  names, with row kinds `station`, `stop` and `tariff`. Any unknown code reads
+  `unknown (code)`.
+
+## Other Calypso networks
+
+`TCalypsoNetworks.Recommend` reads the environment's country and network
+codes and **recommends** one of these profiles. It never applies one:
+
+- Intercode (France `250`, including Navigo);
+- Lisboa Viva (Portugal);
+- Rav-Kav (Israel `376`);
+- OPUS (Canada `124`);
+- Venezia Unica and Pisa (Italy `380`);
+- MOBIB.
+
+`Decode(snapshot, profile)` applies the profile you chose and returns
+EN1545 field views for the environment, contracts, events and counters.
+Intercode contract layouts are chosen from the contract list; unreferenced
+contracts stay raw. Unknown networks get a generic view with the header fields
+plus raw records. Every profile names its source and has
+`CheckedOnCard = False` until someone verifies it on a physical card. Station
+databases for these networks exist only as GPL-licensed Cardpeek data, so none
+are bundled.
+
+## Report, masking and JSON
+
+`TMobibReport.Build(data, contracts, lookup, options)` returns a flat,
+parent-first tree. Each node has a key, caption, value, confidence
+(`published`, `observed` or `unknown`) and a `Personal` flag. The sections are:
+
+- MOBIB CARD;
+- CARD OVERVIEW (application, features, expiry, card number, card type,
+  active contract count);
+- HOLDER;
+- CONTRACTS (duplicates included in the count);
+- VALIDATIONS;
+- SPECIAL EVENTS;
+- COUNTERS;
+- FILE INFORMATION.
+
+`TMobibReportOptions` has these settings:
+
+- `ShowPersonal` defaults to false. Personal values (card number, birth date,
+  postal code, holder fields and application serial number) are then replaced
+  by `[masked]`.
+- `Context` sets the operator context.
+- `HasNow`/`Now` set the date for contract status.
+
+`ToText` produces the indented summary and `ToJson` produces ASCII JSON
+(`erd-card-mobib-report`, version 1). `IsPersonalFile` and `FileLabel` help a
+UI mask or label raw files the same way.
 
 ## Native operator rules: activation, validity, and zones
 
@@ -335,8 +527,30 @@ The implementation was written independently based on public protocol facts:
 [Metrodroid tariff codes](https://github.com/metrodroid/metrodroid/blob/master/src/commonMain/kotlin/au/id/micolous/metrodroid/transit/mobib/MobibLookup.kt),
 [Keyple SAM protocol](https://github.com/eclipse-keyple/keyple-card-calypso-crypto-legacysam-java-lib),
 [Keyple secure-session framing](https://github.com/eclipse-keyple/keyple-card-calypso-java-lib),
-and [Keyple SELECT forms](https://github.com/eclipse-keyple/keyple-card-calypso-java-lib/blob/main/src/main/java/org/eclipse/keyple/card/calypso/CommandSelectFile.java).
-No implementation code from these projects has been copied.
+and [Keyple SELECT forms](https://github.com/eclipse-keyple/keyple-card-calypso-java-lib/blob/main/src/main/java/org/eclipse/keyple/card/calypso/CommandSelectFile.java),
+the Keyple startup-information and FCI decoding,
+[Metrodroid MOBIB environment and event layouts](https://github.com/metrodroid/metrodroid/blob/master/src/commonMain/kotlin/au/id/micolous/metrodroid/transit/mobib/MobibTransitData.kt),
+and the Metrodroid Intercode, Lisboa Viva, Rav-Kav, OPUS and Venezia layouts.
+No implementation code from these projects has been copied. Only facts such as
+field widths and orders are used. The single exception is the bundled Brussels
+stop data from MOBIB-Extractor, which is permissively licensed data with its licence
+notice included.
+
+`MobibExtended.Tests` also checks, with the holder's permission, eight real
+De Lijn contract rows, four special-event rows and the contract list. Those
+rows contain no name, birth date, postal code or card number, and the card's
+environment record is not included. The tests check monthly start and end
+dates, the duplicate record, version-3 special events and status on a
+supplied date.
+
+`CalypsoReader.Tests` uses exact APDU transcripts to cover application
+selection, FCI and startup decoding, file information, record size from the
+card, SFI reads, folder-qualified plans and plan validation. `En1545.Tests`,
+`MobibExtended.Tests`, `MobibLookup.Tests`, `CalypsoNetworks.Tests` and
+`MobibReport.Tests` use synthetic records that copy the structure of real
+cards, never their personal values. They cover version-3 environments,
+version-4 contracts with inverted end dates, bitmap events, 48-byte records,
+counter fallback, masking, JSON and the network profiles.
 
 Tests use synthetic data and exact APDU transcripts for reads, caller file plans,
 errors, bounds, and session lifecycle. The codec has independent bit vectors,
