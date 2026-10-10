@@ -55,7 +55,11 @@ type
   procedure WriteBlock(const ABlock:Byte;const AData:TBytes);
  end;
 implementation
-uses ERD.Card.Bytes,ERD.Card.APDU;
+uses
+{$IFNDEF FPC}
+ Winapi.Windows,
+{$ENDIF}
+ ERD.Card.Bytes,ERD.Card.APDU;
 const
  CommandReg=$6331;IrqReg=$6334;ErrorReg=$6336;FifoReg=$6339;LevelReg=$633A;
  ControlReg=$633C;FramingReg=$633D;ManualReg=$630D;TxModeReg=$6302;RxModeReg=$6303;
