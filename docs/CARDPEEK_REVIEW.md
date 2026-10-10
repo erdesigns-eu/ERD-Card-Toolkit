@@ -12,7 +12,7 @@ were executed or added here.
 | --- | --- | --- |
 | OpenPGP card reader | [`openpgp.lua`](https://github.com/L1L1/cardpeek/blob/de8cee209b870f3d7aa1c6bd55e84738765dc1e6/dot_cardpeek_dir/scripts/openpgp.lua): SELECT, GET DATA, application identity, cardholder data, algorithm attributes, fingerprints, password status, signature counter and certificate | No OpenPGP component. Add `TOpenPgpCardReader` and typed snapshot/codecs first. Then explicit PIN operations and documented writable data objects. Signing, key generation/import and deletion are separate operations requiring a fuller current specification; CardPeek's beta reader does not establish support for them. |
 | Tachograph driver cards | [`tachograph.lua`](https://github.com/L1L1/cardpeek/blob/de8cee209b870f3d7aa1c6bd55e84738765dc1e6/dot_cardpeek_dir/scripts/tachograph.lua): file plans, activity/vehicle/place records, card signatures and binary `.ddd` export | No tachograph component. Add bounded file reading, version-specific codecs and compliant export. The older script is not evidence of complete second-generation/Gen2v2 support; define and validate those formats separately. |
-| EMV semantic decoders | [`emv.lua`](https://github.com/L1L1/cardpeek/blob/de8cee209b870f3d7aa1c6bd55e84738765dc1e6/dot_cardpeek_dir/scripts/emv.lua): CVM lists and AIP/AUC/IAC/TVR bit explanations, currency and country labels | We already read AFL records, decode DOLs and read/parse advertised transaction logs. Add typed offline explanations for 8E, 82, 9F07, 95 and 9F0D/0E/0F, plus source-versioned ISO country/currency metadata. Return unknown/reserved bits, not guessed meanings. This is decoding, not running a payment kernel. |
+| EMV semantic decoders | [`emv.lua`](https://github.com/L1L1/cardpeek/blob/de8cee209b870f3d7aa1c6bd55e84738765dc1e6/dot_cardpeek_dir/scripts/emv.lua): CVM lists and AIP/AUC/IAC/TVR bit explanations, currency and country labels | We already read AFL records, decode DOLs and read/parse advertised transaction logs. Book 3 4.3/4.4 typed offline explanations are now implemented for 8E, 82, 9F07, 95 and 9F0D/0E/0F, plus source-versioned ISO country/currency metadata. Return unknown/reserved bits, not guessed meanings. This is decoding, not running a payment kernel. |
 | APDU recording and replay | [`smartcard.c`](https://github.com/L1L1/cardpeek/blob/de8cee209b870f3d7aa1c6bd55e84738765dc1e6/smartcard.c), [`replay.c`](https://github.com/L1L1/cardpeek/blob/de8cee209b870f3d7aa1c6bd55e84738765dc1e6/replay.c) and [`drivers/replay_driver.c`](https://github.com/L1L1/cardpeek/blob/de8cee209b870f3d7aa1c6bd55e84738765dc1e6/drivers/replay_driver.c) | Our tests have mock transports, but there is no reusable persisted recording/replay component. Add decorators around `ICardTransport`, explicit opt-in capture/export, deterministic strict command matching and a synthetic demo. Keep captured personal data, PINs and secure-session material out of default diagnostic output. |
 | Other Calypso networks | [`calypso/`](https://github.com/L1L1/cardpeek/tree/de8cee209b870f3d7aa1c6bd55e84738765dc1e6/dot_cardpeek_dir/scripts/calypso): Paris/Navigo, Lisbon/Viva, Israel/Rav-Kav and other layouts | The generic Calypso reader and provisioned-SAM sessions already exist; typed interpretation is MOBIB-specific. Add a versioned network-profile abstraction and one explicitly supported layout at a time. Historical route names and CardPeek layouts are not current operator activation/fare rules and supply no operator keys. |
 | French Vitale 2 | [`vitale_2.lua`](https://github.com/L1L1/cardpeek/blob/de8cee209b870f3d7aa1c6bd55e84738765dc1e6/dot_cardpeek_dir/scripts/vitale_2.lua): application selection, file reading and beneficiary TLV fields | No French health-card profile. Add a dedicated read-only profile with original bytes and documented field decoding. Reading a certificate/signature is distinct from verifying its trust chain. |
@@ -33,7 +33,7 @@ were executed or added here.
 
 ## Recommended batches
 
-1. **EMV semantic codecs + APDU recording/replay.** Both are immediately useful
+1. **APDU recording/replay (deferred).** EMV semantic codecs are now implemented. Recording/replay is useful
    in existing applications and provide reproducible input for later card-family
    development. Include independent DFM demos and synthetic fixtures.
 2. **OpenPGP public reading + explicit data-object writes/PIN support.** A new
@@ -44,8 +44,8 @@ were executed or added here.
    their own test vectors instead of being added as unverified labels.
 4. **Vitale/Thai eID**, according to the actual cards needed by applications.
 
-Separately, the original CardStudio JavaCard functionality still warrants a
-**GlobalPlatform/CPLC + CAP loading/installing** batch. This is distinct from the
+The original CardStudio **GlobalPlatform/CPLC + CAP loading/installing** batch is
+now implemented within the explicit profiles in [GLOBALPLATFORM.md](GLOBALPLATFORM.md). This is distinct from the
 CardPeek findings. ATR changes must target documented programmable-card commands;
 an ATR is supplied by the chip/firmware and cannot generally be changed by a
 standard PC/SC command.

@@ -31,6 +31,7 @@ def main():
                '-Fu' + str(REPO / 'src/core'), '-Fu' + str(REPO / 'src/crypto'), '-Fu' + str(REPO / 'src/pcsc'),
                '-Fu' + str(REPO / 'src/eid'),
                '-Fu' + str(REPO / 'src/emv'),
+               '-Fu' + str(REPO / 'src/globalplatform'),
                '-Fu' + str(REPO / 'src/magstripe'),
                '-Fu' + str(REPO / 'src/memory'),
                '-Fu' + str(REPO / 'src/sim'),
@@ -39,6 +40,7 @@ def main():
                '-Fu' + str(REPO / 'src/contactless'),
                '-Fu' + str(REPO / 'src/design'),
                '-Fu' + str(REPO / 'examples/vcl/shared'),
+               '-Fu' + str(REPO / 'examples/vcl/globalplatform'),
                '-FU' + str(build), '-FE' + str(build)]
     if args.rtl_dir is not None:
         command.extend(['-n', '-Fu' + str(args.rtl_dir.resolve())])
@@ -52,7 +54,7 @@ def main():
                 command.append('-Fl' + str(crt_path.parent))
     for project in ('tests/transport/CardEvents.Tests.dpr', 'tests/sim/SimCard.Tests.dpr', 'examples/sim/InspectSim.dpr', 'examples/readers/InspectTwn4.dpr', 'tests/readers/Twn4.Tests.dpr', 'tests/input/RfidInput.Tests.dpr', 'tests/input/Hid.Tests.dpr', 'tests/memory/Sle4404.Tests.dpr', 'tests/memory/MemoryCounter.Tests.dpr', 'tests/memory/MemoryCard.Tests.dpr', 'examples/memory/InspectMemoryCard.dpr', 'examples/memory/InspectSle4404.dpr',
                     'tests/core/CardCore.Tests.dpr', 'tests/core/ProtocolCore.Tests.dpr',
-                    'tests/core/CardCatalogs.Tests.dpr', 'tests/core/LegacyCatalogs.Tests.dpr', 'tests/emv/EmvCalculator.Tests.dpr',
+                    'tests/core/CardCatalogs.Tests.dpr', 'tests/core/LegacyCatalogs.Tests.dpr', 'tests/emv/EmvCalculator.Tests.dpr', 'tests/emv/EmvSemantics.Tests.dpr', 'tests/globalplatform/GlobalPlatform.Tests.dpr', 'tests/globalplatform/GpDemoOperations.Tests.dpr',
                     'tests/demos/Controller.Tests.dpr', 'tests/demos/DemoJob.Tests.dpr', 'tests/demos/FamilyOperations.Tests.dpr',
                     'tests/crypto/EacCrypto.Tests.dpr', 'tests/eid/IcaoDocument.Tests.dpr',
                     'tests/contactless/DesfireManagement.Tests.dpr',
@@ -85,7 +87,7 @@ def main():
     subprocess.run(command + ['-Fu' + str(REPO / 'tests/design'),
                               'tests/design/Registration.Tests.dpr'], cwd=REPO, check=True)
     suffix = '.exe' if os.name == 'nt' else ''
-    for project in ('CardEvents.Tests', 'SimCard.Tests', 'Twn4.Tests', 'RfidInput.Tests', 'Hid.Tests', 'Sle4404.Tests', 'MemoryCounter.Tests', 'MemoryCard.Tests', 'Controller.Tests', 'DemoJob.Tests', 'FamilyOperations.Tests', 'Registration.Tests', 'EacCrypto.Tests', 'IcaoDocument.Tests', 'DesfireManagement.Tests', 'CardCore.Tests', 'ProtocolCore.Tests', 'CardCatalogs.Tests', 'LegacyCatalogs.Tests', 'EmvCalculator.Tests', 'CardCrypto.Tests', 'LegacyMifare.Tests', 'Desfire.Tests', 'DesfireSession.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'MobibCodec.Tests', 'Calypso.Tests', 'CalypsoSam.Tests', 'MobibSubscriptions.Tests', 'MobibRules.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Type2Felica.Tests', 'Topaz.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'Iso15693Type5.Tests', 'Iso15693Profiles.Tests', 'Iso15693Management.Tests', 'MagStripe.Tests', 'Msr206.Tests', 'Msr2067HL.Tests'):
+    for project in ('CardEvents.Tests', 'SimCard.Tests', 'Twn4.Tests', 'RfidInput.Tests', 'Hid.Tests', 'Sle4404.Tests', 'MemoryCounter.Tests', 'MemoryCard.Tests', 'Controller.Tests', 'DemoJob.Tests', 'FamilyOperations.Tests', 'Registration.Tests', 'EacCrypto.Tests', 'IcaoDocument.Tests', 'DesfireManagement.Tests', 'CardCore.Tests', 'ProtocolCore.Tests', 'CardCatalogs.Tests', 'LegacyCatalogs.Tests', 'EmvCalculator.Tests', 'EmvSemantics.Tests', 'GlobalPlatform.Tests', 'GpDemoOperations.Tests', 'CardCrypto.Tests', 'LegacyMifare.Tests', 'Desfire.Tests', 'DesfireSession.Tests', 'CardTransport.Tests', 'BelgianEid.Tests', 'Icao.Tests', 'MobibCodec.Tests', 'Calypso.Tests', 'CalypsoSam.Tests', 'MobibSubscriptions.Tests', 'MobibRules.Tests', 'Emv.Tests', 'Contactless.Tests', 'RawUid.Tests', 'Type2Password.Tests', 'Type2Felica.Tests', 'Topaz.Tests', 'Ndef.Tests', 'Type4Ndef.Tests', 'Iso15693Type5.Tests', 'Iso15693Profiles.Tests', 'Iso15693Management.Tests', 'MagStripe.Tests', 'Msr206.Tests', 'Msr2067HL.Tests'):
         result = subprocess.run([str(build / (project + suffix))], cwd=REPO,
                                 capture_output=True, text=True)
         print(result.stdout, end='', flush=True)
@@ -184,12 +186,13 @@ def main():
                         'tests/crypto/native/bcrypt_stub.c', '-lcrypto', '-o',
                         str(crypto_build / 'libbcrypt.dll.so')], cwd=REPO, check=True)
         crypto_command = [arg for arg in command if not arg.startswith(('-FU', '-FE'))]
-        crypto_command.extend(['-dMSWINDOWS', '-Fl' + str(crypto_build),
+        crypto_command.extend(['-dMSWINDOWS', '-dCARDCRYPTO_ABI_TEST', '-Fl' + str(crypto_build),
                                '-FU' + str(crypto_build), '-FE' + str(crypto_build)])
         crypto_env = os.environ.copy()
         crypto_env['LD_LIBRARY_PATH'] = str(crypto_build) + os.pathsep + crypto_env.get('LD_LIBRARY_PATH', '')
         for project in ('tests/crypto/NativeCrypto.Tests.dpr', 'tests/crypto/CardCrypto.Tests.dpr',
                         'tests/emv/EmvCalculator.Tests.dpr',
+                        'tests/globalplatform/GlobalPlatform.Tests.dpr',
                         'tests/contactless/LegacyMifare.Tests.dpr', 'tests/contactless/Desfire.Tests.dpr', 'tests/contactless/DesfireSession.Tests.dpr',
                         'tests/contactless/DesfireManagement.Tests.dpr'):
             subprocess.run(crypto_command + [project], cwd=REPO, check=True)

@@ -16,7 +16,7 @@ where %CARD_COMPILER% >nul 2>&1
 if errorlevel 1 exit /b %errorlevel%
 where msbuild >nul 2>&1
 if errorlevel 1 exit /b %errorlevel%
-for %%P in (ERDCardCore ERDCardMagStripe ERDCardPCSC ERDCardEID ERDCardEMV ERDCardContactless ERDCardCryptoWindows ERDCardCryptoOpenSSL ERDCardMemory ERDCardSIM ERDCardInput ERDCardTWN4) do (
+for %%P in (ERDCardCore ERDCardMagStripe ERDCardPCSC ERDCardEID ERDCardEMV ERDCardGlobalPlatform ERDCardContactless ERDCardCryptoWindows ERDCardCryptoOpenSSL ERDCardMemory ERDCardSIM ERDCardInput ERDCardTWN4) do (
   call :build_runtime %%P
   if errorlevel 1 exit /b 1
 )

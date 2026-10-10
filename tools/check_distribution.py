@@ -263,7 +263,9 @@ def check_form(path):
         if event:
             handler = event.group(2)
             parameters = (r'Sender:\s*TObject;\s*var\s+Key:\s*Char'
-                          if event.group(1) == 'OnKeyPress' else r'Sender:\s*TObject')
+                          if event.group(1) == 'OnKeyPress' else
+                          r'Sender:\s*TObject;\s*var\s+CanClose:\s*Boolean'
+                          if event.group(1) == 'OnCloseQuery' else r'Sender:\s*TObject')
             signature = r'procedure\s+' + re.escape(handler) + r'\(' + parameters + r'\);'
             if not re.search(signature, pas, re.I):
                 errors.append(f'{path.name}: missing notify handler {handler}')

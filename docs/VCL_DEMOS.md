@@ -1,7 +1,7 @@
 # VCL read/write demos
 
-Twenty-eight applications demonstrate implemented APIs: SmartCardDemo,
-MagStripeDemo, twenty-four family projects and two independent offline-tool demos. Each application owns a direct TForm
+Thirty applications demonstrate implemented APIs: SmartCardDemo,
+MagStripeDemo, twenty-five family projects and three independent offline-tool demos. Each application owns a direct TForm
 class and its own designer-editable Main.dfm, including all action inputs and a
 reader dropdown where hardware is involved. EmvCalculatorDemo is fully offline;
 CardCatalogDemo uses native reader/card snapshots rather than card commands.
@@ -47,6 +47,8 @@ that byte-buffer wiping guarantee. Errors display their class, never backend tex
 
 | Project | Actual actions |
 | --- | --- |
+| `globalplatform/GlobalPlatformDemo.dproj` | Native reader/card events, explicit SCP02/SCP03 authentication, CPLC/registry and CAP/DAP load/install/delete/status/extradition, key management and RSA/AES token/receipt policies; snapshotted background worker |
+| `emvsemantics/EmvSemanticsDemo.dproj` | Offline AIP/AUC/TVR/IAC/CVM List with explicit Book 3 4.3/4.4; no reader required |
 | `emvcalculator/EmvCalculatorDemo.dproj` | All offline key/MAC/AC/ARPC/script/PIN calculations; explicit CVN transaction inputs and verification |
 | `cardcatalog/CardCatalogDemo.dproj` | Filterable complete valid ATR/tag/path/APDU/AID inventories, offline lookup, native reader/card events and offered ATR snapshot |
 | `readertools/ReaderToolsDemo.dproj` | Offline command/response APDU decode/encode, validated ATR/protocol/catalog hints, decoded BER-TLV tree/roundtrip, EMV tag metadata, NDEF roundtrip; PC/SC reader list and connected ATR/protocol |

@@ -14,7 +14,7 @@ uses
 {$ENDIF}
 
 type
-  /// <summary>Optional SHA-1 capability for explicitly specified legacy key derivation.</summary>
+  /// <summary>Optional SHA-1 capability for explicitly selected legacy card derivation/signature profiles.</summary>
   /// <remarks>Inputs are borrowed; returns independent storage. SHA-1 is not a modern signature algorithm.</remarks>
   ICardHashProvider = interface
     ['{97107784-4432-4198-A9FC-A703E501679E}']

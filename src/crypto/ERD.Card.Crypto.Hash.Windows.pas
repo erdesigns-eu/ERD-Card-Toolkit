@@ -15,7 +15,7 @@ uses
   ERD.Card.Crypto, ERD.Card.Crypto.Hash;
 
 type
-  /// <summary>Windows CNG or Linux OpenSSL 3 SHA-1 backend, with per-call native handles.</summary>
+  /// <summary>Windows CNG SHA-1 backend, with per-call native handles.</summary>
   TCardWindowsHashProvider = class(TInterfacedObject, ICardHashProvider)
   public
     /// <summary>Hashes bounded borrowed bytes without retaining input or logging data.</summary>

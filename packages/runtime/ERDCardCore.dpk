@@ -10,6 +10,7 @@ requires
   rtl;
 
 contains
+  ERD.Card.Crypto.RSA in '..\..\src\core\ERD.Card.Crypto.RSA.pas',
   ERD.Card.APDU.Catalog in '..\..\src\core\ERD.Card.APDU.Catalog.pas',
   ERD.Card.ATR.Legacy in '..\..\src\core\ERD.Card.ATR.Legacy.pas',
   ERD.Card.Crypto.Hash in '..\..\src\core\ERD.Card.Crypto.Hash.pas',

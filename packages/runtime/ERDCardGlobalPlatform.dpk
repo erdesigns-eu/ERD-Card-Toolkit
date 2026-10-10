@@ -1,0 +1,19 @@
+﻿package ERDCardGlobalPlatform;
+
+{$R *.res}
+{$IMPLICITBUILD ON}
+
+{$DESCRIPTION 'ERD Card GlobalPlatform: secure channels, card management and JavaCard CAP loading'}
+{$RUNONLY}
+
+requires
+  rtl,
+  ERDCardCore;
+
+contains
+  ERD.Card.GlobalPlatform.Management in '..\..\src\globalplatform\ERD.Card.GlobalPlatform.Management.pas',
+  ERD.Card.GlobalPlatform.CAP in '..\..\src\globalplatform\ERD.Card.GlobalPlatform.CAP.pas',
+  ERD.Card.GlobalPlatform.SecureChannel in '..\..\src\globalplatform\ERD.Card.GlobalPlatform.SecureChannel.pas',
+  ERD.Card.GlobalPlatform in '..\..\src\globalplatform\ERD.Card.GlobalPlatform.pas';
+
+end.
