@@ -92,11 +92,11 @@ requires the full expected-after window; the demo does not calculate carry rules
 An application erase requires known user/memory-counter locations and a non-erased
 expected application area so the component can prove the supplied memory code.
 
-Worker preflight runs the actual component's argument validation against an
-acquisition-only rejecting transport/channel. It stops before BeginTransaction or
-Open acquires hardware, then repeats the validated action against the selected
-real adapter once. No simulated successful card response is supplied. Card-state
-checks necessarily happen after connection, under the component's transaction.
+The worker executes the actual component once against a deferred connection.
+Its argument validation runs before the component requests a transaction, channel
+open or cryptographic provider. The connection then delegates to the selected real
+adapter. Successful validation does not throw an exception or replay the action.
+Card-state checks happen after connection, under the component's transaction.
 Uncertain writes preserve any independently completed verification; a later
 cleanup failure does not turn them into a clean success.
 
@@ -390,8 +390,12 @@ sale price/date, optional duration and
 associated remaining-trip counters. The authenticated action requires explicit
 revision, eight-byte serial, key index, KIF/KVC and an exact existing-record count;
 it aborts on missing/restricted/chained responses rather than guessing a MAC
-transcript. It displays every actual raw record and exports it through its own
-save dialog. See [MOBIB_CALYPSO.md](MOBIB_CALYPSO.md) for the concrete files,
+transcript. The snapshot page defaults to a readable summary, with contracts,
+purchase amounts/dates, validations, counters and file availability. Its raw-output
+selector includes hexadecimal records when needed; every acquired record remains
+exportable through the demo's own save dialog in either display mode. Unknown
+products and duration units keep their codes without inferred entitlement or expiry.
+See [MOBIB_CALYPSO.md](MOBIB_CALYPSO.md) for the concrete files,
 status behavior, parsed fields, secure-provider integration and remaining
 issuer-specific schemas.
 
@@ -480,8 +484,8 @@ CardCatalogDemo owns a different designer form. Its reader combo is populated by
 native reader arrival/removal events; nothing is preselected. Card-state events
 retain independent ATR snapshots, and Inspect offered card ATR analyzes the latest
 snapshot without connecting or sending application APDUs. Inventory filtering
-works offline even without a PC/SC service. Original source rows and unverified
-issuer-context labels remain visible. Invalid historical ATR/status/AID entries
+works offline even without a PC/SC service. Card descriptions and issuer-context labels remain visible. The UI omits old
+application names, source filenames, commit identifiers and source-row numbers. Invalid historical ATR/status/AID entries
 have been removed. Lookup covers wildcard-index nested EMV paths as well as exact
 identifiers. Refresh explicitly restarts reader observation.
 
@@ -491,3 +495,12 @@ worker never accesses VCL controls. Close still waits for the active operation.
 EmvSemanticsDemo includes CVM Results (`9F34`) and terminal capabilities
 (`9F33`, `9F40`) alongside the existing bit fields and CVM List. Select the EMV
 version explicitly; reserved values remain visible in the offline output.
+
+## Request validation
+
+Family demos check missing reader selections, action choices and required
+acknowledgements on the UI thread, before creating a worker. The result area
+identifies the missing field. Reader discovery works independently of those fields.
+Card components still validate typed values and credentials before communication.
+The executor opens its connection at the first real I/O boundary and runs each
+action once; successful validation does not raise a control-flow exception.

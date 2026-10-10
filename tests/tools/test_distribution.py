@@ -302,6 +302,24 @@ class DistributionTests(unittest.TestCase):
             path.write_bytes(b'\xef\xbb\xbf\xff\r\n')
             self.assertTrue(any('invalid UTF-8' in e for e in distribution.check_delphi_text(path)))
 
+    def test_pascal_non_ascii_needs_explicit_utf8(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'Catalog.pas'
+            text = "unit Catalog;\r\nconst Issuer = 'Crédit';\r\n"
+            path.write_bytes(text.encode('utf-8'))
+            self.assertTrue(any('needs UTF-8' in e for e in distribution.check_pascal_encoding(path)))
+            for header in ('{$CODEPAGE UTF8}', '{$CODEPAGE 65001}'):
+                path.write_bytes((header + '\r\n' + text).encode('utf-8'))
+                self.assertEqual([], distribution.check_pascal_encoding(path))
+            path.write_bytes(b'\xef\xbb\xbf' + text.encode('utf-8'))
+            self.assertEqual([], distribution.check_pascal_encoding(path))
+            path.write_bytes((text + '{$CODEPAGE UTF8}\r\n').encode('utf-8'))
+            self.assertTrue(distribution.check_pascal_encoding(path))
+            path.write_bytes(text.encode('cp1252'))
+            self.assertTrue(any('invalid UTF-8' in e for e in distribution.check_pascal_encoding(path)))
+            path.write_bytes(b"unit Catalog;\r\nconst Issuer = 'ASCII';\r\n")
+            self.assertEqual([], distribution.check_pascal_encoding(path))
+
     def test_condition_reader_rejects_unhandled_syntax(self):
         self.assertTrue(distribution.evaluate_condition("'a'=='A' or ('b'!='B' and 'c'=='d')", {}))
         self.assertFalse(distribution.evaluate_condition("'a'=='A' and ('b'!='B' or 'c'=='d')", {}))

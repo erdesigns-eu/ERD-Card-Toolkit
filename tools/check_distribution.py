@@ -33,6 +33,22 @@ def check_delphi_text(path):
     return errors
 
 
+def check_pascal_encoding(path):
+    """Require explicit UTF-8 before non-ASCII Pascal text is compiled by Delphi."""
+    data = path.read_bytes()
+    try:
+        source = data.decode('utf-8-sig')
+    except UnicodeDecodeError:
+        return [f'{path.name}: invalid UTF-8 Pascal source']
+    first_non_ascii = next((i for i, c in enumerate(source) if ord(c) > 127), None)
+    if first_non_ascii is None or data.startswith(b'\xef\xbb\xbf'):
+        return []
+    directive = re.search(r'(?mi)^\s*\{\$CODEPAGE\s+(?:UTF8|65001)\s*\}', source)
+    if directive is None or directive.end() > first_non_ascii:
+        return [f'{path.name}: non-ASCII Pascal source needs UTF-8 BOM or early CODEPAGE UTF8']
+    return []
+
+
 def expand_properties(value, properties):
     """Expand previously evaluated MSBuild properties, with case-insensitive names."""
     def replace(match):
@@ -413,6 +429,9 @@ def main():
         errors.extend(check_form(path))
     for path in sorted((REPO / 'examples/vcl').rglob('*.dpr')):
         errors.extend(check_program(path))
+    for folder in ('src', 'examples'):
+        for path in sorted((REPO / folder).rglob('*.pas')):
+            errors.extend(check_pascal_encoding(path))
     for error in errors:
         print(error, file=sys.stderr)
     print(f'Distribution readers: {len(projects)} projects, {len(groups)} groups, {len(forms)} DFM forms; {len(errors)} findings.')

@@ -1,5 +1,7 @@
 unit SmartCardDemo.Main;
 
+{$CODEPAGE UTF8}
+
 interface
 
 uses

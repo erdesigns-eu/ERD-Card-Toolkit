@@ -190,6 +190,15 @@ type
     /// <param name="AResult">Owned data; WriteVerified survives a later cleanup exception.</param>
     procedure Run(const ARequest: TCardDemoRequest; var AResult: TCardDemoResult);
   end;
+  /// <summary>Optional caller-thread request metadata validation, without exceptions or hardware access.</summary>
+  ICardDemoRequestValidator = interface
+    ['{CD051735-E251-4A37-95A7-7B43B4FCE583}']
+    /// <summary>Checks action, reader selection, acknowledgement and catalog field structure.</summary>
+    /// <param name="ARequest">Borrowed request; do not retain buffers or open hardware.</param>
+    /// <param name="AError">Safe display text naming the required field, never input values or credentials.</param>
+    /// <returns>True for valid metadata; component-specific validation still runs on the worker.</returns>
+    function TryValidateRequest(const ARequest: TCardDemoRequest; out AError: UnicodeString): Boolean;
+  end;
   /// <summary>One non-cancelling worker with polling completion and no queued UI callbacks.</summary>
   /// <remarks>Free joins the worker. Poll to completion before freeing on the UI thread.
   /// Closing a form must wait for an active write; termination cannot establish card state.</remarks>

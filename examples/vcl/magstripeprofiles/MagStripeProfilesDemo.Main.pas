@@ -1,5 +1,7 @@
 unit MagStripeProfilesDemo.Main;
 
+{$CODEPAGE UTF8}
+
 interface
 
 uses System.Classes, System.SysUtils, Vcl.Forms, Vcl.Controls, Vcl.StdCtrls,

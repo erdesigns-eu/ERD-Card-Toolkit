@@ -35,6 +35,7 @@ var
   Matches: TAtrCatalogMatches;
   I, J, Eligible: Integer;
   Found: Boolean;
+  ExpectedIssuer: UnicodeString;
 begin
   Reports := TLegacyAtrCatalog.GetReports;
   Check(Length(Reports) = 1316, 'Every valid original ATR report retained');
@@ -55,6 +56,33 @@ begin
     Check(Length(Matches) >= 2, 'Shared issuer fingerprints preserved');
     Check((Matches[0].Issuer <> Matches[1].Issuer) and
       (Matches[0].Kind = ahkHistoricalReport), 'Historical metadata and advisory scope preserved');
+    // Numeric Unicode code points keep the expected text independent of source encoding.
+    ExpectedIssuer := 'CB Visa du Cr' + WideChar($00E9) + 'dit Coop' + WideChar($00E9) + 'ratif';
+    Found := False;
+    for I := 0 to High(Reports) do
+      if Reports[I].SourceRow = 56 then
+      begin
+{$IFDEF FPC}
+        Check(Reports[I].Issuer = UTF8Encode(ExpectedIssuer), 'Accented issuer text preserved');
+{$ELSE}
+        Check(Reports[I].Issuer = ExpectedIssuer, 'Accented issuer text preserved');
+{$ENDIF}
+        Found := True;
+      end;
+    Check(Found, 'Accented issuer source row retained');
+    Matches := Catalog.FindMatches(HexToBytes('3B6500002063CB6A00'));
+    Found := False;
+    for I := 0 to High(Matches) do
+      if Matches[I].Id = 'cardstudio-legacy-56' then
+      begin
+{$IFDEF FPC}
+        Check(Matches[I].Issuer = UTF8Encode(ExpectedIssuer), 'Catalog exposes accented issuer correctly');
+{$ELSE}
+        Check(Matches[I].Issuer = ExpectedIssuer, 'Catalog exposes accented issuer correctly');
+{$ENDIF}
+        Found := True;
+      end;
+    Check(Found, 'Accented issuer reachable through catalog');
     Matches := Catalog.FindMatches(HexToBytes(Reports[0].AtrHex));
     Check((Length(Matches) > 0) and (Matches[0].Country = 'BELGIUM'), 'Belgian eID historical entry restored');
     Writeln('PASS: ', Eligible, ' valid ATR reports restored; malformed reports removed.');
@@ -71,6 +99,7 @@ var
   Instructions: TApduInstructionDescriptions;
   Aids: TEmvAidDescriptions;
   I, Excluded: Integer;
+  ExpectedDescription: UnicodeString;
 begin
   Tags := TLegacyEmvTagCatalog.GetEntries;
   Check(Length(Tags) = 515, 'All original EMV labels');
@@ -94,6 +123,16 @@ begin
   Check((Length(Instructions) > 0) and (Pos('Select', Instructions[0].Description) > 0), 'SELECT instruction explanation');
   Statuses := TApduCatalog.GetHistoricalStatuses;
   Check(Length(Statuses) = 205, 'All valid historical status rows');
+  ExpectedDescription := 'Card dead (overuse, ' + WideChar($2026) + ')';
+  for I := 0 to High(Statuses) do
+    if Statuses[I].Pattern = $6FFF then
+    begin
+{$IFDEF FPC}
+      Check(Statuses[I].Description = UTF8Encode(ExpectedDescription), 'APDU Unicode punctuation preserved');
+{$ELSE}
+      Check(Statuses[I].Description = ExpectedDescription, 'APDU Unicode punctuation preserved');
+{$ENDIF}
+    end;
   Excluded := 0;
   for I := 0 to High(Statuses) do
     if Statuses[I].Mask = 0 then

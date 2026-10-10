@@ -1373,7 +1373,7 @@ begin
       Result[0].Pcsc := True; Result[0].Mutation := False;
       Result[1].Id := 'file'; Result[1].LabelText := 'Read explicit Calypso logical file';
       Result[1].Pcsc := True; Result[1].Mutation := False;
-      SetLength(Result[0].Fields,5); SetLength(Result[1].Fields,4);
+      SetLength(Result[0].Fields,6); SetLength(Result[1].Fields,4);
       Result[0].Fields[0].Name := 'dialect'; Result[0].Fields[0].LabelText := 'Explicit Calypso dialect';
       Result[0].Fields[0].DefaultText := ''; Result[0].Fields[0].Secret := False; Result[0].Fields[0].Choices := 'Legacy CLA 94 / LFI 00|Revision 3 CLA 00 / path 09';
       Result[0].Fields[1].Name := 'le'; Result[0].Fields[1].LabelText := 'Initial expected record bytes';
@@ -1392,6 +1392,8 @@ begin
       Result[0].Fields[3].DefaultText := ''; Result[0].Fields[3].Secret := False; Result[0].Fields[3].Choices := 'Raw bytes only|Legacy MOBIB 056/001';
       Result[0].Fields[4].Name := 'files'; Result[0].Fields[4].LabelText := 'Logical file IDs (hex), semicolon-separated; edit to include additional known files';
       Result[0].Fields[4].DefaultText := '2001;2002;2010;2020;2069;2050;2040;3F1C'; Result[0].Fields[4].Secret := False; Result[0].Fields[4].Choices := '';
+      Result[0].Fields[5].Name := 'raw'; Result[0].Fields[5].LabelText := 'Include raw hexadecimal records in output';
+      Result[0].Fields[5].DefaultText := '0'; Result[0].Fields[5].Secret := False; Result[0].Fields[5].Choices := 'Summary only|Summary and raw records';
       Result[2].Id := 'samfile'; Result[2].LabelText := 'Authenticated Calypso file via provisioned SAM';
       Result[2].Pcsc := True; Result[2].Mutation := False;
       SetLength(Result[2].Fields,11);

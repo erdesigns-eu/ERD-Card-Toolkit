@@ -264,6 +264,27 @@ object MobibDemoForm: TMobibDemoForm
           MaxLength = 262144
           Text = '2001;2002;2010;2020;2069;2050;2040;3F1C'
         end
+        object ActSnapshotRawLabel: TLabel
+          Left = 16
+          Top = 318
+          Width = 940
+          Height = 18
+          Caption = 'Include raw hexadecimal records in output'
+        end
+        object ActSnapshotRawBox: TComboBox
+          Left = 16
+          Top = 340
+          Width = 940
+          Height = 23
+          Anchors = [akLeft, akTop, akRight]
+          TabOrder = 5
+          Style = csDropDownList
+          ItemIndex = 0
+          Text = 'Summary only'
+          Items.Strings = (
+            'Summary only'
+            'Summary and raw records')
+        end
       end
     end
     object ActFileTab: TTabSheet

@@ -289,8 +289,9 @@ begin
     for I := 0 to High(A) do
       if A[I].Pcsc or (F = dfTwn4) then
       begin
-        R := Request(F,A[I].Id); Reached := False;
-        try O.Run(R,D); except on E: EReachedHardware do Reached := True; end;
+        R := Request(F,A[I].Id); Reached := False; Prev := H.Acquires + H.Channels;
+        try O.Run(R,D);
+        except on E: Exception do Reached := H.Acquires + H.Channels > Prev; end;
         Check(Reached,'Valid action did not reach acquisition: ' + A[I].Id);
         Check(H.Releases = 0,'Failed acquisition must not release');
         if A[I].Mutation then
@@ -698,6 +699,77 @@ begin
  end;
 end;
 
+procedure TestRequestValidation;
+var R: TCardDemoRequest; H: THardware; Hardware: ICardFamilyHardware;
+ O: ICardDemoOperations; V: ICardDemoRequestValidator; ErrorText: UnicodeString;
+begin
+ H := THardware.Create; Hardware := H; O := CreateCardFamilyOperations(dfMobib,Hardware);
+ Check(Supports(O,ICardDemoRequestValidator,V),'Family supports optional input validation');
+ R := Request(dfMobib,'snapshot');
+ Check(V.TryValidateRequest(R,ErrorText) and (ErrorText = ''),'Valid metadata needs no exception');
+ R.ReaderName := '';
+ Check(not V.TryValidateRequest(R,ErrorText) and (Pos('Select a reader',string(ErrorText)) > 0),'Missing reader identified');
+ R.ReaderName := 'Exact test reader'; Put(R,dfMobib,'layout','-1');
+ Check(not V.TryValidateRequest(R,ErrorText) and (Pos('Choose ',string(ErrorText)) = 1),'Unselected combo identified');
+ R := Request(dfMobib,'snapshot'); R.Arguments[0] := 'private invalid choice';
+ Check(not V.TryValidateRequest(R,ErrorText) and (Pos('private',string(ErrorText)) = 0),'Validation does not disclose input');
+ O := CreateCardFamilyOperations(dfType2,Hardware); Supports(O,ICardDemoRequestValidator,V);
+ R := Request(dfType2,'writepage'); R.MutationAcknowledged := False;
+ Check(not V.TryValidateRequest(R,ErrorText) and (Pos('acknowledgement',string(ErrorText)) > 0),'Missing acknowledgement identified');
+ Check((H.Acquires = 0) and (H.Channels = 0) and (H.SamAcquires = 0),'Metadata validation acquired hardware');
+end;
+
+procedure TestMobibReadableOutput;
+const Ids: array[0..7] of Word = ($2001,$2002,$2010,$2020,$2069,$2050,$2040,$3F1C);
+var R: TCardDemoRequest; D: TCardDemoResult; H: THardware; Hardware: ICardFamilyHardware;
+ S: TScript; T: ICardTransport; I, RawMode, BitOffset: Integer; Contract: TBytes;
+ procedure Bits(const Value: Cardinal; const Count: Integer);
+ var B: Integer;
+ begin
+  for B := Count-1 downto 0 do begin
+   if (Value and (Cardinal(1) shl B)) <> 0 then
+    Contract[BitOffset div 8] := Contract[BitOffset div 8] or (Byte(1) shl (7-BitOffset mod 8));
+   Inc(BitOffset);
+  end;
+ end;
+begin
+ SetLength(Contract,29); BitOffset := 0;
+ Bits(4,6); Bits(0,19); Bits($000F,14); Bits(0,32); Bits(0,18);
+ Bits(6200,16); Bits(0,6); Bits(12,5); Bits(1,14); Bits(3,2); Bits(1,8); Bits(0,24);
+ for RawMode := 0 to 1 do begin
+  S := TScript.Create; T := S; H := THardware.Create; Hardware := H; H.Transport := T;
+  S.Add('94A4000002200000','9000');
+  for I := 0 to High(Ids) do begin
+   if I = 0 then begin
+    S.Add('94A4000002200100','9000');
+    S.Add('94B201041D','00082B00080000000000000000000000000000000000000000000000009000');
+    S.Add('94B202041D','6A83');
+   end else if I = 3 then begin
+    S.Add('94A4000002202000','9000'); S.Add('94B201041D',BytesToHex(Contract)+'9000');
+    S.Add('94B202041D',StringOfChar('0',58)+'9000'); S.Add('94B203041D','6A83');
+   end else if I = 4 then begin
+    S.Add('94A4000002206900','9000'); S.Add('94B201041D',StringOfChar('0',58)+'9000');
+    S.Add('94B202041D','6A83');
+   end else S.Add('94A4000002'+IntToHex(Ids[I],4)+'00','6A82');
+  end;
+  R := Request(dfMobib,'snapshot'); Put(R,dfMobib,'layout','1'); Put(R,dfMobib,'raw',IntToStr(RawMode));
+  CreateCardFamilyOperations(dfMobib,Hardware).Run(R,D);
+  Check(D.Success and (H.Acquires = 1) and (H.Releases = 1),'Readable snapshot runs once');
+  Check(Pos('CONTRACTS (1 decoded)',string(D.Text)) > 0,'Empty contracts omitted from summary');
+  Check(Pos('Purchase price: EUR 62.00',string(D.Text)) > 0,'Euro cents formatted as price');
+  Check(Pos('Purchase date: 1997-01-02',string(D.Text)) > 0,'Purchase date formatted');
+  Check(Pos('unidentified (tariff 0x000F)',string(D.Text)) > 0,'Unknown product keeps tariff');
+  Check(Pos('unit code 3; unit not mapped',string(D.Text)) > 0,'Unknown duration not guessed');
+  Check(Pos('Associated counter: 0 (counter-use code 0)',string(D.Text)) > 0,'Present zero counter shown separately');
+  Check(Pos('Remaining trips:',string(D.Text)) = 0,'Unknown product does not imply trip entitlement');
+  Check(Pos('2 records acquired, 1 zero-filled',string(D.Text)) > 0,'Empty file records counted');
+  Check(Pos('Holder (2002): not present',string(D.Text)) > 0,'Missing file explained');
+  Check((Pos(BytesToHex(Contract),string(D.Text)) > 0) = (RawMode = 1),'Raw hexadecimal display follows selector');
+  Check((Length(D.Artifacts) = 4) and BytesEqual(D.Artifacts[1].Data,Contract),'All bytes exported in either display mode');
+  Check((S.Position = Length(S.Steps)) and (S.Begins = 1) and (S.Ends = 1),'No validation replay or extra transaction');
+ end;
+end;
+
 procedure TestMobibParsedDemo;
 const Ids: array[0..7] of Word = ($2001,$2002,$2010,$2020,$2069,$2050,$2040,$3F1C);
 var R: TCardDemoRequest; D: TCardDemoResult; H: THardware; Hardware: ICardFamilyHardware;
@@ -713,7 +785,8 @@ begin
  R := Request(dfMobib,'snapshot'); Put(R,dfMobib,'dialect','0'); Put(R,dfMobib,'layout','1');
  CreateCardFamilyOperations(dfMobib,Hardware).Run(R,D);
  Check(D.Success and (S.Position = 11) and (S.Begins = 1) and (S.Ends = 1),'Parsed MOBIB demo executes complete file plan');
- Check((Pos('Layout matched True',string(D.Text)) > 0) and (Pos('Country 56 network 1',string(D.Text)) > 0),'Parsed MOBIB demo displays network and match state');
+ Check((Pos('Data profile: MOBIB 056/001 (matched)',string(D.Text)) > 0) and
+   (Pos('Country: Belgium (056)',string(D.Text)) > 0) and (Pos('Network: 001',string(D.Text)) > 0),'Parsed MOBIB demo displays network and match state');
  Check((Length(D.Artifacts) = 1) and (D.Artifacts[0].Name = 'file-2001-record-1.bin'),'Parsed view retains original export');
 end;
 
@@ -847,7 +920,7 @@ end;
 
 begin
   try
-    TestTopazDemo; TestMobibParsedDemo; TestNativeSamDemo; TestMobibRulesDemo; TestRecordAcquisitionDemos; TestNativeHidDemo; TestAdditionalFamilies; TestDocumentAndEmvDemos; TestExtendedSimDemo; TestFelicaFamilyPreflight; TestIsoPasswordFamilyPreflight; TestStorageDemos; TestSimRoutes; TestOffline; TestLegacyProfilePreflight; TestPreflight; TestCounterAndSleRoutes;
+    TestTopazDemo; TestRequestValidation; TestMobibReadableOutput; TestMobibParsedDemo; TestNativeSamDemo; TestMobibRulesDemo; TestRecordAcquisitionDemos; TestNativeHidDemo; TestAdditionalFamilies; TestDocumentAndEmvDemos; TestExtendedSimDemo; TestFelicaFamilyPreflight; TestIsoPasswordFamilyPreflight; TestStorageDemos; TestSimRoutes; TestOffline; TestLegacyProfilePreflight; TestPreflight; TestCounterAndSleRoutes;
     TestTwnRoutes(0,False); TestTwnRoutes(1,False); TestTwnRoutes(2,False); TestTwnRoutes(3,False); TestTwnRoutes(3,True);
     TestMemoryWrite(-1,False,False); TestMemoryWrite(6,False,False);
     TestMemoryWrite(7,False,False); TestMemoryWrite(-1,True,False); TestMemoryWrite(-1,False,True);

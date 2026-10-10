@@ -1,5 +1,7 @@
 unit MobibDemo.Main;
 
+{$CODEPAGE UTF8}
+
 interface
 
 uses System.Classes, System.SysUtils, Vcl.Forms, Vcl.Controls, Vcl.StdCtrls,
@@ -69,6 +71,10 @@ type
     ActSnapshotFilesLabel: TLabel;
     /// <summary>Logical file IDs (hex), semicolon-separated; edit to include additional known files.</summary>
     ActSnapshotFilesEdit: TEdit;
+    /// <summary>Raw record display label; exports remain available in both display modes.</summary>
+    ActSnapshotRawLabel: TLabel;
+    /// <summary>Choose readable summary or summary with hexadecimal records.</summary>
+    ActSnapshotRawBox: TComboBox;
     /// <summary>Read explicit Calypso logical file page.</summary>
     ActFileTab: TTabSheet;
     /// <summary>Read explicit Calypso logical file inputs.</summary>
@@ -305,12 +311,13 @@ begin
   case ActionPages.ActivePageIndex of
     0:
     begin
-      SetLength(FInputs,5);
+      SetLength(FInputs,6);
       FInputs[0] := ActSnapshotDialectBox;
       FInputs[1] := ActSnapshotLeEdit;
       FInputs[2] := ActSnapshotLimitEdit;
       FInputs[3] := ActSnapshotLayoutBox;
       FInputs[4] := ActSnapshotFilesEdit;
+      FInputs[5] := ActSnapshotRawBox;
     end;
     1:
     begin

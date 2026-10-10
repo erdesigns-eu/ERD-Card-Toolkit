@@ -48,7 +48,7 @@ type
     /// <summary>Every historical report, with all valid retained observations.</summary>
     InventoryBox: TListBox;
 
-    /// <summary>Original metadata, explicit provenance and lookup results.</summary>
+    /// <summary>Card metadata and lookup results.</summary>
     OutputMemo: TMemo;
 
     /// <summary>Latest native reader/card observation status.</summary>
@@ -74,7 +74,7 @@ type
     /// <param name="Sender">The form or initiating designer control.</param>
     procedure CatalogChanged(Sender: TObject);
 
-    /// <summary>Shows original metadata for the selected visible inventory row.</summary>
+    /// <summary>Shows card metadata for the selected visible inventory row.</summary>
     /// <param name="Sender">The form or initiating designer control.</param>
     procedure InventorySelected(Sender: TObject);
 
@@ -259,8 +259,7 @@ begin
               'Scheme: ' + Reports[I].Scheme + '; type: ' + Reports[I].CardType +
               '; country: ' + Reports[I].Country + sLineBreak +
               'Category: ' + Reports[I].Category + sLineBreak +
-              'Original CardStudio 01faaef, untATRList.pas, row ' + IntToStr(Reports[I].SourceRow) + sLineBreak +
-              'Historical observation; fingerprint is not a verified identity.';
+              'Fingerprint is not a verified card identity.';
             LabelText := Reports[I].AtrHex + ' - ' + Reports[I].Issuer + ' - ' + Reports[I].Country;
             AddRow(LabelText, Text);
           end;
@@ -270,8 +269,7 @@ begin
           Tags := TLegacyEmvTagCatalog.GetEntries;
           for I := 0 to High(Tags) do
             AddRow(Tags[I].PatternHex + ' - ' + Tags[I].Name,
-              Tags[I].Name + sLineBreak + 'Original CardStudio 01faaef, untASNParser.pas, row ' +
-              IntToStr(I + 1) + sLineBreak + 'Historical tag/path label; issuer context and parent path apply.');
+              Tags[I].Name + sLineBreak + 'Tag/path meaning depends on issuer context and parent path.');
         end;
       2:
         begin
@@ -287,7 +285,7 @@ begin
           for I := 0 to High(Statuses) do
           begin
             LabelText := IntToHex(Statuses[I].Pattern, 4) + ' - ' + Statuses[I].Description;
-            AddRow(LabelText, Statuses[I].Description + sLineBreak + Statuses[I].Source + sLineBreak +
+            AddRow(LabelText, Statuses[I].Description + sLineBreak +
               'Mask: ' + IntToHex(Statuses[I].Mask, 4));
           end;
         end;
@@ -300,7 +298,6 @@ begin
             if Aids[I].PrefixOnly then
               LabelText := '[RID prefix] ' + LabelText;
             AddRow(LabelText, Aids[I].Name + sLineBreak +
-              'Original CardStudio 01faaef, untEMV.pas; historical CardPeek suggestions.' + sLineBreak +
               'No application selection or automatic card probing.');
           end;
         end;
@@ -342,7 +339,7 @@ begin
             Matches := Catalog.FindMatches(Data);
             for I := 0 to High(Matches) do
               OutputMemo.Lines.Add(Matches[I].Description + ' - ' + Matches[I].Country +
-                ' - ' + Matches[I].Scheme + sLineBreak + Matches[I].Source);
+                ' - ' + Matches[I].Scheme);
           finally
             Catalog.Free;
           end;
@@ -356,7 +353,7 @@ begin
             Number := (Number shl 8) or Data[I];
           Tags := TEmvTagCatalog.FindDescriptions(Number);
           for I := 0 to High(Tags) do
-            OutputMemo.Lines.Add(Tags[I].Name + sLineBreak + Tags[I].Source);
+            OutputMemo.Lines.Add(Tags[I].Name);
           Paths := TLegacyEmvTagCatalog.FindByPath(BytesToHex(Data));
           if Length(Tags) = 0 then
             for I := 0 to High(Paths) do
@@ -376,7 +373,7 @@ begin
             raise EConvertError.Create('Status-word size');
           Statuses := TApduCatalog.FindStatusDescriptions(Word(Data[0]) * 256 + Data[1]);
           for I := 0 to High(Statuses) do
-            OutputMemo.Lines.Add(Statuses[I].Description + sLineBreak + Statuses[I].Source);
+            OutputMemo.Lines.Add(Statuses[I].Description);
         end;
       4:
         begin
