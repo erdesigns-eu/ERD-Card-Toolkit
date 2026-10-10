@@ -70,7 +70,7 @@ uses
 {$ENDIF}
   ERD.Card.MOBIB.Rules, ERD.Card.Contactless.Calypso.SAM, ERD.Card.MOBIB.Subscriptions, ERD.Card.MOBIB.Data, ERD.Card.Contactless.Calypso, ERD.Card.EMV.Data, ERD.Card.EMV.Reader, ERD.Card.EID.Data, ERD.Card.EID.Reader,
   ERD.Card.EID.DocumentReader, ERD.Card.EID.ICAO, ERD.Card.Crypto.EAC, ERD.Card.Crypto.EAC.OpenSSL,
-  ERD.Card.EID.Access, ERD.Card.Bytes, ERD.Card.APDU, ERD.Card.ATR, ERD.Card.ATR.Catalog,
+  ERD.Card.EID.Access, ERD.Card.Bytes, ERD.Card.APDU.Catalog, ERD.Card.APDU, ERD.Card.ATR, ERD.Card.ATR.Catalog,
   ERD.Card.TLV, ERD.Card.EMV.Tags, ERD.Card.Ndef, ERD.Card.Ndef.Records,
   ERD.Card.Memory, ERD.Card.Memory.Counter, ERD.Card.Memory.Sle4404,
   ERD.Card.SIM.Data, ERD.Card.SIM.Reader, ERD.Card.Memory.Capabilities, ERD.Card.PCSC.Reader,
@@ -364,7 +364,8 @@ var Hid: TUsbHidReaderWriter; HidHardware: ICardFamilyHidHardware; Devices: THid
   Field: TRfidHidAsciiField; P, NewP, Data, Key, Id, Wire: TBytes;
   Model: TMemoryCardModel; Cap: TAcsMemoryCapabilities; Sec: TMemoryCardSecurityStatus;
   Snapshot: TMemoryCardSnapshot; Ndef: TNdefMessage; Doc: TTlvDocument; Atr: TAtrInfo;
-  Catalog: TAtrCatalog; Matches: TAtrCatalogMatches; Tag: TEmvTagDescription;
+  Catalog: TAtrCatalog; Matches: TAtrCatalogMatches; TagHints: TEmvTagDescriptions;
+  InstructionHints: TApduInstructionDescriptions; StatusHints: TApduStatusDescriptions;
   Apdu: TApduCommand; Response: TApduResponse; Lines: TStringList; I, J, N, Address, Count: Integer; TagId: Cardinal;
   Basic: TCardDemoRequest; Output: string;
 begin
@@ -385,11 +386,19 @@ begin
           Output := 'CLA=' + IntToHex(Apdu.CLA,2) + ' INS=' + IntToHex(Apdu.INS,2) + ' P1=' + IntToHex(Apdu.P1,2) + ' P2=' + IntToHex(Apdu.P2,2) + sLineBreak +
             'Data: ' + BytesToHex(Apdu.Data) + sLineBreak +
             'Extended: ' + BoolToStr(Apdu.IsExtended,True) + ' Has Le: ' + BoolToStr(Apdu.HasLe,True) + ' Le: ' + IntToStr(Apdu.Le) + sLineBreak +
-            'Encoded: ' + BytesToHex(TApduCodec.EncodeCommand(Apdu)); end
+            'Encoded: ' + BytesToHex(TApduCodec.EncodeCommand(Apdu));
+          InstructionHints := TApduCatalog.FindInstructions(Apdu.INS);
+          for I := 0 to High(InstructionHints) do
+            Output := Output + sLineBreak + InstructionHints[I].Description + ' (' + InstructionHints[I].Standard + '; CLA/card context applies)';
+        end
         else if A.Id = 'response' then
         begin Response := TApduCodec.DecodeResponse(Data);
           Output := 'Status: ' + IntToHex(Response.StatusWord,4) + sLineBreak + 'Data: ' + BytesToHex(Response.Data) +
-            sLineBreak + 'Encoded: ' + BytesToHex(TApduCodec.EncodeResponse(Response)); end
+            sLineBreak + 'Encoded: ' + BytesToHex(TApduCodec.EncodeResponse(Response));
+          StatusHints := TApduCatalog.FindStatusDescriptions(Response.StatusWord);
+          for I := 0 to High(StatusHints) do
+            Output := Output + sLineBreak + StatusHints[I].Description + ' (' + StatusHints[I].Source + ')';
+        end
         else if A.Id = 'atr' then
         begin
           Atr := TAtrCodec.Decode(Data); Catalog := CreateDefaultAtrCatalog;
@@ -414,9 +423,13 @@ begin
         begin
           if (Length(Data) < 1) or (Length(Data) > 4) then Fail;
           TagId := 0; for I := 0 to High(Data) do TagId := (TagId shl 8) or Data[I];
-          if TEmvTagCatalog.TryDescribe(TagId,Tag) then Output := Tag.Name + sLineBreak + 'Length metadata: ' + IntToStr(Tag.MinLength) + '..' + IntToStr(Tag.MaxLength) +
-            sLineBreak + 'Sensitive data: ' + BoolToStr(Tag.Sensitive,True) + sLineBreak + Tag.Source
-          else Output := 'No catalog entry for this tag.';
+          TagHints := TEmvTagCatalog.FindDescriptions(TagId);
+          if Length(TagHints) = 0 then
+            Output := 'No catalog entry for this tag.';
+          for I := 0 to High(TagHints) do
+            Output := Output + TagHints[I].Name + sLineBreak +
+              'Length metadata: ' + IntToStr(TagHints[I].MinLength) + '..' + IntToStr(TagHints[I].MaxLength) +
+              sLineBreak + TagHints[I].Source + sLineBreak;
         end else Fail;
       end;
       dfMemory:

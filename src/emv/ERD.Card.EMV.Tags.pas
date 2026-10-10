@@ -27,7 +27,9 @@ type
     /// <summary>Tag/length-only data-object list, not a BER-TLV value stream.</summary>
     eteDol,
     /// <summary>EMV packed Track 2 equivalent; distinct from physical magnetic-track framing.</summary>
-    eteTrack2);
+    eteTrack2,
+    /// <summary>Historical label with no verified representation or length contract.</summary>
+    eteUnknown);
 
   /// <summary>Curated source-attributed EMV Book 3 diagnostic tag description.</summary>
   /// <remarks>Lengths are metadata, not validation of context or issuer semantics. Minus one denotes
@@ -49,6 +51,9 @@ type
     Source: string;
   end;
 
+  /// <summary>Owned descriptions including all historical issuer-context alternatives.</summary>
+  TEmvTagDescriptions = array of TEmvTagDescription;
+
   /// <summary>Pure curated EMV tag lookup; no I/O, issuer guessing or payment processing.</summary>
   TEmvTagCatalog = class
   public
@@ -59,9 +64,43 @@ type
     /// <remarks>Does not decode values, validate BER tag syntax, enforce lengths or change reader behavior.</remarks>
     class function TryDescribe(const ATag: Cardinal;
       out ADescription: TEmvTagDescription): Boolean; static;
+    /// <summary>Returns the curated description first and every original CardStudio label for the tag.</summary>
+    /// <param name="ATag">Exact encoded tag identifier.</param>
+    /// <returns>Independent descriptions; historical labels have unknown encoding/length and explicit provenance.</returns>
+    class function FindDescriptions(const ATag: Cardinal): TEmvTagDescriptions; static;
   end;
 
 implementation
+
+uses ERD.Card.EMV.LegacyTags;
+
+class function TEmvTagCatalog.FindDescriptions(const ATag: Cardinal): TEmvTagDescriptions;
+var
+  Historical: TLegacyEmvTags;
+  Description: TEmvTagDescription;
+  I, N: Integer;
+begin
+  Result := nil;
+  if TryDescribe(ATag, Description) then
+  begin
+    SetLength(Result, 1);
+    Result[0] := Description;
+  end;
+  Historical := TLegacyEmvTagCatalog.GetEntries;
+  for I := 0 to High(Historical) do
+    if (Historical[I].Tag <> 0) and (Historical[I].Tag = ATag) then
+    begin
+      N := Length(Result);
+      SetLength(Result, N + 1);
+      Result[N].Tag := ATag;
+      Result[N].Name := Historical[I].Name;
+      Result[N].Encoding := eteUnknown;
+      Result[N].MaxLength := -1;
+      Result[N].Sensitive := True;
+      Result[N].Source := 'Original CardStudio 01faaef, untASNParser.pas, row ' +
+        IntToStr(I + 1) + '; historical context-dependent label';
+    end;
+end;
 
 class function TEmvTagCatalog.TryDescribe(const ATag: Cardinal;
   out ADescription: TEmvTagDescription): Boolean;

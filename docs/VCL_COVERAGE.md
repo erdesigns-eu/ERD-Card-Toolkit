@@ -1,9 +1,10 @@
 # VCL examples: current coverage
 
-There are **twenty-six separately executable applications** in
+There are **twenty-eight separately executable applications** in
 `examples/vcl/CardDemos.groupproj`. Each application has its own `TForm`,
 `.Main.pas`, and `.Main.dfm`. All visual controls are in that application's own
-DFM, including action pages, input fields, reader selection, and timers. There is
+DFM, including input fields and action controls. Hardware demos include reader
+selection; the offline calculator requires no reader or worker timer. There is
 no shared form and no shared form ancestor. Only non-visual card execution, input
 metadata, and worker lifecycle remain shared. Payments are outside this component
 set.
@@ -12,6 +13,8 @@ set.
 | --- | --- |
 | MagStripeDemo | Tracks and MSR206-7HL reads/verified writes |
 | SmartCardDemo | Existing combined PC/SC, eID, EMV, contactless, memory, and RFID pages |
+| EmvCalculatorDemo | All EMV calculator operations, explicit scheme/CVN profiles and transaction fields, AC/ARPC verification; entirely offline |
+| CardCatalogDemo | Valid ATR/tag/path/APDU/AID inventories and offline lookup; native reader/card events and offered ATR inspection without connecting |
 | ReaderToolsDemo | Native reader/card events with its own DFM controls and event log; PC/SC list/status, APDU command/response, ATR/catalog, BER-TLV, EMV tags, and NDEF codecs |
 | MemoryCardDemo | All SLE/I²C models, two ACS dialects, snapshots/ranges, PIN, writes, PIN replacement, and permanent protection |
 | SleCounterDemo | Public windows, bit/carry/backup programming, and raw certificate calculation |
@@ -44,7 +47,8 @@ The shared event bridge is nonvisual. Refresh devices explicitly restarts observ
 
 ## Reader selection in every demo
 
-Every demo fills its own dropdown on a background task when it opens and has its
+Hardware demos fill their own dropdown through background discovery or native
+reader events and have their
 own refresh button. PC/SC demos show installed smart-card readers; TWN4 and
 magstripe show present Windows COM ports; RFID/native HID show HID collections
 with VID/PID/usage. The visible name and operational address remain linked. No

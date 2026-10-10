@@ -42,6 +42,7 @@ out of scope (see [Not supported](#not-supported)).
 | **Belgian eID** | `TBelgianEIDReader` | Read identity, address, JPEG photo, certificates (RAW/DER) and raw signature files from Belpic 1.7/1.8 contact cards. |
 | **ICAO travel/ID documents** | `TICAODocumentReader` | BAC (MRZ) or PACE (MRZ/CAN, ECDH Generic Mapping, AES-128, NIST P-256 or brainpoolP256r1) secure messaging. Read DG1 (MRZ identity), DG2 (JPEG and JPEG 2000 face images), and complete EF.COM/EF.SOD files. Includes MRZ parsing with check digits (TD1/TD2/TD3) and EF.CardAccess PACEInfo decoding. |
 | **EMV** | `TEMVCardReader` | PSE/PPSE directory discovery, PDOL inspection without GPO, GPO and AFL record reading, an optional bounded extra SFI/record scan, GET DATA objects, and transaction logs. Extracts PAN, expiry date, cardholder name, IBAN and Track 2 equivalent data where present. Reading only, no transactions. |
+| **Offline EMV calculations** | `TEmvCalculator` | UDK Option A/B, common/ATC/Mastercard/Visa-script/EMV-2000-tree keys, DES parity and DES/AES KCV, ISO 9797 Retail MAC, ARQC/TC/AAC generation and verification, ARPC methods 1/2 and verification, AES-128 CMAC, script MAC/encryption and PIN-block formatting. Explicit Visa 10/18/22, Mastercard 16/17/20/21 and Interac 133 calculation profiles; no card commands or payment processing. |
 | **MIFARE Classic** | `TContactlessCardReader` | Classic Mini/1K/4K layouts. Read blocks with a supplied key A/B and write data blocks; block 0 and sector trailers are refused. |
 | **Ultralight / NTAG (Type 2)** | `TContactlessCardReader`, `TType2PasswordCardReader` | Ultralight, Ultralight EV1 (48/128), NTAG210/212/213/215/216 page reads, user-memory snapshots and user-page writes. PWD_AUTH/PACK access, verified AUTH0/PROT/AUTHLIM configuration and password/PACK replacement, supported counter reads, and protected NDEF through an ACR122U adapter. |
 | **Ultralight C** | `TUltralightCCardReaderWriter` | Supplied-key 2K3DES mutual authentication, exact user-page reads, a 144-byte user-memory snapshot and verified four-byte user-page writes through raw RF (ACR122U adapter). Read authentication configuration; verified AUTH0/AUTH1 updates and key replacement with same-UID fresh RF authentication. Manufacturer, OTP, lock and counter writes remain excluded. |
@@ -94,7 +95,7 @@ These rules apply to every component and are worth knowing before you start:
 | `src/core` | Byte helpers, APDU, ATR, ATR catalog, BER-TLV, transport, event queue and crypto contracts |
 | `src/pcsc` | PC/SC API abstraction, Windows `winscard.dll` binding, `TSmartCardReader`, `TSmartCardMonitor` |
 | `src/eid` | Belgian eID, ICAO document reader, MRZ, LDS, BAC/PACE access and secure messaging |
-| `src/emv` | EMV reader, data model and tag catalog |
+| `src/emv` | EMV reader, offline calculators, CVN profiles, data model and tag/AID catalogs |
 | `src/contactless` | MIFARE Classic, Type 1/2/3/4/5, FeliCa, NDEF, ISO 15693, DESFire, UID programming, Calypso/MOBIB |
 | `src/memory` | SLE/I²C memory chips, SLE counter chips, SLE4404, ACS capability catalog |
 | `src/sim` | SIM/USIM reader/writer and data codecs |
@@ -105,7 +106,7 @@ These rules apply to every component and are worth knowing before you start:
 | `src/design` | IDE palette registration |
 | `packages/` | `ERDCards.groupproj`: 12 runtime packages and the design-time package |
 | `Delphi Packages/` | Native-format `Core` reference package used for IDE troubleshooting |
-| `examples/` | 19 console examples and 22 VCL demos (`examples/vcl/CardDemos.groupproj`) |
+| `examples/` | 19 console examples and 28 VCL demos (`examples/vcl/CardDemos.groupproj`) |
 | `tests/` | Pascal test programs (Free Pascal/Delphi), native ABI shims and Python tests |
 | `tools/` | Build scripts, test runner, distribution checker, `pascalcheck` static analysis, fixture generators |
 | `docs/` | Per-family guides, installation, validation and planning documents |
@@ -168,11 +169,11 @@ tools\build-packages.cmd dcc32 design
 ```
 
 Then use **Component > Install Packages > Add** and select `ERDCardDesign.bpl`.
-It registers 31 components:
+It registers 32 components:
 
 | Palette page | Components |
 | --- | --- |
-| **ERD Cards** | `TSmartCardMonitor`, `TSmartCardReader`, `TBelgianEIDReader`, `TICAODocumentReader`, `TSimCardReaderWriter`, `TEMVCardReader`, `TMagStripeReaderWriter`, `TMemoryCardReaderWriter`, `TSleCounterCardReaderWriter`, `TSle4404CardReaderWriter` |
+| **ERD Cards** | `TSmartCardMonitor`, `TSmartCardReader`, `TBelgianEIDReader`, `TICAODocumentReader`, `TSimCardReaderWriter`, `TEMVCardReader`, `TEmvCalculator`, `TMagStripeReaderWriter`, `TMemoryCardReaderWriter`, `TSleCounterCardReaderWriter`, `TSle4404CardReaderWriter` |
 | **ERD Input** | `THidDeviceMonitor`, `TUsbHidInputMonitor`, `TRfidKeyboardReader`, `TRfidHidReportReader`, `TUsbHidReaderWriter`, `TTwn4CardReaderWriter` |
 | **ERD Contactless** | `TTopazCardReader`, `TType1NdefCardReader`, `TFelicaCardReader`, `TType3NdefCardReader`, `TUltralightCCardReaderWriter`, `TCalypsoCardReader`, `TContactlessCardReader`, `TType2NdefCardReader`, `TType4NdefCardReader`, `TIso15693CardReader`, `TIso15693SecurityManager`, `TType5NdefCardReader`, `TDesfireCardReader`, `TType2PasswordCardReader`, `TRawUidProgrammer` |
 
@@ -296,9 +297,10 @@ needs no hardware. Run them with `--help` to see their arguments.
 
 ### VCL demos
 
-`examples/vcl/CardDemos.groupproj` contains 22 Windows VCL applications. Each one has
-its own form and DFM, its own reader/HID/COM-port picker with a refresh button, and
-runs card work on a background thread. Write, PIN and management actions require
+`examples/vcl/CardDemos.groupproj` contains 28 Windows VCL applications. Each owns
+its own form and DFM. Hardware demos have an in-app reader/HID/COM-port picker and
+run card work on a background thread. The offline calculator requires no reader;
+the catalog demo receives reader/card snapshots through native events. Write, PIN and management actions require
 an explicit acknowledgement. PC/SC demos update their reader list from native hotplug events
 and show card offered/removed notifications without running a card operation.
 
@@ -307,6 +309,8 @@ and show card offered/removed notifications without running a card operation.
 | `SmartCardDemo` | Combined PC/SC, eID, EMV, contactless, NDEF, memory and RFID pages |
 | `MagStripeDemo` | Track checks, swipes and verified MSR206-7HL writes |
 | `MagStripeProfilesDemo` | Track codecs, MagTek keyboard/HID, MSR206/MSR605 reads and status-only programming |
+| `EmvCalculatorDemo` | All offline EMV calculations, explicit CVN transaction fields and cryptogram verification |
+| `CardCatalogDemo` | Browse/filter ATR, EMV tag/path, APDU instruction/status and AID inventories; native reader/card events and offered ATR lookup |
 | `ReaderToolsDemo` | Reader/card events log, PC/SC list/ATR, APDU, ATR catalog, BER-TLV, EMV tags, NDEF |
 | `RfidInputDemo` | Keyboard capture, boot/ID/ASCII HID report decoding, identifier conversion |
 | `UsbHidDemo` | HID hot-plug, continuous input reports, interrupt/feature report I/O and export |
@@ -378,7 +382,7 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 ## Not supported
 
 - **Payments:** no terminal/provider integration, transaction authorization or NFC
-  payment kernel. EMV support is read-only ([docs/PAYMENTS.md](docs/PAYMENTS.md)).
+  payment kernel. EMV card access is read-only; offline calculations do not send issuer scripts or process payments ([docs/PAYMENTS.md](docs/PAYMENTS.md)).
 - **Document authenticity:** certificates, signatures and EF.SOD can be read, but
   passive authentication (SOD/issuer verification), chip authentication and EAC are
   not implemented. The library doesn't decode fingerprints, include a JPEG 2000
@@ -420,7 +424,9 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 | `ERD.Card.Bytes` | Hex/byte conversion and copying |
 | `ERD.Card.APDU` | ISO 7816-4 command/response APDU codec |
 | `ERD.Card.ATR` | ATR parser with protocol and TCK validation |
-| `ERD.Card.ATR.Catalog` | Curated, masked ATR hint catalog with sources |
+| `ERD.Card.ATR.Catalog` | Source-attributed protocol hints and 1,316 valid historical ATR reports; all ambiguous matches |
+| `ERD.Card.ATR.Legacy` | Valid original ATR inventory with issuer/country/scheme/category and source rows |
+| `ERD.Card.APDU.Catalog` | 35 instruction labels, 205 historical status explanations and dynamic standard statuses |
 | `ERD.Card.TLV` | Bounded BER-TLV tree decoder/encoder |
 | `ERD.Card.Transport` | `ICardTransport` and `ICardTransaction` contracts |
 | `ERD.Card.Events` | Bounded main-thread event queue used by monitors |
@@ -441,7 +447,10 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 | `ERD.Card.EID.Access` | BAC/PACE key derivation and protocol steps |
 | `ERD.Card.EID.SecureMessaging` | ICAO secure messaging |
 | `ERD.Card.EID.DocumentReader` | `TICAODocumentReader`, EF.CardAccess codec |
-| `ERD.Card.EMV.Tags` | EMV tag catalog |
+| `ERD.Card.EMV.Tags` | 46 curated descriptions plus source-attributed historical alternatives |
+| `ERD.Card.EMV.LegacyTags` | 515 historical tag/path labels, including symbolic index paths |
+| `ERD.Card.EMV.Aids` | 61 valid historical AID/RID suggestions; no automatic selection |
+| `ERD.Card.EMV.Calculator` | Offline calculation component and eight explicit CVN profiles |
 | `ERD.Card.EMV.Data` | EMV data model, DOL/AFL/log codec |
 | `ERD.Card.EMV.Reader` | `TEMVCardReader` |
 | `ERD.Card.Contactless` | `TContactlessCardReader`, reader profiles, Classic layout |
@@ -517,6 +526,8 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 
 **Card families**
 
+- [Offline EMV calculators](docs/EMV_CALCULATORS.md)
+- [CardPeek comparison and candidate extensions](docs/CARDPEEK_REVIEW.md)
 - [Belgian eID](docs/BELGIAN_EID.md) · [European eID / ICAO](docs/EUROPEAN_EID.md) · [EMV](docs/EMV_READER.md)
 - [Topaz / Type 1](docs/TOPAZ_TYPE1.md)
 - [FeliCa / Type 3](docs/FELICA_TYPE3.md) · [Type 2 management and protected NDEF](docs/TYPE2_MANAGEMENT.md)

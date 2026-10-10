@@ -11,6 +11,7 @@ requires
   ERDCardCore;
 
 contains
+  ERD.Card.Crypto.Hash.OpenSSL in '..\..\src\crypto\ERD.Card.Crypto.Hash.OpenSSL.pas',
   ERD.Card.Crypto.EAC.OpenSSL in '..\..\src\crypto\ERD.Card.Crypto.EAC.OpenSSL.pas';
 
 end.

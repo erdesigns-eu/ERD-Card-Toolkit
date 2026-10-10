@@ -22,7 +22,7 @@ procedure AtrTests;
 var C:TAtrCatalog; Matches:TAtrCatalogMatches; E:TAtrCatalogEntries;
   B,Original:TBytes; I,J:Integer; Failed:Boolean;
 begin
-  C:=CreateDefaultAtrCatalog;
+  C:=CreateDefaultAtrCatalog(False);
   try
     B:=HexToBytes('3B8F8001804F0CA0000003060B00350000000056');
     Matches:=C.FindMatches(B);
