@@ -11,6 +11,7 @@ requires
   ERDCardCore;
 
 contains
+  ERD.Card.Crypto.RSA.Native in '..\..\src\crypto\ERD.Card.Crypto.RSA.Native.pas',
   ERD.Card.Crypto.Hash.Windows in '..\..\src\crypto\ERD.Card.Crypto.Hash.Windows.pas',
   ERD.Card.Crypto.Windows in '..\..\src\crypto\ERD.Card.Crypto.Windows.pas';
 

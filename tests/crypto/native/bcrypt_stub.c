@@ -5,10 +5,13 @@
 #include <string.h>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
+#include <openssl/param_build.h>
+#include <openssl/bn.h>
+#include <openssl/rsa.h>
 
 static int calls, fail_call, wrong_length, live;
 struct algorithm { uint32_t marker; int des; };
-struct key { uint8_t secret[24]; void *object; int des; };
+struct key { uint8_t secret[24]; void *object; int des; EVP_PKEY *rsa; };
 static int32_t failure(void) { return (int32_t)UINT32_C(0xc0000001); }
 static int tick(void) { return ++calls == fail_call; }
 static int wide_equal(const uint16_t *value, const char *expected) {
@@ -22,9 +25,9 @@ int test_crypto_calls(void) { return calls; }
 int32_t BCryptOpenAlgorithmProvider(void **out, const uint16_t *id,
                                    const uint16_t *provider, uint32_t flags) {
     if (tick()) return failure();
-    if (!out || (!wide_equal(id,"AES") && !wide_equal(id,"3DES") && !wide_equal(id,"SHA1")) || provider || flags) return failure();
+    if (!out || (!wide_equal(id,"AES") && !wide_equal(id,"3DES") && !wide_equal(id,"SHA1") && !wide_equal(id,"RSA")) || provider || flags) return failure();
     struct algorithm *a=calloc(1,sizeof(*a)); if (!a) return failure();
-    a->marker=0x12345678; a->des=wide_equal(id,"SHA1") ? 2 : wide_equal(id,"3DES"); *out=a; live++; return 0;
+    a->marker=0x12345678; a->des=wide_equal(id,"RSA") ? 3 : wide_equal(id,"SHA1") ? 2 : wide_equal(id,"3DES"); *out=a; live++; return 0;
 }
 int32_t BCryptSetProperty(void *handle, const uint16_t *name, const void *data,
                           uint32_t count, uint32_t flags) {
@@ -75,7 +78,7 @@ int32_t BCryptDecrypt(void *k,const void *in,uint32_t n,void *pad,void *iv,uint3
 }
 int32_t BCryptDestroyKey(void *handle) {
     int failed=tick(); if (!handle) return failure();
-    struct key *k=handle; memset(k->secret,0,24); free(k); live--; return failed ? failure() : 0;
+    struct key *k=handle; if (k->des==3) EVP_PKEY_free(k->rsa); memset(k->secret,0,24); free(k); live--; return failed ? failure() : 0;
 }
 int32_t BCryptCloseAlgorithmProvider(void *handle,uint32_t flags) {
     int failed=tick(); if (!handle || flags) return failure();
@@ -115,4 +118,68 @@ int32_t BCryptFinishHash(void *handle,void *output,uint32_t count,uint32_t flags
 int32_t BCryptDestroyHash(void *handle) {
     int failed=tick(); if (!handle) return failure();
     struct hash *h=handle; EVP_MD_CTX_free(h->ctx); free(h); live--; return failed ? failure() : 0;
+}
+
+/* RSA import/sign/verify branch: consumes the exact CNG key-blob layout. */
+static uint32_t little32(const uint8_t *b) {
+    return b[0] | ((uint32_t)b[1]<<8) | ((uint32_t)b[2]<<16) | ((uint32_t)b[3]<<24);
+}
+int32_t BCryptImportKeyPair(void *algorithm,void *import,const uint16_t *type,
+                           void **out,const void *input,uint32_t count,uint32_t flags) {
+    if (tick()) return failure();
+    if (!algorithm || ((struct algorithm *)algorithm)->des!=3 || import || !out || !input || count<24 || flags) return failure();
+    int private_key=wide_equal(type,"RSAPRIVATEBLOB");
+    if (!private_key && !wide_equal(type,"RSAPUBLICBLOB")) return failure();
+    const uint8_t *b=input;
+    uint32_t en=little32(b+8),nn=little32(b+12),pn=little32(b+16),qn=little32(b+20);
+    if (little32(b)!=(private_key?0x32415352u:0x31415352u) || little32(b+4)!=nn*8 ||
+        nn<128 || nn>512 || en<1 || en>8 || count!=24+en+nn+pn+qn ||
+        (private_key?(pn!=nn/2 || qn!=nn/2):(pn || qn))) return failure();
+    BIGNUM *e=BN_bin2bn(b+24,en,NULL),*n=BN_bin2bn(b+24+en,nn,NULL),*p=NULL,*q=NULL,*d=NULL;
+    BIGNUM *pm=NULL,*qm=NULL,*phi=NULL; BN_CTX *bnctx=NULL;
+    OSSL_PARAM_BLD *builder=OSSL_PARAM_BLD_new(); OSSL_PARAM *params=NULL;
+    EVP_PKEY_CTX *ctx=NULL; EVP_PKEY *rsa=NULL;
+    int ok=e && n && builder;
+    if (ok && private_key) {
+        p=BN_bin2bn(b+24+en+nn,pn,NULL); q=BN_bin2bn(b+24+en+nn+pn,qn,NULL);
+        pm=BN_dup(p); qm=BN_dup(q); phi=BN_new(); bnctx=BN_CTX_new();
+        ok=p && q && pm && qm && phi && bnctx && BN_sub_word(pm,1)==1 && BN_sub_word(qm,1)==1 && BN_mul(phi,pm,qm,bnctx)==1;
+        if (ok) { d=BN_mod_inverse(NULL,e,phi,bnctx); ok=d!=NULL; }
+    }
+    if (ok) ok=OSSL_PARAM_BLD_push_BN(builder,"n",n)==1 && OSSL_PARAM_BLD_push_BN(builder,"e",e)==1;
+    if (ok && private_key) ok=OSSL_PARAM_BLD_push_BN(builder,"d",d)==1 && OSSL_PARAM_BLD_push_BN(builder,"rsa-factor1",p)==1 && OSSL_PARAM_BLD_push_BN(builder,"rsa-factor2",q)==1;
+    if (ok) { params=OSSL_PARAM_BLD_to_param(builder); ctx=EVP_PKEY_CTX_new_from_name(NULL,"RSA",NULL); ok=params && ctx; }
+    if (ok) ok=EVP_PKEY_fromdata_init(ctx)==1 && EVP_PKEY_fromdata(ctx,&rsa,private_key?EVP_PKEY_KEYPAIR:EVP_PKEY_PUBLIC_KEY,params)==1;
+    EVP_PKEY_CTX_free(ctx); OSSL_PARAM_free(params); OSSL_PARAM_BLD_free(builder);
+    BN_clear_free(e); BN_clear_free(n); BN_clear_free(p); BN_clear_free(q); BN_clear_free(d);
+    BN_clear_free(pm); BN_clear_free(qm); BN_clear_free(phi); BN_CTX_free(bnctx);
+    if (!ok) { EVP_PKEY_free(rsa); return failure(); }
+    struct key *k=calloc(1,sizeof(*k)); if (!k) { EVP_PKEY_free(rsa); return failure(); }
+    k->des=3; k->rsa=rsa; *out=k; live++; return 0;
+}
+int32_t BCryptSignHash(void *handle,const uint16_t **padding,const void *digest,uint32_t count,
+                       void *output,uint32_t outsize,uint32_t *actual,uint32_t flags) {
+    if (tick()) return failure();
+    struct key *k=handle;
+    if (!k || k->des!=3 || !padding || !wide_equal(*padding,"SHA1") || !digest || count!=20 ||
+        !output || outsize!=(uint32_t)EVP_PKEY_get_size(k->rsa) || !actual || flags!=2) return failure();
+    EVP_PKEY_CTX *ctx=EVP_PKEY_CTX_new_from_pkey(NULL,k->rsa,NULL); if (!ctx) return failure();
+    size_t size=outsize;
+    int ok=EVP_PKEY_sign_init(ctx)==1 && EVP_PKEY_CTX_set_rsa_padding(ctx,RSA_PKCS1_PADDING)==1 &&
+        EVP_PKEY_CTX_set_signature_md(ctx,EVP_sha1())==1 && EVP_PKEY_sign(ctx,output,&size,digest,count)==1;
+    EVP_PKEY_CTX_free(ctx); if (!ok) return failure();
+    *actual=wrong_length==2 ? (uint32_t)size-1 : (uint32_t)size; return 0;
+}
+int32_t BCryptVerifySignature(void *handle,const uint16_t **padding,const void *digest,uint32_t count,
+                              const void *signature,uint32_t size,uint32_t flags) {
+    if (tick()) return failure();
+    struct key *k=handle;
+    if (!k || k->des!=3 || !padding || !wide_equal(*padding,"SHA1") || !digest || count!=20 ||
+        !signature || size!=(uint32_t)EVP_PKEY_get_size(k->rsa) || flags!=2) return failure();
+    EVP_PKEY_CTX *ctx=EVP_PKEY_CTX_new_from_pkey(NULL,k->rsa,NULL); if (!ctx) return failure();
+    int ok=EVP_PKEY_verify_init(ctx)==1 && EVP_PKEY_CTX_set_rsa_padding(ctx,RSA_PKCS1_PADDING)==1 &&
+        EVP_PKEY_CTX_set_signature_md(ctx,EVP_sha1())==1;
+    int verified=ok ? EVP_PKEY_verify(ctx,signature,size,digest,count) : -1;
+    EVP_PKEY_CTX_free(ctx);
+    return verified==1 ? 0 : verified==0 ? (int32_t)UINT32_C(0xc000a000) : failure();
 }

@@ -180,6 +180,7 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="..\..\src\core\ERD.Card.Crypto.RSA.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.APDU.Catalog.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.ATR.Legacy.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Crypto.Hash.pas"/>

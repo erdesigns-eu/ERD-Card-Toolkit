@@ -177,6 +177,7 @@
         <DCC_Optimize>true</DCC_Optimize>
     </PropertyGroup>
     <ItemGroup>
+        <DCCReference Include="..\..\src\emv\ERD.Card.EMV.Semantics.pas"/>
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>

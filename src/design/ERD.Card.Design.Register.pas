@@ -14,7 +14,7 @@ uses
 {$ELSE}
   System.Classes,
 {$ENDIF}
-  ERD.Card.EMV.Calculator, ERD.Card.PCSC.Monitor, ERD.Card.HID.Monitor, ERD.Card.SIM.Reader,
+  ERD.Card.GlobalPlatform, ERD.Card.EMV.Calculator, ERD.Card.PCSC.Monitor, ERD.Card.HID.Monitor, ERD.Card.SIM.Reader,
   ERD.Card.Reader.TWN4, ERD.Card.RFID.Input, ERD.Card.RFID.HID, ERD.Card.HID,
   DesignIntf, ERD.Card.Memory, ERD.Card.Memory.Counter, ERD.Card.Memory.Sle4404,
   ERD.Card.PCSC.Reader, ERD.Card.EID.Reader,
@@ -30,7 +30,7 @@ uses
 
 procedure Register;
 begin
-  RegisterComponents('ERD Cards', [TSmartCardMonitor, TSmartCardReader,
+  RegisterComponents('ERD Cards', [TGlobalPlatformCardManager, TSmartCardMonitor, TSmartCardReader,
     TBelgianEIDReader, TICAODocumentReader, TSimCardReaderWriter,
     TEmvCalculator, TEMVCardReader, TMagStripeReaderWriter, TMemoryCardReaderWriter,
     TSleCounterCardReaderWriter, TSle4404CardReaderWriter]);

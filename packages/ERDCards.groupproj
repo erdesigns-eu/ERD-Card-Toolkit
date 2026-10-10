@@ -21,6 +21,7 @@
         <Projects Include="runtime\ERDCardEMV.dproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="runtime\ERDCardGlobalPlatform.dproj"><Dependencies/></Projects>
         <Projects Include="runtime\ERDCardMagStripe.dproj">
             <Dependencies/>
         </Projects>
@@ -98,11 +99,20 @@
     <Target Name="ERDCardEMV">
         <MSBuild Projects="runtime\ERDCardEMV.dproj"/>
     </Target>
+    <Target Name="ERDCardGlobalPlatform">
+        <MSBuild Projects="runtime\ERDCardGlobalPlatform.dproj"/>
+    </Target>
     <Target Name="ERDCardEMV:Clean">
         <MSBuild Projects="runtime\ERDCardEMV.dproj" Targets="Clean"/>
     </Target>
+    <Target Name="ERDCardGlobalPlatform:Clean">
+        <MSBuild Projects="runtime\ERDCardGlobalPlatform.dproj" Targets="Clean"/>
+    </Target>
     <Target Name="ERDCardEMV:Make">
         <MSBuild Projects="runtime\ERDCardEMV.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ERDCardGlobalPlatform:Make">
+        <MSBuild Projects="runtime\ERDCardGlobalPlatform.dproj" Targets="Make"/>
     </Target>
     <Target Name="ERDCardMagStripe">
         <MSBuild Projects="runtime\ERDCardMagStripe.dproj"/>
@@ -168,13 +178,13 @@
         <MSBuild Projects="runtime\ERDCardSIM.dproj" Targets="Make"/>
     </Target>
     <Target Name="Build">
-        <CallTarget Targets="ERDCardCore;ERDCardCryptoWindows;ERDCardCryptoOpenSSL;ERDCardPCSC;ERDCardEID;ERDCardEMV;ERDCardMagStripe;ERDCardContactless;ERDCardMemory;ERDCardInput;ERDCardTWN4;ERDCardSIM;ERDCardDesign"/>
+        <CallTarget Targets="ERDCardCore;ERDCardCryptoWindows;ERDCardCryptoOpenSSL;ERDCardPCSC;ERDCardEID;ERDCardEMV;ERDCardGlobalPlatform;ERDCardMagStripe;ERDCardContactless;ERDCardMemory;ERDCardInput;ERDCardTWN4;ERDCardSIM;ERDCardDesign"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="ERDCardCore:Clean;ERDCardCryptoWindows:Clean;ERDCardCryptoOpenSSL:Clean;ERDCardPCSC:Clean;ERDCardEID:Clean;ERDCardEMV:Clean;ERDCardMagStripe:Clean;ERDCardContactless:Clean;ERDCardMemory:Clean;ERDCardInput:Clean;ERDCardTWN4:Clean;ERDCardSIM:Clean;ERDCardDesign:Clean"/>
+        <CallTarget Targets="ERDCardCore:Clean;ERDCardCryptoWindows:Clean;ERDCardCryptoOpenSSL:Clean;ERDCardPCSC:Clean;ERDCardEID:Clean;ERDCardEMV:Clean;ERDCardGlobalPlatform:Clean;ERDCardMagStripe:Clean;ERDCardContactless:Clean;ERDCardMemory:Clean;ERDCardInput:Clean;ERDCardTWN4:Clean;ERDCardSIM:Clean;ERDCardDesign:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="ERDCardCore:Make;ERDCardCryptoWindows:Make;ERDCardCryptoOpenSSL:Make;ERDCardPCSC:Make;ERDCardEID:Make;ERDCardEMV:Make;ERDCardMagStripe:Make;ERDCardContactless:Make;ERDCardMemory:Make;ERDCardInput:Make;ERDCardTWN4:Make;ERDCardSIM:Make;ERDCardDesign:Make"/>
+        <CallTarget Targets="ERDCardCore:Make;ERDCardCryptoWindows:Make;ERDCardCryptoOpenSSL:Make;ERDCardPCSC:Make;ERDCardEID:Make;ERDCardEMV:Make;ERDCardGlobalPlatform:Make;ERDCardMagStripe:Make;ERDCardContactless:Make;ERDCardMemory:Make;ERDCardInput:Make;ERDCardTWN4:Make;ERDCardSIM:Make;ERDCardDesign:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

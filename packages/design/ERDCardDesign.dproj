@@ -66,7 +66,7 @@
         <SanitizedProjectName>ERDCardDesign</SanitizedProjectName>
         <DCC_BplOutput>..\..\dist\packages\$(Platform)\$(Config)</DCC_BplOutput>
         <DCC_DcpOutput>..\..\dist\packages\$(Platform)\$(Config)</DCC_DcpOutput>
-        <DCC_UnitSearchPath>..\..\src\readers;..\..\src\sim;..\..\src\input;..\..\src\memory;..\..\src\core;..\..\src\crypto;..\..\src\pcsc;..\..\src\eid;..\..\src\emv;..\..\src\magstripe;..\..\src\contactless;..\..\src\design;..\..\dist\packages\$(Platform)\$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>..\..\src\globalplatform;..\..\src\readers;..\..\src\sim;..\..\src\input;..\..\src\memory;..\..\src\core;..\..\src\crypto;..\..\src\pcsc;..\..\src\eid;..\..\src\emv;..\..\src\magstripe;..\..\src\contactless;..\..\src\design;..\..\dist\packages\$(Platform)\$(Config);$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <DCC_RangeChecking>true</DCC_RangeChecking>
         <DCC_IntegerOverflowCheck>true</DCC_IntegerOverflowCheck>
         <DCC_GenerateDocumentation>true</DCC_GenerateDocumentation>
@@ -120,6 +120,12 @@
         <DCC_Optimize>true</DCC_Optimize>
     </PropertyGroup>
     <ItemGroup>
+        <DCCReference Include="..\..\src\globalplatform\ERD.Card.GlobalPlatform.Management.pas"/>
+        <DCCReference Include="..\..\src\core\ERD.Card.Crypto.RSA.pas"/>
+        <DCCReference Include="..\..\src\emv\ERD.Card.EMV.Semantics.pas"/>
+        <DCCReference Include="..\..\src\globalplatform\ERD.Card.GlobalPlatform.CAP.pas"/>
+        <DCCReference Include="..\..\src\globalplatform\ERD.Card.GlobalPlatform.SecureChannel.pas"/>
+        <DCCReference Include="..\..\src\globalplatform\ERD.Card.GlobalPlatform.pas"/>
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>

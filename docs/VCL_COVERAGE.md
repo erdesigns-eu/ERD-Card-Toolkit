@@ -1,10 +1,10 @@
 # VCL examples: current coverage
 
-There are **twenty-eight separately executable applications** in
+There are **thirty separately executable applications** in
 `examples/vcl/CardDemos.groupproj`. Each application has its own `TForm`,
 `.Main.pas`, and `.Main.dfm`. All visual controls are in that application's own
 DFM, including input fields and action controls. Hardware demos include reader
-selection; the offline calculator requires no reader or worker timer. There is
+selection; offline calculators and semantic tools require no reader or worker timer. There is
 no shared form and no shared form ancestor. Only non-visual card execution, input
 metadata, and worker lifecycle remain shared. Payments are outside this component
 set.
@@ -13,6 +13,8 @@ set.
 | --- | --- |
 | MagStripeDemo | Tracks and MSR206-7HL reads/verified writes |
 | SmartCardDemo | Existing combined PC/SC, eID, EMV, contactless, memory, and RFID pages |
+| GlobalPlatformDemo | CPLC/tagged or legacy registry, explicit native authentication, CAP/DAP load/install/delete/status/extradition, key management and RSA/AES token/receipt policies, background execution and native reader/card events |
+| EmvSemanticsDemo | Book 3 4.3/4.4 AIP/AUC/TVR/IAC/CVM List; reserved bits and binary thresholds, entirely offline |
 | EmvCalculatorDemo | All EMV calculator operations, explicit scheme/CVN profiles and transaction fields, AC/ARPC verification; entirely offline |
 | CardCatalogDemo | Valid ATR/tag/path/APDU/AID inventories and offline lookup; native reader/card events and offered ATR inspection without connecting |
 | ReaderToolsDemo | Native reader/card events with its own DFM controls and event log; PC/SC list/status, APDU command/response, ATR/catalog, BER-TLV, EMV tags, and NDEF codecs |

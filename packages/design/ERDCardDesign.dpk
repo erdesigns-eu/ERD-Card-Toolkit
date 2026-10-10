@@ -35,6 +35,12 @@ requires
   designide;
 
 contains
+  ERD.Card.GlobalPlatform.Management in '..\..\src\globalplatform\ERD.Card.GlobalPlatform.Management.pas',
+  ERD.Card.Crypto.RSA in '..\..\src\core\ERD.Card.Crypto.RSA.pas',
+  ERD.Card.EMV.Semantics in '..\..\src\emv\ERD.Card.EMV.Semantics.pas',
+  ERD.Card.GlobalPlatform.CAP in '..\..\src\globalplatform\ERD.Card.GlobalPlatform.CAP.pas',
+  ERD.Card.GlobalPlatform.SecureChannel in '..\..\src\globalplatform\ERD.Card.GlobalPlatform.SecureChannel.pas',
+  ERD.Card.GlobalPlatform in '..\..\src\globalplatform\ERD.Card.GlobalPlatform.pas',
   ERD.Card.EMV.Tags in '..\..\src\emv\ERD.Card.EMV.Tags.pas',
   ERD.Card.ATR.Catalog in '..\..\src\core\ERD.Card.ATR.Catalog.pas',
   ERD.Card.ATR in '..\..\src\core\ERD.Card.ATR.pas',
