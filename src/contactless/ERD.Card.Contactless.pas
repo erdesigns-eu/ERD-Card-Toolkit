@@ -1,7 +1,7 @@
 unit ERD.Card.Contactless;
 
 {$IFDEF FPC}
-  {$MODE DELPHI}
+{$MODE DELPHI}
 {$ENDIF}
 
 interface
@@ -17,6 +17,7 @@ uses
 type
   /// <summary>Invalid contactless configuration, data or requested operation; messages contain no keys.</summary>
   EContactlessError = class(EConvertError);
+
   /// <summary>Reader/card status failure; no key or command bytes are retained.</summary>
   EContactlessStatusError = class(EContactlessError)
   private
@@ -28,6 +29,7 @@ type
     /// <summary>Received SW1/SW2 with SW1 in the high byte.</summary>
     property StatusWord: Word read FStatusWord;
   end;
+
   /// <summary>A write was dispatched but completion could not be established; never retry blindly.</summary>
   EContactlessWriteUncertain = class(EContactlessError)
   private
@@ -39,6 +41,7 @@ type
     /// <summary>Class of the original failure; its possibly sensitive message is not retained.</summary>
     property OriginalErrorClass: string read FOriginalErrorClass;
   end;
+
   /// <summary>Explicit original MIFARE Classic memory layout; no automatic card identification.</summary>
   TMifareClassicModel = (
     /// <summary>Mini: 20 blocks in five sectors.</summary>
@@ -46,15 +49,14 @@ type
     /// <summary>1K: 64 blocks in sixteen sectors.</summary>
     mcm1K,
     /// <summary>4K: 256 blocks; sectors 32..39 contain sixteen blocks each.</summary>
-    mcm4K
-  );
+    mcm4K);
   /// <summary>Caller-selected Classic sector key; no default keys or key discovery.</summary>
   TMifareClassicKeyType = (
     /// <summary>Authenticate using key A, reader key type 60.</summary>
     mckA,
     /// <summary>Authenticate using key B, reader key type 61.</summary>
-    mckB
-  );
+    mckB);
+
   /// <summary>Injectable reader command profile for UID and Classic storage operations.</summary>
   /// <remarks>Command builders perform no I/O. Their returned buffers belong to the caller.
   /// Only assign a profile known to match the selected reader/driver; PC/SC alone does not prove support.</remarks>
@@ -73,8 +75,8 @@ type
     /// <param name="AKeyType">Key A or B.</param>
     /// <param name="ASlot">Previously loaded volatile slot identifier.</param>
     /// <returns>One complete authentication command.</returns>
-    function AuthenticateCommand(const ABlock: Byte; const AKeyType: TMifareClassicKeyType;
-      const ASlot: Byte): TBytes;
+    function AuthenticateCommand(const ABlock: Byte;
+      const AKeyType: TMifareClassicKeyType; const ASlot: Byte): TBytes;
     /// <summary>Builds a sixteen-byte Classic block read.</summary>
     /// <param name="ABlock">Validated block number.</param>
     /// <returns>One complete block read command.</returns>
@@ -85,6 +87,7 @@ type
     /// <returns>Independent complete write command.</returns>
     function WriteBlockCommand(const ABlock: Byte; const AData: TBytes): TBytes;
   end;
+
   /// <summary>Optional reader capability for four-byte Ultralight/NTAG page commands.</summary>
   /// <remarks>Separate interface preserves the existing IContactlessReaderProfile contract and GUID.</remarks>
   IType2ReaderProfile = interface
@@ -99,6 +102,7 @@ type
     /// <returns>Independent complete command; successful response contains only status bytes.</returns>
     function WritePageCommand(const APage: Byte; const AData: TBytes): TBytes;
   end;
+
   /// <summary>Optional reader-command capability for explicitly selected Classic Gen2/CUID cards.</summary>
   /// <remarks>Reader capability does not detect a programmable card. The caller must identify a
   /// reprogrammable Gen2/CUID variant; one-time fused and RF-unlock variants require separate profiles.</remarks>
@@ -109,6 +113,7 @@ type
     /// <returns>Independent complete command; successful response contains only status bytes.</returns>
     function WriteGen2ManufacturerCommand(const ABlock: TBytes): TBytes;
   end;
+
   /// <summary>Optional authenticated direct-write capability for caller-identified factory FUID cards.</summary>
   /// <remarks>Separate from reprogrammable Gen2 capability; factory UID alone does not identify this variant.</remarks>
   IFuidUidReaderProfile = interface
@@ -118,6 +123,7 @@ type
     /// <returns>Independent complete command; successful response contains only status bytes.</returns>
     function WriteFuidManufacturerCommand(const ABlock: TBytes): TBytes;
   end;
+
   /// <summary>Opt-in PC/SC storage pseudo-APDU profile: FF CA/82/86/B0/D6.</summary>
   /// <remarks>Targets the documented ACR122U-compatible storage command dialect. Other readers
   /// may implement it, require another profile, or lack Classic hardware support entirely.
@@ -140,8 +146,8 @@ type
     /// <param name="ASlot">Reader volatile slot identifier.</param>
     /// <returns>Independent command bytes.</returns>
     /// <exception cref="EContactlessError">Key type is invalid.</exception>
-    function AuthenticateCommand(const ABlock: Byte; const AKeyType: TMifareClassicKeyType;
-      const ASlot: Byte): TBytes;
+    function AuthenticateCommand(const ABlock: Byte;
+      const AKeyType: TMifareClassicKeyType; const ASlot: Byte): TBytes;
     /// <summary>Builds FF B0 with a sixteen-byte response request.</summary>
     /// <param name="ABlock">Classic block number.</param>
     /// <returns>Independent command bytes.</returns>
@@ -175,6 +181,7 @@ type
     /// <remarks>Does not configure, fuse or lock the card; variant selection and factory checks belong to the caller/API.</remarks>
     function WriteFuidManufacturerCommand(const ABlock: TBytes): TBytes;
   end;
+
   /// <summary>Stateless MIFARE Classic layout checks.</summary>
   TMifareClassicLayout = class
   public
@@ -182,14 +189,17 @@ type
     /// <param name="AModel">Mini, 1K or 4K.</param>
     /// <returns>20, 64 or 256 sixteen-byte blocks.</returns>
     /// <exception cref="EContactlessError">Model is invalid.</exception>
-    class function BlockCount(const AModel: TMifareClassicModel): Integer; static;
+    class function BlockCount(const AModel: TMifareClassicModel)
+      : Integer; static;
     /// <summary>Identifies trailer blocks containing access bits and sector keys.</summary>
     /// <param name="AModel">Explicit memory layout.</param>
     /// <param name="ABlock">Block number within that layout.</param>
     /// <returns>True for a sector trailer.</returns>
     /// <exception cref="EContactlessError">Model or block number is invalid.</exception>
-    class function IsTrailer(const AModel: TMifareClassicModel; const ABlock: Integer): Boolean; static;
+    class function IsTrailer(const AModel: TMifareClassicModel;
+      const ABlock: Integer): Boolean; static;
   end;
+
   /// <summary>Non-visual Classic/Type 2 storage and explicit programmable-UID operations using reader profiles.</summary>
   /// <remarks>Construction performs no hardware work. Configure/call on one caller thread, without
   /// reentrancy. Every operation holds one exclusive transaction by default. No probing, reset,
@@ -200,12 +210,15 @@ type
     FProfile: IContactlessReaderProfile;
     FUseTransactions: Boolean;
     function BeginOperation: ICardTransaction;
-    procedure EndOperation(const ATransaction: ICardTransaction; const ASucceeded: Boolean);
+    procedure EndOperation(const ATransaction: ICardTransaction;
+      const ASucceeded: Boolean);
     function Send(const ACommand: TBytes; const AExpectedSize: Integer): TBytes;
-    procedure Authenticate(const ABlock: Byte; const AKeyType: TMifareClassicKeyType;
-      const AKey: TBytes; const ASlot: Byte);
-    procedure ValidateBlock(const AModel: TMifareClassicModel; const ABlock: Integer;
-      const AKeyType: TMifareClassicKeyType; const AKey: TBytes);
+    procedure Authenticate(const ABlock: Byte;
+      const AKeyType: TMifareClassicKeyType; const AKey: TBytes;
+      const ASlot: Byte);
+    procedure ValidateBlock(const AModel: TMifareClassicModel;
+      const ABlock: Integer; const AKeyType: TMifareClassicKeyType;
+      const AKey: TBytes);
     function RequireType2Profile: IType2ReaderProfile;
     function RequireGen2Profile: IGen2UidReaderProfile;
     function RequireFuidProfile: IFuidUidReaderProfile;
@@ -230,8 +243,9 @@ type
     /// <remarks>The local key-bearing command is overwritten on exit. Reader slots can retain the
     /// key until reset/disconnection; manage their lifecycle according to the reader documentation.
     /// This is not secure-memory storage: profile/transport copies are outside the component's control.</remarks>
-    function ReadClassicBlock(const AModel: TMifareClassicModel; const ABlock: Integer;
-      const AKeyType: TMifareClassicKeyType; const AKey: TBytes; const ASlot: Byte = 0): TBytes;
+    function ReadClassicBlock(const AModel: TMifareClassicModel;
+      const ABlock: Integer; const AKeyType: TMifareClassicKeyType;
+      const AKey: TBytes; const ASlot: Byte = 0): TBytes;
     /// <summary>Authenticates and writes one Classic data block; manufacturer/trailer writes are rejected.</summary>
     /// <param name="AModel">Caller-identified Classic layout.</param>
     /// <param name="ABlock">Writable data block; block zero and all sector trailers are rejected before I/O.</param>
@@ -245,8 +259,9 @@ type
     /// <remarks>One write attempt only. A transport or release failure after dispatch can leave the
     /// write outcome unknown; inspect the card before any retry. This is not a rollback transaction.
     /// A successful status is not an independent read-back verification. Key-slot lifetime matches ReadClassicBlock.</remarks>
-    procedure WriteClassicDataBlock(const AModel: TMifareClassicModel; const ABlock: Integer;
-      const AKeyType: TMifareClassicKeyType; const AKey, AData: TBytes; const ASlot: Byte = 0);
+    procedure WriteClassicDataBlock(const AModel: TMifareClassicModel;
+      const ABlock: Integer; const AKeyType: TMifareClassicKeyType;
+      const AKey, AData: TBytes; const ASlot: Byte = 0);
     /// <summary>Reads one four-byte page within an explicit Ultralight/NTAG layout.</summary>
     /// <param name="AModel">Caller-identified supported memory layout.</param>
     /// <param name="APage">Physical page in the layout; non-user regions may be read when the card permits.</param>
@@ -256,7 +271,8 @@ type
     /// <exception cref="EContactlessStatusError">Reader/card denies the read.</exception>
     /// <remarks>No Classic authentication, password attempts, counters or RF fallback are sent.
     /// Masked password/configuration reads remain exactly as returned by the card.</remarks>
-    function ReadType2Page(const AModel: TType2TagModel; const APage: Integer): TBytes;
+    function ReadType2Page(const AModel: TType2TagModel;
+      const APage: Integer): TBytes;
     /// <summary>Reads every user-data page in one exclusive transaction without returning partial data.</summary>
     /// <param name="AModel">Caller-identified supported layout; largest snapshot is 888 bytes.</param>
     /// <returns>Complete independent ascending-page snapshot after successful release.</returns>
@@ -266,7 +282,8 @@ type
     /// <remarks>One four-byte request per page; no PC/SC requests outside the selected user region.
     /// Underlying RF read granularity depends on the reader/driver. Lock/password permissions are
     /// enforced by the card. Raw bytes are not an NDEF interpretation.</remarks>
-    function ReadType2UserMemory(const AModel: TType2TagModel): TType2UserMemory;
+    function ReadType2UserMemory(const AModel: TType2TagModel)
+      : TType2UserMemory;
     /// <summary>Writes one four-byte user page while excluding manufacturer, OTP/CC, lock and configuration pages.</summary>
     /// <param name="AModel">Caller-identified supported layout.</param>
     /// <param name="APage">User-data page only.</param>
@@ -277,7 +294,8 @@ type
     /// <exception cref="EContactlessWriteUncertain">Dispatch occurred and completion could not be established.</exception>
     /// <remarks>One write attempt; no password guessing, lock updates, retries or independent read-back.
     /// A release/transport failure after dispatch can leave modified data; inspect before retrying.</remarks>
-    procedure WriteType2UserPage(const AModel: TType2TagModel; const APage: Integer; const AData: TBytes);
+    procedure WriteType2UserPage(const AModel: TType2TagModel;
+      const APage: Integer; const AData: TBytes);
     /// <summary>Programs a UID on an explicitly identified reprogrammable Classic Gen2/CUID card.</summary>
     /// <param name="AModel">Explicit four-byte or seven-byte manufacturer-block layout.</param>
     /// <param name="ANewUid">Exactly four or seven caller-owned bytes according to AModel.</param>
@@ -294,7 +312,8 @@ type
     /// four-byte layout's BCC and verifies all sixteen written bytes. False ActiveUidVerified means
     /// the reader still reports the old UID and caller-controlled RF reactivation is required.
     /// No reset/reconnect or write replay. Ordinary data writers still reject manufacturer blocks.</remarks>
-    function ProgramClassicGen2Uid(const AModel: TClassicGen2UidModel; const ANewUid: TBytes; const AKeyType: TMifareClassicKeyType;
+    function ProgramClassicGen2Uid(const AModel: TClassicGen2UidModel;
+      const ANewUid: TBytes; const AKeyType: TMifareClassicKeyType;
       const AKey: TBytes; const ASlot: Byte = 0): TProgrammableUidResult;
     /// <summary>Performs one authenticated UID write on an explicitly identified four-byte factory FUID card.</summary>
     /// <param name="ANewUid">Exactly four target bytes, different from factory UID AA55C396; never modified.</param>
@@ -311,8 +330,9 @@ type
     /// fifteen, recomputes BCC and verifies all sixteen bytes. False ActiveUidVerified requires caller-controlled RF
     /// reactivation and ReadUid verification; never repeat this method after an uncertain result. No automatic replay,
     /// fuse commands or reconnect. Local key-command overwriting and reader key-slot lifetime match ReadClassicBlock.</remarks>
-    function ProgramFuidUidOnce(const ANewUid: TBytes; const AKeyType: TMifareClassicKeyType;
-      const AKey: TBytes; const ASlot: Byte = 0): TFuidUidResult;
+    function ProgramFuidUidOnce(const ANewUid: TBytes;
+      const AKeyType: TMifareClassicKeyType; const AKey: TBytes;
+      const ASlot: Byte = 0): TFuidUidResult;
     /// <summary>Connected byte transport retained by the component; its owner may disconnect it.</summary>
     property Transport: ICardTransport read FTransport write FTransport;
     /// <summary>Explicit matching reader command profile; nil disables all hardware operations.</summary>
@@ -320,7 +340,8 @@ type
   published
     /// <summary>Acquire one exclusive ICardTransaction per complete operation; defaults to true.</summary>
     /// <remarks>False requires caller-guaranteed exclusive access. Existing transactions cannot nest.</remarks>
-    property UseTransactions: Boolean read FUseTransactions write FUseTransactions default True;
+    property UseTransactions: Boolean read FUseTransactions
+      write FUseTransactions default True;
   end;
 
 implementation
@@ -329,31 +350,37 @@ uses ERD.Card.APDU, ERD.Card.Bytes;
 
 procedure Fail(const AReason: string);
 begin
-  raise EContactlessError.Create('Contactless operation failed: ' + AReason + '.');
+  raise EContactlessError.Create('Contactless operation failed: ' +
+    AReason + '.');
 end;
 
-function Command(const AIns, AP2: Byte; const AData: TBytes; const ALe: Integer): TBytes;
-var Apdu: TApduCommand;
+function Command(const AIns, AP2: Byte; const AData: TBytes;
+  const ALe: Integer): TBytes;
+var
+  APDU: TApduCommand;
 begin
-  Apdu := Default(TApduCommand);
-  Apdu.CLA := $FF;
-  Apdu.INS := AIns;
-  Apdu.P2 := AP2;
-  Apdu.Data := AData;
-  Apdu.HasLe := ALe > 0;
-  Apdu.Le := Cardinal(ALe);
-  Result := TApduCodec.EncodeCommand(Apdu);
+  APDU := Default (TApduCommand);
+  APDU.CLA := $FF;
+  APDU.INS := AIns;
+  APDU.P2 := AP2;
+  APDU.Data := AData;
+  APDU.HasLe := ALe > 0;
+  APDU.Le := Cardinal(ALe);
+  Result := TApduCodec.EncodeCommand(APDU);
 end;
 
 constructor EContactlessStatusError.Create(const AStatusWord: Word);
 begin
-  inherited CreateFmt('Contactless command returned status %.4x.', [AStatusWord]);
+  inherited CreateFmt('Contactless command returned status %.4x.',
+    [AStatusWord]);
   FStatusWord := AStatusWord;
 end;
 
-constructor EContactlessWriteUncertain.Create(const AOriginalErrorClass: string);
+constructor EContactlessWriteUncertain.Create(const AOriginalErrorClass
+  : string);
 begin
-  inherited Create('Contactless write outcome is uncertain; inspect the card before retrying.');
+  inherited Create
+    ('Contactless write outcome is uncertain; inspect the card before retrying.');
   FOriginalErrorClass := AOriginalErrorClass;
 end;
 
@@ -362,17 +389,21 @@ begin
   Result := Command($CA, 0, nil, 256);
 end;
 
-function TPcscStorageProfile.LoadKeyCommand(const AKey: TBytes; const ASlot: Byte): TBytes;
+function TPcscStorageProfile.LoadKeyCommand(const AKey: TBytes;
+  const ASlot: Byte): TBytes;
 begin
-  if Length(AKey) <> 6 then Fail('key size');
+  if Length(AKey) <> 6 then
+    Fail('key size');
   Result := Command($82, ASlot, AKey, 0);
 end;
 
 function TPcscStorageProfile.AuthenticateCommand(const ABlock: Byte;
   const AKeyType: TMifareClassicKeyType; const ASlot: Byte): TBytes;
-var Data: TBytes;
+var
+  Data: TBytes;
 begin
-  if not (AKeyType in [mckA, mckB]) then Fail('key type');
+  if not(AKeyType in [mckA, mckB]) then
+    Fail('key type');
   Data := HexToBytes('0100006000');
   Data[2] := ABlock;
   Data[3] := $60 + Ord(AKeyType);
@@ -385,9 +416,11 @@ begin
   Result := Command($B0, ABlock, nil, 16);
 end;
 
-function TPcscStorageProfile.WriteBlockCommand(const ABlock: Byte; const AData: TBytes): TBytes;
+function TPcscStorageProfile.WriteBlockCommand(const ABlock: Byte;
+  const AData: TBytes): TBytes;
 begin
-  if Length(AData) <> 16 then Fail('data block size');
+  if Length(AData) <> 16 then
+    Fail('data block size');
   Result := Command($D6, ABlock, AData, 0);
 end;
 
@@ -396,39 +429,55 @@ begin
   Result := Command($B0, APage, nil, Type2PageBytes);
 end;
 
-function TPcscStorageProfile.WritePageCommand(const APage: Byte; const AData: TBytes): TBytes;
+function TPcscStorageProfile.WritePageCommand(const APage: Byte;
+  const AData: TBytes): TBytes;
 begin
-  if Length(AData) <> Type2PageBytes then Fail('page data size');
+  if Length(AData) <> Type2PageBytes then
+    Fail('page data size');
   Result := Command($D6, APage, AData, 0);
 end;
 
-function TPcscStorageProfile.WriteGen2ManufacturerCommand(const ABlock: TBytes): TBytes;
+function TPcscStorageProfile.WriteGen2ManufacturerCommand
+  (const ABlock: TBytes): TBytes;
 begin
-  if Length(ABlock) <> 16 then Fail('manufacturer block size');
+  if Length(ABlock) <> 16 then
+    Fail('manufacturer block size');
   Result := Command($D6, 0, ABlock, 0);
 end;
 
-function TPcscStorageProfile.WriteFuidManufacturerCommand(const ABlock: TBytes): TBytes;
+function TPcscStorageProfile.WriteFuidManufacturerCommand
+  (const ABlock: TBytes): TBytes;
 begin
-  if Length(ABlock) <> 16 then Fail('manufacturer block size');
+  if Length(ABlock) <> 16 then
+    Fail('manufacturer block size');
   Result := Command($D6, 0, ABlock, 0);
 end;
 
-class function TMifareClassicLayout.BlockCount(const AModel: TMifareClassicModel): Integer;
+class function TMifareClassicLayout.BlockCount(const AModel
+  : TMifareClassicModel): Integer;
 begin
   case AModel of
-    mcmMini: Result := 20;
-    mcm1K: Result := 64;
-    mcm4K: Result := 256;
-  else Fail('Classic model'); Result := 0; end;
+    mcmMini:
+      Result := 20;
+    mcm1K:
+      Result := 64;
+    mcm4K:
+      Result := 256;
+  else
+    Fail('Classic model');
+    Result := 0;
+  end;
 end;
 
 class function TMifareClassicLayout.IsTrailer(const AModel: TMifareClassicModel;
   const ABlock: Integer): Boolean;
 begin
-  if (ABlock < 0) or (ABlock >= BlockCount(AModel)) then Fail('block range');
-  if ABlock < 128 then Result := (ABlock mod 4) = 3
-  else Result := (ABlock mod 16) = 15;
+  if (ABlock < 0) or (ABlock >= BlockCount(AModel)) then
+    Fail('block range');
+  if ABlock < 128 then
+    Result := (ABlock mod 4) = 3
+  else
+    Result := (ABlock mod 16) = 15;
 end;
 
 constructor TContactlessCardReader.Create(AOwner: TComponent);
@@ -440,65 +489,86 @@ end;
 function TContactlessCardReader.BeginOperation: ICardTransaction;
 begin
   Result := nil;
-  if FTransport = nil then Fail('no transport');
-  if FProfile = nil then Fail('no reader profile');
+  if FTransport = nil then
+    Fail('no transport');
+  if FProfile = nil then
+    Fail('no reader profile');
   if FUseTransactions then
   begin
-    if not Supports(FTransport, ICardTransaction, Result) then Fail('transaction capability missing');
+    if not Supports(FTransport, ICardTransaction, Result) then
+      Fail('transaction capability missing');
     Result.BeginTransaction;
   end;
 end;
 
-procedure TContactlessCardReader.EndOperation(const ATransaction: ICardTransaction;
-  const ASucceeded: Boolean);
+procedure TContactlessCardReader.EndOperation(const ATransaction
+  : ICardTransaction; const ASucceeded: Boolean);
 begin
-  if ATransaction = nil then Exit;
-  if ASucceeded then ATransaction.EndTransaction
+  if ATransaction = nil then
+    Exit;
+  if ASucceeded then
+    ATransaction.EndTransaction
   else
   begin
-    try ATransaction.EndTransaction;
+    try
+      ATransaction.EndTransaction;
     except
       // Retain the primary operation failure, including an ambiguous write outcome.
     end;
   end;
 end;
 
-function TContactlessCardReader.Send(const ACommand: TBytes; const AExpectedSize: Integer): TBytes;
-var Response: TApduResponse;
+function TContactlessCardReader.Send(const ACommand: TBytes;
+  const AExpectedSize: Integer): TBytes;
+var
+  Response: TApduResponse;
 begin
   Response := TApduCodec.DecodeResponse(FTransport.Exchange(ACommand));
   if Response.StatusWord <> ApduStatusSuccess then
     raise EContactlessStatusError.Create(Response.StatusWord);
   if AExpectedSize >= 0 then
   begin
-    if Length(Response.Data) <> AExpectedSize then Fail('response size');
+    if Length(Response.Data) <> AExpectedSize then
+      Fail('response size');
   end
-  else if (Length(Response.Data) < 1) or (Length(Response.Data) > 32) then Fail('UID size');
+  else if (Length(Response.Data) < 1) or (Length(Response.Data) > 32) then
+    Fail('UID size');
   Result := Response.Data;
 end;
 
-procedure TContactlessCardReader.ValidateBlock(const AModel: TMifareClassicModel;
-  const ABlock: Integer; const AKeyType: TMifareClassicKeyType; const AKey: TBytes);
+procedure TContactlessCardReader.ValidateBlock(const AModel
+  : TMifareClassicModel; const ABlock: Integer;
+  const AKeyType: TMifareClassicKeyType; const AKey: TBytes);
 begin
-  if (ABlock < 0) or (ABlock >= TMifareClassicLayout.BlockCount(AModel)) then Fail('block range');
-  if not (AKeyType in [mckA, mckB]) then Fail('key type');
-  if Length(AKey) <> 6 then Fail('key size');
+  if (ABlock < 0) or (ABlock >= TMifareClassicLayout.BlockCount(AModel)) then
+    Fail('block range');
+  if not(AKeyType in [mckA, mckB]) then
+    Fail('key type');
+  if Length(AKey) <> 6 then
+    Fail('key size');
 end;
 
 procedure TContactlessCardReader.Authenticate(const ABlock: Byte;
   const AKeyType: TMifareClassicKeyType; const AKey: TBytes; const ASlot: Byte);
-var Wire: TBytes; I: Integer;
+var
+  Wire: TBytes;
+  I: Integer;
 begin
   Wire := FProfile.LoadKeyCommand(AKey, ASlot);
-  try Send(Wire, 0);
+  try
+    Send(Wire, 0);
   finally
-    for I := 0 to Length(Wire) - 1 do Wire[I] := 0;
+    for I := 0 to Length(Wire) - 1 do
+      Wire[I] := 0;
   end;
   Send(FProfile.AuthenticateCommand(ABlock, AKeyType, ASlot), 0);
 end;
 
 function TContactlessCardReader.ReadUid: TBytes;
-var Transaction: ICardTransaction; Data: TBytes; Succeeded: Boolean;
+var
+  Transaction: ICardTransaction;
+  Data: TBytes;
+  Succeeded: Boolean;
 begin
   Result := nil;
   Transaction := BeginOperation;
@@ -506,26 +576,31 @@ begin
   try
     Data := Send(FProfile.UidCommand, -1);
     Succeeded := True;
-  finally EndOperation(Transaction, Succeeded); end;
+  finally
+    EndOperation(Transaction, Succeeded);
+  end;
   Result := Data;
 end;
 
 function TContactlessCardReader.RequireType2Profile: IType2ReaderProfile;
 begin
   Result := nil;
-  if not Supports(FProfile, IType2ReaderProfile, Result) then Fail('Type 2 reader capability missing');
+  if not Supports(FProfile, IType2ReaderProfile, Result) then
+    Fail('Type 2 reader capability missing');
 end;
 
 function TContactlessCardReader.RequireGen2Profile: IGen2UidReaderProfile;
 begin
   Result := nil;
-  if not Supports(FProfile, IGen2UidReaderProfile, Result) then Fail('Gen2 UID reader capability missing');
+  if not Supports(FProfile, IGen2UidReaderProfile, Result) then
+    Fail('Gen2 UID reader capability missing');
 end;
 
 function TContactlessCardReader.RequireFuidProfile: IFuidUidReaderProfile;
 begin
   Result := nil;
-  if not Supports(FProfile, IFuidUidReaderProfile, Result) then Fail('FUID reader capability missing');
+  if not Supports(FProfile, IFuidUidReaderProfile, Result) then
+    Fail('FUID reader capability missing');
 end;
 
 function TContactlessCardReader.ReadType2Page(const AModel: TType2TagModel;
@@ -545,11 +620,14 @@ begin
   try
     Data := Send(Profile.ReadPageCommand(Byte(APage)), Type2PageBytes);
     Succeeded := True;
-  finally EndOperation(Transaction, Succeeded); end;
+  finally
+    EndOperation(Transaction, Succeeded);
+  end;
   Result := Data;
 end;
 
-function TContactlessCardReader.ReadType2UserMemory(const AModel: TType2TagModel): TType2UserMemory;
+function TContactlessCardReader.ReadType2UserMemory(const AModel
+  : TType2TagModel): TType2UserMemory;
 var
   Profile: IType2ReaderProfile;
   Transaction: ICardTransaction;
@@ -558,13 +636,13 @@ var
   Page, LastPage, Offset, I: Integer;
   Succeeded: Boolean;
 begin
-  Result := Default(TType2UserMemory);
+  Result := Default (TType2UserMemory);
   LastPage := TType2Layout.LastUserPage(AModel);
   Profile := RequireType2Profile;
   Transaction := BeginOperation;
   Succeeded := False;
   try
-    Data := Default(TType2UserMemory);
+    Data := Default (TType2UserMemory);
     Data.Model := AModel;
     Data.FirstPage := Type2FirstUserPage;
     Data.PageCount := LastPage - Type2FirstUserPage + 1;
@@ -573,24 +651,29 @@ begin
     for Page := Type2FirstUserPage to LastPage do
     begin
       PageData := Send(Profile.ReadPageCommand(Byte(Page)), Type2PageBytes);
-      for I := 0 to Type2PageBytes - 1 do Data.Data[Offset + I] := PageData[I];
+      for I := 0 to Type2PageBytes - 1 do
+        Data.Data[Offset + I] := PageData[I];
       Inc(Offset, Type2PageBytes);
     end;
     Succeeded := True;
-  finally EndOperation(Transaction, Succeeded); end;
+  finally
+    EndOperation(Transaction, Succeeded);
+  end;
   Result := Data;
 end;
 
-procedure TContactlessCardReader.WriteType2UserPage(const AModel: TType2TagModel;
-  const APage: Integer; const AData: TBytes);
+procedure TContactlessCardReader.WriteType2UserPage(const AModel
+  : TType2TagModel; const APage: Integer; const AData: TBytes);
 var
   Profile: IType2ReaderProfile;
   Transaction: ICardTransaction;
   Wire: TBytes;
   Succeeded, Dispatched: Boolean;
 begin
-  if not TType2Layout.IsUserPage(AModel, APage) then Fail('protected Type 2 page');
-  if Length(AData) <> Type2PageBytes then Fail('page data size');
+  if not TType2Layout.IsUserPage(AModel, APage) then
+    Fail('protected Type 2 page');
+  if Length(AData) <> Type2PageBytes then
+    Fail('page data size');
   Profile := RequireType2Profile;
   Transaction := BeginOperation;
   Succeeded := False;
@@ -601,19 +684,23 @@ begin
       Dispatched := True;
       Send(Wire, 0);
       Succeeded := True;
-    finally EndOperation(Transaction, Succeeded); end;
+    finally
+      EndOperation(Transaction, Succeeded);
+    end;
   except
     on E: Exception do
     begin
-      if Dispatched and not (E is EContactlessStatusError) then
+      if Dispatched and not(E is EContactlessStatusError) then
         raise EContactlessWriteUncertain.Create(E.ClassName);
       raise;
     end;
   end;
 end;
 
-function TContactlessCardReader.ProgramClassicGen2Uid(const AModel: TClassicGen2UidModel; const ANewUid: TBytes;
-  const AKeyType: TMifareClassicKeyType; const AKey: TBytes; const ASlot: Byte): TProgrammableUidResult;
+function TContactlessCardReader.ProgramClassicGen2Uid
+  (const AModel: TClassicGen2UidModel; const ANewUid: TBytes;
+  const AKeyType: TMifareClassicKeyType; const AKey: TBytes; const ASlot: Byte)
+  : TProgrammableUidResult;
 var
   Profile: IGen2UidReaderProfile;
   Transaction: ICardTransaction;
@@ -622,7 +709,7 @@ var
   Succeeded, Dispatched, WriteAccepted: Boolean;
   UidSize: Integer;
 begin
-  Result := Default(TProgrammableUidResult);
+  Result := Default (TProgrammableUidResult);
   UidSize := TProgrammableUidCodec.UidLength(AModel);
   TProgrammableUidCodec.ValidateUid(AModel, ANewUid);
   ValidateBlock(mcm1K, 0, AKeyType, AKey);
@@ -633,16 +720,19 @@ begin
   WriteAccepted := False;
   try
     try
-      Data := Default(TProgrammableUidResult);
+      Data := Default (TProgrammableUidResult);
       Data.Model := AModel;
       Data.RequestedUid := CopyBytes(ANewUid);
       Data.PreviousUid := Send(FProfile.UidCommand, -1);
-      if Length(Data.PreviousUid) <> UidSize then Fail('current UID length does not match selected layout');
+      if Length(Data.PreviousUid) <> UidSize then
+        Fail('current UID length does not match selected layout');
       Authenticate(0, AKeyType, AKey, ASlot);
       OldBlock := Send(FProfile.ReadBlockCommand(0), 16);
       BlockUid := TProgrammableUidCodec.DecodeGen2Uid(AModel, OldBlock);
-      if not BytesEqual(BlockUid, Data.PreviousUid) then Fail('UID and manufacturer block disagree');
-      Data.ManufacturerBlock := TProgrammableUidCodec.PrepareGen2Block(AModel, OldBlock, Data.RequestedUid);
+      if not BytesEqual(BlockUid, Data.PreviousUid) then
+        Fail('UID and manufacturer block disagree');
+      Data.ManufacturerBlock := TProgrammableUidCodec.PrepareGen2Block(AModel,
+        OldBlock, Data.RequestedUid);
       if BytesEqual(Data.RequestedUid, Data.PreviousUid) then
         Data.ActiveUidVerified := True
       else
@@ -652,18 +742,23 @@ begin
         Send(Wire, 0);
         WriteAccepted := True;
         VerifiedBlock := Send(FProfile.ReadBlockCommand(0), 16);
-        if not BytesEqual(VerifiedBlock, Data.ManufacturerBlock) then Fail('manufacturer read-back mismatch');
+        if not BytesEqual(VerifiedBlock, Data.ManufacturerBlock) then
+          Fail('manufacturer read-back mismatch');
         ActiveUid := Send(FProfile.UidCommand, -1);
         Data.ActiveUidVerified := BytesEqual(ActiveUid, Data.RequestedUid);
-        if not Data.ActiveUidVerified and not BytesEqual(ActiveUid, Data.PreviousUid) then
+        if not Data.ActiveUidVerified and not BytesEqual(ActiveUid,
+          Data.PreviousUid) then
           Fail('active UID verification mismatch');
       end;
       Succeeded := True;
-    finally EndOperation(Transaction, Succeeded); end;
+    finally
+      EndOperation(Transaction, Succeeded);
+    end;
   except
     on E: Exception do
     begin
-      if Dispatched and (WriteAccepted or not (E is EContactlessStatusError)) then
+      if Dispatched and (WriteAccepted or not(E is EContactlessStatusError))
+      then
         raise EContactlessWriteUncertain.Create(E.ClassName);
       raise;
     end;
@@ -672,18 +767,23 @@ begin
 end;
 
 function TContactlessCardReader.ProgramFuidUidOnce(const ANewUid: TBytes;
-  const AKeyType: TMifareClassicKeyType; const AKey: TBytes; const ASlot: Byte): TFuidUidResult;
-var Profile: IFuidUidReaderProfile; Transaction: ICardTransaction; Data: TFuidUidResult;
+  const AKeyType: TMifareClassicKeyType; const AKey: TBytes; const ASlot: Byte)
+  : TFuidUidResult;
+var
+  Profile: IFuidUidReaderProfile;
+  Transaction: ICardTransaction;
+  Data: TFuidUidResult;
   FactoryUid, OldBlock, BlockUid, Verified, ActiveUid, Wire: TBytes;
   Succeeded, Dispatched: Boolean;
 begin
-  Result := Default(TFuidUidResult);
+  Result := Default (TFuidUidResult);
   TProgrammableUidCodec.ValidateUid(cgum4Byte, ANewUid);
   FactoryUid := HexToBytes('AA55C396');
-  if BytesEqual(ANewUid, FactoryUid) then Fail('target must differ from factory UID');
+  if BytesEqual(ANewUid, FactoryUid) then
+    Fail('target must differ from factory UID');
   ValidateBlock(mcm1K, 0, AKeyType, AKey);
   Profile := RequireFuidProfile;
-  Data := Default(TFuidUidResult);
+  Data := Default (TFuidUidResult);
   Data.RequestedUid := CopyBytes(ANewUid);
   Succeeded := False;
   Dispatched := False;
@@ -691,36 +791,49 @@ begin
   try
     try
       Data.PreviousUid := Send(FProfile.UidCommand, -1);
-      if not BytesEqual(Data.PreviousUid, FactoryUid) then Fail('FUID factory UID precondition failed');
+      if not BytesEqual(Data.PreviousUid, FactoryUid) then
+        Fail('FUID factory UID precondition failed');
       Authenticate(0, AKeyType, AKey, ASlot);
       OldBlock := Send(FProfile.ReadBlockCommand(0), 16);
       BlockUid := TProgrammableUidCodec.DecodeGen2Uid(cgum4Byte, OldBlock);
-      if not BytesEqual(BlockUid, FactoryUid) then Fail('FUID factory UID/block mismatch');
-      Data.ManufacturerBlock := TProgrammableUidCodec.PrepareGen2Block(cgum4Byte, OldBlock, Data.RequestedUid);
+      if not BytesEqual(BlockUid, FactoryUid) then
+        Fail('FUID factory UID/block mismatch');
+      Data.ManufacturerBlock := TProgrammableUidCodec.PrepareGen2Block
+        (cgum4Byte, OldBlock, Data.RequestedUid);
       Wire := Profile.WriteFuidManufacturerCommand(Data.ManufacturerBlock);
       Dispatched := True;
       Send(Wire, 0);
       Verified := Send(FProfile.ReadBlockCommand(0), 16);
-      if not BytesEqual(Verified, Data.ManufacturerBlock) then Fail('FUID manufacturer read-back mismatch');
+      if not BytesEqual(Verified, Data.ManufacturerBlock) then
+        Fail('FUID manufacturer read-back mismatch');
       ActiveUid := Send(FProfile.UidCommand, -1);
       Data.ActiveUidVerified := BytesEqual(ActiveUid, Data.RequestedUid);
-      if not Data.ActiveUidVerified and not BytesEqual(ActiveUid, FactoryUid) then Fail('FUID active UID mismatch');
+      if not Data.ActiveUidVerified and not BytesEqual(ActiveUid, FactoryUid)
+      then
+        Fail('FUID active UID mismatch');
       Succeeded := True;
-    finally EndOperation(Transaction, Succeeded); end;
+    finally
+      EndOperation(Transaction, Succeeded);
+    end;
   except
     on E: Exception do
     begin
-      if Dispatched then raise EContactlessWriteUncertain.Create(E.ClassName);
+      if Dispatched then
+        raise EContactlessWriteUncertain.Create(E.ClassName);
       raise;
     end;
   end;
   Result := Data;
 end;
 
-function TContactlessCardReader.ReadClassicBlock(const AModel: TMifareClassicModel;
-  const ABlock: Integer; const AKeyType: TMifareClassicKeyType; const AKey: TBytes;
+function TContactlessCardReader.ReadClassicBlock(const AModel
+  : TMifareClassicModel; const ABlock: Integer;
+  const AKeyType: TMifareClassicKeyType; const AKey: TBytes;
   const ASlot: Byte): TBytes;
-var Transaction: ICardTransaction; Data: TBytes; Succeeded: Boolean;
+var
+  Transaction: ICardTransaction;
+  Data: TBytes;
+  Succeeded: Boolean;
 begin
   Result := nil;
   ValidateBlock(AModel, ABlock, AKeyType, AKey);
@@ -730,18 +843,26 @@ begin
     Authenticate(Byte(ABlock), AKeyType, AKey, ASlot);
     Data := Send(FProfile.ReadBlockCommand(Byte(ABlock)), 16);
     Succeeded := True;
-  finally EndOperation(Transaction, Succeeded); end;
+  finally
+    EndOperation(Transaction, Succeeded);
+  end;
   Result := Data;
 end;
 
-procedure TContactlessCardReader.WriteClassicDataBlock(const AModel: TMifareClassicModel;
-  const ABlock: Integer; const AKeyType: TMifareClassicKeyType; const AKey, AData: TBytes;
+procedure TContactlessCardReader.WriteClassicDataBlock
+  (const AModel: TMifareClassicModel; const ABlock: Integer;
+  const AKeyType: TMifareClassicKeyType; const AKey, AData: TBytes;
   const ASlot: Byte);
-var Transaction: ICardTransaction; Succeeded, Dispatched: Boolean; Wire: TBytes;
+var
+  Transaction: ICardTransaction;
+  Succeeded, Dispatched: Boolean;
+  Wire: TBytes;
 begin
   ValidateBlock(AModel, ABlock, AKeyType, AKey);
-  if (ABlock = 0) or TMifareClassicLayout.IsTrailer(AModel, ABlock) then Fail('protected block');
-  if Length(AData) <> 16 then Fail('data block size');
+  if (ABlock = 0) or TMifareClassicLayout.IsTrailer(AModel, ABlock) then
+    Fail('protected block');
+  if Length(AData) <> 16 then
+    Fail('data block size');
   Transaction := BeginOperation;
   Succeeded := False;
   Dispatched := False;
@@ -752,11 +873,13 @@ begin
       Dispatched := True;
       Send(Wire, 0);
       Succeeded := True;
-    finally EndOperation(Transaction, Succeeded); end;
+    finally
+      EndOperation(Transaction, Succeeded);
+    end;
   except
     on E: Exception do
     begin
-      if Dispatched and not (E is EContactlessStatusError) then
+      if Dispatched and not(E is EContactlessStatusError) then
         raise EContactlessWriteUncertain.Create(E.ClassName);
       raise;
     end;

@@ -1,7 +1,7 @@
 unit ERD.Card.Contactless.Raw;
 
 {$IFDEF FPC}
-  {$MODE DELPHI}
+{$MODE DELPHI}
 {$ENDIF}
 
 interface
@@ -12,7 +12,9 @@ uses
 {$ELSE}
   System.SysUtils, System.Classes,
 {$ENDIF}
-  ERD.Card.Contactless, ERD.Card.Contactless.UID, ERD.Card.Contactless.UID.Profiles, ERD.Card.Contactless.UID.USCUID, ERD.Card.Contactless.UID.Partial;
+  ERD.Card.Contactless, ERD.Card.Contactless.UID,
+  ERD.Card.Contactless.UID.Profiles, ERD.Card.Contactless.UID.USCUID,
+  ERD.Card.Contactless.UID.Partial;
 
 type
   /// <summary>One raw ISO 14443-A RF response; bytes include any card-supplied CRC.</summary>
@@ -25,6 +27,7 @@ type
     /// <summary>True only for a reader-reported RF response timeout; Data is empty and BitCount is zero.</summary>
     TimedOut: Boolean;
   end;
+
   /// <summary>Exclusive raw Type A reader session, independent of PC/SC storage pseudo-APDUs.</summary>
   /// <remarks>Implementations must send each frame once, retain RF selection between exchanges,
   /// disable automatic CRC insertion/removal and retries, and bound RF timeouts.
@@ -43,8 +46,10 @@ type
     /// <param name="AFrame">Nonempty caller-owned frame, including any required CRC-A bytes; never modified.</param>
     /// <param name="ABitCount">Valid outgoing bits, using all preceding bytes and one to eight bits in the final byte.</param>
     /// <returns>Independent raw response including CRC, partial-bit count and explicit RF timeout state.</returns>
-    function Exchange(const AFrame: TBytes; const ABitCount: Integer): TRawRfResponse;
+    function Exchange(const AFrame: TBytes; const ABitCount: Integer)
+      : TRawRfResponse;
   end;
+
   /// <summary>Explicit Classic-compatible volatile RF unlock dialect; never a fuse or permanent configuration change.</summary>
   TClassicRawUidProfile = (
     /// <summary>Reprogrammable four-byte Gen1a: seven-bit 40 followed by byte 43.</summary>
@@ -52,8 +57,8 @@ type
     /// <summary>Unsealed four-byte UFUID using Gen1a wakeup; sealed variants fail instead of being unfused.</summary>
     crupUnsealedUfuid,
     /// <summary>Reprogrammable four-byte Gen1b: seven-bit 40 only; never sends 43 or probes alternate wakeup.</summary>
-    crupGen1b
-  );
+    crupGen1b);
+
   /// <summary>Completed seven-byte DirectWrite Type 2 UID programming and fresh RF activation.</summary>
   /// <remarks>Ordinary record assignment shares arrays; the method returns independent copies.</remarks>
   TType2UidResult = record
@@ -66,6 +71,7 @@ type
     /// <summary>True on every returned result: fresh RF selection reports RequestedUid.</summary>
     ActiveUidVerified: Boolean;
   end;
+
   /// <summary>Bounded raw Type A CRC and reprogrammable Type 2 manufacturer-page codecs.</summary>
   TRawUidCodec = class
   public
@@ -79,7 +85,8 @@ type
     /// <param name="ADataSize">Required payload size, zero to 253 bytes.</param>
     /// <returns>Independent payload after length, framing and CRC validation.</returns>
     /// <exception cref="EContactlessError">Size, framing, timeout or CRC is invalid.</exception>
-    class function DecodeCrcA(const AResponse: TRawRfResponse; const ADataSize: Integer): TBytes; static;
+    class function DecodeCrcA(const AResponse: TRawRfResponse;
+      const ADataSize: Integer): TBytes; static;
     /// <summary>Validates Type 2 manufacturer-page BCC values and copies the seven-byte UID.</summary>
     /// <param name="APages">Exactly sixteen bytes from pages zero through three.</param>
     /// <returns>Independent UID assembled from page zero and page one.</returns>
@@ -90,8 +97,10 @@ type
     /// <param name="ANewUid">Exactly seven caller-owned UID bytes.</param>
     /// <returns>Independent sixteen-byte pages; bytes nine through fifteen remain unchanged.</returns>
     /// <exception cref="EProgrammableUidError">Existing pages or requested UID are invalid.</exception>
-    class function PrepareType2Pages(const APages, ANewUid: TBytes): TBytes; static;
+    class function PrepareType2Pages(const APages, ANewUid: TBytes)
+      : TBytes; static;
   end;
+
   /// <summary>Nonvisual UID programmer for caller-identified reprogrammable raw-RF card profiles.</summary>
   /// <remarks>No automatic card detection, key discovery, fusing, wiping or rollback.
   /// Ordinary production cards and write-once variants are not covered. Requires one card in the field.</remarks>
@@ -105,15 +114,16 @@ type
     procedure UnlockClassic(const AProfile: TClassicRawUidProfile);
     procedure UnlockUscuid(const AStyle: TUscuidWakeupStyle);
     function ReadUscuidBlock(const ACommand, ABlock: Byte): TBytes;
-    procedure WriteUscuidBlock(const ACommand, ABlock: Byte; const AData: TBytes;
-      var ADispatched: Boolean);
+    procedure WriteUscuidBlock(const ACommand, ABlock: Byte;
+      const AData: TBytes; var ADispatched: Boolean);
     function ReadManufacturer: TBytes;
     procedure CheckActivation(const ARequestedUid: TBytes);
     procedure RequireStatus9000(const AResponse: TRawRfResponse);
-    function ExchangeGen4(const APassword: TBytes; const ACommand: Byte; const AData: TBytes;
-      var AWriteDispatched: Boolean): TRawRfResponse;
+    function ExchangeGen4(const APassword: TBytes; const ACommand: Byte;
+      const AData: TBytes; var AWriteDispatched: Boolean): TRawRfResponse;
     function ReadGen4Configuration(const APassword: TBytes): TBytes;
-    function ReadGen4Blocks(const ALayout: TGen4UidLayout; const APassword: TBytes): TUidManufacturerBlocks;
+    function ReadGen4Blocks(const ALayout: TGen4UidLayout;
+      const APassword: TBytes): TUidManufacturerBlocks;
   public
     /// <summary>Programs a four-byte UID using explicit Gen1a, unsealed UFUID or Gen1b volatile unlock.</summary>
     /// <param name="AProfile">Caller-identified Gen1a/unsealed UFUID (40/43) or Gen1b (40 only) dialect.</param>
@@ -125,7 +135,8 @@ type
     /// <remarks>Preserves bytes five through fifteen; never sends wipe, seal or permanent lock commands.
     /// Gen1b additionally unlocks and verifies all block bytes after fresh activation. A matching UID is a verified no-op.
     /// Any failure after the write handshake is uncertain; never blindly retry.</remarks>
-    function ProgramClassicUid(const AProfile: TClassicRawUidProfile; const ANewUid: TBytes): TProgrammableUidResult;
+    function ProgramClassicUid(const AProfile: TClassicRawUidProfile;
+      const ANewUid: TBytes): TProgrammableUidResult;
     /// <summary>Programs a seven-byte UID on an explicitly identified reprogrammable Type 2 DirectWrite variant.</summary>
     /// <param name="ANewUid">Exactly seven bytes; copied without modification.</param>
     /// <returns>Independent manufacturer pages and UIDs after read-back, fresh selection and successful release.</returns>
@@ -144,7 +155,8 @@ type
     /// <exception cref="EContactlessWriteUncertain">UID command was dispatched and completion could not be verified.</exception>
     /// <remarks>Raw backend must allow at least two seconds for response. After accepted writing, waits one second
     /// for card memory reset before fresh activation. No freeze or block-write command; old block UID may differ from RF UID.</remarks>
-    function ProgramGen3Uid(const ASize: TGen3UidSize; const ANewUid: TBytes): TGen3UidResult;
+    function ProgramGen3Uid(const ASize: TGen3UidSize; const ANewUid: TBytes)
+      : TGen3UidResult;
     /// <summary>Programs a UID on an already configured Gen4 UMC Classic/Type 2 four/seven/ten-byte variant.</summary>
     /// <param name="ALayout">Existing configured emulation layout; does not change card protocol or UID length.</param>
     /// <param name="ANewUid">Requested UID copied without modification.</param>
@@ -156,7 +168,8 @@ type
     /// <remarks>Requires stable GTU mode 02 and a raw backend allowing at least one second for response without automatic RATS.
     /// Preserves configuration, metadata, internal/lock bytes and hidden block tails. Split Type 2 writes are not atomic.
     /// Local password-bearing commands/configuration are overwritten on all exits; backend/transport copies are outside that guarantee.</remarks>
-    function ProgramGen4Uid(const ALayout: TGen4UidLayout; const ANewUid, APassword: TBytes): TGen4UidResult;
+    function ProgramGen4Uid(const ALayout: TGen4UidLayout;
+      const ANewUid, APassword: TBytes): TGen4UidResult;
     /// <summary>Programs an already configured USCUID/GDM public or hidden UID source.</summary>
     /// <param name="AWakeupStyle">Explicit enabled Gen1a 40/43 or GDM 20/23 wakeup; never probed.</param>
     /// <param name="ALayout">Existing public four-byte, hidden F3 four-byte or hidden F0/F1 seven-byte source.</param>
@@ -169,8 +182,8 @@ type
     /// Preserves configuration and metadata; hidden F3 leaves public block zero unchanged. Seven-byte programming
     /// writes hidden block zero and mirrors the first seven public bytes; these two writes are not atomic.
     /// A matching UID is a verified no-op. No configuration, wipe, fuse, key discovery, rollback or replay commands.</remarks>
-    function ProgramUscuidUid(const AWakeupStyle: TUscuidWakeupStyle; const ALayout: TUscuidUidLayout;
-      const ANewUid: TBytes): TUscuidUidResult;
+    function ProgramUscuidUid(const AWakeupStyle: TUscuidWakeupStyle;
+      const ALayout: TUscuidUidLayout; const ANewUid: TBytes): TUscuidUidResult;
     /// <summary>Programs a four-byte UID on an explicitly identified partial USCUID UFUID/ZUID/PFUID variant.</summary>
     /// <param name="AProfile">Caller-identified enabled unsealed UFUID, ZUID or PFUID; never automatically probed.</param>
     /// <param name="ANewUid">Exactly four requested UID bytes; copied without modification.</param>
@@ -199,46 +212,67 @@ begin
 end;
 
 procedure TRawUidProgrammer.RequireStatus9000(const AResponse: TRawRfResponse);
-var Data: TBytes;
+var
+  Data: TBytes;
 begin
   Data := TRawUidCodec.DecodeCrcA(AResponse, 2);
-  if (Data[0] <> $90) or (Data[1] <> 0) then Fail('card rejected UID command');
+  if (Data[0] <> $90) or (Data[1] <> 0) then
+    Fail('card rejected UID command');
 end;
 
-function TRawUidProgrammer.ExchangeGen4(const APassword: TBytes; const ACommand: Byte;
-  const AData: TBytes; var AWriteDispatched: Boolean): TRawRfResponse;
-var Payload, Wire: TBytes;
+function TRawUidProgrammer.ExchangeGen4(const APassword: TBytes;
+  const ACommand: Byte; const AData: TBytes; var AWriteDispatched: Boolean)
+  : TRawRfResponse;
+var
+  Payload, Wire: TBytes;
 begin
   SetLength(Payload, 6 + Length(AData));
   try
     Payload[0] := $CF;
     Move(APassword[0], Payload[1], 4);
     Payload[5] := ACommand;
-    if Length(AData) > 0 then Move(AData[0], Payload[6], Length(AData));
+    if Length(AData) > 0 then
+      Move(AData[0], Payload[6], Length(AData));
     Wire := TRawUidCodec.AppendCrcA(Payload);
-  finally FillChar(Payload[0], Length(Payload), 0); end;
+  finally
+    FillChar(Payload[0], Length(Payload), 0);
+  end;
   try
-    if ACommand = $CD then AWriteDispatched := True;
+    if ACommand = $CD then
+      AWriteDispatched := True;
     Result := FReader.Exchange(Wire, Length(Wire) * 8);
-  finally FillChar(Wire[0], Length(Wire), 0); end;
+  finally
+    FillChar(Wire[0], Length(Wire), 0);
+  end;
 end;
 
-function TRawUidProgrammer.ReadGen4Configuration(const APassword: TBytes): TBytes;
-var Response: TRawRfResponse; Size: Integer; Dispatched: Boolean;
+function TRawUidProgrammer.ReadGen4Configuration(const APassword
+  : TBytes): TBytes;
+var
+  Response: TRawRfResponse;
+  Size: Integer;
+  Dispatched: Boolean;
 begin
   Result := nil;
   Dispatched := False;
   Response := ExchangeGen4(APassword, $C6, nil, Dispatched);
   try
     Size := Length(Response.Data) - 2;
-    if not (Size in [30, 32]) then Fail('unsupported Gen4 configuration response');
+    if not(Size in [30, 32]) then
+      Fail('unsupported Gen4 configuration response');
     Result := TRawUidCodec.DecodeCrcA(Response, Size);
-  finally if Length(Response.Data) > 0 then FillChar(Response.Data[0], Length(Response.Data), 0); end;
+  finally
+    if Length(Response.Data) > 0 then
+      FillChar(Response.Data[0], Length(Response.Data), 0);
+  end;
 end;
 
 function TRawUidProgrammer.ReadGen4Blocks(const ALayout: TGen4UidLayout;
   const APassword: TBytes): TUidManufacturerBlocks;
-var Data: TBytes; I: Integer; Dispatched: Boolean;
+var
+  Data: TBytes;
+  I: Integer;
+  Dispatched: Boolean;
 begin
   Result := nil;
   SetLength(Result, TGen4UidCodec.ManufacturerBlockCount(ALayout));
@@ -247,17 +281,23 @@ begin
   for I := 0 to Length(Result) - 1 do
   begin
     Data[0] := Byte(I);
-    Result[I] := TRawUidCodec.DecodeCrcA(ExchangeGen4(APassword, $CE, Data, Dispatched), 16);
+    Result[I] := TRawUidCodec.DecodeCrcA(ExchangeGen4(APassword, $CE, Data,
+      Dispatched), 16);
   end;
 end;
 
-function TRawUidProgrammer.ProgramGen3Uid(const ASize: TGen3UidSize; const ANewUid: TBytes): TGen3UidResult;
-var Data: TGen3UidResult; Wire, Verified: TBytes; Succeeded, Dispatched: Boolean;
+function TRawUidProgrammer.ProgramGen3Uid(const ASize: TGen3UidSize;
+  const ANewUid: TBytes): TGen3UidResult;
+var
+  Data: TGen3UidResult;
+  Wire, Verified: TBytes;
+  Succeeded, Dispatched: Boolean;
 begin
-  Result := Default(TGen3UidResult);
-  Wire := TRawUidCodec.AppendCrcA(TGen3UidCodec.BuildUidCommand(ASize, ANewUid));
+  Result := Default (TGen3UidResult);
+  Wire := TRawUidCodec.AppendCrcA(TGen3UidCodec.BuildUidCommand(ASize,
+    ANewUid));
   RequireReader;
-  Data := Default(TGen3UidResult);
+  Data := Default (TGen3UidResult);
   Data.UidSize := ASize;
   Data.RequestedUid := CopyBytes(ANewUid);
   Succeeded := False;
@@ -266,7 +306,8 @@ begin
   try
     try
       Data.PreviousUid := FReader.Activate;
-      if Length(Data.PreviousUid) <> TGen3UidCodec.UidLength(ASize) then Fail('Gen3 original UID size mismatch');
+      if Length(Data.PreviousUid) <> TGen3UidCodec.UidLength(ASize) then
+        Fail('Gen3 original UID size mismatch');
       Data.ManufacturerBlock := ReadManufacturer;
       // The Gen3 UID register is independent; never require it to match the embedded block-zero UID.
       if not BytesEqual(Data.PreviousUid, Data.RequestedUid) then
@@ -276,15 +317,19 @@ begin
         TThread.Sleep(1000);
         CheckActivation(Data.RequestedUid);
         Verified := ReadManufacturer;
-        if not BytesEqual(Verified, Data.ManufacturerBlock) then Fail('Gen3 manufacturer block changed');
+        if not BytesEqual(Verified, Data.ManufacturerBlock) then
+          Fail('Gen3 manufacturer block changed');
       end;
       Data.ActiveUidVerified := True;
       Succeeded := True;
-    finally ReleaseSession(Succeeded); end;
+    finally
+      ReleaseSession(Succeeded);
+    end;
   except
     on E: Exception do
     begin
-      if Dispatched then raise EContactlessWriteUncertain.Create(E.ClassName);
+      if Dispatched then
+        raise EContactlessWriteUncertain.Create(E.ClassName);
       raise;
     end;
   end;
@@ -293,14 +338,19 @@ end;
 
 function TRawUidProgrammer.ProgramGen4Uid(const ALayout: TGen4UidLayout;
   const ANewUid, APassword: TBytes): TGen4UidResult;
-var Data: TGen4UidResult; Original, Verified: TUidManufacturerBlocks;
-  Config, NewConfig, OriginalUid, WriteData: TBytes; I: Integer; Succeeded, Dispatched: Boolean;
+var
+  Data: TGen4UidResult;
+  Original, Verified: TUidManufacturerBlocks;
+  Config, NewConfig, OriginalUid, WriteData: TBytes;
+  I: Integer;
+  Succeeded, Dispatched: Boolean;
 begin
-  Result := Default(TGen4UidResult);
+  Result := Default (TGen4UidResult);
   TGen4UidCodec.ValidateUid(ALayout, ANewUid);
-  if Length(APassword) <> 4 then raise EProgrammableUidError.Create('Invalid Gen4 password size.');
+  if Length(APassword) <> 4 then
+    raise EProgrammableUidError.Create('Invalid Gen4 password size.');
   RequireReader;
-  Data := Default(TGen4UidResult);
+  Data := Default (TGen4UidResult);
   Data.Layout := ALayout;
   Data.RequestedUid := CopyBytes(ANewUid);
   Succeeded := False;
@@ -310,46 +360,58 @@ begin
     try
       try
         Data.PreviousUid := FReader.Activate;
-        if Length(Data.PreviousUid) <> TGen4UidCodec.UidLength(ALayout) then Fail('Gen4 original UID size mismatch');
+        if Length(Data.PreviousUid) <> TGen4UidCodec.UidLength(ALayout) then
+          Fail('Gen4 original UID size mismatch');
         Config := ReadGen4Configuration(APassword);
         TGen4UidCodec.ValidateConfiguration(ALayout, Config);
         Original := ReadGen4Blocks(ALayout, APassword);
         OriginalUid := TGen4UidCodec.DecodeUid(ALayout, Original);
-        if not BytesEqual(OriginalUid, Data.PreviousUid) then Fail('Gen4 original RF UID/block mismatch');
+        if not BytesEqual(OriginalUid, Data.PreviousUid) then
+          Fail('Gen4 original RF UID/block mismatch');
         if not BytesEqual(Data.PreviousUid, Data.RequestedUid) then
         begin
-          Data.ManufacturerBlocks := TGen4UidCodec.PrepareBlocks(ALayout, Original, Data.RequestedUid);
+          Data.ManufacturerBlocks := TGen4UidCodec.PrepareBlocks(ALayout,
+            Original, Data.RequestedUid);
           for I := 0 to Length(Data.ManufacturerBlocks) - 1 do
           begin
             SetLength(WriteData, 17);
             WriteData[0] := Byte(I);
             Move(Data.ManufacturerBlocks[I][0], WriteData[1], 16);
-            RequireStatus9000(ExchangeGen4(APassword, $CD, WriteData, Dispatched));
+            RequireStatus9000(ExchangeGen4(APassword, $CD, WriteData,
+              Dispatched));
           end;
           // Verify persistent data after reactivation, not a transient shadow view.
           CheckActivation(Data.RequestedUid);
           NewConfig := ReadGen4Configuration(APassword);
-          if not BytesEqual(Config, NewConfig) then Fail('Gen4 configuration changed');
+          if not BytesEqual(Config, NewConfig) then
+            Fail('Gen4 configuration changed');
           Verified := ReadGen4Blocks(ALayout, APassword);
           for I := 0 to Length(Verified) - 1 do
-            if not BytesEqual(Verified[I], Data.ManufacturerBlocks[I]) then Fail('Gen4 manufacturer read-back mismatch');
+            if not BytesEqual(Verified[I], Data.ManufacturerBlocks[I]) then
+              Fail('Gen4 manufacturer read-back mismatch');
         end
         else
         begin
           SetLength(Data.ManufacturerBlocks, Length(Original));
-          for I := 0 to Length(Original) - 1 do Data.ManufacturerBlocks[I] := CopyBytes(Original[I]);
+          for I := 0 to Length(Original) - 1 do
+            Data.ManufacturerBlocks[I] := CopyBytes(Original[I]);
         end;
         Data.ActiveUidVerified := True;
         Succeeded := True;
       finally
-        if Length(Config) > 0 then FillChar(Config[0], Length(Config), 0);
-        if Length(NewConfig) > 0 then FillChar(NewConfig[0], Length(NewConfig), 0);
+        if Length(Config) > 0 then
+          FillChar(Config[0], Length(Config), 0);
+        if Length(NewConfig) > 0 then
+          FillChar(NewConfig[0], Length(NewConfig), 0);
       end;
-    finally ReleaseSession(Succeeded); end;
+    finally
+      ReleaseSession(Succeeded);
+    end;
   except
     on E: Exception do
     begin
-      if Dispatched then raise EContactlessWriteUncertain.Create(E.ClassName);
+      if Dispatched then
+        raise EContactlessWriteUncertain.Create(E.ClassName);
       raise;
     end;
   end;
@@ -357,24 +419,31 @@ begin
 end;
 
 function CrcA(const AData: TBytes): Word;
-var I, J: Integer; Value: Cardinal;
+var
+  I, J: Integer;
+  Value: Cardinal;
 begin
   Value := $6363;
   for I := 0 to Length(AData) - 1 do
   begin
     Value := Value xor AData[I];
     for J := 1 to 8 do
-      if (Value and 1) <> 0 then Value := (Value shr 1) xor $8408
-      else Value := Value shr 1;
+      if (Value and 1) <> 0 then
+        Value := (Value shr 1) xor $8408
+      else
+        Value := Value shr 1;
   end;
   Result := Word(Value);
 end;
 
 class function TRawUidCodec.AppendCrcA(const AData: TBytes): TBytes;
-var Crc: Word; Size: Integer;
+var
+  Crc: Word;
+  Size: Integer;
 begin
   Size := Length(AData);
-  if Size > 253 then Fail('frame exceeds limit');
+  if Size > 253 then
+    Fail('frame exceeds limit');
   Crc := CrcA(AData);
   Result := CopyBytes(AData);
   SetLength(Result, Size + 2);
@@ -382,43 +451,56 @@ begin
   Result[Size + 1] := Byte(Crc shr 8);
 end;
 
-class function TRawUidCodec.DecodeCrcA(const AResponse: TRawRfResponse; const ADataSize: Integer): TBytes;
-var Data, Expected: TBytes;
+class function TRawUidCodec.DecodeCrcA(const AResponse: TRawRfResponse;
+  const ADataSize: Integer): TBytes;
+var
+  Data, Expected: TBytes;
 begin
   Result := nil;
-  if (ADataSize < 0) or (ADataSize > 253) then Fail('invalid response size');
+  if (ADataSize < 0) or (ADataSize > 253) then
+    Fail('invalid response size');
   if AResponse.TimedOut or (Length(AResponse.Data) <> ADataSize + 2) or
-    (AResponse.BitCount <> (ADataSize + 2) * 8) then Fail('invalid response framing');
+    (AResponse.BitCount <> (ADataSize + 2) * 8) then
+    Fail('invalid response framing');
   Data := Copy(AResponse.Data, 0, ADataSize);
   try
     Expected := AppendCrcA(Data);
-    if not BytesEqual(Expected, AResponse.Data) then Fail('response CRC mismatch');
+    if not BytesEqual(Expected, AResponse.Data) then
+      Fail('response CRC mismatch');
     Result := Data;
   finally
-    if Length(Expected) > 0 then FillChar(Expected[0], Length(Expected), 0);
-    if (Length(Result) = 0) and (Length(Data) > 0) then FillChar(Data[0], Length(Data), 0);
+    if Length(Expected) > 0 then
+      FillChar(Expected[0], Length(Expected), 0);
+    if (Length(Result) = 0) and (Length(Data) > 0) then
+      FillChar(Data[0], Length(Data), 0);
   end;
 end;
 
 class function TRawUidCodec.DecodeType2Uid(const APages: TBytes): TBytes;
 begin
   Result := nil;
-  if Length(APages) <> 16 then raise EProgrammableUidError.Create('Invalid Type 2 manufacturer-page size.');
+  if Length(APages) <> 16 then
+    raise EProgrammableUidError.Create
+      ('Invalid Type 2 manufacturer-page size.');
   if (($88 xor APages[0] xor APages[1] xor APages[2]) <> APages[3]) or
     ((APages[4] xor APages[5] xor APages[6] xor APages[7]) <> APages[8]) then
-    raise EProgrammableUidError.Create('Invalid Type 2 manufacturer-page checksum.');
+    raise EProgrammableUidError.Create
+      ('Invalid Type 2 manufacturer-page checksum.');
   SetLength(Result, 7);
   Move(APages[0], Result[0], 3);
   Move(APages[4], Result[3], 4);
   TProgrammableUidCodec.ValidateUid(cgum7Byte, Result);
 end;
 
-class function TRawUidCodec.PrepareType2Pages(const APages, ANewUid: TBytes): TBytes;
-var Previous: TBytes;
+class function TRawUidCodec.PrepareType2Pages(const APages,
+  ANewUid: TBytes): TBytes;
+var
+  Previous: TBytes;
 begin
   TProgrammableUidCodec.ValidateUid(cgum7Byte, ANewUid);
   Previous := DecodeType2Uid(APages);
-  if Length(Previous) <> 7 then Fail('invalid manufacturer UID');
+  if Length(Previous) <> 7 then
+    Fail('invalid manufacturer UID');
   Result := CopyBytes(APages);
   Move(ANewUid[0], Result[0], 3);
   Result[3] := $88 xor ANewUid[0] xor ANewUid[1] xor ANewUid[2];
@@ -428,14 +510,17 @@ end;
 
 procedure TRawUidProgrammer.RequireReader;
 begin
-  if FReader = nil then Fail('raw reader missing');
+  if FReader = nil then
+    Fail('raw reader missing');
 end;
 
 procedure TRawUidProgrammer.ReleaseSession(const ASucceeded: Boolean);
 begin
-  if ASucceeded then FReader.EndSession
+  if ASucceeded then
+    FReader.EndSession
   else
-    try FReader.EndSession;
+    try
+      FReader.EndSession;
     except
       // Preserve the primary operation failure; the adapter must still release exclusivity.
     end;
@@ -443,33 +528,41 @@ end;
 
 procedure TRawUidProgrammer.RequireAck(const AResponse: TRawRfResponse);
 begin
-  if AResponse.TimedOut or (AResponse.BitCount <> 4) or (Length(AResponse.Data) <> 1) then
+  if AResponse.TimedOut or (AResponse.BitCount <> 4) or
+    (Length(AResponse.Data) <> 1) then
     Fail('missing four-bit acknowledgment');
-  if (AResponse.Data[0] and $0F) <> $0A then Fail('card rejected command');
+  if (AResponse.Data[0] and $0F) <> $0A then
+    Fail('card rejected command');
 end;
 
 procedure TRawUidProgrammer.HaltSelectedCard;
-var Wire: TBytes; Response: TRawRfResponse;
+var
+  Wire: TBytes;
+  Response: TRawRfResponse;
 begin
   Wire := TRawUidCodec.AppendCrcA(HexToBytes('5000'));
   Response := FReader.Exchange(Wire, Length(Wire) * 8);
-  if not Response.TimedOut or (Length(Response.Data) <> 0) or (Response.BitCount <> 0) then
+  if not Response.TimedOut or (Length(Response.Data) <> 0) or
+    (Response.BitCount <> 0) then
     Fail('HALT did not report expected RF timeout');
 end;
 
-procedure TRawUidProgrammer.UnlockClassic(const AProfile: TClassicRawUidProfile);
+procedure TRawUidProgrammer.UnlockClassic(const AProfile
+  : TClassicRawUidProfile);
 begin
   if AProfile = crupGen1b then
   begin
     HaltSelectedCard;
     RequireAck(FReader.Exchange(HexToBytes('40'), 7));
   end
-  else UnlockUscuid(uwsGen1a);
+  else
+    UnlockUscuid(uwsGen1a);
 end;
 
 procedure TRawUidProgrammer.UnlockUscuid(const AStyle: TUscuidWakeupStyle);
 begin
-  if not (AStyle in [uwsGen1a, uwsGdm]) then Fail('invalid wakeup style');
+  if not(AStyle in [uwsGen1a, uwsGdm]) then
+    Fail('invalid wakeup style');
   HaltSelectedCard;
   if AStyle = uwsGen1a then
   begin
@@ -483,19 +576,23 @@ begin
   end;
 end;
 
-function TRawUidProgrammer.ReadUscuidBlock(const ACommand, ABlock: Byte): TBytes;
-var Wire: TBytes;
+function TRawUidProgrammer.ReadUscuidBlock(const ACommand,
+  ABlock: Byte): TBytes;
+var
+  Wire: TBytes;
 begin
   SetLength(Wire, 2);
   Wire[0] := ACommand;
   Wire[1] := ABlock;
   Wire := TRawUidCodec.AppendCrcA(Wire);
-  Result := TRawUidCodec.DecodeCrcA(FReader.Exchange(Wire, Length(Wire) * 8), 16);
+  Result := TRawUidCodec.DecodeCrcA(FReader.Exchange(Wire,
+    Length(Wire) * 8), 16);
 end;
 
 procedure TRawUidProgrammer.WriteUscuidBlock(const ACommand, ABlock: Byte;
   const AData: TBytes; var ADispatched: Boolean);
-var Wire: TBytes;
+var
+  Wire: TBytes;
 begin
   SetLength(Wire, 2);
   Wire[0] := ACommand;
@@ -507,17 +604,22 @@ begin
   RequireAck(FReader.Exchange(Wire, Length(Wire) * 8));
 end;
 
-function TRawUidProgrammer.ProgramUscuidUid(const AWakeupStyle: TUscuidWakeupStyle;
-  const ALayout: TUscuidUidLayout; const ANewUid: TBytes): TUscuidUidResult;
-var Data: TUscuidUidResult; Source, SourceUid, Verified: TBytes;
-  HiddenIndex: Integer; Succeeded, Dispatched: Boolean;
+function TRawUidProgrammer.ProgramUscuidUid(const AWakeupStyle
+  : TUscuidWakeupStyle; const ALayout: TUscuidUidLayout; const ANewUid: TBytes)
+  : TUscuidUidResult;
+var
+  Data: TUscuidUidResult;
+  Source, SourceUid, Verified: TBytes;
+  HiddenIndex: Integer;
+  Succeeded, Dispatched: Boolean;
 begin
-  Result := Default(TUscuidUidResult);
-  if not (AWakeupStyle in [uwsGen1a, uwsGdm]) then Fail('invalid wakeup style');
+  Result := Default (TUscuidUidResult);
+  if not(AWakeupStyle in [uwsGen1a, uwsGdm]) then
+    Fail('invalid wakeup style');
   TUscuidUidCodec.ValidateUid(ALayout, ANewUid);
   HiddenIndex := TUscuidUidCodec.HiddenBlockIndex(ALayout);
   RequireReader;
-  Data := Default(TUscuidUidResult);
+  Data := Default (TUscuidUidResult);
   Data.WakeupStyle := AWakeupStyle;
   Data.Layout := ALayout;
   Data.RequestedUid := CopyBytes(ANewUid);
@@ -527,22 +629,27 @@ begin
   try
     try
       Data.PreviousUid := FReader.Activate;
-      if Length(Data.PreviousUid) <> TUscuidUidCodec.UidLength(ALayout) then Fail('current USCUID length mismatch');
+      if Length(Data.PreviousUid) <> TUscuidUidCodec.UidLength(ALayout) then
+        Fail('current USCUID length mismatch');
       UnlockUscuid(AWakeupStyle);
       Data.Configuration := ReadUscuidBlock($E0, 0);
-      TUscuidUidCodec.ValidateConfiguration(AWakeupStyle, ALayout, Data.Configuration);
+      TUscuidUidCodec.ValidateConfiguration(AWakeupStyle, ALayout,
+        Data.Configuration);
       Data.PublicManufacturerBlock := ReadManufacturer;
-      if HiddenIndex < 0 then Source := Data.PublicManufacturerBlock
+      if HiddenIndex < 0 then
+        Source := Data.PublicManufacturerBlock
       else
       begin
         Data.HiddenManufacturerBlock := ReadUscuidBlock($38, Byte(HiddenIndex));
         Source := Data.HiddenManufacturerBlock;
       end;
       SourceUid := TUscuidUidCodec.DecodeUid(ALayout, Source);
-      if not BytesEqual(SourceUid, Data.PreviousUid) then Fail('USCUID source/selection mismatch');
+      if not BytesEqual(SourceUid, Data.PreviousUid) then
+        Fail('USCUID source/selection mismatch');
       if not BytesEqual(Data.PreviousUid, Data.RequestedUid) then
       begin
-        Source := TUscuidUidCodec.PrepareSourceBlock(ALayout, Source, Data.RequestedUid);
+        Source := TUscuidUidCodec.PrepareSourceBlock(ALayout, Source,
+          Data.RequestedUid);
         if HiddenIndex < 0 then
         begin
           Data.PublicManufacturerBlock := Source;
@@ -561,38 +668,47 @@ begin
         CheckActivation(Data.RequestedUid);
         UnlockUscuid(AWakeupStyle);
         Verified := ReadUscuidBlock($E0, 0);
-        if not BytesEqual(Verified, Data.Configuration) then Fail('USCUID configuration changed');
+        if not BytesEqual(Verified, Data.Configuration) then
+          Fail('USCUID configuration changed');
         Verified := ReadManufacturer;
-        if not BytesEqual(Verified, Data.PublicManufacturerBlock) then Fail('USCUID public read-back mismatch');
+        if not BytesEqual(Verified, Data.PublicManufacturerBlock) then
+          Fail('USCUID public read-back mismatch');
         if HiddenIndex >= 0 then
         begin
           Verified := ReadUscuidBlock($38, Byte(HiddenIndex));
-          if not BytesEqual(Verified, Data.HiddenManufacturerBlock) then Fail('USCUID hidden read-back mismatch');
+          if not BytesEqual(Verified, Data.HiddenManufacturerBlock) then
+            Fail('USCUID hidden read-back mismatch');
         end;
       end;
       Data.ActiveUidVerified := True;
       Succeeded := True;
-    finally ReleaseSession(Succeeded); end;
+    finally
+      ReleaseSession(Succeeded);
+    end;
   except
     on E: Exception do
     begin
-      if Dispatched then raise EContactlessWriteUncertain.Create(E.ClassName);
+      if Dispatched then
+        raise EContactlessWriteUncertain.Create(E.ClassName);
       raise;
     end;
   end;
   Result := Data;
 end;
 
-function TRawUidProgrammer.ProgramPartialUscuidUid(const AProfile: TPartialUscuidProfile;
-  const ANewUid: TBytes): TPartialUscuidUidResult;
-var Data: TPartialUscuidUidResult; BlockUid, Verified: TBytes;
-  ReadCommand: Byte; Succeeded, Dispatched: Boolean;
+function TRawUidProgrammer.ProgramPartialUscuidUid(const AProfile
+  : TPartialUscuidProfile; const ANewUid: TBytes): TPartialUscuidUidResult;
+var
+  Data: TPartialUscuidUidResult;
+  BlockUid, Verified: TBytes;
+  ReadCommand: Byte;
+  Succeeded, Dispatched: Boolean;
 begin
-  Result := Default(TPartialUscuidUidResult);
+  Result := Default (TPartialUscuidUidResult);
   ReadCommand := TPartialUscuidUidCodec.ConfigurationReadCommand(AProfile);
   TProgrammableUidCodec.ValidateUid(cgum4Byte, ANewUid);
   RequireReader;
-  Data := Default(TPartialUscuidUidResult);
+  Data := Default (TPartialUscuidUidResult);
   Data.Profile := AProfile;
   Data.RequestedUid := CopyBytes(ANewUid);
   Succeeded := False;
@@ -601,33 +717,42 @@ begin
   try
     try
       Data.PreviousUid := FReader.Activate;
-      if Length(Data.PreviousUid) <> 4 then Fail('partial USCUID requires four-byte RF UID');
+      if Length(Data.PreviousUid) <> 4 then
+        Fail('partial USCUID requires four-byte RF UID');
       UnlockUscuid(uwsGen1a);
       Data.Configuration := ReadUscuidBlock(ReadCommand, 0);
-      TPartialUscuidUidCodec.ValidateConfiguration(AProfile, Data.Configuration);
+      TPartialUscuidUidCodec.ValidateConfiguration(AProfile,
+        Data.Configuration);
       Data.ManufacturerBlock := ReadManufacturer;
-      BlockUid := TProgrammableUidCodec.DecodeGen2Uid(cgum4Byte, Data.ManufacturerBlock);
+      BlockUid := TProgrammableUidCodec.DecodeGen2Uid(cgum4Byte,
+        Data.ManufacturerBlock);
       TProgrammableUidCodec.ValidateUid(cgum4Byte, BlockUid);
-      if not BytesEqual(BlockUid, Data.PreviousUid) then Fail('partial USCUID UID/block mismatch');
+      if not BytesEqual(BlockUid, Data.PreviousUid) then
+        Fail('partial USCUID UID/block mismatch');
       if not BytesEqual(Data.PreviousUid, Data.RequestedUid) then
       begin
-        Data.ManufacturerBlock := TProgrammableUidCodec.PrepareGen2Block(cgum4Byte,
-          Data.ManufacturerBlock, Data.RequestedUid);
+        Data.ManufacturerBlock := TProgrammableUidCodec.PrepareGen2Block
+          (cgum4Byte, Data.ManufacturerBlock, Data.RequestedUid);
         WriteUscuidBlock($A0, 0, Data.ManufacturerBlock, Dispatched);
         CheckActivation(Data.RequestedUid);
         UnlockUscuid(uwsGen1a);
         Verified := ReadUscuidBlock(ReadCommand, 0);
-        if not BytesEqual(Verified, Data.Configuration) then Fail('partial USCUID configuration changed');
+        if not BytesEqual(Verified, Data.Configuration) then
+          Fail('partial USCUID configuration changed');
         Verified := ReadManufacturer;
-        if not BytesEqual(Verified, Data.ManufacturerBlock) then Fail('partial USCUID persistent block mismatch');
+        if not BytesEqual(Verified, Data.ManufacturerBlock) then
+          Fail('partial USCUID persistent block mismatch');
       end;
       Data.ActiveUidVerified := True;
       Succeeded := True;
-    finally ReleaseSession(Succeeded); end;
+    finally
+      ReleaseSession(Succeeded);
+    end;
   except
     on E: Exception do
     begin
-      if Dispatched then raise EContactlessWriteUncertain.Create(E.ClassName);
+      if Dispatched then
+        raise EContactlessWriteUncertain.Create(E.ClassName);
       raise;
     end;
   end;
@@ -635,29 +760,36 @@ begin
 end;
 
 function TRawUidProgrammer.ReadManufacturer: TBytes;
-var Wire: TBytes;
+var
+  Wire: TBytes;
 begin
   Wire := TRawUidCodec.AppendCrcA(HexToBytes('3000'));
-  Result := TRawUidCodec.DecodeCrcA(FReader.Exchange(Wire, Length(Wire) * 8), 16);
+  Result := TRawUidCodec.DecodeCrcA(FReader.Exchange(Wire,
+    Length(Wire) * 8), 16);
 end;
 
 procedure TRawUidProgrammer.CheckActivation(const ARequestedUid: TBytes);
-var ActiveUid: TBytes;
+var
+  ActiveUid: TBytes;
 begin
   ActiveUid := FReader.Activate;
-  if not BytesEqual(ActiveUid, ARequestedUid) then Fail('fresh RF UID mismatch');
+  if not BytesEqual(ActiveUid, ARequestedUid) then
+    Fail('fresh RF UID mismatch');
 end;
 
-function TRawUidProgrammer.ProgramClassicUid(const AProfile: TClassicRawUidProfile;
-  const ANewUid: TBytes): TProgrammableUidResult;
-var Data: TProgrammableUidResult; OldBlock, OldUid, Verified, Wire: TBytes;
+function TRawUidProgrammer.ProgramClassicUid(const AProfile
+  : TClassicRawUidProfile; const ANewUid: TBytes): TProgrammableUidResult;
+var
+  Data: TProgrammableUidResult;
+  OldBlock, OldUid, Verified, Wire: TBytes;
   Succeeded, Dispatched: Boolean;
 begin
-  Result := Default(TProgrammableUidResult);
-  if not (AProfile in [crupGen1a, crupUnsealedUfuid, crupGen1b]) then Fail('invalid Classic raw profile');
+  Result := Default (TProgrammableUidResult);
+  if not(AProfile in [crupGen1a, crupUnsealedUfuid, crupGen1b]) then
+    Fail('invalid Classic raw profile');
   TProgrammableUidCodec.ValidateUid(cgum4Byte, ANewUid);
   RequireReader;
-  Data := Default(TProgrammableUidResult);
+  Data := Default (TProgrammableUidResult);
   Data.Model := cgum4Byte;
   Data.RequestedUid := CopyBytes(ANewUid);
   Succeeded := False;
@@ -666,12 +798,15 @@ begin
   try
     try
       Data.PreviousUid := FReader.Activate;
-      if Length(Data.PreviousUid) <> 4 then Fail('current UID is not four bytes');
+      if Length(Data.PreviousUid) <> 4 then
+        Fail('current UID is not four bytes');
       UnlockClassic(AProfile);
       OldBlock := ReadManufacturer;
       OldUid := TProgrammableUidCodec.DecodeGen2Uid(cgum4Byte, OldBlock);
-      if not BytesEqual(OldUid, Data.PreviousUid) then Fail('original UID/block mismatch');
-      Data.ManufacturerBlock := TProgrammableUidCodec.PrepareGen2Block(cgum4Byte, OldBlock, Data.RequestedUid);
+      if not BytesEqual(OldUid, Data.PreviousUid) then
+        Fail('original UID/block mismatch');
+      Data.ManufacturerBlock := TProgrammableUidCodec.PrepareGen2Block
+        (cgum4Byte, OldBlock, Data.RequestedUid);
       if not BytesEqual(Data.PreviousUid, Data.RequestedUid) then
       begin
         Wire := TRawUidCodec.AppendCrcA(HexToBytes('A000'));
@@ -680,36 +815,45 @@ begin
         Wire := TRawUidCodec.AppendCrcA(Data.ManufacturerBlock);
         RequireAck(FReader.Exchange(Wire, Length(Wire) * 8));
         Verified := ReadManufacturer;
-        if not BytesEqual(Verified, Data.ManufacturerBlock) then Fail('manufacturer read-back mismatch');
+        if not BytesEqual(Verified, Data.ManufacturerBlock) then
+          Fail('manufacturer read-back mismatch');
         CheckActivation(Data.RequestedUid);
         if AProfile = crupGen1b then
         begin
           UnlockClassic(AProfile);
           Verified := ReadManufacturer;
-          if not BytesEqual(Verified, Data.ManufacturerBlock) then Fail('persistent Gen1b manufacturer mismatch');
+          if not BytesEqual(Verified, Data.ManufacturerBlock) then
+            Fail('persistent Gen1b manufacturer mismatch');
         end;
       end;
       Data.ActiveUidVerified := True;
       Succeeded := True;
-    finally ReleaseSession(Succeeded); end;
+    finally
+      ReleaseSession(Succeeded);
+    end;
   except
     on E: Exception do
     begin
-      if Dispatched then raise EContactlessWriteUncertain.Create(E.ClassName);
+      if Dispatched then
+        raise EContactlessWriteUncertain.Create(E.ClassName);
       raise;
     end;
   end;
   Result := Data;
 end;
 
-function TRawUidProgrammer.ProgramType2DirectWriteUid(const ANewUid: TBytes): TType2UidResult;
-var Data: TType2UidResult; OldPages, OldUid, Verified, Wire: TBytes;
-  Succeeded, Dispatched: Boolean; Page: Integer;
+function TRawUidProgrammer.ProgramType2DirectWriteUid(const ANewUid: TBytes)
+  : TType2UidResult;
+var
+  Data: TType2UidResult;
+  OldPages, OldUid, Verified, Wire: TBytes;
+  Succeeded, Dispatched: Boolean;
+  Page: Integer;
 begin
-  Result := Default(TType2UidResult);
+  Result := Default (TType2UidResult);
   TProgrammableUidCodec.ValidateUid(cgum7Byte, ANewUid);
   RequireReader;
-  Data := Default(TType2UidResult);
+  Data := Default (TType2UidResult);
   Data.RequestedUid := CopyBytes(ANewUid);
   Succeeded := False;
   Dispatched := False;
@@ -717,11 +861,14 @@ begin
   try
     try
       Data.PreviousUid := FReader.Activate;
-      if Length(Data.PreviousUid) <> 7 then Fail('current UID is not seven bytes');
+      if Length(Data.PreviousUid) <> 7 then
+        Fail('current UID is not seven bytes');
       OldPages := ReadManufacturer;
       OldUid := TRawUidCodec.DecodeType2Uid(OldPages);
-      if not BytesEqual(OldUid, Data.PreviousUid) then Fail('original UID/pages mismatch');
-      Data.ManufacturerPages := TRawUidCodec.PrepareType2Pages(OldPages, Data.RequestedUid);
+      if not BytesEqual(OldUid, Data.PreviousUid) then
+        Fail('original UID/pages mismatch');
+      Data.ManufacturerPages := TRawUidCodec.PrepareType2Pages(OldPages,
+        Data.RequestedUid);
       if not BytesEqual(Data.PreviousUid, Data.RequestedUid) then
       begin
         for Page := 0 to 2 do
@@ -735,16 +882,20 @@ begin
           RequireAck(FReader.Exchange(Wire, Length(Wire) * 8));
         end;
         Verified := ReadManufacturer;
-        if not BytesEqual(Verified, Data.ManufacturerPages) then Fail('manufacturer-page read-back mismatch');
+        if not BytesEqual(Verified, Data.ManufacturerPages) then
+          Fail('manufacturer-page read-back mismatch');
         CheckActivation(Data.RequestedUid);
       end;
       Data.ActiveUidVerified := True;
       Succeeded := True;
-    finally ReleaseSession(Succeeded); end;
+    finally
+      ReleaseSession(Succeeded);
+    end;
   except
     on E: Exception do
     begin
-      if Dispatched then raise EContactlessWriteUncertain.Create(E.ClassName);
+      if Dispatched then
+        raise EContactlessWriteUncertain.Create(E.ClassName);
       raise;
     end;
   end;
