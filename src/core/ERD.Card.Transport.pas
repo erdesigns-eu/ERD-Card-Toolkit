@@ -1,7 +1,7 @@
 unit ERD.Card.Transport;
 
 {$IFDEF FPC}
-  {$MODE DELPHI}
+{$MODE DELPHI}
 {$ENDIF}
 
 interface

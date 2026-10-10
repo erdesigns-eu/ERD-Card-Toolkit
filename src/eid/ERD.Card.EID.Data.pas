@@ -1,7 +1,7 @@
 unit ERD.Card.EID.Data;
 
 {$IFDEF FPC}
-  {$MODE DELPHI}
+{$MODE DELPHI}
 {$ENDIF}
 
 interface
@@ -90,8 +90,7 @@ type
     /// <summary>Second A-card mention, tag 1E.</summary>
     eitCardAMention2,
     /// <summary>EU registration or residence start date text, tag 1F.</summary>
-    eitEuStartDate
-  );
+    eitEuStartDate);
 
   /// <summary>Address tags in the published eID address file.</summary>
   TEidAddressTag = (
@@ -102,8 +101,7 @@ type
     /// <summary>Postal code retained as text, tag 02.</summary>
     eatPostalCode,
     /// <summary>Residence municipality, tag 03.</summary>
-    eatMunicipality
-  );
+    eatMunicipality);
 
   /// <summary>One simplified eID TLV entry with an independent value buffer.</summary>
   TEidField = record
@@ -112,6 +110,7 @@ type
     /// <summary>Exact value bytes, excluding tag and additive length bytes.</summary>
     Value: TBytes;
   end;
+
   /// <summary>Entries in original file order; at most 256 unique tags.</summary>
   TEidFields = array of TEidField;
 
@@ -208,8 +207,7 @@ type
     /// <summary>Root CA certificate, EF 503B.</summary>
     eckRootCa,
     /// <summary>National register certificate, EF 503C.</summary>
-    eckNationalRegister
-  );
+    eckNationalRegister);
   /// <summary>Availability of a requested certificate, without any trust decision.</summary>
   TEidCertificateState = (
     /// <summary>The certificate was not requested.</summary>
@@ -219,8 +217,8 @@ type
     /// <summary>The selected file contained only zero bytes, indicating no issued certificate.</summary>
     ecsEmpty,
     /// <summary>A nonempty DER SEQUENCE envelope was read; X.509 structure and trust remain unchecked.</summary>
-    ecsPresent
-  );
+    ecsPresent);
+
   /// <summary>Certificate file bytes and its unpadded DER envelope.</summary>
   TEidCertificate = record
     /// <summary>The certificate file role.</summary>
@@ -232,6 +230,7 @@ type
     /// <summary>Independent DER envelope excluding zero padding; empty unless present.</summary>
     DerData: TBytes;
   end;
+
   /// <summary>Certificate records in TEidCertificateKind order when requested.</summary>
   TEidCertificates = array of TEidCertificate;
 
@@ -246,8 +245,7 @@ type
     /// <summary>Both identity and address signature files, without verification.</summary>
     esSignatures,
     /// <summary>All five public certificate files, accepting missing or unissued certificates.</summary>
-    esCertificates
-  );
+    esCertificates);
   /// <summary>A selection of public data groups; no PIN or private-key operation is involved.</summary>
   TEidSections = set of TEidSection;
 
@@ -286,12 +284,14 @@ type
     /// <param name="ABytes">Complete identity EF bytes, including optional padding.</param>
     /// <returns>An independent identity record; absent optional values remain empty.</returns>
     /// <exception cref="EBelgianEidError">TLV, UTF-8 or the presence-only family flag is malformed.</exception>
-    class function DecodeIdentity(const ABytes: TBytes): TBelgianEidIdentity; static;
+    class function DecodeIdentity(const ABytes: TBytes)
+      : TBelgianEidIdentity; static;
     /// <summary>Decodes address text and preserves all original fields.</summary>
     /// <param name="ABytes">Complete address EF bytes, including optional padding.</param>
     /// <returns>An independent address record.</returns>
     /// <exception cref="EBelgianEidError">TLV or known text fields are malformed.</exception>
-    class function DecodeAddress(const ABytes: TBytes): TBelgianEidAddress; static;
+    class function DecodeAddress(const ABytes: TBytes)
+      : TBelgianEidAddress; static;
     /// <summary>Separates a certificate DER SEQUENCE envelope from zero padding.</summary>
     /// <param name="ABytes">Nonempty certificate EF bytes, possibly all zeroes.</param>
     /// <param name="AKind">The role assigned by the selected EF.</param>
@@ -322,7 +322,8 @@ var
   I: Integer;
 begin
   for I := AStart to Length(ABytes) - 1 do
-    if ABytes[I] <> 0 then Exit(False);
+    if ABytes[I] <> 0 then
+      Exit(False);
   Result := True;
 end;
 
@@ -342,7 +343,8 @@ begin
     Inc(I);
     Needed := 0;
     Minimum := 0;
-    if B < $80 then Scalar := B
+    if B < $80 then
+      Scalar := B
     else if (B >= $C2) and (B <= $DF) then
     begin
       Needed := 1;
@@ -366,18 +368,22 @@ begin
       Fail('UTF-8 leading byte');
       Scalar := 0;
     end;
-    if Needed > Length(ABytes) - I then Fail('truncated UTF-8');
+    if Needed > Length(ABytes) - I then
+      Fail('truncated UTF-8');
     for J := 1 to Needed do
     begin
       B := ABytes[I];
       Inc(I);
-      if (B and $C0) <> $80 then Fail('UTF-8 continuation');
+      if (B and $C0) <> $80 then
+        Fail('UTF-8 continuation');
       Scalar := (Scalar shl 6) or (B and $3F);
     end;
     if (Scalar < Minimum) or (Scalar > $10FFFF) or
-      ((Scalar >= $D800) and (Scalar <= $DFFF)) then Fail('UTF-8 scalar');
+      ((Scalar >= $D800) and (Scalar <= $DFFF)) then
+      Fail('UTF-8 scalar');
     Inc(Count);
-    if Scalar <= $FFFF then Result[Count] := WideChar(Scalar)
+    if Scalar <= $FFFF then
+      Result[Count] := WideChar(Scalar)
     else
     begin
       Dec(Scalar, $10000);
@@ -394,7 +400,8 @@ var
   I: Integer;
 begin
   for I := 0 to Length(Fields) - 1 do
-    if Fields[I].Tag = ATag then Exit(True);
+    if Fields[I].Tag = ATag then
+      Exit(True);
   Result := False;
 end;
 
@@ -404,7 +411,8 @@ var
 begin
   Result := nil;
   for I := 0 to Length(Fields) - 1 do
-    if Fields[I].Tag = ATag then Exit(CopyBytes(Fields[I].Value));
+    if Fields[I].Tag = ATag then
+      Exit(CopyBytes(Fields[I].Value));
 end;
 
 function TEidFileData.GetText(const ATag: Byte): UnicodeString;
@@ -418,7 +426,7 @@ var
   Tag: Byte;
   Seen: set of Byte;
 begin
-  Result := Default(TEidFileData);
+  Result := Default (TEidFileData);
   CheckFileSize(ABytes);
   Offset := 0;
   Count := 0;
@@ -426,67 +434,91 @@ begin
   while Offset < Length(ABytes) do
   begin
     Tag := ABytes[Offset];
-    if (Tag = 0) and AllZero(ABytes, Offset) then Break;
-    if (Tag = 0) and (Count <> 0) then Fail('misplaced version tag');
-    if Tag in Seen then Fail('duplicate tag');
+    if (Tag = 0) and AllZero(ABytes, Offset) then
+      Break;
+    if (Tag = 0) and (Count <> 0) then
+      Fail('misplaced version tag');
+    if Tag in Seen then
+      Fail('duplicate tag');
     Include(Seen, Tag);
     Inc(Offset);
     ValueLength := 0;
     repeat
-      if Offset >= Length(ABytes) then Fail('truncated length');
+      if Offset >= Length(ABytes) then
+        Fail('truncated length');
       Part := ABytes[Offset];
       Inc(Offset);
-      if ValueLength > EidMaxFileBytes - Part then Fail('length limit');
+      if ValueLength > EidMaxFileBytes - Part then
+        Fail('length limit');
       Inc(ValueLength, Part);
     until Part <> $FF;
-    if ValueLength > Length(ABytes) - Offset then Fail('truncated value');
+    if ValueLength > Length(ABytes) - Offset then
+      Fail('truncated value');
     SetLength(Result.Fields, Count + 1);
     Result.Fields[Count].Tag := Tag;
     Result.Fields[Count].Value := Copy(ABytes, Offset, ValueLength);
     Inc(Count);
     Inc(Offset, ValueLength);
   end;
-  if Count = 0 then Fail('no fields');
+  if Count = 0 then
+    Fail('no fields');
   Result.EncodedLength := Offset;
   Result.RawData := CopyBytes(ABytes);
 end;
 
-class function TBelgianEidCodec.DecodeIdentity(const ABytes: TBytes): TBelgianEidIdentity;
+class function TBelgianEidCodec.DecodeIdentity(const ABytes: TBytes)
+  : TBelgianEidIdentity;
 var
   I: Integer;
   Tag: Byte;
   Text: UnicodeString;
 begin
-  Result := Default(TBelgianEidIdentity);
+  Result := Default (TBelgianEidIdentity);
   Result.Data := DecodeFile(ABytes);
   for I := 0 to Length(Result.Data.Fields) - 1 do
   begin
     Tag := Result.Data.Fields[I].Tag;
-    if Tag in [Ord(eitCardNumber), Ord(eitValidityBegin)..Ord(eitSpecialStatus),
-      Ord(eitDuplicate), Ord(eitSpecialOrganization),
-      Ord(eitProtectionDateAndCountry)..Ord(eitRegionalFileNumber),
-      Ord(eitBrexitMention1)..Ord(eitEuStartDate)] then
+    if Tag in [Ord(eitCardNumber), Ord(eitValidityBegin)
+      .. Ord(eitSpecialStatus), Ord(eitDuplicate), Ord(eitSpecialOrganization),
+      Ord(eitProtectionDateAndCountry) .. Ord(eitRegionalFileNumber),
+      Ord(eitBrexitMention1) .. Ord(eitEuStartDate)] then
     begin
       Text := StrictUtf8(Result.Data.Fields[I].Value);
       case Tag of
-        Ord(eitCardNumber): Result.CardNumber := Text;
-        Ord(eitValidityBegin): Result.ValidityBegin := Text;
-        Ord(eitValidityEnd): Result.ValidityEnd := Text;
-        Ord(eitIssuingMunicipality): Result.IssuingMunicipality := Text;
-        Ord(eitNationalNumber): Result.NationalNumber := Text;
-        Ord(eitSurname): Result.Surname := Text;
-        Ord(eitGivenNames): Result.GivenNames := Text;
-        Ord(eitThirdNameInitial): Result.ThirdNameInitial := Text;
-        Ord(eitNationality): Result.Nationality := Text;
-        Ord(eitBirthLocation): Result.BirthLocation := Text;
-        Ord(eitBirthDate): Result.BirthDate := Text;
-        Ord(eitSex): Result.Sex := Text;
-        Ord(eitNobility): Result.Nobility := Text;
-        Ord(eitDocumentType): Result.DocumentType := Text;
-        Ord(eitSpecialStatus): Result.SpecialStatus := Text;
+        Ord(eitCardNumber):
+          Result.CardNumber := Text;
+        Ord(eitValidityBegin):
+          Result.ValidityBegin := Text;
+        Ord(eitValidityEnd):
+          Result.ValidityEnd := Text;
+        Ord(eitIssuingMunicipality):
+          Result.IssuingMunicipality := Text;
+        Ord(eitNationalNumber):
+          Result.NationalNumber := Text;
+        Ord(eitSurname):
+          Result.Surname := Text;
+        Ord(eitGivenNames):
+          Result.GivenNames := Text;
+        Ord(eitThirdNameInitial):
+          Result.ThirdNameInitial := Text;
+        Ord(eitNationality):
+          Result.Nationality := Text;
+        Ord(eitBirthLocation):
+          Result.BirthLocation := Text;
+        Ord(eitBirthDate):
+          Result.BirthDate := Text;
+        Ord(eitSex):
+          Result.Sex := Text;
+        Ord(eitNobility):
+          Result.Nobility := Text;
+        Ord(eitDocumentType):
+          Result.DocumentType := Text;
+        Ord(eitSpecialStatus):
+          Result.SpecialStatus := Text;
       end;
     end;
-    if (Tag = Byte(Ord(eitMemberOfFamily))) and (Length(Result.Data.Fields[I].Value) <> 0) then
+    if (Tag = Byte(Ord(eitMemberOfFamily))) and
+      (Length(Result.Data.Fields[I].Value) <> 0) then
       Fail('family flag length');
   end;
   Result.ChipNumber := Result.Data.GetBytes(Ord(eitChipNumber));
@@ -494,9 +526,10 @@ begin
   Result.MemberOfFamily := Result.Data.HasField(Ord(eitMemberOfFamily));
 end;
 
-class function TBelgianEidCodec.DecodeAddress(const ABytes: TBytes): TBelgianEidAddress;
+class function TBelgianEidCodec.DecodeAddress(const ABytes: TBytes)
+  : TBelgianEidAddress;
 begin
-  Result := Default(TBelgianEidAddress);
+  Result := Default (TBelgianEidAddress);
   Result.Data := DecodeFile(ABytes);
   Result.StreetAndNumber := Result.Data.GetText(Ord(eatStreetAndNumber));
   Result.PostalCode := Result.Data.GetText(Ord(eatPostalCode));
@@ -508,7 +541,7 @@ class function TBelgianEidCodec.DecodeCertificate(const ABytes: TBytes;
 var
   Offset, Size, Count, I: Integer;
 begin
-  Result := Default(TEidCertificate);
+  Result := Default (TEidCertificate);
   CheckFileSize(ABytes);
   Result.Kind := AKind;
   Result.RawData := CopyBytes(ABytes);
@@ -517,7 +550,8 @@ begin
     Result.State := ecsEmpty;
     Exit;
   end;
-  if (Length(ABytes) < 2) or (ABytes[0] <> $30) then Fail('certificate SEQUENCE');
+  if (Length(ABytes) < 2) or (ABytes[0] <> $30) then
+    Fail('certificate SEQUENCE');
   Offset := 2;
   Size := ABytes[1];
   if Size >= $80 then
@@ -525,17 +559,21 @@ begin
     Count := Size and $7F;
     if (Count = 0) or (Count > 2) or (Count > Length(ABytes) - Offset) then
       Fail('certificate length');
-    if ABytes[Offset] = 0 then Fail('nonminimal certificate length');
+    if ABytes[Offset] = 0 then
+      Fail('nonminimal certificate length');
     Size := 0;
     for I := 1 to Count do
     begin
       Size := (Size shl 8) or ABytes[Offset];
       Inc(Offset);
     end;
-    if Size < $80 then Fail('nonminimal certificate length');
+    if Size < $80 then
+      Fail('nonminimal certificate length');
   end;
-  if (Size = 0) or (Size > Length(ABytes) - Offset) then Fail('certificate size');
-  if not AllZero(ABytes, Offset + Size) then Fail('certificate padding');
+  if (Size = 0) or (Size > Length(ABytes) - Offset) then
+    Fail('certificate size');
+  if not AllZero(ABytes, Offset + Size) then
+    Fail('certificate padding');
   Result.DerData := Copy(ABytes, 0, Offset + Size);
   Result.State := ecsPresent;
 end;

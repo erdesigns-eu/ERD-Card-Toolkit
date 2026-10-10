@@ -1,5 +1,8 @@
 unit ERD.Card.Crypto.EAC;
-{$IFDEF FPC}{$MODE DELPHI}{$ENDIF}
+
+{$IFDEF FPC}
+{$MODE DELPHI}
+{$ENDIF}
 
 interface
 
@@ -17,8 +20,8 @@ type
     /// <summary>NIST P-256, standardized parameter identifier 12.</summary>
     ppcNistP256,
     /// <summary>Brainpool P256r1, standardized parameter identifier 13.</summary>
-    ppcBrainpoolP256
-  );
+    ppcBrainpoolP256);
+
   /// <summary>One owned PACE Generic Mapping key agreement; native private scalars never leave the context.</summary>
   /// <remarks>Single-use, single-thread context. Validate points, infinity, subgroup and reflection before derivation.</remarks>
   ICardPaceAgreement = interface
@@ -36,6 +39,7 @@ type
     /// <returns>Owned exact 32-byte shared secret; this step can be used once.</returns>
     function Agree(const ACardAgreementKey: TBytes): TBytes;
   end;
+
   /// <summary>Maintained native primitives for ICAO BAC and PACE, extending the unchanged AES provider contract.</summary>
   /// <remarks>No cipher, digest or elliptic-curve arithmetic is implemented in the protocol layer.
   /// Borrowed inputs are not modified; independent secret outputs must be cleared by their owner.</remarks>
@@ -51,7 +55,8 @@ type
     /// <param name="AData">Positive multiple of eight, at most one MiB.</param>
     /// <param name="AEncrypt">True for encryption, false for decryption.</param>
     /// <returns>Owned exact-length ciphertext/plaintext.</returns>
-    function TripleDesCbc(const AKey,AIv,AData:TBytes; const AEncrypt:Boolean):TBytes;
+    function TripleDesCbc(const AKey, AIv, AData: TBytes;
+      const AEncrypt: Boolean): TBytes;
     /// <summary>Creates one Generic Mapping context with explicit fresh, uniformly sampled private scalars.</summary>
     /// <param name="ACurve">One implemented standardized 256-bit curve.</param>
     /// <param name="AMappingSecret">Exact 32-byte positive scalar below the curve order; copied by native storage.</param>
@@ -59,8 +64,8 @@ type
     /// <returns>Owned context retaining the provider/library for its complete lifetime.</returns>
     /// <remarks>Document readers obtain scalars using this provider's CSPRNG with bounded rejection sampling.
     /// Explicit scalars also permit published-vector tests; never use test scalars in hardware sessions.</remarks>
-    function CreatePaceAgreement(const ACurve:TCardPaceCurve;
-      const AMappingSecret,AAgreementSecret:TBytes):ICardPaceAgreement;
+    function CreatePaceAgreement(const ACurve: TCardPaceCurve;
+      const AMappingSecret, AAgreementSecret: TBytes): ICardPaceAgreement;
   end;
 
 implementation

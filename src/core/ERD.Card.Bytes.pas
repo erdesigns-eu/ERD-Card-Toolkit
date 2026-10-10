@@ -1,7 +1,7 @@
 unit ERD.Card.Bytes;
 
 {$IFDEF FPC}
-  {$MODE DELPHI}
+{$MODE DELPHI}
 {$ENDIF}
 
 interface
@@ -26,18 +26,18 @@ type
     property Offset: Integer read FOffset;
   end;
 
-/// <summary>Converts hexadecimal text to a newly allocated byte array.</summary>
-/// <param name="AHex">Hexadecimal digit pairs; an empty string is valid.</param>
-/// <param name="ABytes">Decoded bytes on success; an empty array on failure.</param>
-/// <param name="AErrorOffset">
-/// The one-based invalid character or unmatched final digit position; zero on success.
-/// </param>
-/// <param name="AAllowWhitespace">Whether to ignore ASCII space, tab, CR and LF.</param>
-/// <returns>True if every non-ignored character forms a complete hexadecimal pair.</returns>
-/// <remarks>
-/// Invalid text is reported without a conversion exception or partial output.
-/// The input is not retained. Allocation failures are not converted into false.
-/// </remarks>
+  /// <summary>Converts hexadecimal text to a newly allocated byte array.</summary>
+  /// <param name="AHex">Hexadecimal digit pairs; an empty string is valid.</param>
+  /// <param name="ABytes">Decoded bytes on success; an empty array on failure.</param>
+  /// <param name="AErrorOffset">
+  /// The one-based invalid character or unmatched final digit position; zero on success.
+  /// </param>
+  /// <param name="AAllowWhitespace">Whether to ignore ASCII space, tab, CR and LF.</param>
+  /// <returns>True if every non-ignored character forms a complete hexadecimal pair.</returns>
+  /// <remarks>
+  /// Invalid text is reported without a conversion exception or partial output.
+  /// The input is not retained. Allocation failures are not converted into false.
+  /// </remarks>
 function TryHexToBytes(const AHex: string; out ABytes: TBytes;
   out AErrorOffset: Integer; const AAllowWhitespace: Boolean = False): Boolean;
 
@@ -54,7 +54,8 @@ function HexToBytes(const AHex: string;
 /// <param name="AUpperCase">Whether to use uppercase rather than lowercase digits.</param>
 /// <returns>A new string containing exactly two characters per byte.</returns>
 /// <exception cref="ERangeError">The output length cannot be represented by an Integer.</exception>
-function BytesToHex(const ABytes: TBytes; const AUpperCase: Boolean = True): string;
+function BytesToHex(const ABytes: TBytes;
+  const AUpperCase: Boolean = True): string;
 
 /// <summary>Creates an independent copy of a byte array.</summary>
 /// <param name="ABytes">The source bytes; the input is not modified.</param>
@@ -73,9 +74,12 @@ implementation
 function HexNibble(const AChar: Char): Integer;
 begin
   case AChar of
-    '0'..'9': Result := Ord(AChar) - Ord('0');
-    'A'..'F': Result := Ord(AChar) - Ord('A') + 10;
-    'a'..'f': Result := Ord(AChar) - Ord('a') + 10;
+    '0' .. '9':
+      Result := Ord(AChar) - Ord('0');
+    'A' .. 'F':
+      Result := Ord(AChar) - Ord('A') + 10;
+    'a' .. 'f':
+      Result := Ord(AChar) - Ord('a') + 10;
   else
     Result := -1;
   end;
@@ -144,7 +148,8 @@ begin
   Result := True;
 end;
 
-function HexToBytes(const AHex: string; const AAllowWhitespace: Boolean): TBytes;
+function HexToBytes(const AHex: string;
+  const AAllowWhitespace: Boolean): TBytes;
 var
   ErrorOffset: Integer;
 begin
@@ -161,7 +166,8 @@ var
   Digits: string;
 begin
   if Length(ABytes) > MaxInt div 2 then
-    raise ERangeError.Create('Hexadecimal output exceeds the supported string length.');
+    raise ERangeError.Create
+      ('Hexadecimal output exceeds the supported string length.');
   if AUpperCase then
     Digits := UpperDigits
   else

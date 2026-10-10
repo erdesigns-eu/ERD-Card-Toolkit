@@ -1,7 +1,7 @@
 unit ERD.Card.PCSC.Reader;
 
 {$IFDEF FPC}
-  {$MODE DELPHI}
+{$MODE DELPHI}
 {$ENDIF}
 
 interface
@@ -43,11 +43,15 @@ type
     FOnCardInserted, FOnCardRemoved: TPcscCardEvent;
     FOnReaderAdded, FOnReaderRemoved: TPcscReaderEvent;
     FOnMonitorError: TPcscMonitorErrorEvent;
-    procedure EventInserted(Sender: TObject; const ASnapshot: TPcscReaderSnapshot);
-    procedure EventRemoved(Sender: TObject; const ASnapshot: TPcscReaderSnapshot);
+    procedure EventInserted(Sender: TObject;
+      const ASnapshot: TPcscReaderSnapshot);
+    procedure EventRemoved(Sender: TObject;
+      const ASnapshot: TPcscReaderSnapshot);
     procedure EventState(Sender: TObject; const ASnapshot: TPcscReaderSnapshot);
-    procedure EventReaderAdded(Sender: TObject; const AReaderName: UnicodeString);
-    procedure EventReaderRemoved(Sender: TObject; const AReaderName: UnicodeString);
+    procedure EventReaderAdded(Sender: TObject;
+      const AReaderName: UnicodeString);
+    procedure EventReaderRemoved(Sender: TObject;
+      const AReaderName: UnicodeString);
     procedure EventError(Sender: TObject; const AStatusCode: Cardinal);
   private
     FReaderName: UnicodeString;
@@ -134,23 +138,31 @@ type
     /// <summary>The exact Unicode reader name; configure only while disconnected and not monitoring.</summary>
     property ReaderName: UnicodeString read FReaderName write SetReaderName;
     /// <summary>The sharing policy; defaults to shared access and changes only while inactive.</summary>
-    property ShareMode: TPcscShareMode read FShareMode write SetShareMode default psmShared;
+    property ShareMode: TPcscShareMode read FShareMode write SetShareMode
+      default psmShared;
     /// <summary>The allowed native protocol mask: T=0, T=1 or both; configure only while inactive.</summary>
     property Protocols: Cardinal read FProtocols write SetProtocols default 3;
     /// <summary>The receive capacity from 2 through CardMaxResponseBytes; configure only while inactive.</summary>
-    property MaxResponseBytes: Integer read FMaxResponseBytes write SetMaxResponseBytes default CardMaxResponseBytes;
+    property MaxResponseBytes: Integer read FMaxResponseBytes
+      write SetMaxResponseBytes default CardMaxResponseBytes;
     /// <summary>State change from PollChanges or main-thread StartEventMonitoring; configure while stopped.</summary>
-    property OnCardStateChange: TCardStateChangeEvent read FOnCardStateChange write SetOnCardStateChange;
+    property OnCardStateChange: TCardStateChangeEvent read FOnCardStateChange
+      write SetOnCardStateChange;
     /// <summary>Selected reader card insertion/replacement, delivered by StartEventMonitoring on the main thread.</summary>
-    property OnCardInserted: TPcscCardEvent read FOnCardInserted write FOnCardInserted;
+    property OnCardInserted: TPcscCardEvent read FOnCardInserted
+      write FOnCardInserted;
     /// <summary>Selected reader card removal or reader loss, retaining the previous ATR.</summary>
-    property OnCardRemoved: TPcscCardEvent read FOnCardRemoved write FOnCardRemoved;
+    property OnCardRemoved: TPcscCardEvent read FOnCardRemoved
+      write FOnCardRemoved;
     /// <summary>Any PC/SC reader arrival; exact name, without changing the selected reader.</summary>
-    property OnReaderAdded: TPcscReaderEvent read FOnReaderAdded write FOnReaderAdded;
+    property OnReaderAdded: TPcscReaderEvent read FOnReaderAdded
+      write FOnReaderAdded;
     /// <summary>Any PC/SC reader disappearance, delivered after its card removal.</summary>
-    property OnReaderRemoved: TPcscReaderEvent read FOnReaderRemoved write FOnReaderRemoved;
+    property OnReaderRemoved: TPcscReaderEvent read FOnReaderRemoved
+      write FOnReaderRemoved;
     /// <summary>Terminal automatic monitor failure; monitoring is already stopped before this handler.</summary>
-    property OnMonitorError: TPcscMonitorErrorEvent read FOnMonitorError write FOnMonitorError;
+    property OnMonitorError: TPcscMonitorErrorEvent read FOnMonitorError
+      write FOnMonitorError;
   end;
 
 implementation
@@ -168,6 +180,7 @@ type
 {$ELSE}
   TInternalCriticalSection = TCriticalSection;
 {$ENDIF}
+
   TInternalLock = class
   private
     FLock: TInternalCriticalSection;
@@ -177,6 +190,7 @@ type
     procedure Enter;
     procedure Leave;
   end;
+
   TPcscSession = class(TInterfacedObject, ICardTransport, ICardTransaction)
   private
     FApi: IPcscApi;
@@ -197,7 +211,8 @@ type
     function ListReaders: TPcscReaderNames;
     procedure Connect(const AName: UnicodeString; const AShare: TPcscShareMode;
       const AProtocols: Cardinal; const ACapacity: Integer);
-    procedure Close(const ADisposition: TPcscDisposition; const AReportErrors: Boolean);
+    procedure Close(const ADisposition: TPcscDisposition;
+      const AReportErrors: Boolean);
     procedure BeginTransaction;
     procedure EndTransaction; overload;
     procedure EndTransaction(const ADisposition: TPcscDisposition); overload;
@@ -206,6 +221,7 @@ type
     function Connected: Boolean;
     function Protocol: TPcscProtocol;
   end;
+
   TPcscWatcher = class(TThread)
   private
     FApi: IPcscApi;
@@ -217,14 +233,17 @@ type
     FPending: Boolean;
     FSnapshot: TPcscReaderSnapshot;
     FError: Cardinal;
-    procedure Publish(const ASnapshot: TPcscReaderSnapshot; const AError: Cardinal);
+    procedure Publish(const ASnapshot: TPcscReaderSnapshot;
+      const AError: Cardinal);
   protected
     procedure Execute; override;
   public
-    constructor Create(const AApi: IPcscApi; const AName: UnicodeString; const AContext: TPcscHandle);
+    constructor Create(const AApi: IPcscApi; const AName: UnicodeString;
+      const AContext: TPcscHandle);
     destructor Destroy; override;
     procedure StartWatching;
-    function Take(out ASnapshot: TPcscReaderSnapshot; out AError: Cardinal): Boolean;
+    function Take(out ASnapshot: TPcscReaderSnapshot;
+      out AError: Cardinal): Boolean;
   end;
 
 constructor TInternalLock.Create;
@@ -267,16 +286,19 @@ end;
 
 procedure CheckStatus(const AStatus: Cardinal; const AOperation: string);
 begin
-  if AStatus <> PcscSuccess then raise EPcscError.Create(AOperation, AStatus);
+  if AStatus <> PcscSuccess then
+    raise EPcscError.Create(AOperation, AStatus);
 end;
 
 procedure ValidateName(const AName: UnicodeString);
 begin
   if (AName = '') or (Pos(#0, AName) <> 0) then
-    raise ECardTransportError.Create('A nonempty reader name without null characters is required.');
+    raise ECardTransportError.Create
+      ('A nonempty reader name without null characters is required.');
 end;
 
-function CopySnapshot(const ASnapshot: TPcscReaderSnapshot): TPcscReaderSnapshot;
+function CopySnapshot(const ASnapshot: TPcscReaderSnapshot)
+  : TPcscReaderSnapshot;
 begin
   Result.ReaderName := ASnapshot.ReaderName;
   Result.State := ASnapshot.State and not PcscStateChanged;
@@ -292,7 +314,8 @@ end;
 
 destructor TPcscSession.Destroy;
 begin
-  if FLock <> nil then Close(pcdLeave, False);
+  if FLock <> nil then
+    Close(pcdLeave, False);
   FLock.Free;
   inherited Destroy;
 end;
@@ -301,25 +324,31 @@ procedure TPcscSession.EnsureContext;
 var
   Context: TPcscHandle;
 begin
-  if FContext <> 0 then Exit;
+  if FContext <> 0 then
+    Exit;
   CheckStatus(FApi.Establish(Context), 'EstablishContext');
-  if Context = 0 then raise EPcscError.Create('EstablishContext', PcscInternalError);
+  if Context = 0 then
+    raise EPcscError.Create('EstablishContext', PcscInternalError);
   FContext := Context;
 end;
 
 procedure TPcscSession.RequireConnected;
 begin
-  if FCard = 0 then raise ECardTransportError.Create('The card transport is disconnected.');
+  if FCard = 0 then
+    raise ECardTransportError.Create('The card transport is disconnected.');
   RequireTransactionThread;
 end;
 
 procedure TPcscSession.RequireTransactionThread;
 begin
-  if FInTransaction and (FTransactionThread <> NativeUInt(TThread.CurrentThread.ThreadID)) then
-    raise ECardTransportError.Create('The transaction belongs to another thread.');
+  if FInTransaction and
+    (FTransactionThread <> NativeUInt(TThread.CurrentThread.ThreadID)) then
+    raise ECardTransportError.Create
+      ('The transaction belongs to another thread.');
 end;
 
-function TPcscSession.CloseInternal(const ADisposition: TPcscDisposition): Cardinal;
+function TPcscSession.CloseInternal(const ADisposition: TPcscDisposition)
+  : Cardinal;
 var
   Card: TPcscHandle;
   Context: TPcscHandle;
@@ -333,23 +362,28 @@ begin
   FInTransaction := False;
   FTransactionThread := 0;
   Result := PcscSuccess;
-  if Card <> 0 then Result := FApi.Disconnect(Card, ADisposition);
+  if Card <> 0 then
+    Result := FApi.Disconnect(Card, ADisposition);
   if Context <> 0 then
   begin
     Status := FApi.Release(Context);
-    if Result = PcscSuccess then Result := Status;
+    if Result = PcscSuccess then
+      Result := Status;
   end;
 end;
 
-procedure TPcscSession.Close(const ADisposition: TPcscDisposition; const AReportErrors: Boolean);
+procedure TPcscSession.Close(const ADisposition: TPcscDisposition;
+  const AReportErrors: Boolean);
 var
   Status: Cardinal;
 begin
   FLock.Enter;
   try
-    if AReportErrors then RequireTransactionThread;
+    if AReportErrors then
+      RequireTransactionThread;
     Status := CloseInternal(ADisposition);
-    if AReportErrors then CheckStatus(Status, 'CloseConnection');
+    if AReportErrors then
+      CheckStatus(Status, 'CloseConnection');
   finally
     FLock.Leave;
   end;
@@ -364,25 +398,31 @@ begin
     RequireTransactionThread;
     EnsureContext;
     Status := FApi.ListReaders(FContext, Result);
-    if Status = PcscNoReaders then Result := nil
-    else CheckStatus(Status, 'ListReaders');
+    if Status = PcscNoReaders then
+      Result := nil
+    else
+      CheckStatus(Status, 'ListReaders');
   finally
     FLock.Leave;
   end;
 end;
 
-procedure TPcscSession.Connect(const AName: UnicodeString; const AShare: TPcscShareMode;
-  const AProtocols: Cardinal; const ACapacity: Integer);
+procedure TPcscSession.Connect(const AName: UnicodeString;
+  const AShare: TPcscShareMode; const AProtocols: Cardinal;
+  const ACapacity: Integer);
 begin
   FLock.Enter;
   try
-    if FCard <> 0 then raise ECardTransportError.Create('The card transport is already connected.');
+    if FCard <> 0 then
+      raise ECardTransportError.Create
+        ('The card transport is already connected.');
     ValidateName(AName);
     EnsureContext;
     try
-      CheckStatus(FApi.Connect(FContext, AName, AShare, AProtocols, FCard, FProtocol), 'Connect');
-      if (FCard = 0) or ((FProtocol <> PcscProtocolT0) and (FProtocol <> PcscProtocolT1)) or
-        ((FProtocol and AProtocols) = 0) then
+      CheckStatus(FApi.Connect(FContext, AName, AShare, AProtocols, FCard,
+        FProtocol), 'Connect');
+      if (FCard = 0) or ((FProtocol <> PcscProtocolT0) and
+        (FProtocol <> PcscProtocolT1)) or ((FProtocol and AProtocols) = 0) then
         raise EPcscError.Create('Connect', PcscInternalError);
       FMaxResponseBytes := ACapacity;
     except
@@ -399,7 +439,8 @@ begin
   FLock.Enter;
   try
     RequireConnected;
-    if FInTransaction then raise ECardTransportError.Create('Nested transactions are unsupported.');
+    if FInTransaction then
+      raise ECardTransportError.Create('Nested transactions are unsupported.');
     CheckStatus(FApi.BeginTransaction(FCard), 'BeginTransaction');
     FInTransaction := True;
     FTransactionThread := NativeUInt(TThread.CurrentThread.ThreadID);
@@ -418,7 +459,8 @@ begin
   FLock.Enter;
   try
     RequireConnected;
-    if not FInTransaction then raise ECardTransportError.Create('No transaction is active.');
+    if not FInTransaction then
+      raise ECardTransportError.Create('No transaction is active.');
     try
       CheckStatus(FApi.EndTransaction(FCard, ADisposition), 'EndTransaction');
     except
@@ -438,7 +480,8 @@ begin
   try
     RequireConnected;
     CheckStatus(FApi.ReadAtr(FCard, Result), 'ReadAtr');
-    if Length(Result) > PcscMaxAtrBytes then raise EPcscError.Create('ReadAtr', PcscInternalError);
+    if Length(Result) > PcscMaxAtrBytes then
+      raise EPcscError.Create('ReadAtr', PcscInternalError);
     Result := CopyBytes(Result);
   finally
     FLock.Leave;
@@ -457,9 +500,11 @@ begin
   try
     RequireConnected;
     try
-      CheckStatus(FApi.Transmit(FCard, FProtocol, Command, FMaxResponseBytes, Result), 'Transmit');
+      CheckStatus(FApi.Transmit(FCard, FProtocol, Command, FMaxResponseBytes,
+        Result), 'Transmit');
       if (Length(Result) < 2) or (Length(Result) > FMaxResponseBytes) then
-        raise ECardTransportError.Create('The response exceeds transport bounds or lacks status bytes.');
+        raise ECardTransportError.Create
+          ('The response exceeds transport bounds or lacks status bytes.');
       Result := CopyBytes(Result);
     except
       Result := nil;
@@ -486,8 +531,10 @@ begin
   FLock.Enter;
   try
     case FProtocol of
-      1: Result := pcpT0;
-      2: Result := pcpT1;
+      1:
+        Result := pcpT0;
+      2:
+        Result := pcpT1;
     else
       Result := pcpNone;
     end;
@@ -496,8 +543,8 @@ begin
   end;
 end;
 
-constructor TPcscWatcher.Create(const AApi: IPcscApi; const AName: UnicodeString;
-  const AContext: TPcscHandle);
+constructor TPcscWatcher.Create(const AApi: IPcscApi;
+  const AName: UnicodeString; const AContext: TPcscHandle);
 begin
   inherited Create(True);
   FThreadCreated := True;
@@ -520,18 +567,22 @@ begin
   if FThreadCreated then
   begin
     Terminate;
-    if FContext <> 0 then FApi.Cancel(FContext);
+    if FContext <> 0 then
+      FApi.Cancel(FContext);
     // Start a never-started thread only after termination, so Execute cannot wait.
-    if not FStarted then StartWatching;
+    if not FStarted then
+      StartWatching;
     WaitFor;
   end;
-  if FContext <> 0 then FApi.Release(FContext);
+  if FContext <> 0 then
+    FApi.Release(FContext);
   FContext := 0;
   FLock.Free;
   inherited Destroy;
 end;
 
-procedure TPcscWatcher.Publish(const ASnapshot: TPcscReaderSnapshot; const AError: Cardinal);
+procedure TPcscWatcher.Publish(const ASnapshot: TPcscReaderSnapshot;
+  const AError: Cardinal);
 begin
   FLock.Enter;
   try
@@ -558,20 +609,24 @@ begin
     while not Terminated do
     begin
       Status := FApi.WaitStatus(FContext, FName, Current, 250, Snapshot);
-      if Terminated then Exit;
-      if Status = PcscTimeout then Continue;
+      if Terminated then
+        Exit;
+      if Status = PcscTimeout then
+        Continue;
       if Status <> PcscSuccess then
       begin
-        Publish(Default(TPcscReaderSnapshot), Status);
+        Publish(Default (TPcscReaderSnapshot), Status);
         Exit;
       end;
-      if (Snapshot.ReaderName <> FName) or (Length(Snapshot.Atr) > PcscMaxAtrBytes) then
+      if (Snapshot.ReaderName <> FName) or
+        (Length(Snapshot.Atr) > PcscMaxAtrBytes) then
       begin
-        Publish(Default(TPcscReaderSnapshot), PcscInternalError);
+        Publish(Default (TPcscReaderSnapshot), PcscInternalError);
         Exit;
       end;
       Snapshot.State := Snapshot.State and not PcscStateChanged;
-      if Initial or (Snapshot.State <> Current) or (not BytesEqual(PreviousAtr, Snapshot.Atr)) then
+      if Initial or (Snapshot.State <> Current) or
+        (not BytesEqual(PreviousAtr, Snapshot.Atr)) then
       begin
         Publish(Snapshot, PcscSuccess);
         Current := Snapshot.State;
@@ -579,22 +634,27 @@ begin
         Initial := False;
       end
       else
-        Sleep(10); // Ignored/unknown readers may return an immediate unchanged state.
+        Sleep(10);
+      // Ignored/unknown readers may return an immediate unchanged state.
     end;
   except
-    on E: EPcscError do Publish(Default(TPcscReaderSnapshot), E.StatusCode);
-    on E: Exception do Publish(Default(TPcscReaderSnapshot), PcscInternalError);
+    on E: EPcscError do
+      Publish(Default (TPcscReaderSnapshot), E.StatusCode);
+    on E: Exception do
+      Publish(Default (TPcscReaderSnapshot), PcscInternalError);
   end;
 end;
 
-function TPcscWatcher.Take(out ASnapshot: TPcscReaderSnapshot; out AError: Cardinal): Boolean;
+function TPcscWatcher.Take(out ASnapshot: TPcscReaderSnapshot;
+  out AError: Cardinal): Boolean;
 begin
-  ASnapshot := Default(TPcscReaderSnapshot);
+  ASnapshot := Default (TPcscReaderSnapshot);
   AError := PcscSuccess;
   FLock.Enter;
   try
     Result := FPending;
-    if not Result then Exit;
+    if not Result then
+      Exit;
     ASnapshot := CopySnapshot(FSnapshot);
     AError := FError;
     FPending := False;
@@ -605,7 +665,8 @@ end;
 
 procedure TSmartCardReader.Initialize(const AApi: IPcscApi);
 begin
-  if AApi = nil then raise ECardTransportError.Create('A PC/SC adapter is required.');
+  if AApi = nil then
+    raise ECardTransportError.Create('A PC/SC adapter is required.');
   FApi := AApi;
   FSession := TPcscSession.Create(AApi);
   FTransport := TPcscSession(FSession);
@@ -620,7 +681,8 @@ begin
   Initialize(CreateSystemPcscApi);
 end;
 
-constructor TSmartCardReader.CreateWithApi(AOwner: TComponent; const AApi: IPcscApi);
+constructor TSmartCardReader.CreateWithApi(AOwner: TComponent;
+  const AApi: IPcscApi);
 begin
   inherited Create(AOwner);
   Initialize(AApi);
@@ -629,7 +691,8 @@ end;
 destructor TSmartCardReader.Destroy;
 begin
   StopMonitoring;
-  if FSession <> nil then TPcscSession(FSession).Close(pcdLeave, False);
+  if FSession <> nil then
+    TPcscSession(FSession).Close(pcdLeave, False);
   FSession := nil;
   FTransport := nil;
   FApi := nil;
@@ -639,13 +702,16 @@ end;
 procedure TSmartCardReader.RequireConfigurable;
 begin
   if Connected or Monitoring then
-    raise ECardTransportError.Create('Configuration requires a disconnected, non-monitoring reader.');
+    raise ECardTransportError.Create
+      ('Configuration requires a disconnected, non-monitoring reader.');
 end;
 
 procedure TSmartCardReader.SetReaderName(const AValue: UnicodeString);
 begin
   RequireConfigurable;
-  if Pos(#0, AValue) <> 0 then raise ECardTransportError.Create('Reader names cannot contain null characters.');
+  if Pos(#0, AValue) <> 0 then
+    raise ECardTransportError.Create
+      ('Reader names cannot contain null characters.');
   FReaderName := AValue;
 end;
 
@@ -661,7 +727,8 @@ procedure TSmartCardReader.SetProtocols(const AValue: Cardinal);
 begin
   RequireConfigurable;
   if (AValue = 0) or ((AValue and not Cardinal(3)) <> 0) then
-    raise ECardTransportError.Create('Only T=0 and T=1 protocol masks are supported.');
+    raise ECardTransportError.Create
+      ('Only T=0 and T=1 protocol masks are supported.');
   FProtocols := AValue;
 end;
 
@@ -669,13 +736,17 @@ procedure TSmartCardReader.SetMaxResponseBytes(const AValue: Integer);
 begin
   RequireConfigurable;
   if (AValue < 2) or (AValue > CardMaxResponseBytes) then
-    raise ECardTransportError.Create('The receive capacity exceeds transport bounds.');
+    raise ECardTransportError.Create
+      ('The receive capacity exceeds transport bounds.');
   FMaxResponseBytes := AValue;
 end;
 
-procedure TSmartCardReader.SetOnCardStateChange(const AValue: TCardStateChangeEvent);
+procedure TSmartCardReader.SetOnCardStateChange(const AValue
+  : TCardStateChangeEvent);
 begin
-  if Monitoring then raise ECardTransportError.Create('Stop monitoring before replacing its event handler.');
+  if Monitoring then
+    raise ECardTransportError.Create
+      ('Stop monitoring before replacing its event handler.');
   FOnCardStateChange := AValue;
 end;
 
@@ -691,7 +762,8 @@ end;
 
 function TSmartCardReader.GetMonitoring: Boolean;
 begin
-  Result := (FWatcher <> nil) or ((FEventMonitor <> nil) and FEventMonitor.Active);
+  Result := (FWatcher <> nil) or
+    ((FEventMonitor <> nil) and FEventMonitor.Active);
 end;
 
 function TSmartCardReader.ListReaders: TPcscReaderNames;
@@ -701,7 +773,8 @@ end;
 
 procedure TSmartCardReader.Connect;
 begin
-  TPcscSession(FSession).Connect(FReaderName, FShareMode, FProtocols, FMaxResponseBytes);
+  TPcscSession(FSession).Connect(FReaderName, FShareMode, FProtocols,
+    FMaxResponseBytes);
 end;
 
 procedure TSmartCardReader.Disconnect(const ADisposition: TPcscDisposition);
@@ -727,7 +800,8 @@ end;
 procedure TSmartCardReader.StartEventMonitoring;
 begin
   ValidateName(FReaderName);
-  if Monitoring then raise ECardTransportError.Create('Monitoring already exists.');
+  if Monitoring then
+    raise ECardTransportError.Create('Monitoring already exists.');
   FreeAndNil(FEventMonitor);
   FEventMonitor := TSmartCardMonitor.CreateWithApi(nil, FApi);
   try
@@ -738,27 +812,53 @@ begin
     FEventMonitor.OnStateChanged := EventState;
     FEventMonitor.OnError := EventError;
     FEventMonitor.Start;
-  except FreeAndNil(FEventMonitor); raise; end;
+  except
+    FreeAndNil(FEventMonitor);
+    raise;
+  end;
 end;
 
-procedure TSmartCardReader.EventInserted(Sender: TObject; const ASnapshot: TPcscReaderSnapshot);
+procedure TSmartCardReader.EventInserted(Sender: TObject;
+  const ASnapshot: TPcscReaderSnapshot);
 begin
-  if (ASnapshot.ReaderName = FReaderName) and Assigned(FOnCardInserted) then FOnCardInserted(Self, ASnapshot);
+  if (ASnapshot.ReaderName = FReaderName) and Assigned(FOnCardInserted) then
+    FOnCardInserted(Self, ASnapshot);
 end;
-procedure TSmartCardReader.EventRemoved(Sender: TObject; const ASnapshot: TPcscReaderSnapshot);
+
+procedure TSmartCardReader.EventRemoved(Sender: TObject;
+  const ASnapshot: TPcscReaderSnapshot);
 begin
-  if (ASnapshot.ReaderName = FReaderName) and Assigned(FOnCardRemoved) then FOnCardRemoved(Self, ASnapshot);
+  if (ASnapshot.ReaderName = FReaderName) and Assigned(FOnCardRemoved) then
+    FOnCardRemoved(Self, ASnapshot);
 end;
-procedure TSmartCardReader.EventState(Sender: TObject; const ASnapshot: TPcscReaderSnapshot);
+
+procedure TSmartCardReader.EventState(Sender: TObject;
+  const ASnapshot: TPcscReaderSnapshot);
 begin
-  if (ASnapshot.ReaderName = FReaderName) and Assigned(FOnCardStateChange) then FOnCardStateChange(Self, ASnapshot);
+  if (ASnapshot.ReaderName = FReaderName) and Assigned(FOnCardStateChange) then
+    FOnCardStateChange(Self, ASnapshot);
 end;
-procedure TSmartCardReader.EventReaderAdded(Sender: TObject; const AReaderName: UnicodeString);
-begin if Assigned(FOnReaderAdded) then FOnReaderAdded(Self, AReaderName); end;
-procedure TSmartCardReader.EventReaderRemoved(Sender: TObject; const AReaderName: UnicodeString);
-begin if Assigned(FOnReaderRemoved) then FOnReaderRemoved(Self, AReaderName); end;
-procedure TSmartCardReader.EventError(Sender: TObject; const AStatusCode: Cardinal);
-begin if Assigned(FOnMonitorError) then FOnMonitorError(Self, AStatusCode); end;
+
+procedure TSmartCardReader.EventReaderAdded(Sender: TObject;
+  const AReaderName: UnicodeString);
+begin
+  if Assigned(FOnReaderAdded) then
+    FOnReaderAdded(Self, AReaderName);
+end;
+
+procedure TSmartCardReader.EventReaderRemoved(Sender: TObject;
+  const AReaderName: UnicodeString);
+begin
+  if Assigned(FOnReaderRemoved) then
+    FOnReaderRemoved(Self, AReaderName);
+end;
+
+procedure TSmartCardReader.EventError(Sender: TObject;
+  const AStatusCode: Cardinal);
+begin
+  if Assigned(FOnMonitorError) then
+    FOnMonitorError(Self, AStatusCode);
+end;
 
 procedure TSmartCardReader.StartMonitoring;
 var
@@ -766,9 +866,11 @@ var
   Watcher: TPcscWatcher;
 begin
   ValidateName(FReaderName);
-  if Monitoring then raise ECardTransportError.Create('Monitoring already exists.');
+  if Monitoring then
+    raise ECardTransportError.Create('Monitoring already exists.');
   CheckStatus(FApi.Establish(Context), 'EstablishMonitorContext');
-  if Context = 0 then raise EPcscError.Create('EstablishMonitorContext', PcscInternalError);
+  if Context = 0 then
+    raise EPcscError.Create('EstablishMonitorContext', PcscInternalError);
   try
     Watcher := TPcscWatcher.Create(FApi, FReaderName, Context);
   except
@@ -794,14 +896,17 @@ begin
   FreeAndNil(FEventMonitor);
 end;
 
-function TSmartCardReader.PollChanges(out ASnapshot: TPcscReaderSnapshot): Boolean;
+function TSmartCardReader.PollChanges(out ASnapshot
+  : TPcscReaderSnapshot): Boolean;
 var
   Status: Cardinal;
 begin
-  ASnapshot := Default(TPcscReaderSnapshot);
+  ASnapshot := Default (TPcscReaderSnapshot);
   Result := False;
-  if FWatcher = nil then Exit;
-  if not TPcscWatcher(FWatcher).Take(ASnapshot, Status) then Exit;
+  if FWatcher = nil then
+    Exit;
+  if not TPcscWatcher(FWatcher).Take(ASnapshot, Status) then
+    Exit;
   if Status <> PcscSuccess then
   begin
     StopMonitoring;
@@ -809,7 +914,8 @@ begin
   end;
   Result := True;
   // Event dispatch is last: a handler may stop monitoring or free the component.
-  if Assigned(FOnCardStateChange) then FOnCardStateChange(Self, ASnapshot);
+  if Assigned(FOnCardStateChange) then
+    FOnCardStateChange(Self, ASnapshot);
 end;
 
 end.

@@ -1,7 +1,7 @@
 unit ERD.Card.Reader.TWN4.Serial;
 
 {$IFDEF FPC}
-  {$MODE DELPHI}
+{$MODE DELPHI}
 {$ENDIF}
 
 interface
@@ -28,7 +28,7 @@ uses
   ERD.Card.MagStripe.Serial;
 
 type
-  TTwn4SerialChannel = class(TInterfacedObject,ITwn4ByteChannel)
+  TTwn4SerialChannel = class(TInterfacedObject, ITwn4ByteChannel)
   private
     FPort: IMagStripeSerialPort;
   public
@@ -41,28 +41,49 @@ type
   end;
 
 constructor TTwn4SerialChannel.Create(const AName: string);
-begin inherited Create; FPort := CreateWindowsMagStripeSerialPort(AName); end;
+begin
+  inherited Create;
+  FPort := CreateWindowsMagStripeSerialPort(AName);
+end;
 
 procedure TTwn4SerialChannel.Open;
 begin
   FPort.Open;
-  try FPort.DiscardInput;
-  except try FPort.Close; except end; raise; end;
+  try
+    FPort.DiscardInput;
+  except
+    try
+      FPort.Close;
+    except
+    end;
+    raise;
+  end;
 end;
 
 procedure TTwn4SerialChannel.Close;
-begin FPort.Close; end;
+begin
+  FPort.Close;
+end;
 
-procedure TTwn4SerialChannel.Send(const ABytes: TBytes; const ATimeoutMs: Cardinal);
-begin FPort.Send(ABytes,ATimeoutMs); end;
+procedure TTwn4SerialChannel.Send(const ABytes: TBytes;
+  const ATimeoutMs: Cardinal);
+begin
+  FPort.Send(ABytes, ATimeoutMs);
+end;
 
 function TTwn4SerialChannel.ReceiveByte(const ATimeoutMs: Cardinal): Byte;
-begin Result := FPort.ReceiveByte(ATimeoutMs); end;
+begin
+  Result := FPort.ReceiveByte(ATimeoutMs);
+end;
 
 function TTwn4SerialChannel.NowMs: UInt64;
-begin Result := FPort.NowMs; end;
+begin
+  Result := FPort.NowMs;
+end;
 
 function CreateWindowsTwn4CdcChannel(const APortName: string): ITwn4ByteChannel;
-begin Result := TTwn4SerialChannel.Create(APortName); end;
+begin
+  Result := TTwn4SerialChannel.Create(APortName);
+end;
 
 end.

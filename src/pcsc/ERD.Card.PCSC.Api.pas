@@ -1,7 +1,7 @@
 unit ERD.Card.PCSC.Api;
 
 {$IFDEF FPC}
-  {$MODE DELPHI}
+{$MODE DELPHI}
 {$ENDIF}
 
 interface
@@ -70,8 +70,7 @@ type
     /// <summary>This connection exclusively owns the card.</summary>
     psmExclusive,
     /// <summary>Other applications may also connect to the card.</summary>
-    psmShared
-  );
+    psmShared);
   /// <summary>An explicit card action when ending a transaction or connection.</summary>
   TPcscDisposition = (
     /// <summary>Leave the card powered and its current state unchanged.</summary>
@@ -81,8 +80,7 @@ type
     /// <summary>Power down the card.</summary>
     pcdUnpower,
     /// <summary>Request ejection where the reader supports it.</summary>
-    pcdEject
-  );
+    pcdEject);
   /// <summary>The single negotiated command transport protocol.</summary>
   TPcscProtocol = (
     /// <summary>No card is connected.</summary>
@@ -90,8 +88,8 @@ type
     /// <summary>T=0 was negotiated.</summary>
     pcpT0,
     /// <summary>T=1 was negotiated.</summary>
-    pcpT1
-  );
+    pcpT1);
+
   /// <summary>A raw reader snapshot independent of connection state.</summary>
   /// <remarks>Ordinary record assignment shares Atr storage; publishers must copy it for independent ownership.</remarks>
   TPcscReaderSnapshot = record
@@ -102,8 +100,10 @@ type
     /// <summary>Uninterpreted ATR bytes, possibly a reader-generated contactless identifier.</summary>
     Atr: TBytes;
   end;
+
   /// <summary>Owned snapshots/current states for a bounded multi-reader status wait.</summary>
   TPcscReaderSnapshots = array of TPcscReaderSnapshot;
+
   /// <summary>Optional native multi-reader status wait; supports the PC/SC PnP notification pseudo-reader.</summary>
   IPcscMonitorApi = interface
     ['{40801DA5-2D15-41E1-A147-0D8DE2E4A1CA}']
@@ -113,9 +113,11 @@ type
     /// <param name="ATimeoutMs">Finite timeout; timeout does not trigger reader-list polling.</param>
     /// <param name="ASnapshots">Owned ordered snapshots matching names; normalized reader states, raw PnP state; cleared on failure.</param>
     /// <returns>Native success, timeout, cancellation or error; no APDU or card connection is opened.</returns>
-    function WaitReaders(const AContext: TPcscHandle; const ACurrent: TPcscReaderSnapshots;
-      const ATimeoutMs: Cardinal; out ASnapshots: TPcscReaderSnapshots): Cardinal;
+    function WaitReaders(const AContext: TPcscHandle;
+      const ACurrent: TPcscReaderSnapshots; const ATimeoutMs: Cardinal;
+      out ASnapshots: TPcscReaderSnapshots): Cardinal;
   end;
+
   /// <summary>A PC/SC failure preserving the unsigned 32-bit native status code.</summary>
   EPcscError = class(ECardTransportError)
   private
@@ -125,12 +127,14 @@ type
     /// <summary>Creates a native failure without logging card data or reader identities.</summary>
     /// <param name="AOperation">A fixed operation label, not user/card data.</param>
     /// <param name="AStatusCode">The original PC/SC error bits.</param>
-    constructor Create(const AOperation: string; const AStatusCode: Cardinal); reintroduce;
+    constructor Create(const AOperation: string; const AStatusCode: Cardinal);
+      reintroduce;
     /// <summary>The unsigned native PC/SC status code.</summary>
     property StatusCode: Cardinal read FStatusCode;
     /// <summary>The fixed operation label.</summary>
     property Operation: string read FOperation;
   end;
+
   /// <summary>An injectable, thread-safe boundary around native PC/SC operations.</summary>
   /// <remarks>
   /// All outputs are cleared on native failure. Returned arrays must be independent.
@@ -154,7 +158,8 @@ type
     /// <param name="AContext">A live resource-manager context.</param>
     /// <param name="ANames">Independent reader names, empty on failure or PcscNoReaders.</param>
     /// <returns>The native status code; PcscNoReaders denotes an empty discovery result.</returns>
-    function ListReaders(const AContext: TPcscHandle; out ANames: TPcscReaderNames): Cardinal;
+    function ListReaders(const AContext: TPcscHandle;
+      out ANames: TPcscReaderNames): Cardinal;
     /// <summary>Connects to one exact reader name with a protocol mask.</summary>
     /// <param name="AContext">A live context.</param>
     /// <param name="AReaderName">The exact Unicode reader name, without embedded nulls.</param>
@@ -163,14 +168,16 @@ type
     /// <param name="ACard">The owned card handle, or zero on failure.</param>
     /// <param name="AActiveProtocol">The single negotiated native protocol, or zero on failure.</param>
     /// <returns>The native status code.</returns>
-    function Connect(const AContext: TPcscHandle; const AReaderName: UnicodeString;
-      const AShareMode: TPcscShareMode; const AProtocols: Cardinal;
-      out ACard: TPcscHandle; out AActiveProtocol: Cardinal): Cardinal;
+    function Connect(const AContext: TPcscHandle;
+      const AReaderName: UnicodeString; const AShareMode: TPcscShareMode;
+      const AProtocols: Cardinal; out ACard: TPcscHandle;
+      out AActiveProtocol: Cardinal): Cardinal;
     /// <summary>Closes a card connection with an explicit card action.</summary>
     /// <param name="ACard">The connected card handle.</param>
     /// <param name="ADisposition">The requested card action.</param>
     /// <returns>The native status code; does not raise.</returns>
-    function Disconnect(const ACard: TPcscHandle; const ADisposition: TPcscDisposition): Cardinal;
+    function Disconnect(const ACard: TPcscHandle;
+      const ADisposition: TPcscDisposition): Cardinal;
     /// <summary>Acquires the native card transaction lock.</summary>
     /// <param name="ACard">The connected card handle.</param>
     /// <returns>The native status code; this synchronous call may block.</returns>
@@ -179,7 +186,8 @@ type
     /// <param name="ACard">The connected card handle.</param>
     /// <param name="ADisposition">The requested card action.</param>
     /// <returns>The native status code.</returns>
-    function EndTransaction(const ACard: TPcscHandle; const ADisposition: TPcscDisposition): Cardinal;
+    function EndTransaction(const ACard: TPcscHandle;
+      const ADisposition: TPcscDisposition): Cardinal;
     /// <summary>Sends one command without retrying it.</summary>
     /// <param name="ACard">The connected card handle.</param>
     /// <param name="AProtocol">The single negotiated native protocol.</param>
@@ -188,7 +196,8 @@ type
     /// <param name="AResponse">Independent received bytes, empty on native failure.</param>
     /// <returns>The native status code; an insufficient buffer must not trigger a resend.</returns>
     function Transmit(const ACard: TPcscHandle; const AProtocol: Cardinal;
-      const ACommand: TBytes; const AMaxResponseBytes: Integer; out AResponse: TBytes): Cardinal;
+      const ACommand: TBytes; const AMaxResponseBytes: Integer;
+      out AResponse: TBytes): Cardinal;
     /// <summary>Reads the current ATR associated with a card connection.</summary>
     /// <param name="ACard">The connected card handle.</param>
     /// <param name="AAtr">Independent uninterpreted bytes, empty on failure.</param>
@@ -201,9 +210,9 @@ type
     /// <param name="ATimeoutMs">The finite timeout in milliseconds.</param>
     /// <param name="ASnapshot">Independent normalized state/ATR, cleared on failure.</param>
     /// <returns>Native success, timeout, cancellation or another failure.</returns>
-    function WaitStatus(const AContext: TPcscHandle; const AReaderName: UnicodeString;
-      const ACurrentState: Cardinal; const ATimeoutMs: Cardinal;
-      out ASnapshot: TPcscReaderSnapshot): Cardinal;
+    function WaitStatus(const AContext: TPcscHandle;
+      const AReaderName: UnicodeString; const ACurrentState: Cardinal;
+      const ATimeoutMs: Cardinal; out ASnapshot: TPcscReaderSnapshot): Cardinal;
     /// <summary>Cancels an in-flight status wait without affecting other contexts.</summary>
     /// <param name="AContext">The dedicated monitoring context.</param>
     /// <returns>The native status code; does not raise.</returns>
@@ -212,9 +221,11 @@ type
 
 implementation
 
-constructor EPcscError.Create(const AOperation: string; const AStatusCode: Cardinal);
+constructor EPcscError.Create(const AOperation: string;
+  const AStatusCode: Cardinal);
 begin
-  inherited Create(AOperation + ' failed (PC/SC 0x' + IntToHex(AStatusCode, 8) + ').');
+  inherited Create(AOperation + ' failed (PC/SC 0x' + IntToHex(AStatusCode,
+    8) + ').');
   FOperation := AOperation;
   FStatusCode := AStatusCode;
 end;

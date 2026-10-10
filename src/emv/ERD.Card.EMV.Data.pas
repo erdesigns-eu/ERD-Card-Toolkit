@@ -1,7 +1,7 @@
 unit ERD.Card.EMV.Data;
 
 {$IFDEF FPC}
-  {$MODE DELPHI}
+{$MODE DELPHI}
 {$ENDIF}
 
 interface
@@ -21,8 +21,8 @@ type
     /// <summary>Contact PSE: 1PAY.SYS.DDF01, with an SFI record directory.</summary>
     edContactPse,
     /// <summary>Contactless PPSE: 2PAY.SYS.DDF01, with application templates in the FCI.</summary>
-    edContactlessPpse
-  );
+    edContactlessPpse);
+
   /// <summary>A directory entry without application selection or payment execution.</summary>
   TEmvApplicationInfo = record
     /// <summary>Exact application identifier, 5..16 bytes.</summary>
@@ -36,8 +36,10 @@ type
     /// <summary>Bit 8 of tag 87; user confirmation is required before payment selection.</summary>
     ConfirmationRequired: Boolean;
   end;
+
   /// <summary>Discovered applications in directory order; no implicit preference is selected.</summary>
   TEmvApplications = array of TEmvApplicationInfo;
+
   /// <summary>Directory discovery result; absence differs from an existing empty directory.</summary>
   TEmvDirectoryData = record
     /// <summary>The directory requested by the caller.</summary>
@@ -49,6 +51,7 @@ type
     /// <summary>Independent application entries in directory order.</summary>
     Applications: TEmvApplications;
   end;
+
   /// <summary>A primitive EMV tag and byte value for terminal inputs or collected card fields.</summary>
   TEmvValue = record
     /// <summary>Complete encoded tag identifier, at most three bytes.</summary>
@@ -56,6 +59,7 @@ type
     /// <summary>Exact bytes; never hexadecimal text or a borrowed TLV buffer.</summary>
     Value: TBytes;
   end;
+
   /// <summary>Tag/value entries; terminal inputs require unique tags, card fields may repeat.</summary>
   TEmvValues = array of TEmvValue;
   /// <summary>Explicitly supported optional GET DATA objects; no PIN verification is performed.</summary>
@@ -67,8 +71,8 @@ type
     /// <summary>Remaining offline PIN attempts, tag 9F17, one byte.</summary>
     edoPinTryCounter,
     /// <summary>Transaction log data-object list, tag 9F4F.</summary>
-    edoLogFormat
-  );
+    edoLogFormat);
+
   /// <summary>Optional GET DATA result with an explicit absence/unsupported status.</summary>
   TEmvDataObjectResult = record
     /// <summary>Requested object.</summary>
@@ -86,6 +90,7 @@ type
     /// <summary>Unsigned big-endian counter; meaningful only when HasNumericValue is true.</summary>
     NumericValue: Word;
   end;
+
   /// <summary>One cyclic transaction-log record; values are not BER-TLV encoded.</summary>
   TEmvLogRecord = record
     /// <summary>Record number, starting at one for the most recent entry.</summary>
@@ -95,8 +100,10 @@ type
     /// <summary>Decoded values in Log Format order, retaining repeated and unknown tags.</summary>
     Fields: TEmvValues;
   end;
+
   /// <summary>Transaction-log records in newest-first order.</summary>
   TEmvLogRecords = array of TEmvLogRecord;
+
   /// <summary>Complete optional card transaction-log snapshot; not a payment authorization result.</summary>
   /// <remarks>Ordinary record assignment shares arrays. Log availability and contents are issuer dependent.</remarks>
   TEmvTransactionLogData = record
@@ -113,6 +120,7 @@ type
     /// <summary>All existing records up to the advertised maximum; no partial snapshot on failure.</summary>
     Records: TEmvLogRecords;
   end;
+
   /// <summary>One data-object-list request, whose length is a single byte rather than BER length encoding.</summary>
   TEmvDolEntry = record
     /// <summary>Requested primitive terminal tag.</summary>
@@ -120,8 +128,10 @@ type
     /// <summary>Requested terminal-value size in bytes, including a possible zero length.</summary>
     Size: Byte;
   end;
+
   /// <summary>DOL requests in card-provided order, including repeated requests.</summary>
   TEmvDolEntries = array of TEmvDolEntry;
+
   /// <summary>One validated Application File Locator entry.</summary>
   TEmvAflEntry = record
     /// <summary>Short file identifier, 1..30.</summary>
@@ -133,8 +143,10 @@ type
     /// <summary>Number of initial records used for offline authentication; no authentication is performed here.</summary>
     OfflineAuthRecords: Byte;
   end;
+
   /// <summary>Validated AFL entries; overlapping record ranges are rejected.</summary>
   TEmvAfl = array of TEmvAflEntry;
+
   /// <summary>One successfully read application record.</summary>
   TEmvRecord = record
     /// <summary>Source short file identifier.</summary>
@@ -144,8 +156,10 @@ type
     /// <summary>Independent complete record bytes without SW1/SW2; issuer records may be opaque.</summary>
     RawData: TBytes;
   end;
+
   /// <summary>Read records in AFL order.</summary>
   TEmvRecords = array of TEmvRecord;
+
   /// <summary>Outcome of one additional caller-requested record probe.</summary>
   TEmvRecordProbe = record
     /// <summary>Requested short file identifier, 1..30.</summary>
@@ -155,8 +169,10 @@ type
     /// <summary>Card status: 9000 read, 6A82/6A83 absent, 6982/6985 access or state restricted.</summary>
     StatusWord: Word;
   end;
+
   /// <summary>Additional probes in ascending SFI and record order; advertised records are not probed twice.</summary>
   TEmvRecordProbes = array of TEmvRecordProbe;
+
   /// <summary>Complete data result from one selected application.</summary>
   /// <remarks>Fields are optional; an IBAN is not guaranteed. Ordinary record assignment
   /// shares arrays. No issuer lookup, account ownership or cryptographic authenticity
@@ -193,6 +209,7 @@ type
     /// <summary>Independent tag 57 Track 2 equivalent data, or empty; not a magstripe wire format.</summary>
     Track2Equivalent: TBytes;
   end;
+
   /// <summary>Stateless DOL, AFL, transaction-log and optional card-field decoding with explicit bounds.</summary>
   TEmvCodec = class
   public
@@ -207,7 +224,8 @@ type
     /// <returns>Independent tags and values in format order.</returns>
     /// <exception cref="EEmvDataError">The format is invalid or empty, total length exceeds 256, or record size differs.</exception>
     /// <remarks>No amount, date, currency or successful-payment interpretation is inferred.</remarks>
-    class function DecodeLogRecord(const AFormat, ARecord: TBytes): TEmvValues; static;
+    class function DecodeLogRecord(const AFormat, ARecord: TBytes)
+      : TEmvValues; static;
     /// <summary>Parses primitive EMV tags followed by one-byte requested sizes.</summary>
     /// <param name="ABytes">A PDOL value, at most 252 bytes; empty is allowed.</param>
     /// <returns>Independent requests in original order.</returns>
@@ -219,19 +237,22 @@ type
     /// <returns>Independent encoded 83 object fitting short APDU Lc, at most 255 bytes.</returns>
     /// <exception cref="EEmvDataError">A requested value is missing, ambiguous, wrong-sized or exceeds short-APDU capacity.</exception>
     /// <remarks>No capabilities, country, currency, amounts or unpredictable numbers are fabricated.</remarks>
-    class function BuildDolData(const ADol: TBytes; const AValues: TEmvValues): TBytes; static;
+    class function BuildDolData(const ADol: TBytes; const AValues: TEmvValues)
+      : TBytes; static;
     /// <summary>Validates file/record ranges, offline-authentication counts and cumulative bounds.</summary>
     /// <param name="ABytes">AFL bytes, at most 252 and a multiple of four; empty is permitted.</param>
     /// <param name="AMaxRecords">Maximum total requested records, 1..1024.</param>
     /// <returns>Independent AFL entries; no overlapping file/record pair.</returns>
     /// <exception cref="EEmvDataError">A field, overlap or bound is invalid.</exception>
-    class function DecodeAfl(const ABytes: TBytes; const AMaxRecords: Integer = 256): TEmvAfl; static;
+    class function DecodeAfl(const ABytes: TBytes;
+      const AMaxRecords: Integer = 256): TEmvAfl; static;
     /// <summary>Copies one optional tag, accepting equal repeats and rejecting conflicting values.</summary>
     /// <param name="AFields">Collected primitive card fields.</param>
     /// <param name="ATag">Complete encoded tag to look up.</param>
     /// <returns>Independent value bytes; empty when absent or empty.</returns>
     /// <exception cref="EEmvDataError">Repeated copies of the tag disagree.</exception>
-    class function ConsistentValue(const AFields: TEmvValues; const ATag: TBytes): TBytes; static;
+    class function ConsistentValue(const AFields: TEmvValues;
+      const ATag: TBytes): TBytes; static;
     /// <summary>Validates and extracts optional PAN, expiry, name, IBAN and Track 2 values.</summary>
     /// <param name="AData">Snapshot whose Fields have been populated; convenient values are overwritten and may change before an error.</param>
     /// <exception cref="EEmvDataError">Known field encodings, lengths or repeated values are inconsistent.</exception>
@@ -246,10 +267,12 @@ implementation
 uses ERD.Card.Bytes;
 
 function LogSize(const AEntries: TEmvDolEntries): Integer;
-var I: Integer;
+var
+  I: Integer;
 begin
   Result := 0;
-  for I := 0 to Length(AEntries) - 1 do Inc(Result, AEntries[I].Size);
+  for I := 0 to Length(AEntries) - 1 do
+    Inc(Result, AEntries[I].Size);
   if (Result < 1) or (Result > 256) then
     raise EEmvDataError.Create('Invalid EMV log format size.');
 end;
@@ -259,7 +282,8 @@ begin
   Result := LogSize(DecodeDol(AFormat));
 end;
 
-class function TEmvCodec.DecodeLogRecord(const AFormat, ARecord: TBytes): TEmvValues;
+class function TEmvCodec.DecodeLogRecord(const AFormat, ARecord: TBytes)
+  : TEmvValues;
 var
   Entries: TEmvDolEntries;
   I, Size, Offset: Integer;
@@ -290,17 +314,21 @@ var
   B: Byte;
 begin
   Result := nil;
-  if AOffset >= Length(ABytes) then Fail('missing tag');
+  if AOffset >= Length(ABytes) then
+    Fail('missing tag');
   Start := AOffset;
   B := ABytes[AOffset];
   Inc(AOffset);
-  if (B = 0) or (B = $FF) or ((B and $20) <> 0) then Fail('primitive tag');
+  if (B = 0) or (B = $FF) or ((B and $20) <> 0) then
+    Fail('primitive tag');
   if (B and $1F) = $1F then
   begin
     repeat
-      if (AOffset >= Length(ABytes)) or (AOffset - Start >= 3) then Fail('tag length');
+      if (AOffset >= Length(ABytes)) or (AOffset - Start >= 3) then
+        Fail('tag length');
       B := ABytes[AOffset];
-      if (AOffset = Start + 1) and ((B and $7F) = 0) then Fail('tag encoding');
+      if (AOffset = Start + 1) and ((B and $7F) = 0) then
+        Fail('tag encoding');
       Inc(AOffset);
     until (B and $80) = 0;
   end;
@@ -313,12 +341,14 @@ var
   Tag: TBytes;
 begin
   Result := nil;
-  if Length(ABytes) > 252 then Fail('DOL limit');
+  if Length(ABytes) > 252 then
+    Fail('DOL limit');
   Offset := 0;
   while Offset < Length(ABytes) do
   begin
     Tag := ReadTag(ABytes, Offset);
-    if Offset >= Length(ABytes) then Fail('DOL size missing');
+    if Offset >= Length(ABytes) then
+      Fail('DOL size missing');
     Index := Length(Result);
     SetLength(Result, Index + 1);
     Result[Index].Tag := Tag;
@@ -327,7 +357,8 @@ begin
   end;
 end;
 
-class function TEmvCodec.BuildDolData(const ADol: TBytes; const AValues: TEmvValues): TBytes;
+class function TEmvCodec.BuildDolData(const ADol: TBytes;
+  const AValues: TEmvValues): TBytes;
 var
   Entries: TEmvDolEntries;
   Buffer, Tag: TBytes;
@@ -336,19 +367,23 @@ begin
   Result := nil;
   Buffer := nil;
   Entries := DecodeDol(ADol);
-  if Length(AValues) > 256 then Fail('terminal value count');
+  if Length(AValues) > 256 then
+    Fail('terminal value count');
   for I := 0 to Length(AValues) - 1 do
   begin
     Offset := 0;
     Tag := ReadTag(AValues[I].Tag, Offset);
-    if Offset <> Length(AValues[I].Tag) then Fail('terminal tag');
+    if Offset <> Length(AValues[I].Tag) then
+      Fail('terminal tag');
     for J := 0 to I - 1 do
-      if BytesEqual(Tag, AValues[J].Tag) then Fail('duplicate terminal tag');
+      if BytesEqual(Tag, AValues[J].Tag) then
+        Fail('duplicate terminal tag');
   end;
   Size := 0;
   for I := 0 to Length(Entries) - 1 do
   begin
-    if Entries[I].Size > 252 - Size then Fail('GPO data limit');
+    if Entries[I].Size > 252 - Size then
+      Fail('GPO data limit');
     Inc(Size, Entries[I].Size);
   end;
   SetLength(Buffer, Size);
@@ -357,14 +392,18 @@ begin
   begin
     Found := -1;
     for J := 0 to Length(AValues) - 1 do
-      if BytesEqual(Entries[I].Tag, AValues[J].Tag) then Found := J;
+      if BytesEqual(Entries[I].Tag, AValues[J].Tag) then
+        Found := J;
     if Found < 0 then
     begin
-      if Entries[I].Size = 0 then Continue;
+      if Entries[I].Size = 0 then
+        Continue;
       Fail('terminal value missing');
     end;
-    if Length(AValues[Found].Value) <> Entries[I].Size then Fail('terminal value size');
-    for K := 0 to Entries[I].Size - 1 do Buffer[Offset + K] := AValues[Found].Value[K];
+    if Length(AValues[Found].Value) <> Entries[I].Size then
+      Fail('terminal value size');
+    for K := 0 to Entries[I].Size - 1 do
+      Buffer[Offset + K] := AValues[Found].Value[K];
     Inc(Offset, Entries[I].Size);
   end;
   if Size < 128 then
@@ -382,40 +421,50 @@ begin
     Result[2] := Byte(Size);
     Offset := 3;
   end;
-  for I := 0 to Size - 1 do Result[Offset + I] := Buffer[I];
+  for I := 0 to Size - 1 do
+    Result[Offset + I] := Buffer[I];
 end;
 
-class function TEmvCodec.DecodeAfl(const ABytes: TBytes; const AMaxRecords: Integer): TEmvAfl;
+class function TEmvCodec.DecodeAfl(const ABytes: TBytes;
+  const AMaxRecords: Integer): TEmvAfl;
 var
   I, J, Count, Total: Integer;
 begin
   Result := nil;
   if (AMaxRecords < 1) or (AMaxRecords > 1024) or (Length(ABytes) > 252) or
-    (Length(ABytes) mod 4 <> 0) then Fail('AFL limit');
+    (Length(ABytes) mod 4 <> 0) then
+    Fail('AFL limit');
   Count := Length(ABytes) div 4;
   SetLength(Result, Count);
   Total := 0;
   for I := 0 to Count - 1 do
   begin
-    if (ABytes[I * 4] and 7) <> 0 then Fail('AFL reserved bits');
+    if (ABytes[I * 4] and 7) <> 0 then
+      Fail('AFL reserved bits');
     Result[I].Sfi := ABytes[I * 4] shr 3;
     Result[I].FirstRecord := ABytes[I * 4 + 1];
     Result[I].LastRecord := ABytes[I * 4 + 2];
     Result[I].OfflineAuthRecords := ABytes[I * 4 + 3];
-    if (Result[I].Sfi < 1) or (Result[I].Sfi > 30) or (Result[I].FirstRecord = 0) or
-      (Result[I].LastRecord < Result[I].FirstRecord) then Fail('AFL record range');
+    if (Result[I].Sfi < 1) or (Result[I].Sfi > 30) or
+      (Result[I].FirstRecord = 0) or
+      (Result[I].LastRecord < Result[I].FirstRecord) then
+      Fail('AFL record range');
     J := Integer(Result[I].LastRecord) - Result[I].FirstRecord + 1;
-    if Result[I].OfflineAuthRecords > J then Fail('AFL authentication count');
+    if Result[I].OfflineAuthRecords > J then
+      Fail('AFL authentication count');
     Inc(Total, J);
-    if Total > AMaxRecords then Fail('AFL record limit');
+    if Total > AMaxRecords then
+      Fail('AFL record limit');
     for J := 0 to I - 1 do
       if (Result[I].Sfi = Result[J].Sfi) and
         (Result[I].FirstRecord <= Result[J].LastRecord) and
-        (Result[J].FirstRecord <= Result[I].LastRecord) then Fail('overlapping AFL records');
+        (Result[J].FirstRecord <= Result[I].LastRecord) then
+        Fail('overlapping AFL records');
   end;
 end;
 
-class function TEmvCodec.ConsistentValue(const AFields: TEmvValues; const ATag: TBytes): TBytes;
+class function TEmvCodec.ConsistentValue(const AFields: TEmvValues;
+  const ATag: TBytes): TBytes;
 var
   I: Integer;
   Found: Boolean;
@@ -425,13 +474,16 @@ begin
   for I := 0 to Length(AFields) - 1 do
     if BytesEqual(AFields[I].Tag, ATag) then
     begin
-      if Found and not BytesEqual(Result, AFields[I].Value) then Fail('conflicting card fields');
-      if not Found then Result := CopyBytes(AFields[I].Value);
+      if Found and not BytesEqual(Result, AFields[I].Value) then
+        Fail('conflicting card fields');
+      if not Found then
+        Result := CopyBytes(AFields[I].Value);
       Found := True;
     end;
 end;
 
-function DecimalText(const ABytes: TBytes; const AAllowPadding: Boolean): UnicodeString;
+function DecimalText(const ABytes: TBytes; const AAllowPadding: Boolean)
+  : UnicodeString;
 var
   I, Digit, Count: Integer;
 begin
@@ -440,10 +492,14 @@ begin
   Count := 0;
   for I := 0 to Length(ABytes) * 2 - 1 do
   begin
-    if I mod 2 = 0 then Digit := ABytes[I div 2] shr 4
-    else Digit := ABytes[I div 2] and $0F;
-    if (Digit = 15) and AAllowPadding and (I = Length(ABytes) * 2 - 1) then Break;
-    if Digit > 9 then Fail('decimal field encoding');
+    if I mod 2 = 0 then
+      Digit := ABytes[I div 2] shr 4
+    else
+      Digit := ABytes[I div 2] and $0F;
+    if (Digit = 15) and AAllowPadding and (I = Length(ABytes) * 2 - 1) then
+      Break;
+    if Digit > 9 then
+      Fail('decimal field encoding');
     Inc(Count);
     Result[Count] := WideChar(Ord('0') + Digit);
   end;
@@ -451,11 +507,13 @@ begin
 end;
 
 function LatinText(const ABytes: TBytes): UnicodeString;
-var I: Integer;
+var
+  I: Integer;
 begin
   Result := '';
   SetLength(Result, Length(ABytes));
-  for I := 0 to Length(ABytes) - 1 do Result[I + 1] := WideChar(ABytes[I]);
+  for I := 0 to Length(ABytes) - 1 do
+    Result[I + 1] := WideChar(ABytes[I]);
 end;
 
 function Track2Text(const ABytes: TBytes): UnicodeString;
@@ -467,13 +525,19 @@ begin
   Count := 0;
   for I := 0 to Length(ABytes) * 2 - 1 do
   begin
-    if I mod 2 = 0 then Nibble := ABytes[I div 2] shr 4
-    else Nibble := ABytes[I div 2] and $0F;
-    if (Nibble = 15) and (I = Length(ABytes) * 2 - 1) then Break;
+    if I mod 2 = 0 then
+      Nibble := ABytes[I div 2] shr 4
+    else
+      Nibble := ABytes[I div 2] and $0F;
+    if (Nibble = 15) and (I = Length(ABytes) * 2 - 1) then
+      Break;
     Inc(Count);
-    if Nibble <= 9 then Result[Count] := WideChar(Ord('0') + Nibble)
-    else if Nibble = 13 then Result[Count] := 'D'
-    else Fail('Track 2 encoding');
+    if Nibble <= 9 then
+      Result[Count] := WideChar(Ord('0') + Nibble)
+    else if Nibble = 13 then
+      Result[Count] := 'D'
+    else
+      Fail('Track 2 encoding');
   end;
   SetLength(Result, Count);
 end;
@@ -485,42 +549,52 @@ var
   I, Separator: Integer;
 begin
   Value := ConsistentValue(AData.Fields, HexToBytes('5A'));
-  if Length(Value) > 10 then Fail('PAN size');
+  if Length(Value) > 10 then
+    Fail('PAN size');
   AData.Pan := DecimalText(Value, True);
-  if Length(AData.Pan) > 19 then Fail('PAN digit count');
+  if Length(AData.Pan) > 19 then
+    Fail('PAN digit count');
   Value := ConsistentValue(AData.Fields, HexToBytes('5F24'));
-  if (Length(Value) <> 0) and (Length(Value) <> 3) then Fail('expiry size');
+  if (Length(Value) <> 0) and (Length(Value) <> 3) then
+    Fail('expiry size');
   AData.ExpiryDate := DecimalText(Value, False);
   AData.ExpiryMonth := Copy(AData.ExpiryDate, 1, 4);
   AData.ServiceCode := '';
   Value := ConsistentValue(AData.Fields, HexToBytes('5F20'));
-  if Length(Value) > 26 then Fail('cardholder name size');
+  if Length(Value) > 26 then
+    Fail('cardholder name size');
   AData.CardholderName := LatinText(Value);
   Value := ConsistentValue(AData.Fields, HexToBytes('5F53'));
   AData.Iban := LatinText(Value);
   if Length(Value) <> 0 then
   begin
-    if (Length(Value) < 15) or (Length(Value) > 34) then Fail('IBAN size');
+    if (Length(Value) < 15) or (Length(Value) > 34) then
+      Fail('IBAN size');
     for I := 1 to Length(AData.Iban) do
-      if not (((AData.Iban[I] >= 'A') and (AData.Iban[I] <= 'Z')) or
-        ((AData.Iban[I] >= '0') and (AData.Iban[I] <= '9'))) then Fail('IBAN encoding');
-    if (AData.Iban[1] < 'A') or (AData.Iban[1] > 'Z') or
-      (AData.Iban[2] < 'A') or (AData.Iban[2] > 'Z') or
-      (AData.Iban[3] < '0') or (AData.Iban[3] > '9') or
-      (AData.Iban[4] < '0') or (AData.Iban[4] > '9') then Fail('IBAN header');
+      if not(((AData.Iban[I] >= 'A') and (AData.Iban[I] <= 'Z')) or
+        ((AData.Iban[I] >= '0') and (AData.Iban[I] <= '9'))) then
+        Fail('IBAN encoding');
+    if (AData.Iban[1] < 'A') or (AData.Iban[1] > 'Z') or (AData.Iban[2] < 'A')
+      or (AData.Iban[2] > 'Z') or (AData.Iban[3] < '0') or (AData.Iban[3] > '9')
+      or (AData.Iban[4] < '0') or (AData.Iban[4] > '9') then
+      Fail('IBAN header');
   end;
   AData.Track2Equivalent := ConsistentValue(AData.Fields, HexToBytes('57'));
-  if Length(AData.Track2Equivalent) > 19 then Fail('Track 2 size');
+  if Length(AData.Track2Equivalent) > 19 then
+    Fail('Track 2 size');
   if Length(AData.Track2Equivalent) <> 0 then
   begin
     Track := Track2Text(AData.Track2Equivalent);
     Separator := Pos('D', Track);
     if (Separator < 2) or (Separator > 20) or (Length(Track) - Separator < 7) or
-      (Pos('D', Copy(Track, Separator + 1, Length(Track))) <> 0) then Fail('Track 2 structure');
+      (Pos('D', Copy(Track, Separator + 1, Length(Track))) <> 0) then
+      Fail('Track 2 structure');
     TrackPan := Copy(Track, 1, Separator - 1);
     TrackExpiry := Copy(Track, Separator + 1, 4);
-    if (AData.Pan <> '') and (AData.Pan <> TrackPan) then Fail('conflicting PAN sources');
-    if (AData.ExpiryMonth <> '') and (AData.ExpiryMonth <> TrackExpiry) then Fail('conflicting expiry sources');
+    if (AData.Pan <> '') and (AData.Pan <> TrackPan) then
+      Fail('conflicting PAN sources');
+    if (AData.ExpiryMonth <> '') and (AData.ExpiryMonth <> TrackExpiry) then
+      Fail('conflicting expiry sources');
     AData.Pan := TrackPan;
     AData.ExpiryMonth := TrackExpiry;
     AData.ServiceCode := Copy(Track, Separator + 5, 3);

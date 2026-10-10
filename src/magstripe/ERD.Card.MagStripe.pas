@@ -1,7 +1,7 @@
 unit ERD.Card.MagStripe;
 
 {$IFDEF FPC}
-  {$MODE DELPHI}
+{$MODE DELPHI}
 {$ENDIF}
 
 interface
@@ -26,10 +26,10 @@ type
     /// <summary>Explicit low-coercivity setting supported by the backend.</summary>
     mscLow,
     /// <summary>Explicit high-coercivity setting supported by the backend.</summary>
-    mscHigh
-  );
+    mscHigh);
   /// <summary>Supported explicit coercivity modes.</summary>
   TMagStripeCoercivitySet = set of TMagStripeCoercivity;
+
   /// <summary>Backend operation guarantees, queried without I/O.</summary>
   TMagStripeCapabilities = record
     /// <summary>Tracks the device can read, independently of a given card's contents.</summary>
@@ -41,6 +41,7 @@ type
     /// <summary>Write returns read-back from the same programmed card after device verification.</summary>
     VerifiedWrite: Boolean;
   end;
+
   /// <summary>Exclusive synchronous magstripe device session with bounded operations.</summary>
   /// <remarks>Implementations own connection, buffers, deadlines and cancellation cleanup.
   /// Acquire grants one non-nested caller-thread session; failure grants nothing.
@@ -59,7 +60,8 @@ type
     /// <param name="ATracks">Requested tracks; return unselected tracks as empty strings.</param>
     /// <param name="ATimeoutMs">Total operation deadline in milliseconds, including swipe wait.</param>
     /// <returns>Unframed validated payloads; absent tracks are empty, decode errors must raise.</returns>
-    function Read(const ATracks: TMagStripeTrackSet; const ATimeoutMs: Cardinal): TMagStripeTracks;
+    function Read(const ATracks: TMagStripeTrackSet; const ATimeoutMs: Cardinal)
+      : TMagStripeTracks;
     /// <summary>Writes only selected tracks once and returns same-card device-verified read-back.</summary>
     /// <param name="ATracks">Nonempty selected tracks; every selected payload must be nonempty.</param>
     /// <param name="AData">Unframed payloads; unselected entries are empty.</param>
@@ -68,9 +70,11 @@ type
     /// <returns>Verified unframed read-back for selected tracks; others empty.</returns>
     /// <remarks>Do not substitute a later arbitrary swipe as verification. Timeout, cancellation,
     /// device errors or uncertain verification must raise and cancel pending work before release.</remarks>
-    function Write(const ATracks: TMagStripeTrackSet; const AData: TMagStripeTracks;
-      const ACoercivity: TMagStripeCoercivity; const ATimeoutMs: Cardinal): TMagStripeTracks;
+    function Write(const ATracks: TMagStripeTrackSet;
+      const AData: TMagStripeTracks; const ACoercivity: TMagStripeCoercivity;
+      const ATimeoutMs: Cardinal): TMagStripeTracks;
   end;
+
   /// <summary>Explicit nonempty physical track combinations accepted by a status-only writer.</summary>
   TMagStripeWriteSelection = (
     /// <summary>Track 1 only.</summary>
@@ -86,10 +90,10 @@ type
     /// <summary>Tracks 2 and 3.</summary>
     mswsTracks23,
     /// <summary>All three physical tracks.</summary>
-    mswsAllTracks
-  );
+    mswsAllTracks);
   /// <summary>Supported complete write selections, rather than inferring every subset is safe.</summary>
   TMagStripeWriteSelections = set of TMagStripeWriteSelection;
+
   /// <summary>Device-status programming guarantees, queried without I/O.</summary>
   TMagStripeStatusWriteCapabilities = record
     /// <summary>Exact permitted selections; backend must preserve physically present unselected tracks.</summary>
@@ -97,6 +101,7 @@ type
     /// <summary>Supported explicit programming coercivity modes.</summary>
     Coercivities: TMagStripeCoercivitySet;
   end;
+
   /// <summary>Receipt based on device-reported programming status, without host read-back evidence.</summary>
   TMagStripeProgrammingReceipt = record
     /// <summary>Requested physical tracks; this is request metadata, not measured stripe contents.</summary>
@@ -108,6 +113,7 @@ type
     /// <summary>Always false for ProgramTracks; no independent track read-back was provided.</summary>
     HostReadBackVerified: Boolean;
   end;
+
   /// <summary>Optional device-status programming contract, distinct from verified read-back writing.</summary>
   /// <remarks>Implement alongside IMagStripeDevice. A successful status must never be represented
   /// by echoing requested data as if it were acquired read-back. No automatic second-card swipe.</remarks>
@@ -123,9 +129,11 @@ type
     /// <param name="ATimeoutMs">Total operation deadline including preparation and swipe wait.</param>
     /// <returns>Raw vendor success status only after completion; errors/cancellation must raise.</returns>
     /// <remarks>Requires an acquired IMagStripeDevice session. Do not replay any programming request.</remarks>
-    function ProgramStatus(const ATracks: TMagStripeTrackSet; const AData: TMagStripeTracks;
-      const ACoercivity: TMagStripeCoercivity; const ATimeoutMs: Cardinal): Byte;
+    function ProgramStatus(const ATracks: TMagStripeTrackSet;
+      const AData: TMagStripeTracks; const ACoercivity: TMagStripeCoercivity;
+      const ATimeoutMs: Cardinal): Byte;
   end;
+
   /// <summary>Non-visual reader/writer component with validation and mandatory exclusive sessions.</summary>
   /// <remarks>No I/O in constructor. Use one caller thread without concurrent or reentrant calls.
   /// WriteTracks requires selected-track preservation and same-card verification from the backend.
@@ -139,10 +147,12 @@ type
     procedure SetDevice(const ADevice: IMagStripeDevice);
     procedure SetTimeoutMs(const ATimeoutMs: Cardinal);
     function BeginOperation(const ATracks: TMagStripeTrackSet;
-      const AWrite: Boolean; const ACoercivity: TMagStripeCoercivity): IMagStripeDevice;
-    procedure EndOperation(const ADevice: IMagStripeDevice; const ASucceeded: Boolean);
-    procedure ValidateData(const ATracks: TMagStripeTrackSet; const AData: TMagStripeTracks;
-      const AWriting: Boolean);
+      const AWrite: Boolean; const ACoercivity: TMagStripeCoercivity)
+      : IMagStripeDevice;
+    procedure EndOperation(const ADevice: IMagStripeDevice;
+      const ASucceeded: Boolean);
+    procedure ValidateData(const ATracks: TMagStripeTrackSet;
+      const AData: TMagStripeTracks; const AWriting: Boolean);
   public
     /// <summary>Creates an inactive component with a ten-second operation timeout.</summary>
     /// <param name="AOwner">Optional component owner; retains usual TComponent ownership.</param>
@@ -161,7 +171,8 @@ type
     /// <exception cref="EMagStripeError">Preflight or acquisition fails before dispatch.</exception>
     /// <exception cref="EMagStripeFormatError">Input track payload is invalid before dispatch.</exception>
     /// <exception cref="EMagStripeWriteUncertain">Dispatch, verification or release failed; media may have changed.</exception>
-    function WriteTracks(const ATracks: TMagStripeTrackSet; const AData: TMagStripeTracks;
+    function WriteTracks(const ATracks: TMagStripeTrackSet;
+      const AData: TMagStripeTracks;
       const ACoercivity: TMagStripeCoercivity = mscCurrent): TMagStripeTracks;
     /// <summary>Programs once using an explicit device-status backend, without claiming host read-back.</summary>
     /// <param name="ATracks">Exact supported physical combination; not every subset is necessarily writable.</param>
@@ -173,15 +184,18 @@ type
     /// <exception cref="EMagStripeWriteUncertain">Programming invocation or release fails; never automatically retry.</exception>
     /// <remarks>Requires IMagStripeStatusWriter in addition to IMagStripeDevice. Does not call Read
     /// or weaken WriteTracks verification. Programming invocation is the conservative uncertainty boundary.</remarks>
-    function ProgramTracks(const ATracks: TMagStripeTrackSet; const AData: TMagStripeTracks;
-      const ACoercivity: TMagStripeCoercivity = mscCurrent): TMagStripeProgrammingReceipt;
+    function ProgramTracks(const ATracks: TMagStripeTrackSet;
+      const AData: TMagStripeTracks;
+      const ACoercivity: TMagStripeCoercivity = mscCurrent)
+      : TMagStripeProgrammingReceipt;
     /// <summary>Retained backend interface; assigning never opens a connection and is refused while busy.</summary>
     property Device: IMagStripeDevice read FDevice write SetDevice;
     /// <summary>Read-only same-thread operation flag, not a cross-thread synchronization primitive.</summary>
     property Busy: Boolean read FBusy;
   published
     /// <summary>Total per-operation deadline, 1..600000 milliseconds; cannot change while busy.</summary>
-    property TimeoutMs: Cardinal read FTimeoutMs write SetTimeoutMs default 10000;
+    property TimeoutMs: Cardinal read FTimeoutMs write SetTimeoutMs
+      default 10000;
   end;
 
 implementation
@@ -194,13 +208,15 @@ end;
 
 procedure TMagStripeReaderWriter.SetDevice(const ADevice: IMagStripeDevice);
 begin
-  if FBusy then raise EMagStripeError.Create('Magstripe component is busy.');
+  if FBusy then
+    raise EMagStripeError.Create('Magstripe component is busy.');
   FDevice := ADevice;
 end;
 
 procedure TMagStripeReaderWriter.SetTimeoutMs(const ATimeoutMs: Cardinal);
 begin
-  if FBusy then raise EMagStripeError.Create('Magstripe component is busy.');
+  if FBusy then
+    raise EMagStripeError.Create('Magstripe component is busy.');
   if (ATimeoutMs < 1) or (ATimeoutMs > 600000) then
     raise EMagStripeError.Create('Invalid magstripe operation timeout.');
   FTimeoutMs := ATimeoutMs;
@@ -216,20 +232,25 @@ begin
     begin
       TMagStripeTrackCodec.ValidatePayload(T, AData[T]);
       if AWriting and (AData[T] = '') then
-        raise EMagStripeError.Create('Empty selected writes require a separate erase operation.');
+        raise EMagStripeError.Create
+          ('Empty selected writes require a separate erase operation.');
     end
     else if AData[T] <> '' then
-      raise EMagStripeError.Create('Unselected magnetic stripe data is not allowed.');
+      raise EMagStripeError.Create
+        ('Unselected magnetic stripe data is not allowed.');
 end;
 
-function TMagStripeReaderWriter.BeginOperation(const ATracks: TMagStripeTrackSet;
-  const AWrite: Boolean; const ACoercivity: TMagStripeCoercivity): IMagStripeDevice;
+function TMagStripeReaderWriter.BeginOperation(const ATracks
+  : TMagStripeTrackSet; const AWrite: Boolean;
+  const ACoercivity: TMagStripeCoercivity): IMagStripeDevice;
 var
   Caps: TMagStripeCapabilities;
 begin
-  if FBusy then raise EMagStripeError.Create('Magstripe component is busy.');
+  if FBusy then
+    raise EMagStripeError.Create('Magstripe component is busy.');
   if (ATracks = []) or (FDevice = nil) then
-    raise EMagStripeError.Create('Magstripe device and tracks must be configured.');
+    raise EMagStripeError.Create
+      ('Magstripe device and tracks must be configured.');
   if (FTimeoutMs < 1) or (FTimeoutMs > 600000) then
     raise EMagStripeError.Create('Invalid magstripe operation timeout.');
   Result := FDevice;
@@ -241,11 +262,12 @@ begin
       if (Ord(ACoercivity) < Ord(Low(TMagStripeCoercivity))) or
         (Ord(ACoercivity) > Ord(High(TMagStripeCoercivity))) then
         raise EMagStripeError.Create('Invalid magstripe coercivity.');
-      if not Caps.VerifiedWrite or not (ATracks <= Caps.WriteTracks) or
-        not (ACoercivity in Caps.Coercivities) then
-        raise EMagStripeError.Create('Verified selected-track writing is not supported.');
+      if not Caps.VerifiedWrite or not(ATracks <= Caps.WriteTracks) or
+        not(ACoercivity in Caps.Coercivities) then
+        raise EMagStripeError.Create
+          ('Verified selected-track writing is not supported.');
     end
-    else if not (ATracks <= Caps.ReadTracks) then
+    else if not(ATracks <= Caps.ReadTracks) then
       raise EMagStripeError.Create('Selected-track reading is not supported.');
     Result.Acquire;
   except
@@ -258,15 +280,19 @@ procedure TMagStripeReaderWriter.EndOperation(const ADevice: IMagStripeDevice;
   const ASucceeded: Boolean);
 begin
   try
-    if ASucceeded then ADevice.Release
+    if ASucceeded then
+      ADevice.Release
     else
-      try ADevice.Release; except { Preserve the primary operation failure. } end;
+      try
+        ADevice.Release;
+      except { Preserve the primary operation failure. } end;
   finally
     FBusy := False;
   end;
 end;
 
-function TMagStripeReaderWriter.ReadTracks(const ATracks: TMagStripeTrackSet): TMagStripeTracks;
+function TMagStripeReaderWriter.ReadTracks(const ATracks: TMagStripeTrackSet)
+  : TMagStripeTracks;
 var
   Session: IMagStripeDevice;
   Succeeded: Boolean;
@@ -283,13 +309,15 @@ begin
 end;
 
 function TMagStripeReaderWriter.WriteTracks(const ATracks: TMagStripeTrackSet;
-  const AData: TMagStripeTracks; const ACoercivity: TMagStripeCoercivity): TMagStripeTracks;
+  const AData: TMagStripeTracks; const ACoercivity: TMagStripeCoercivity)
+  : TMagStripeTracks;
 var
   Session: IMagStripeDevice;
   Succeeded: Boolean;
   T: TMagStripeTrack;
 begin
-  if FBusy then raise EMagStripeError.Create('Magstripe component is busy.');
+  if FBusy then
+    raise EMagStripeError.Create('Magstripe component is busy.');
   ValidateData(ATracks, AData, True);
   Session := BeginOperation(ATracks, True, ACoercivity);
   Succeeded := False;
@@ -300,14 +328,16 @@ begin
         ValidateData(ATracks, Result, True);
         for T := Low(TMagStripeTrack) to High(TMagStripeTrack) do
           if (T in ATracks) and (Result[T] <> AData[T]) then
-            raise EMagStripeError.Create('Magstripe write read-back does not match.');
+            raise EMagStripeError.Create
+              ('Magstripe write read-back does not match.');
         Succeeded := True;
       finally
         EndOperation(Session, Succeeded);
       end;
     except
       on E: Exception do
-        raise EMagStripeWriteUncertain.Create('Magstripe write completion is uncertain (' + E.ClassName + ').');
+        raise EMagStripeWriteUncertain.Create
+          ('Magstripe write completion is uncertain (' + E.ClassName + ').');
     end;
   finally
     Session := nil;
@@ -315,7 +345,8 @@ begin
 end;
 
 function TMagStripeReaderWriter.ProgramTracks(const ATracks: TMagStripeTrackSet;
-  const AData: TMagStripeTracks; const ACoercivity: TMagStripeCoercivity): TMagStripeProgrammingReceipt;
+  const AData: TMagStripeTracks; const ACoercivity: TMagStripeCoercivity)
+  : TMagStripeProgrammingReceipt;
 var
   Session: IMagStripeDevice;
   Writer: IMagStripeStatusWriter;
@@ -325,25 +356,32 @@ var
   T: TMagStripeTrack;
   Succeeded: Boolean;
 begin
-  if FBusy then raise EMagStripeError.Create('Magstripe component is busy.');
+  if FBusy then
+    raise EMagStripeError.Create('Magstripe component is busy.');
   ValidateData(ATracks, AData, True);
-  if (FDevice = nil) or (ATracks = []) or (FTimeoutMs < 1) or (FTimeoutMs > 600000) then
-    raise EMagStripeError.Create('Magstripe device, tracks and timeout must be configured.');
+  if (FDevice = nil) or (ATracks = []) or (FTimeoutMs < 1) or
+    (FTimeoutMs > 600000) then
+    raise EMagStripeError.Create
+      ('Magstripe device, tracks and timeout must be configured.');
   if (Ord(ACoercivity) < Ord(Low(TMagStripeCoercivity))) or
     (Ord(ACoercivity) > Ord(High(TMagStripeCoercivity))) then
     raise EMagStripeError.Create('Invalid magstripe coercivity.');
   Mask := 0;
   for T := Low(TMagStripeTrack) to High(TMagStripeTrack) do
-    if T in ATracks then Mask := Mask or (1 shl Ord(T));
+    if T in ATracks then
+      Mask := Mask or (1 shl Ord(T));
   Selection := TMagStripeWriteSelection(Mask - 1);
   Session := FDevice;
   FBusy := True;
   try
     if not Supports(Session, IMagStripeStatusWriter, Writer) then
-      raise EMagStripeError.Create('Device-status programming is not supported.');
+      raise EMagStripeError.Create
+        ('Device-status programming is not supported.');
     Caps := Writer.GetStatusWriteCapabilities;
-    if not (Selection in Caps.Selections) or not (ACoercivity in Caps.Coercivities) then
-      raise EMagStripeError.Create('Selected programming combination or coercivity is not supported.');
+    if not(Selection in Caps.Selections) or not(ACoercivity in Caps.Coercivities)
+    then
+      raise EMagStripeError.Create
+        ('Selected programming combination or coercivity is not supported.');
     Session.Acquire;
   except
     FBusy := False;
@@ -355,15 +393,19 @@ begin
       Result.RequestedTracks := ATracks;
       Result.RequestedCoercivity := ACoercivity;
       Result.HostReadBackVerified := False;
-      Result.DeviceStatus := Writer.ProgramStatus(ATracks, AData, ACoercivity, FTimeoutMs);
+      Result.DeviceStatus := Writer.ProgramStatus(ATracks, AData, ACoercivity,
+        FTimeoutMs);
       Succeeded := True;
     finally
       EndOperation(Session, Succeeded);
     end;
   except
-    on E: EMagStripeWriteUncertain do raise;
+    on E: EMagStripeWriteUncertain do
+      raise;
     on E: Exception do
-      raise EMagStripeWriteUncertain.Create('Magstripe programming completion is uncertain (' + E.ClassName + ').');
+      raise EMagStripeWriteUncertain.Create
+        ('Magstripe programming completion is uncertain (' +
+        E.ClassName + ').');
   end;
 end;
 

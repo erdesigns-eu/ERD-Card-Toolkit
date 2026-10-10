@@ -1,7 +1,7 @@
 unit ERD.Card.ATR;
 
 {$IFDEF FPC}
-  {$MODE DELPHI}
+{$MODE DELPHI}
 {$ENDIF}
 
 interface
@@ -19,7 +19,8 @@ const
 
 type
   /// <summary>The transmission protocols advertised by TD bytes; T=15 is excluded.</summary>
-  TAtrProtocols = set of 0..14;
+  TAtrProtocols = set of 0 .. 14;
+
   /// <summary>One group of optional TA, TB, TC and TD interface bytes.</summary>
   TAtrInterfaceGroup = record
     /// <summary>Whether TA is present in this group.</summary>
@@ -39,8 +40,10 @@ type
     /// <summary>The TD value, including the next group mask and protocol number.</summary>
     TD: Byte;
   end;
+
   /// <summary>Interface groups in ATR order; array index zero denotes TA1 through TD1.</summary>
   TAtrInterfaceGroups = array of TAtrInterfaceGroup;
+
   /// <summary>A completely validated asynchronous ATR in logical-byte form.</summary>
   /// <remarks>
   /// PC/SC supplies logical bytes for both conventions; this codec does not decode
@@ -65,6 +68,7 @@ type
     /// <summary>The validated TCK byte, or zero when no checksum is required.</summary>
     Tck: Byte;
   end;
+
   /// <summary>Describes an ATR syntax or checksum failure.</summary>
   TAtrErrorCode = (
     /// <summary>No error occurred.</summary>
@@ -84,8 +88,8 @@ type
     /// <summary>Bytes remain after the complete ATR.</summary>
     aicTrailingData,
     /// <summary>The ATR exceeds the thirty-three-byte limit.</summary>
-    aicTooLong
-  );
+    aicTooLong);
+
   /// <summary>Describes an ATR failure without retaining card data.</summary>
   TAtrError = record
     /// <summary>The failure category; aicNone on success.</summary>
@@ -93,6 +97,7 @@ type
     /// <summary>The zero-based offending position, input length for missing bytes, or minus one on success.</summary>
     Offset: Integer;
   end;
+
   /// <summary>An exception containing a structured ATR failure without input contents.</summary>
   EAtrFormatError = class(EConvertError)
   private
@@ -104,6 +109,7 @@ type
     /// <summary>The failure details, with a zero-based offset.</summary>
     property Error: TAtrError read FError;
   end;
+
   /// <summary>Validates asynchronous ISO 7816 ATR syntax and its required checksum.</summary>
   /// <remarks>Stateless and independent of VCL, hardware and issuer-identification catalogs.</remarks>
   TAtrCodec = class
@@ -171,7 +177,7 @@ var
   end;
 
 begin
-  AInfo := Default(TAtrInfo);
+  AInfo := Default (TAtrInfo);
   AtrError(AError, aicNone, -1);
   if Length(ABytes) > AtrMaxSize then
   begin
@@ -189,7 +195,7 @@ begin
     AtrError(AError, aicInvalidConvention, 0);
     Exit(False);
   end;
-  Info := Default(TAtrInfo);
+  Info := Default (TAtrInfo);
   Info.TS := ABytes[0];
   Info.T0 := ABytes[1];
   Mask := Info.T0 shr 4;
@@ -197,19 +203,23 @@ begin
   NeedTck := False;
   while Mask <> 0 do
   begin
-    Group := Default(TAtrInterfaceGroup);
+    Group := Default (TAtrInterfaceGroup);
     Group.HasTA := (Mask and 1) <> 0;
     Group.HasTB := (Mask and 2) <> 0;
     Group.HasTC := (Mask and 4) <> 0;
     Group.HasTD := (Mask and 8) <> 0;
     if Group.HasTA then
-      if not ReadInterface(Group.TA) then Exit(False);
+      if not ReadInterface(Group.TA) then
+        Exit(False);
     if Group.HasTB then
-      if not ReadInterface(Group.TB) then Exit(False);
+      if not ReadInterface(Group.TB) then
+        Exit(False);
     if Group.HasTC then
-      if not ReadInterface(Group.TC) then Exit(False);
+      if not ReadInterface(Group.TC) then
+        Exit(False);
     if Group.HasTD then
-      if not ReadInterface(Group.TD) then Exit(False);
+      if not ReadInterface(Group.TD) then
+        Exit(False);
     GroupCount := Length(Info.InterfaceGroups);
     SetLength(Info.InterfaceGroups, GroupCount + 1);
     Info.InterfaceGroups[GroupCount] := Group;

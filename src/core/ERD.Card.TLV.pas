@@ -1,7 +1,7 @@
 unit ERD.Card.TLV;
 
 {$IFDEF FPC}
-  {$MODE DELPHI}
+{$MODE DELPHI}
 {$ENDIF}
 
 interface
@@ -55,8 +55,8 @@ type
     /// <summary>The supplied resource limits are outside their supported ranges.</summary>
     tecInvalidOptions,
     /// <summary>A nil node/document or a conflicting constructed flag was supplied.</summary>
-    tecInvalidNode
-  );
+    tecInvalidNode);
+
   /// <summary>TLV failure details that do not retain card data.</summary>
   TTlvError = record
     /// <summary>The failure category; tecNone on success.</summary>
@@ -67,6 +67,7 @@ type
     /// </summary>
     Offset: Integer;
   end;
+
   /// <summary>Explicit limits for decoding untrusted definite-length card TLV streams.</summary>
   TTlvDecodeOptions = record
     /// <summary>Maximum nesting depth, from one through TlvHardMaxDepth.</summary>
@@ -80,6 +81,7 @@ type
     /// <summary>Whether to ignore 00 and FF padding between nodes at every constructed level.</summary>
     AllowPadding: Boolean;
   end;
+
   /// <summary>An exception containing TLV error details without input contents.</summary>
   ETlvFormatError = class(EConvertError)
   private
@@ -91,10 +93,12 @@ type
     /// <summary>The failure category and offset.</summary>
     property Error: TTlvError read FError;
   end;
+
   /// <summary>An immutable node owning its child nodes.</summary>
   TTlvNode = class;
   /// <summary>An array of node references; its owner determines node lifetimes.</summary>
   TTlvNodes = array of TTlvNode;
+
   /// <summary>An immutable ISO 7816 BER-TLV node with an encoded identifier.</summary>
   /// <remarks>
   /// A document or parent owns borrowed nodes returned by index properties.
@@ -128,7 +132,8 @@ type
     /// <param name="AChildren">Child nodes to clone; nil entries are rejected.</param>
     /// <exception cref="ETlvFormatError">Tag, nodes or hard construction limits are invalid.</exception>
     /// <exception cref="ERangeError">The encoded node exceeds the supported buffer size.</exception>
-    constructor CreateConstructed(const ATag: TBytes; const AChildren: array of TTlvNode);
+    constructor CreateConstructed(const ATag: TBytes;
+      const AChildren: array of TTlvNode);
     /// <summary>Frees this owned node and every owned descendant.</summary>
     destructor Destroy; override;
     /// <summary>Creates a deep copy with independent buffers and descendants.</summary>
@@ -152,6 +157,7 @@ type
     /// <exception cref="ERangeError">The child index is out of range.</exception>
     property Children[const AIndex: Integer]: TTlvNode read GetChild;
   end;
+
   /// <summary>An immutable document owning its ordered root nodes.</summary>
   TTlvDocument = class
   private
@@ -177,6 +183,7 @@ type
     /// <exception cref="ERangeError">The root index is out of range.</exception>
     property Roots[const AIndex: Integer]: TTlvNode read GetRoot;
   end;
+
   /// <summary>Decodes bounded definite-length ISO 7816 BER-TLV and encodes canonical lengths.</summary>
   /// <remarks>
   /// EMV encoded tag identifiers such as 9F02 are supported; this is not a full
@@ -203,8 +210,9 @@ type
     /// <param name="AError">Failure details, or tecNone and minus one on success.</param>
     /// <returns>True if all non-padding bytes form valid bounded nodes.</returns>
     /// <remarks>Free any earlier output document first. No partial document is returned on failure.</remarks>
-    class function TryDecode(const ABytes: TBytes; const AOptions: TTlvDecodeOptions;
-      out ADocument: TTlvDocument; out AError: TTlvError): Boolean; overload; static;
+    class function TryDecode(const ABytes: TBytes;
+      const AOptions: TTlvDecodeOptions; out ADocument: TTlvDocument;
+      out AError: TTlvError): Boolean; overload; static;
     /// <summary>Decodes a stream with the default limits or raises a structured error.</summary>
     /// <param name="ABytes">The complete binary stream.</param>
     /// <returns>A caller-owned document.</returns>
@@ -223,8 +231,8 @@ type
     class function EncodeNode(const ANode: TTlvNode): TBytes; static;
   end;
 
-/// <summary>Returns default bounded decoding options without padding support.</summary>
-/// <returns>Limits of depth 32, 10000 nodes, one MiB and 32 identifier bytes.</returns>
+  /// <summary>Returns default bounded decoding options without padding support.</summary>
+  /// <returns>Limits of depth 32, 10000 nodes, one MiB and 32 identifier bytes.</returns>
 function DefaultTlvOptions: TTlvDecodeOptions;
 
 implementation
@@ -236,7 +244,8 @@ begin
   AError.Offset := AOffset;
 end;
 
-procedure RaiseTlvError(const ACode: TTlvErrorCode; const AOffset: Integer = -1);
+procedure RaiseTlvError(const ACode: TTlvErrorCode;
+  const AOffset: Integer = -1);
 var
   Error: TTlvError;
 begin
@@ -325,7 +334,8 @@ begin
   if Length(ATag) > TlvMaxTagBytes then
     RaiseTlvError(tecTagLimit, TlvMaxTagBytes);
   Position := 0;
-  if not ReadTag(ATag, Position, Length(ATag), TlvMaxTagBytes, Parsed, Error) then
+  if not ReadTag(ATag, Position, Length(ATag), TlvMaxTagBytes, Parsed, Error)
+  then
     raise ETlvFormatError.Create(Error);
   if Position <> Length(ATag) then
     RaiseTlvError(tecInvalidTag, Position);
@@ -338,7 +348,8 @@ var
   Remaining: Integer;
 begin
   Result := 1;
-  if ASize < 128 then Exit;
+  if ASize < 128 then
+    Exit;
   Remaining := ASize;
   while Remaining > 0 do
   begin
@@ -362,7 +373,8 @@ begin
   begin
     ANode.FValueSize := 0;
     for I := 0 to Length(ANode.FChildren) - 1 do
-      ANode.FValueSize := CheckedSize(ANode.FValueSize, ANode.FChildren[I].FEncodedSize);
+      ANode.FValueSize := CheckedSize(ANode.FValueSize,
+        ANode.FChildren[I].FEncodedSize);
   end
   else
     ANode.FValueSize := Length(ANode.FValue);
@@ -375,9 +387,12 @@ function CloneNode(const ANode: TTlvNode; const ADepth: Integer;
 var
   I: Integer;
 begin
-  if ANode = nil then RaiseTlvError(tecInvalidNode);
-  if ADepth > TlvHardMaxDepth then RaiseTlvError(tecDepthLimit);
-  if ACount >= TlvHardMaxNodes then RaiseTlvError(tecNodeLimit);
+  if ANode = nil then
+    RaiseTlvError(tecInvalidNode);
+  if ADepth > TlvHardMaxDepth then
+    RaiseTlvError(tecDepthLimit);
+  if ACount >= TlvHardMaxNodes then
+    RaiseTlvError(tecNodeLimit);
   Inc(ACount);
   Result := TTlvNode.Create;
   try
@@ -394,7 +409,8 @@ begin
   end;
 end;
 
-procedure WriteNode(const ANode: TTlvNode; var ABytes: TBytes; var APosition: Integer);
+procedure WriteNode(const ANode: TTlvNode; var ABytes: TBytes;
+  var APosition: Integer);
 var
   I: Integer;
   Count: Integer;
@@ -475,7 +491,8 @@ var
 begin
   inherited Create;
   ValidateTag(ATag, True);
-  if Length(AChildren) >= TlvHardMaxNodes then RaiseTlvError(tecNodeLimit);
+  if Length(AChildren) >= TlvHardMaxNodes then
+    RaiseTlvError(tecNodeLimit);
   FTag := Copy(ATag, 0, Length(ATag));
   SetLength(FChildren, Length(AChildren));
   Count := 1;
@@ -539,7 +556,8 @@ var
   Count: Integer;
 begin
   inherited Create;
-  if Length(ANodes) > TlvHardMaxNodes then RaiseTlvError(tecNodeLimit);
+  if Length(ANodes) > TlvHardMaxNodes then
+    RaiseTlvError(tecNodeLimit);
   Count := 0;
   SetLength(FNodes, Length(ANodes));
   for I := 0 to Length(ANodes) - 1 do
@@ -621,7 +639,8 @@ end;
 
 function ParseNodes(const ABytes: TBytes; var APosition: Integer;
   const AEnd: Integer; const ADepth: Integer; const AOptions: TTlvDecodeOptions;
-  var ANodeCount: Integer; out ANodes: TTlvNodes; out AError: TTlvError): Boolean;
+  var ANodeCount: Integer; out ANodes: TTlvNodes;
+  out AError: TTlvError): Boolean;
 var
   Node: TTlvNode;
   Tag: TBytes;
@@ -653,7 +672,8 @@ begin
         TlvError(AError, tecNodeLimit, APosition);
         Exit(False);
       end;
-      if not ReadTag(ABytes, APosition, AEnd, AOptions.MaxTagBytes, Tag, AError) then
+      if not ReadTag(ABytes, APosition, AEnd, AOptions.MaxTagBytes, Tag, AError)
+      then
         Exit(False);
       if not ReadLength(ABytes, APosition, AEnd, ValueSize, AError) then
         Exit(False);
@@ -668,8 +688,8 @@ begin
       Inc(ANodeCount);
       if Node.IsConstructed then
       begin
-        if not ParseNodes(ABytes, APosition, ValueEnd, ADepth + 1,
-          AOptions, ANodeCount, Node.FChildren, AError) then
+        if not ParseNodes(ABytes, APosition, ValueEnd, ADepth + 1, AOptions,
+          ANodeCount, Node.FChildren, AError) then
           Exit(False);
       end
       else
@@ -681,8 +701,10 @@ begin
       if Count = Length(ANodes) then
       begin
         Capacity := Count * 2;
-        if Capacity < 4 then Capacity := 4;
-        if Capacity > AOptions.MaxNodes then Capacity := AOptions.MaxNodes;
+        if Capacity < 4 then
+          Capacity := 4;
+        if Capacity > AOptions.MaxNodes then
+          Capacity := AOptions.MaxNodes;
         SetLength(ANodes, Capacity);
       end;
       ANodes[Count] := Node;
@@ -693,7 +715,8 @@ begin
     Result := True;
   finally
     Node.Free;
-    if not Result then FreeNodes(ANodes);
+    if not Result then
+      FreeNodes(ANodes);
   end;
 end;
 
@@ -730,8 +753,9 @@ begin
   try
     Position := 0;
     Count := 0;
-    if not ParseNodes(ABytes, Position, Length(ABytes), 1, AOptions,
-      Count, Document.FNodes, AError) then Exit(False);
+    if not ParseNodes(ABytes, Position, Length(ABytes), 1, AOptions, Count,
+      Document.FNodes, AError) then
+      Exit(False);
     ADocument := Document;
     Document := nil;
     Result := True;
@@ -750,7 +774,8 @@ end;
 
 class function TTlvCodec.Encode(const ADocument: TTlvDocument): TBytes;
 begin
-  if ADocument = nil then RaiseTlvError(tecInvalidNode);
+  if ADocument = nil then
+    RaiseTlvError(tecInvalidNode);
   Result := EncodeNodes(ADocument.FNodes);
 end;
 
@@ -759,7 +784,8 @@ var
   Position: Integer;
 begin
   Result := nil;
-  if ANode = nil then RaiseTlvError(tecInvalidNode);
+  if ANode = nil then
+    RaiseTlvError(tecInvalidNode);
   SetLength(Result, ANode.FEncodedSize);
   Position := 0;
   WriteNode(ANode, Result, Position);

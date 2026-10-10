@@ -1,7 +1,7 @@
 unit ERD.Card.APDU;
 
 {$IFDEF FPC}
-  {$MODE DELPHI}
+{$MODE DELPHI}
 {$ENDIF}
 
 interface
@@ -43,8 +43,7 @@ type
     /// <summary>The response does not contain both status bytes.</summary>
     aecResponseTruncated,
     /// <summary>The response data exceeds 65536 bytes.</summary>
-    aecResponseTooLong
-  );
+    aecResponseTooLong);
 
   /// <summary>Reports an APDU error without retaining potentially sensitive input.</summary>
   TApduError = record
@@ -158,7 +157,8 @@ type
     /// <param name="AResponse">The response with at most 65536 data bytes.</param>
     /// <returns>A new byte array containing data followed by SW1 and SW2.</returns>
     /// <exception cref="EApduFormatError">The response data exceeds the maximum length.</exception>
-    class function EncodeResponse(const AResponse: TApduResponse): TBytes; static;
+    class function EncodeResponse(const AResponse: TApduResponse)
+      : TBytes; static;
   end;
 
 implementation
@@ -201,7 +201,7 @@ var
   HasLe: Boolean;
   Extended: Boolean;
 begin
-  ACommand := Default(TApduCommand);
+  ACommand := Default (TApduCommand);
   SetError(AError, aecNone, -1);
   if Length(ABytes) > ApduMaxExtendedDataLength + 9 then
   begin
@@ -337,8 +337,8 @@ begin
       ((DataSize = 0) and (not ACommand.HasLe)) then
       RaiseFormatError(aecInvalidCommand);
   end
-  else if (DataSize > ApduMaxShortDataLength) or
-    (ACommand.Le > ApduMaxShortLe) then
+  else if (DataSize > ApduMaxShortDataLength) or (ACommand.Le > ApduMaxShortLe)
+  then
     RaiseFormatError(aecInvalidCommand);
 
   DataStart := ApduHeaderSize;
@@ -403,7 +403,7 @@ class function TApduCodec.TryDecodeResponse(const ABytes: TBytes;
 var
   Size: Integer;
 begin
-  AResponse := Default(TApduResponse);
+  AResponse := Default (TApduResponse);
   SetError(AError, aecNone, -1);
   if Length(ABytes) > ApduMaxExtendedLe + 2 then
   begin
@@ -429,7 +429,8 @@ begin
     raise EApduFormatError.Create(Error);
 end;
 
-class function TApduCodec.EncodeResponse(const AResponse: TApduResponse): TBytes;
+class function TApduCodec.EncodeResponse(const AResponse
+  : TApduResponse): TBytes;
 var
   I: Integer;
   DataSize: Integer;

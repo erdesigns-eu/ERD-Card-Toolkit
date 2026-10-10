@@ -1,7 +1,7 @@
 unit ERD.Card.Crypto;
 
 {$IFDEF FPC}
-  {$MODE DELPHI}
+{$MODE DELPHI}
 {$ENDIF}
 
 interface
@@ -16,6 +16,7 @@ uses
 type
   /// <summary>Invalid cryptographic arguments or a failed provider operation; contains no secret data.</summary>
   ECardCryptoError = class(Exception);
+
   /// <summary>Retained AES-128/CSPRNG backend; implementations use a maintained system cryptographic library.</summary>
   /// <remarks>Inputs are borrowed and never modified. Outputs have independent storage. CBC uses no padding;
   /// keys and IVs are exactly 16 bytes. Implementations must not log keys, nonces or plaintext.</remarks>
@@ -41,6 +42,7 @@ type
     /// <exception cref="ECardCryptoError">Arguments or random generator fail.</exception>
     function RandomBytes(const ACount: Integer): TBytes;
   end;
+
   /// <summary>AES-CMAC and buffer utilities; AES itself is delegated to the retained provider.</summary>
   TCardCrypto = class
   public
@@ -56,7 +58,8 @@ type
     /// <param name="AMessage">Zero through 1048560 bytes; no secret input is logged.</param>
     /// <returns>Independent complete 16-byte MAC; no protocol-specific truncation.</returns>
     /// <exception cref="ECardCryptoError">Provider, bounds or primitive result fail.</exception>
-    class function Cmac(const AProvider: ICardAesProvider; const AKey, AMessage: TBytes): TBytes; static;
+    class function Cmac(const AProvider: ICardAesProvider;
+      const AKey, AMessage: TBytes): TBytes; static;
     /// <summary>Calculates the DESFire EV1 chained AES-CMAC variant with an explicit starting IV.</summary>
     /// <param name="AProvider">Non-nil maintained AES backend.</param>
     /// <param name="AKey">Exactly 16 borrowed secret bytes.</param>
@@ -83,74 +86,115 @@ implementation
 
 class procedure TCardCrypto.ValidateCbc(const AKey, AIv, AData: TBytes);
 begin
-  if (Length(AKey)<>16) or (Length(AIv)<>16) or (Length(AData)=0) or
-    (Length(AData)>1048576) or (Length(AData) mod 16<>0) then
+  if (Length(AKey) <> 16) or (Length(AIv) <> 16) or (Length(AData) = 0) or
+    (Length(AData) > 1048576) or (Length(AData) mod 16 <> 0) then
     raise ECardCryptoError.Create('Invalid AES-128 CBC arguments.');
 end;
 
 class procedure TCardCrypto.Clear(var ABytes: TBytes);
 begin
-  if Length(ABytes)>0 then FillChar(ABytes[0],Length(ABytes),0);
-  ABytes:=nil;
+  if Length(ABytes) > 0 then
+    FillChar(ABytes[0], Length(ABytes), 0);
+  ABytes := nil;
 end;
 
 class function TCardCrypto.EqualSecret(const ALeft, ARight: TBytes): Boolean;
-var I: Integer; Difference: Byte;
+var
+  I: Integer;
+  Difference: Byte;
 begin
-  Result:=False;
-  if Length(ALeft)<>Length(ARight) then Exit;
-  Difference:=0;
-  for I:=0 to High(ALeft) do Difference:=Difference or (ALeft[I] xor ARight[I]);
-  Result:=Difference=0;
+  Result := False;
+  if Length(ALeft) <> Length(ARight) then
+    Exit;
+  Difference := 0;
+  for I := 0 to High(ALeft) do
+    Difference := Difference or (ALeft[I] xor ARight[I]);
+  Result := Difference = 0;
 end;
 
 class function TCardCrypto.Cmac(const AProvider: ICardAesProvider;
   const AKey, AMessage: TBytes): TBytes;
-var Zero: TBytes;
+var
+  Zero: TBytes;
 begin
-  Zero:=nil;
-  try SetLength(Zero,16); Result:=CmacChained(AProvider,AKey,Zero,AMessage);
-  finally Clear(Zero); end;
+  Zero := nil;
+  try
+    SetLength(Zero, 16);
+    Result := CmacChained(AProvider, AKey, Zero, AMessage);
+  finally
+    Clear(Zero);
+  end;
 end;
 
 class function TCardCrypto.CmacChained(const AProvider: ICardAesProvider;
   const AKey, AIv, AMessage: TBytes): TBytes;
-var Zero,L,K1,K2,Blocks,Cipher: TBytes; N,Last,Remaining,I: Integer;
+var
+  Zero, L, K1, K2, Blocks, Cipher: TBytes;
+  N, Last, Remaining, I: Integer;
   function DoubleBlock(const A: TBytes): TBytes;
-  var J: Integer; Carry,Next: Byte;
+  var
+    J: Integer;
+    Carry, Next: Byte;
   begin
-    Result:=nil; SetLength(Result,16); Carry:=0;
-    for J:=15 downto 0 do
+    Result := nil;
+    SetLength(Result, 16);
+    Carry := 0;
+    for J := 15 downto 0 do
     begin
-      Next:=A[J] shr 7; Result[J]:=((Integer(A[J]) shl 1) and $FF) or Carry; Carry:=Next;
+      Next := A[J] shr 7;
+      Result[J] := ((Integer(A[J]) shl 1) and $FF) or Carry;
+      Carry := Next;
     end;
-    if Carry<>0 then Result[15]:=Result[15] xor $87;
+    if Carry <> 0 then
+      Result[15] := Result[15] xor $87;
   end;
+
 begin
-  Result:=nil;
-  if (AProvider=nil) or (Length(AKey)<>16) or (Length(AIv)<>16) or (Length(AMessage)>1048560) then
+  Result := nil;
+  if (AProvider = nil) or (Length(AKey) <> 16) or (Length(AIv) <> 16) or
+    (Length(AMessage) > 1048560) then
     raise ECardCryptoError.Create('Invalid AES-CMAC arguments.');
-  Zero:=nil; L:=nil; K1:=nil; K2:=nil; Blocks:=nil; Cipher:=nil;
+  Zero := nil;
+  L := nil;
+  K1 := nil;
+  K2 := nil;
+  Blocks := nil;
+  Cipher := nil;
   try
-    SetLength(Zero,16); L:=AProvider.EncryptCbc(AKey,Zero,Zero);
-    if Length(L)<>16 then raise ECardCryptoError.Create('Invalid AES provider result.');
-    K1:=DoubleBlock(L); K2:=DoubleBlock(K1);
-    N:=(Length(AMessage)+15) div 16; if N=0 then N:=1;
-    SetLength(Blocks,N*16);
-    if Length(AMessage)>0 then Move(AMessage[0],Blocks[0],Length(AMessage));
-    Last:=(N-1)*16; Remaining:=Length(AMessage)-Last;
-    if Remaining=16 then
-      for I:=0 to 15 do Blocks[Last+I]:=Blocks[Last+I] xor K1[I]
+    SetLength(Zero, 16);
+    L := AProvider.EncryptCbc(AKey, Zero, Zero);
+    if Length(L) <> 16 then
+      raise ECardCryptoError.Create('Invalid AES provider result.');
+    K1 := DoubleBlock(L);
+    K2 := DoubleBlock(K1);
+    N := (Length(AMessage) + 15) div 16;
+    if N = 0 then
+      N := 1;
+    SetLength(Blocks, N * 16);
+    if Length(AMessage) > 0 then
+      Move(AMessage[0], Blocks[0], Length(AMessage));
+    Last := (N - 1) * 16;
+    Remaining := Length(AMessage) - Last;
+    if Remaining = 16 then
+      for I := 0 to 15 do
+        Blocks[Last + I] := Blocks[Last + I] xor K1[I]
     else
     begin
-      Blocks[Last+Remaining]:=$80;
-      for I:=0 to 15 do Blocks[Last+I]:=Blocks[Last+I] xor K2[I];
+      Blocks[Last + Remaining] := $80;
+      for I := 0 to 15 do
+        Blocks[Last + I] := Blocks[Last + I] xor K2[I];
     end;
-    Cipher:=AProvider.EncryptCbc(AKey,AIv,Blocks);
-    if Length(Cipher)<>Length(Blocks) then raise ECardCryptoError.Create('Invalid AES provider result.');
-    Result:=Copy(Cipher,Last,16);
+    Cipher := AProvider.EncryptCbc(AKey, AIv, Blocks);
+    if Length(Cipher) <> Length(Blocks) then
+      raise ECardCryptoError.Create('Invalid AES provider result.');
+    Result := Copy(Cipher, Last, 16);
   finally
-    Clear(Zero); Clear(L); Clear(K1); Clear(K2); Clear(Blocks); Clear(Cipher);
+    Clear(Zero);
+    Clear(L);
+    Clear(K1);
+    Clear(K2);
+    Clear(Blocks);
+    Clear(Cipher);
   end;
 end;
 

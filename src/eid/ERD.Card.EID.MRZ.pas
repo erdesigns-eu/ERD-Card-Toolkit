@@ -1,7 +1,7 @@
 unit ERD.Card.EID.MRZ;
 
 {$IFDEF FPC}
-  {$MODE DELPHI}
+{$MODE DELPHI}
 {$ENDIF}
 
 interface
@@ -23,8 +23,8 @@ type
     /// <summary>Document layout: two lines of thirty-six characters.</summary>
     mfTD2,
     /// <summary>Passport layout: two lines of forty-four characters.</summary>
-    mfTD3
-  );
+    mfTD3);
+
   /// <summary>Decoded and checksum-validated MRZ data; checksums do not prove authenticity.</summary>
   /// <remarks>Dates retain YYMMDD and unknown-position fillers. No century, country
   /// name, original accented spelling or complete date is inferred from MRZ text.</remarks>
@@ -56,6 +56,7 @@ type
     /// <summary>Exact second optional field for TD1; empty for TD2/TD3.</summary>
     OptionalData2: UnicodeString;
   end;
+
   /// <summary>Stateless ICAO TD1/TD2/TD3 parsing and 7/3/1 check-digit calculation.</summary>
   TMrzCodec = class
   public
@@ -82,15 +83,22 @@ end;
 
 function CharacterValue(const AChar: WideChar): Integer;
 begin
-  if (AChar >= '0') and (AChar <= '9') then Result := Ord(AChar) - Ord('0')
-  else if (AChar >= 'A') and (AChar <= 'Z') then Result := Ord(AChar) - Ord('A') + 10
-  else if AChar = '<' then Result := 0
-  else begin Fail; Result := 0; end;
+  if (AChar >= '0') and (AChar <= '9') then
+    Result := Ord(AChar) - Ord('0')
+  else if (AChar >= 'A') and (AChar <= 'Z') then
+    Result := Ord(AChar) - Ord('A') + 10
+  else if AChar = '<' then
+    Result := 0
+  else
+  begin
+    Fail;
+    Result := 0;
+  end;
 end;
 
 class function TMrzCodec.CheckDigit(const AText: UnicodeString): WideChar;
 const
-  Weights: array[0..2] of Integer = (7, 3, 1);
+  Weights: array [0 .. 2] of Integer = (7, 3, 1);
 var
   I, Sum: Integer;
 begin
@@ -102,7 +110,8 @@ end;
 
 procedure Verify(const AValue: UnicodeString; const ADigit: WideChar);
 begin
-  if TMrzCodec.CheckDigit(AValue) <> ADigit then Fail;
+  if TMrzCodec.CheckDigit(AValue) <> ADigit then
+    Fail;
 end;
 
 function TrimFillers(const AValue: UnicodeString): UnicodeString;
@@ -117,7 +126,9 @@ var
   I: Integer;
 begin
   Result := TrimFillers(AValue);
-  for I := 1 to Length(Result) do if Result[I] = '<' then Result[I] := ' ';
+  for I := 1 to Length(Result) do
+    if Result[I] = '<' then
+      Result[I] := ' ';
 end;
 
 procedure ValidateDate(const AValue: UnicodeString);
@@ -125,7 +136,9 @@ var
   I: Integer;
 begin
   for I := 1 to Length(AValue) do
-    if not (((AValue[I] >= '0') and (AValue[I] <= '9')) or (AValue[I] = '<')) then Fail;
+    if not(((AValue[I] >= '0') and (AValue[I] <= '9')) or (AValue[I] = '<'))
+    then
+      Fail;
 end;
 
 function DocumentNumber(const APrefix, AOptional: UnicodeString;
@@ -139,20 +152,25 @@ begin
     Verify(APrefix, ADigit);
     Exit(TrimFillers(APrefix));
   end;
-  if not AAllowExtension then Fail;
-  if Pos('<', APrefix) <> 0 then Fail;
+  if not AAllowExtension then
+    Fail;
+  if Pos('<', APrefix) <> 0 then
+    Fail;
   Stop := Pos('<', AOptional);
-  if Stop < 3 then Fail;
+  if Stop < 3 then
+    Fail;
   Extension := Copy(AOptional, 1, Stop - 2);
   Verify(APrefix + Extension, AOptional[Stop - 1]);
   Result := APrefix + Extension;
 end;
 
 procedure ValidateLetters(const AText: UnicodeString);
-var I: Integer;
+var
+  I: Integer;
 begin
   for I := 1 to Length(AText) do
-    if not (((AText[I] >= 'A') and (AText[I] <= 'Z')) or (AText[I] = '<')) then Fail;
+    if not(((AText[I] >= 'A') and (AText[I] <= 'Z')) or (AText[I] = '<')) then
+      Fail;
 end;
 
 class function TMrzCodec.Decode(const AText: UnicodeString): TMrzIdentity;
@@ -160,15 +178,17 @@ var
   Text, L1, L2, Names, Composite: UnicodeString;
   I, Count, Split: Integer;
 begin
-  Result := Default(TMrzIdentity);
-  if Length(AText) > 96 then Fail;
+  Result := Default (TMrzIdentity);
+  if Length(AText) > 96 then
+    Fail;
   Text := '';
   SetLength(Text, Length(AText));
   Count := 0;
   for I := 1 to Length(AText) do
     if (AText[I] <> #13) and (AText[I] <> #10) then
     begin
-      if CharacterValue(AText[I]) < 0 then Fail;
+      if CharacterValue(AText[I]) < 0 then
+        Fail;
       Inc(Count);
       Text[Count] := AText[I];
     end;
@@ -183,14 +203,16 @@ begin
         Names := Copy(Text, 61, 30);
         Result.OptionalData := Copy(L1, 16, 15);
         Result.OptionalData2 := Copy(L2, 19, 11);
-        Result.DocumentNumber := DocumentNumber(Copy(L1, 6, 9), Result.OptionalData, L1[15], True);
+        Result.DocumentNumber := DocumentNumber(Copy(L1, 6, 9),
+          Result.OptionalData, L1[15], True);
         Result.BirthDate := Copy(L2, 1, 6);
         Verify(Result.BirthDate, L2[7]);
         Result.Sex := L2[8];
         Result.ExpiryDate := Copy(L2, 9, 6);
         Verify(Result.ExpiryDate, L2[15]);
         Result.Nationality := Copy(L2, 16, 3);
-        Composite := Copy(L1, 6, 25) + Copy(L2, 1, 7) + Copy(L2, 9, 7) + Result.OptionalData2;
+        Composite := Copy(L1, 6, 25) + Copy(L2, 1, 7) + Copy(L2, 9, 7) +
+          Result.OptionalData2;
         Verify(Composite, L2[30]);
       end;
     72, 88:
@@ -208,9 +230,12 @@ begin
         L1 := Copy(Text, 1, Split);
         L2 := Copy(Text, Split + 1, Split);
         Names := Copy(L1, 6, Split - 5);
-        if Count = 72 then Result.OptionalData := Copy(L2, 29, 7)
-        else Result.OptionalData := Copy(L2, 29, 14);
-        Result.DocumentNumber := DocumentNumber(Copy(L2, 1, 9), Result.OptionalData, L2[10], Count = 72);
+        if Count = 72 then
+          Result.OptionalData := Copy(L2, 29, 7)
+        else
+          Result.OptionalData := Copy(L2, 29, 14);
+        Result.DocumentNumber := DocumentNumber(Copy(L2, 1, 9),
+          Result.OptionalData, L2[10], Count = 72);
         Result.Nationality := Copy(L2, 11, 3);
         Result.BirthDate := Copy(L2, 14, 6);
         Verify(Result.BirthDate, L2[20]);
@@ -221,25 +246,31 @@ begin
         begin
           if (L2[43] = '<') and (TrimFillers(Result.OptionalData) = '') then
             Verify(Result.OptionalData, '0')
-          else Verify(Result.OptionalData, L2[43]);
+          else
+            Verify(Result.OptionalData, L2[43]);
         end;
-        Composite := Copy(L2, 1, 10) + Copy(L2, 14, 7) + Copy(L2, 22, Split - 22);
+        Composite := Copy(L2, 1, 10) + Copy(L2, 14, 7) +
+          Copy(L2, 22, Split - 22);
         Verify(Composite, L2[Split]);
       end;
-  else Fail;
+  else
+    Fail;
   end;
   ValidateDate(Result.BirthDate);
   ValidateDate(Result.ExpiryDate);
-  if (Result.Sex <> 'M') and (Result.Sex <> 'F') and (Result.Sex <> '<') then Fail;
+  if (Result.Sex <> 'M') and (Result.Sex <> 'F') and (Result.Sex <> '<') then
+    Fail;
   Result.DocumentCode := Copy(L1, 1, 2);
   Result.IssuingState := Copy(L1, 3, 3);
   ValidateLetters(Result.DocumentCode);
-  if Result.DocumentCode[1] = '<' then Fail;
+  if Result.DocumentCode[1] = '<' then
+    Fail;
   ValidateLetters(Result.IssuingState);
   ValidateLetters(Result.Nationality);
   ValidateLetters(Names);
   Split := Pos('<<', Names);
-  if Split = 0 then Result.Surname := NameText(Names)
+  if Split = 0 then
+    Result.Surname := NameText(Names)
   else
   begin
     Result.Surname := NameText(Copy(Names, 1, Split - 1));
