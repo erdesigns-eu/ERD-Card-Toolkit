@@ -1,7 +1,7 @@
 # VCL read/write demos
 
 Twenty-five applications demonstrate implemented APIs: SmartCardDemo,
-MagStripeDemo and twenty-three family projects. Each application owns a direct TForm
+MagStripeDemo and twenty-four family projects. Each application owns a direct TForm
 class and its own designer-editable Main.dfm, including all action inputs and a
 reader dropdown.
 Only nonvisual operation, metadata and worker/controller units are shared.
@@ -54,6 +54,7 @@ that byte-buffer wiping guarantee. Errors display their class, never backend tex
 | `sle4404/Sle4404Demo.dproj` | Known window/layout/retry budgets, reads with optional supplied user code, user-code proof, one-to-zero programming, scratchpad erase and application erase with both supplied codes |
 | `simcard/SimCardDemo.dproj` | Classic SIM/UICC-USIM files, records, identities and services; PIN/PUK status, verify/change/unblock, ADN contact writes, PBR/IAP/EXT contact reads, explicit linked-record plans, alpha/EMAIL/ANR/SMS/segment codecs |
 | `mifareclassic/MifareClassicDemo.dproj` | UID, offline layout/trailer inspection, supplied-key block reads and status-only data writes |
+| `topaz/TopazDemo.dproj` | Topaz 96/512 identity, memory/locks, byte-range reads, verified user writes and initialized Type 1 NDEF read/parse/replace/clear |
 | `felica/FelicaDemo.dproj` | Explicit 212/424 kbit FeliCa polling, service block reads/verified writes and Type 3 attribute/NDEF read/replace/clear |
 | `type2/Type2Demo.dproj` | Ultralight/EV1/NTAG210/212/213/215/216 UID, page and memory reads, public NDEF, ACR122 PWD_AUTH/PACK user access, verified configuration/credential updates, counters and protected NDEF |
 | `ultralightc/UltralightCDemo.dproj` | Supplied-key 2K3DES authentication, exact user-page/full-memory reads and independently verified page writes |
@@ -389,7 +390,7 @@ save dialog. See [MOBIB_CALYPSO.md](MOBIB_CALYPSO.md) for the concrete files,
 status behavior, parsed fields, secure-provider integration and remaining
 issuer-specific schemas.
 
-The project group's Build/Make/Clean aggregates cover all twenty-five applications;
+The project group's Build/Make/Clean aggregates cover all twenty-six applications;
 the standalone build script includes them too.
 
 
@@ -447,3 +448,15 @@ RF resets run only for these explicit management actions. Neither ending a
 PC/SC transaction nor an ordinary password-session acquisition is advertised as
 RF reset. No permanent lock, privacy/destroy or automatic recovery page is added.
 See [the exact management contract](ISO15693_TYPE5.md#verified-password-and-protection-management).
+
+## Topaz 96/512 / Type 1
+
+Open `topaz/TopazDemo.dproj`. This application has its own direct TForm/DFM,
+reader combobox and native reader/card events. Choose an ACR122U/PN532 FF00 reader,
+exact Topaz model and explicit byte-write acknowledgement dialect. Run the full
+snapshot action to view/export the UID, complete physical preimage and writable
+map. Writes require the same UID and complete preimage, not just the changed range.
+The NDEF page decodes records and exports the message; replacement accepts encoded
+NDEF hex, with empty input clearing an existing message. The writer preserves CC,
+control/lock/reserved bytes and verifies each phase. See [exact mapping, capacities
+and native CIU protocol](TOPAZ_TYPE1.md). Formatting/permanent locks are excluded.

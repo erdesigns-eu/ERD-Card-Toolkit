@@ -164,15 +164,15 @@ begin
   $A4: begin
    if (N<>8) or (ACommand[4]<>2) or (ACommand[3]<>0) or
     ((FCla=$94) and (ACommand[2]<>0)) or ((FCla=0) and (ACommand[2]<>9)) then AuthenticationError;
-   Le:=ACommand[7]; Digest:=Copy(ACommand,0,7); { Case 4 excludes Le. }
+   Digest:=Copy(ACommand,0,7); { Case 4 excludes Le. }
   end;
   $B2: begin
    if (N<>5) or (ACommand[2]=0) or (ACommand[3]<>4) then AuthenticationError;
-   Le:=ACommand[4]; Digest:=Copy(ACommand,0,N);
+   Le:=ACommand[4]; if (Le=0) or (Le>253) then AuthenticationError;
+   Digest:=Copy(ACommand,0,N);
   end;
   else AuthenticationError;
  end;
- if (ACommand[1]=$B2) and ((Le=0) or (Le>253)) then AuthenticationError;
  FBusy:=True;
  try
   Result:=FCard.Exchange(ACommand); B:=Successful(Result);

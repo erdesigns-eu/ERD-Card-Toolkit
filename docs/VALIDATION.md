@@ -1,5 +1,32 @@
 # Library validation record
 
+## Latest run: Topaz / Type 1 and reported Delphi diagnostics (2026-10-10)
+
+The complete supplemental runner passed with Topaz 96/512 memory and initialized
+Type 1 NDEF components, an explicit ACR122U/PN532 Jewel/CIU adapter and an independent
+TopazDemo form/DFM. The focused Topaz suite passed **26,938 assertions** after adding
+nonzero Terminator-TLV padding coverage. It covers all static/dynamic locks, exact
+capacities, preimages, length-last updates, metadata preservation, independently
+authored native transcripts, every RF response bit and dispatched failure/cleanup.
+Family-executor tests passed **2,395 assertions**, including Topaz input preflight,
+parsed Text records, identity and artifact exports. Inactive component registration/
+streaming passed **32 assertions** for **31 palette components**. Distribution checks
+passed for **39 projects, two groups and 26 independent DFM forms**. All **36 Python
+regressions** and **21 Pascal readers**, including public XML documentation, passed.
+
+The supplied RAD Studio 12 Win32 log contained six distinct diagnostics repeated
+across packages. Redundant scalar Result initializations were removed from Type 2
+credential/counter and Ultralight C key operations. HID exception cleanup no longer
+assigns an unread Opened flag; its normal pre-close assignment remains to prevent a
+second close after close failure. Calypso SAM READ RECORD validates Le directly in
+its initialized command branch. DESFire's unsupported key-type branch raises directly,
+so the compiler can prove that KeyTypeBits is assigned on every continuing path.
+No hints/warnings were disabled. The existing SAM/DESFire/credential/event suites
+passed after these edits. These are source fixes with supplemental regression evidence;
+this environment did not perform a native Delphi compilation. Pre-existing Free
+Pascal notes and its private TLV-constructor warning remain separate from the supplied
+Delphi diagnostics. Earlier validation runs follow.
+
 ## Latest run: DESFire native application/file management (2026-10-09)
 
 The full runner passed after extending explicit native application creation and

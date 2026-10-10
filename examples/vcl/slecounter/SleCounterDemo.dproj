@@ -116,7 +116,10 @@
         <DCC_Optimize>true</DCC_Optimize>
     </PropertyGroup>
     <ItemGroup>
-        <DCCReference Include="..\..\..\src\contactless\ERD.Card.Contactless.Felica.pas" />
+        <DCCReference Include="..\..\..\src\contactless\ERD.Card.Contactless.Topaz.pas"/>
+    <DCCReference Include="..\..\..\src\contactless\ERD.Card.Contactless.ACR122.Topaz.pas"/>
+    <DCCReference Include="..\..\..\src\contactless\ERD.Card.Contactless.Type1.Ndef.pas"/>
+    <DCCReference Include="..\..\..\src\contactless\ERD.Card.Contactless.Felica.pas" />
         <DCCReference Include="..\..\..\src\contactless\ERD.Card.Contactless.ACR122.Felica.pas" />
         <DCCReference Include="..\..\..\src\contactless\ERD.Card.Contactless.Type3.Ndef.pas" />
         <DCCReference Include="SleCounterDemo.Main.pas">

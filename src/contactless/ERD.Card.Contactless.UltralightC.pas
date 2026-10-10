@@ -251,7 +251,7 @@ end;
 function TUltralightCCardReaderWriter.ChangeKeyVerified(const ACurrentKey,ANewKey:TBytes):Boolean;
 var Current,Replacement,Storage,Page:TBytes;State:TUltralightCConfiguration;I:Integer;Succeeded,Dispatched:Boolean;
 begin
- Result:=False;Current:=nil;Replacement:=nil;Storage:=nil;Page:=nil;Dispatched:=False;
+ Current:=nil;Replacement:=nil;Storage:=nil;Page:=nil;Dispatched:=False;
  if (Length(ACurrentKey)<>16) or (Length(ANewKey)<>16) then Invalid;
  try
   Current:=CopyBytes(ACurrentKey);Replacement:=CopyBytes(ANewKey);SetLength(Storage,16);

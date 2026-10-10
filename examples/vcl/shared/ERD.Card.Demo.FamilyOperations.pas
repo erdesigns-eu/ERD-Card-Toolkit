@@ -79,6 +79,7 @@ uses
   ERD.Card.Contactless.Raw, ERD.Card.Contactless.ACR122, ERD.Card.Contactless.UID,
   ERD.Card.Contactless.UID.Profiles, ERD.Card.Contactless.UID.USCUID, ERD.Card.Contactless.UID.Partial,
   ERD.Card.Contactless.ISO15693, ERD.Card.Contactless.Type5.Ndef, ERD.Card.Contactless.Type2.Password,
+  ERD.Card.Contactless.Topaz, ERD.Card.Contactless.ACR122.Topaz, ERD.Card.Contactless.Type1.Ndef,
   ERD.Card.Contactless.Felica, ERD.Card.Contactless.ACR122.Felica, ERD.Card.Contactless.Type3.Ndef,
   ERD.Card.Contactless.Type2.Ndef, ERD.Card.Contactless.Type4.Ndef,
   ERD.Card.Contactless, ERD.Card.Contactless.Type2, ERD.Card.RFID.HID,
@@ -339,6 +340,7 @@ var Hid: TUsbHidReaderWriter; HidHardware: ICardFamilyHidHardware; Devices: THid
   Definition: TDesfireFileDefinition; Files: TDesfireFiles; Applications: TDesfireApplicationIds;
   Aes: ICardAesProvider; Aid: Cardinal; Settings: TDesfireFileSettings;
   Felica: TFelicaCardReader; Type3: TType3NdefCardReader; FelicaReader: IFelicaReader; FelicaTarget: TFelicaTarget; FelicaBlocks: TFelicaBlocks; Type3Snapshot: TType3NdefSnapshot; Type3Attribute: TType3NdefAttribute;
+  Topaz: TTopazCardReader; Type1: TType1NdefCardReader; TopazSession: ITopazSession; TopazSnapshot: TTopazSnapshot; Type1Snapshot: TType1NdefSnapshot;
   Type2Configuration: TType2AuthenticationConfiguration;
   Ulc: TUltralightCCardReaderWriter; UlcConfiguration: TUltralightCConfiguration; Des: ICardDesProvider;
   PasswordReader: TType2PasswordCardReader; RawUid: TRawUidProgrammer;
@@ -1014,6 +1016,34 @@ begin
           finally RawUid.Free; end;
         end;
         D.WriteVerified := True; Output := 'Fresh RF UID independently verified: '+BytesToHex(Data);
+      end;
+      dfTopaz:
+      begin
+        I:=Number(R,A,'topazmodel',0,1);J:=Number(R,A,'ack',0,1);
+        Topaz:=TTopazCardReader.Create(nil);Type1:=TType1NdefCardReader.Create(nil);
+        try
+          Topaz.Model:=TTopazModel(I);Type1.Model:=TTopazModel(I);
+          TopazSession:=TAcr122TopazSession.Create(T,TTopazByteAck(J));Topaz.Session:=TopazSession;Type1.Session:=TopazSession;
+          if A.Id='snapshot' then TopazSnapshot:=Topaz.ReadSnapshot
+          else if A.Id='read' then begin
+            Data:=Topaz.ReadRange(Number(R,A,'address',0,511),Number(R,A,'count',1,512));
+            Output:=BytesToHex(Data);Artifact(D,'physical-range.bin',Data);
+          end
+          else if A.Id='write' then begin
+            TopazSnapshot:=Topaz.WriteUserRangeVerified(Bytes(R,A,'uid'),Bytes(R,A,'before'),Number(R,A,'address',0,511),Bytes(R,A,'data'));D.WriteVerified:=True;
+          end
+          else if (A.Id='readndef') or (A.Id='writendef') then begin
+            if A.Id='readndef' then Type1Snapshot:=Type1.ReadMessage
+            else begin Type1Snapshot:=Type1.WriteMessageVerified(Bytes(R,A,'uid'),Bytes(R,A,'before'),Bytes(R,A,'ndef'));D.WriteVerified:=True;end;
+            TopazSnapshot:=Type1Snapshot.Card;Output:=DescribeNdef(Type1Snapshot.Records)+'NDEF: '+BytesToHex(Type1Snapshot.MessageBytes)+sLineBreak;
+            Output:=Output+'CC read only: '+BoolToStr(Type1Snapshot.ReadOnly,True)+sLineBreak;Artifact(D,'message.ndef',Type1Snapshot.MessageBytes);
+          end else Fail;
+          if A.Id<>'read' then begin
+            Output:=Output+'UID: '+BytesToHex(TopazSnapshot.Uid)+sLineBreak+'Header ROM: '+BytesToHex(TopazSnapshot.Target.HeaderRom)+sLineBreak+
+              'Complete memory preimage: '+BytesToHex(TopazSnapshot.Memory)+sLineBreak+'Writable byte map (00/01): '+BytesToHex(TopazSnapshot.Writable);
+            Artifact(D,'topaz-memory.bin',TopazSnapshot.Memory);Artifact(D,'topaz-writable.bin',TopazSnapshot.Writable);
+          end;
+        finally Topaz.Free;Type1.Free;TopazSession:=nil;end;
       end;
       dfFelica:
       begin

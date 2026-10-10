@@ -1768,7 +1768,7 @@ begin
        daktDesOrTwoKey3Des:KeyTypeBits:=0;
        daktThreeKey3Des:KeyTypeBits:=$40;
        daktAes:KeyTypeBits:=$80;
-      else InvalidDesfire;end;
+      else raise EDesfireError.Create('Invalid or unsupported DESFire configuration, response or access.');end;
       RequireManagement; Ids:=TDesfireCodec.ApplicationIds(FEngine.Metadata($6A,nil,3072,False));
       for I:=0 to High(Ids) do if Ids[I]=AAid then InvalidDesfire;
       Header:=Joined(TDesfireCodec.ApplicationBytes(AAid),Joined(OneByte(AKeySettings),OneByte(KeyTypeBits or AKeyCount)));

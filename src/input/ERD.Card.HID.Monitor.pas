@@ -256,7 +256,7 @@ begin
   Opened:=False;FDevice.Close;
  except
   on E:Exception do begin
-   if Opened then begin Opened:=False;try FDevice.Close;except end;end;
+   if Opened then begin try FDevice.Close;except end;end;
    if not Terminated then Post(nil,True);
   end;
  end;
