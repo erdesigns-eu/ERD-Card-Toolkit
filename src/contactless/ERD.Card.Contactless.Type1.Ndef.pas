@@ -82,7 +82,7 @@ begin
  P:=0;Found:=False;NdefEnd:=0;
  while P<Length(Logical) do begin
   if Logical[P]=0 then begin Inc(P);Continue;end;
-  if Logical[P]=$FE then begin Inc(P);Break;end;
+  if Logical[P]=$FE then Break;
   if Found or not (Logical[P] in [3,$FD]) or (P+1>=Length(Logical)) then Invalid;
   L:=Logical[P+1];Header:=2;
   if L=$FF then begin if P+3>=Length(Logical) then Invalid;Header:=4;L:=(Integer(Logical[P+2]) shl 8) or Logical[P+3];if L<255 then Invalid;end;
