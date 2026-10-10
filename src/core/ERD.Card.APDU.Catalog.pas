@@ -1,6 +1,4 @@
-unit ERD.Card.APDU.Catalog;
-
-{$CODEPAGE UTF8}
+﻿unit ERD.Card.APDU.Catalog;
 
 {$IFDEF FPC}
 {$MODE DELPHI}

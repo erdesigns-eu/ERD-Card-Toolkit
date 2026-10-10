@@ -1,6 +1,4 @@
-unit Type2Demo.Main;
-
-{$CODEPAGE UTF8}
+﻿unit Type2Demo.Main;
 
 interface
 

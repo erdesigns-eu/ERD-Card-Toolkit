@@ -1,6 +1,4 @@
-unit UsbHidDemo.Main;
-
-{$CODEPAGE UTF8}
+﻿unit UsbHidDemo.Main;
 
 interface
 

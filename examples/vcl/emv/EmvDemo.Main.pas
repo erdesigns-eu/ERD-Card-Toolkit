@@ -1,6 +1,4 @@
-unit EmvDemo.Main;
-
-{$CODEPAGE UTF8}
+﻿unit EmvDemo.Main;
 
 interface
 

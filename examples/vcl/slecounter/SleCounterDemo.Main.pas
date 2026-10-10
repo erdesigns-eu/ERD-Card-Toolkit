@@ -1,6 +1,4 @@
-unit SleCounterDemo.Main;
-
-{$CODEPAGE UTF8}
+﻿unit SleCounterDemo.Main;
 
 interface
 

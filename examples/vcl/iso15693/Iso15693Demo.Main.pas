@@ -1,6 +1,4 @@
-unit Iso15693Demo.Main;
-
-{$CODEPAGE UTF8}
+﻿unit Iso15693Demo.Main;
 
 interface
 

@@ -1,6 +1,4 @@
-unit UidProgrammingDemo.Main;
-
-{$CODEPAGE UTF8}
+﻿unit UidProgrammingDemo.Main;
 
 interface
 

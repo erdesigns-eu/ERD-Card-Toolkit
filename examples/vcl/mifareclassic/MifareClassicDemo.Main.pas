@@ -1,6 +1,4 @@
-unit MifareClassicDemo.Main;
-
-{$CODEPAGE UTF8}
+﻿unit MifareClassicDemo.Main;
 
 interface
 

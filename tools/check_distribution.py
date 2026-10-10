@@ -40,12 +40,10 @@ def check_pascal_encoding(path):
         source = data.decode('utf-8-sig')
     except UnicodeDecodeError:
         return [f'{path.name}: invalid UTF-8 Pascal source']
-    first_non_ascii = next((i for i, c in enumerate(source) if ord(c) > 127), None)
-    if first_non_ascii is None or data.startswith(b'\xef\xbb\xbf'):
-        return []
-    directive = re.search(r'(?mi)^\s*\{\$CODEPAGE\s+(?:UTF8|65001)\s*\}', source)
-    if directive is None or directive.end() > first_non_ascii:
-        return [f'{path.name}: non-ASCII Pascal source needs UTF-8 BOM or early CODEPAGE UTF8']
+    if re.search(r'(?mi)^\s*\{\$CODEPAGE\b', source):
+        return [f'{path.name}: CODEPAGE is not a Delphi directive; use UTF-8 BOM']
+    if any(ord(c) > 127 for c in source) and not data.startswith(b'\xef\xbb\xbf'):
+        return [f'{path.name}: non-ASCII Pascal source needs UTF-8 BOM']
     return []
 
 

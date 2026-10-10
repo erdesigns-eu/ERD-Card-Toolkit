@@ -1,6 +1,4 @@
-unit ReaderToolsDemo.Main;
-
-{$CODEPAGE UTF8}
+﻿unit ReaderToolsDemo.Main;
 
 interface
 
