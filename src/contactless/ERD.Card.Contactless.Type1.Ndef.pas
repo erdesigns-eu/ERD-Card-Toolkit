@@ -140,7 +140,6 @@ begin
     end;
     if Logical[P] = $FE then
     begin
-      Inc(P);
       Break;
     end;
     if Found or not(Logical[P] in [3, $FD]) or (P + 1 >= Length(Logical)) then
