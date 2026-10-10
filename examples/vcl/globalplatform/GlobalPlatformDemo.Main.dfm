@@ -210,17 +210,25 @@ object GlobalPlatformDemoForm: TGlobalPlatformDemoForm
     object CapEdit: TEdit
       Left = 16
       Top = 300
-      Width = 790
+      Width = 620
       Height = 25
       Text = ''
     end
     object BrowseButton: TButton
-      Left = 824
+      Left = 654
       Top = 300
       Width = 175
       Height = 25
       Caption = 'Choose CAP...'
       OnClick = BrowseClick
+    end
+    object PreviewButton: TButton
+      Left = 842
+      Top = 300
+      Width = 157
+      Height = 25
+      Caption = 'Inspect CAP'
+      OnClick = PreviewClick
     end
     object ModuleLabel: TLabel
       Left = 16
@@ -357,10 +365,25 @@ object GlobalPlatformDemoForm: TGlobalPlatformDemoForm
     end
     object StatusLabel: TLabel
       Left = 16
-      Top = 1182
+      Top = 1240
       Width = 984
       Height = 17
       Caption = 'Reader observation starting...'
+    end
+    object ProgressLabel: TLabel
+      Left = 16
+      Top = 1180
+      Width = 984
+      Height = 17
+      Caption = 'No LOAD blocks acknowledged.'
+    end
+    object LoadProgress: TProgressBar
+      Left = 16
+      Top = 1204
+      Width = 984
+      Height = 20
+      Max = 100
+      Position = 0
     end
     object ManagementGroup: TGroupBox
       Left = 16

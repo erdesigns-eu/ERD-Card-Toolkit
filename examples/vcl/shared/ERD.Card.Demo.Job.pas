@@ -300,7 +300,7 @@ begin
   Completed.Operation := FRequest.Operation;
   try
     FOperations.Run(FRequest, Completed);
-    Completed.Success := True;
+    Completed.Success := Completed.ErrorClass = '';
   except
     on E: Exception do
     begin

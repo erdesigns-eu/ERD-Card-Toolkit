@@ -42,7 +42,7 @@ out of scope (see [Not supported](#not-supported)).
 | **Belgian eID** | `TBelgianEIDReader` | Read identity, address, JPEG photo, certificates (RAW/DER) and raw signature files from Belpic 1.7/1.8 contact cards. |
 | **ICAO travel/ID documents** | `TICAODocumentReader` | BAC (MRZ) or PACE (MRZ/CAN, ECDH Generic Mapping, AES-128, NIST P-256 or brainpoolP256r1) secure messaging. Read DG1 (MRZ identity), DG2 (JPEG and JPEG 2000 face images), and complete EF.COM/EF.SOD files. Includes MRZ parsing with check digits (TD1/TD2/TD3) and EF.CardAccess PACEInfo decoding. |
 | **EMV** | `TEMVCardReader` | PSE/PPSE directory discovery, PDOL inspection without GPO, GPO and AFL record reading, an optional bounded extra SFI/record scan, GET DATA objects, and transaction logs. Extracts PAN, expiry date, cardholder name, IBAN and Track 2 equivalent data where present. Reading only, no transactions. |
-| **EMV semantic tools** | `TEmvSemanticCodec` | Offline AIP, AUC, TVR, IAC and CVM List decoding with explicit Book 3 4.3/4.4, XDA/biometric meanings, unsigned thresholds and preserved reserved/proprietary values. |
+| **EMV semantic tools** | `TEmvSemanticCodec` | Offline AIP, AUC, TVR, IAC, CVM List/Results and terminal-capability decoding with explicit EMV Book 3/4 4.3/4.4, XDA/biometric meanings, unsigned thresholds and preserved reserved/proprietary values. |
 | **Offline EMV calculations** | `TEmvCalculator` | UDK Option A/B, common/ATC/Mastercard/Visa-script/EMV-2000-tree keys, DES parity and DES/AES KCV, ISO 9797 Retail MAC, ARQC/TC/AAC generation and verification, ARPC methods 1/2 and verification, AES-128 CMAC, script MAC/encryption and PIN-block formatting. Explicit Visa 10/18/22, Mastercard 16/17/20/21 and Interac 133 calculation profiles; no card commands or payment processing. |
 | **GlobalPlatform / JavaCard** | `TGlobalPlatformCardManager` | Explicit domain selection, CPLC, tagged/legacy registry; SCP02 i=15 and SCP03 AES-128 S8/S16 (random or verified pseudo-random challenge), command protection and SCP03 response protection. Structurally checked CAP loading, applet installation, explicit deletion/status, LOAD progress, DEK-protected key provision/replacement, RSA/AES issuer tokens, DAP blocks and verified DES/AES receipts. Native Delphi protocol code; no GlobalPlatform DLL. |
 | **MIFARE Classic** | `TContactlessCardReader` | Classic Mini/1K/4K layouts. Read blocks with a supplied key A/B and write data blocks; block 0 and sector trailers are refused. |
@@ -313,8 +313,8 @@ and show card offered/removed notifications without running a card operation.
 | `SmartCardDemo` | Combined PC/SC, eID, EMV, contactless, NDEF, memory and RFID pages |
 | `MagStripeDemo` | Track checks, swipes and verified MSR206-7HL writes |
 | `MagStripeProfilesDemo` | Track codecs, MagTek keyboard/HID, MSR206/MSR605 reads and status-only programming |
-| `GlobalPlatformDemo` | Domain/CPLC/registry, authentication, CAP/DAP load, install/delete/status/extradition, key management and token/receipt policies; own DFM, native reader/card events and background worker |
-| `EmvSemanticsDemo` | Offline AIP/AUC/TVR/IAC/CVM List explanation with explicit Book 3 version |
+| `GlobalPlatformDemo` | Domain/CPLC/registry, authentication, CAP/DAP load, install/delete/status/extradition, key management and token/receipt policies; offline CAP preview, live acknowledged LOAD bytes/blocks, own DFM, native reader/card events and background worker |
+| `EmvSemanticsDemo` | Offline AIP/AUC/TVR/IAC/CVM List/Results and 9F33/9F40 terminal-capability explanation with explicit EMV version |
 | `EmvCalculatorDemo` | All offline EMV calculations, explicit CVN transaction fields and cryptogram verification |
 | `CardCatalogDemo` | Browse/filter ATR, EMV tag/path, APDU instruction/status and AID inventories; native reader/card events and offered ATR lookup |
 | `ReaderToolsDemo` | Reader/card events log, PC/SC list/ATR, APDU, ATR catalog, BER-TLV, EMV tags, NDEF |
@@ -465,7 +465,7 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 | `ERD.Card.GlobalPlatform.SecureChannel` | SCP02 i=15 and SCP03 AES-128 S8/S16 protected transport |
 | `ERD.Card.GlobalPlatform.CAP` | Checked CAP components, raw load-file data and Delphi ZIP archive import |
 | `ERD.Card.GlobalPlatform.Management` | RSA/AES token signers, DAP framing/signatures, GP KCV and identity/counter-bound DES/AES receipt verification |
-| `ERD.Card.EMV.Semantics` | Versioned AIP/AUC/TVR/IAC and CVM List explanation |
+| `ERD.Card.EMV.Semantics` | Versioned AIP/AUC/TVR/IAC, CVM List/Results and terminal-capability explanation |
 | `ERD.Card.EMV.Aids` | 61 valid historical AID/RID suggestions; no automatic selection |
 | `ERD.Card.EMV.Calculator` | Offline calculation component and eight explicit CVN profiles |
 | `ERD.Card.EMV.Data` | EMV data model, DOL/AFL/log codec |

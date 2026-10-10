@@ -26,12 +26,15 @@ object EmvSemanticsDemoForm: TEmvSemanticsDemoForm
       '9F0D - IAC Default'
       '9F0E - IAC Denial'
       '9F0F - IAC Online'
-      '8E - CVM List')
+      '8E - CVM List'
+      '9F34 - CVM Results'
+      '9F33 - Terminal Capabilities'
+      '9F40 - Additional Terminal Capabilities')
   end
   object VersionLabel: TLabel
     Left = 440
     Top = 16
-    Caption = 'Book 3 specification'
+    Caption = 'EMV specification (Book 3 / 4)'
   end
   object VersionBox: TComboBox
     Left = 440

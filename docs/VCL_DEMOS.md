@@ -484,3 +484,10 @@ works offline even without a PC/SC service. Original source rows and unverified
 issuer-context labels remain visible. Invalid historical ATR/status/AID entries
 have been removed. Lookup covers wildcard-index nested EMV paths as well as exact
 identifiers. Refresh explicitly restarts reader observation.
+
+GlobalPlatformDemo includes **Inspect CAP** for an offline package/applet/size
+preview and live acknowledged LOAD byte/block counts with a progress bar. Its
+worker never accesses VCL controls. Close still waits for the active operation.
+EmvSemanticsDemo includes CVM Results (`9F34`) and terminal capabilities
+(`9F33`, `9F40`) alongside the existing bit fields and CVM List. Select the EMV
+version explicitly; reserved values remain visible in the offline output.

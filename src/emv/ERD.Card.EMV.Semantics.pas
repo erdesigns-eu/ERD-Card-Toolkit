@@ -17,11 +17,11 @@ type
   /// <summary>Invalid EMV semantic input length, tag or selected specification.</summary>
   EEmvSemanticError = class(EConvertError);
 
-  /// <summary>Explicit Book 3 version; biometric/XDA meanings are not applied to older cards.</summary>
+  /// <summary>Explicit EMV Book 3/4 version; later biometric/ECC/XDA allocations stay reserved on older profiles.</summary>
   TEmvSemanticVersion = (
-    /// <summary>EMV 4.3 Book 3; later XDA/biometric allocations stay reserved.</summary>
+    /// <summary>EMV 4.3 Book 3/4; later XDA/biometric/ECC terminal allocations stay reserved.</summary>
     esv43,
-    /// <summary>EMV 4.4 Book 3, including XDA and biometric allocations.</summary>
+    /// <summary>EMV 4.4 Book 3/4, including XDA, biometric and ECC terminal allocations.</summary>
     esv44);
 
   /// <summary>One raw bit with its version-specific meaning.</summary>
@@ -76,13 +76,27 @@ type
     Rules: TEmvCvmRules;
   end;
 
-  /// <summary>Offline EMV Book 3 semantic decoding with exact lengths and explicit version.</summary>
+  /// <summary>Three-byte CVM Results 9F34, retaining the terminal's reported method and outcome.</summary>
+  TEmvCvmResult = record
+    /// <summary>Last performed rule with unmodified method flags and condition code.</summary>
+    Rule: TEmvCvmRule;
+    /// <summary>True only for the explicit 3F no-CVM-performed encoding.</summary>
+    NoCvmPerformed: Boolean;
+    /// <summary>Unmodified result byte; zero means unknown, one failed, two successful.</summary>
+    ResultCode: Byte;
+    /// <summary>Whether the result byte has an assigned encoding, including unknown outcome zero.</summary>
+    ResultKnown: Boolean;
+    /// <summary>Reported outcome or reserved designation; does not independently verify a CVM.</summary>
+    ResultMeaning: string;
+  end;
+
+  /// <summary>Offline EMV Book 3/4 semantic decoding with exact lengths and explicit version.</summary>
   TEmvSemanticCodec = class
   public
-    /// <summary>Decodes AIP 82, AUC 9F07, TVR 95 or IAC 9F0D/0E/0F.</summary>
-    /// <param name="ATag">One of the six supported tags; unknown tags fail explicitly.</param>
-    /// <param name="AValue">Exactly two bytes for AIP/AUC or five for TVR/IAC.</param>
-    /// <param name="AVersion">Explicit Book 3 4.3/4.4; no contactless kernel assumptions.</param>
+    /// <summary>Decodes AIP 82, AUC 9F07, TVR 95, IAC 9F0D/0E/0F or terminal capabilities 9F33/9F40.</summary>
+    /// <param name="ATag">One of the eight supported bit-field tags; unknown tags fail explicitly.</param>
+    /// <param name="AValue">Exactly two bytes for AIP/AUC, three for 9F33 or five for TVR/IAC/9F40.</param>
+    /// <param name="AVersion">Explicit EMV 4.3/4.4 allocation; no contactless kernel assumptions.</param>
     /// <returns>All bits including reserved/unknown values; IAC bits describe policy criteria.</returns>
     /// <exception cref="EEmvSemanticError">Unsupported tag/version or incorrect value size.</exception>
     class function DecodeBits(const ATag: Cardinal; const AValue: TBytes;
@@ -95,6 +109,14 @@ type
     /// <exception cref="EEmvSemanticError">Invalid version, incomplete/empty/oversized list.</exception>
     class function DecodeCvmList(const AValue: TBytes;
       const AVersion: TEmvSemanticVersion = esv44): TEmvCvmList; static;
+
+    /// <summary>Decodes CVM Results 9F34, including no-CVM-performed and reserved outcomes.</summary>
+    /// <param name="AValue">Exactly three bytes: method code, condition code and result code.</param>
+    /// <param name="AVersion">Explicit EMV version for method allocation.</param>
+    /// <returns>Raw rule and reported result; no verification or consistency repair is performed.</returns>
+    /// <exception cref="EEmvSemanticError">Unsupported version or incorrect value size.</exception>
+    class function DecodeCvmResults(const AValue: TBytes;
+      const AVersion: TEmvSemanticVersion = esv44): TEmvCvmResult; static;
   end;
 
 implementation
@@ -128,6 +150,20 @@ const
     'Default TDOL used', 'Issuer authentication failed', 'Script failed before final GENERATE AC',
     'Script failed after final GENERATE AC', '', 'Biometric try limit reached',
     'Selected biometric type unsupported', 'XDA signature failed');
+  Terminal: array[0..23] of string = ('Manual key entry', 'Magnetic stripe',
+    'IC with contacts', '', '', '', '', '', 'Plaintext PIN for ICC verification',
+    'Enciphered PIN for online verification', 'Signature',
+    'Enciphered PIN for offline verification (RSA ODE)', 'No CVM required',
+    'Online biometric', 'Offline biometric', 'Enciphered PIN for offline verification (ECC ODE)',
+    'SDA supported', 'DDA supported', 'Card capture', '', 'CDA supported', 'XDA supported', '', '');
+  Additional: array[0..39] of string = ('Cash', 'Goods', 'Services', 'Cashback',
+    'Inquiry', 'Transfer', 'Payment', 'Administrative', 'Cash deposit', '', '', '', '', '', '', '',
+    'Numeric keys', 'Alphabetic and special character keys', 'Command keys', 'Function keys',
+    '', '', '', '', 'Print or electronic, attendant', 'Print or electronic, cardholder',
+    'Display, attendant', 'Display, cardholder', '', '', 'ISO/IEC 8859 code table 10',
+    'ISO/IEC 8859 code table 9', 'ISO/IEC 8859 code table 8', 'ISO/IEC 8859 code table 7',
+    'ISO/IEC 8859 code table 6', 'ISO/IEC 8859 code table 5', 'ISO/IEC 8859 code table 4',
+    'ISO/IEC 8859 code table 3', 'ISO/IEC 8859 code table 2', 'ISO/IEC 8859 code table 1');
 var
   I, N: Integer;
   Meaning: string;
@@ -137,7 +173,8 @@ begin
   if Ord(AVersion) > Ord(High(TEmvSemanticVersion)) then Invalid;
   Iac := (ATag = $9F0D) or (ATag = $9F0E) or (ATag = $9F0F);
   if (ATag = $82) or (ATag = $9F07) then N := 2
-  else if (ATag = $95) or Iac then N := 5
+  else if ATag = $9F33 then N := 3
+  else if (ATag = $95) or Iac or (ATag = $9F40) then N := 5
   else begin Invalid; N := 0; end;
   if Length(AValue) <> N then Invalid;
   SetLength(Result, N * 8);
@@ -145,10 +182,16 @@ begin
   begin
     if ATag = $82 then Meaning := Aip[I]
     else if ATag = $9F07 then Meaning := Auc[I]
+    else if ATag = $9F33 then Meaning := Terminal[I]
+    else if ATag = $9F40 then Meaning := Additional[I]
     else Meaning := Tvr[I];
     if AVersion = esv43 then
     begin
       if (ATag = $82) and (I = 0) then Meaning := '';
+      if (ATag = $9F33) and (I in [13, 14, 15, 21]) then Meaning := '';
+      if (ATag = $9F33) and (I = 11) then Meaning := 'Enciphered PIN for offline verification';
+      if (ATag = $9F40) and (I = 24) then Meaning := 'Print, attendant';
+      if (ATag = $9F40) and (I = 25) then Meaning := 'Print, cardholder';
       if ((ATag = $95) or Iac) and (I in [7, 14, 15, 22, 23, 37, 38, 39]) then Meaning := '';
       if ((ATag = $95) or Iac) and (I = 21) then Meaning := 'Online PIN entered';
     end;
@@ -189,8 +232,8 @@ begin
   end;
 end;
 
-class function TEmvSemanticCodec.DecodeCvmList(const AValue: TBytes;
-  const AVersion: TEmvSemanticVersion): TEmvCvmList;
+function DecodeCvmRule(const RawMethod, Condition: Byte;
+  const Version: TEmvSemanticVersion): TEmvCvmRule;
 const
   Conditions: array[0..9] of string = ('Always', 'Unattended cash',
     'Not unattended cash, manual cash or cashback', 'Terminal supports this CVM',
@@ -198,8 +241,31 @@ const
     'Application currency and amount above X', 'Application currency and amount below Y',
     'Application currency and amount above Y');
 var
-  I, Offset: Integer;
   Code: Byte;
+begin
+  Result := Default(TEmvCvmRule);
+  Code := RawMethod and $3F;
+  Result.RawMethod := RawMethod; Result.Method := Code; Result.Condition := Condition;
+  Result.ContinueOnFailure := RawMethod and $40 <> 0;
+  Result.ReservedBitSet := RawMethod and $80 <> 0;
+  Result.MethodMeaning := DescribeCvmMethod(Code, Version);
+  Result.MethodKnown := Result.MethodMeaning <> '';
+  if not Result.MethodKnown then
+  begin
+    if Code in [$20..$2F] then Result.MethodMeaning := 'Payment-system-specific CVM'
+    else if Code in [$30..$3E] then Result.MethodMeaning := 'Issuer-specific CVM'
+    else Result.MethodMeaning := 'Reserved/unavailable CVM';
+  end;
+  Result.ConditionKnown := Condition <= 9;
+  if Condition <= 9 then Result.ConditionMeaning := Conditions[Condition]
+  else if Condition >= $80 then Result.ConditionMeaning := 'Payment-system-specific condition'
+  else Result.ConditionMeaning := 'Reserved condition';
+end;
+
+class function TEmvSemanticCodec.DecodeCvmList(const AValue: TBytes;
+  const AVersion: TEmvSemanticVersion): TEmvCvmList;
+var
+  I, Offset: Integer;
   function BinaryAmount(const Start: Integer): Cardinal;
   var
     J: Integer;
@@ -215,25 +281,31 @@ begin
   SetLength(Result.Rules, (Length(AValue) - 8) div 2);
   for I := 0 to High(Result.Rules) do
   begin
-    Offset := 8 + I * 2; Code := AValue[Offset] and $3F;
-    Result.Rules[I].RawMethod := AValue[Offset]; Result.Rules[I].Method := Code;
-    Result.Rules[I].Condition := AValue[Offset + 1];
-    Result.Rules[I].ContinueOnFailure := AValue[Offset] and $40 <> 0;
-    Result.Rules[I].ReservedBitSet := AValue[Offset] and $80 <> 0;
-    Result.Rules[I].MethodMeaning := DescribeCvmMethod(Code, AVersion);
-    Result.Rules[I].MethodKnown := Result.Rules[I].MethodMeaning <> '';
-    if not Result.Rules[I].MethodKnown then
-    begin
-      if Code in [$20..$2F] then Result.Rules[I].MethodMeaning := 'Payment-system-specific CVM'
-      else if Code in [$30..$3E] then Result.Rules[I].MethodMeaning := 'Issuer-specific CVM'
-      else Result.Rules[I].MethodMeaning := 'Reserved/unavailable CVM';
-    end;
-    Code := AValue[Offset + 1];
-    Result.Rules[I].ConditionKnown := Code <= 9;
-    if Code <= 9 then Result.Rules[I].ConditionMeaning := Conditions[Code]
-    else if Code >= $80 then Result.Rules[I].ConditionMeaning := 'Payment-system-specific condition'
-    else Result.Rules[I].ConditionMeaning := 'Reserved condition';
+    Offset := 8 + I * 2;
+    Result.Rules[I] := DecodeCvmRule(AValue[Offset], AValue[Offset + 1], AVersion);
   end;
+end;
+
+class function TEmvSemanticCodec.DecodeCvmResults(const AValue: TBytes;
+  const AVersion: TEmvSemanticVersion): TEmvCvmResult;
+begin
+  Result := Default(TEmvCvmResult);
+  if (Ord(AVersion) > Ord(High(TEmvSemanticVersion))) or (Length(AValue) <> 3) then Invalid;
+  Result.Rule := DecodeCvmRule(AValue[0], AValue[1], AVersion);
+  Result.NoCvmPerformed := AValue[0] = $3F;
+  if Result.NoCvmPerformed then
+  begin
+    Result.Rule.MethodKnown := True;
+    Result.Rule.MethodMeaning := 'No CVM performed';
+    if AValue[1] = 0 then Result.Rule.ConditionMeaning := 'No CVM condition (no CVM performed)';
+  end;
+  Result.ResultCode := AValue[2];
+  Result.ResultKnown := AValue[2] <= 2;
+  case AValue[2] of
+    0: Result.ResultMeaning := 'Unknown';
+    1: Result.ResultMeaning := 'Failed';
+    2: Result.ResultMeaning := 'Successful';
+  else Result.ResultMeaning := 'Reserved result'; end;
 end;
 
 end.
