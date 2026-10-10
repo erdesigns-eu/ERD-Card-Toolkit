@@ -1,6 +1,4 @@
-unit Sle4404Demo.Main;
-
-{$CODEPAGE UTF8}
+﻿unit Sle4404Demo.Main;
 
 interface
 

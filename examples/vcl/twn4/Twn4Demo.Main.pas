@@ -1,6 +1,4 @@
-unit Twn4Demo.Main;
-
-{$CODEPAGE UTF8}
+﻿unit Twn4Demo.Main;
 
 interface
 

@@ -1,6 +1,4 @@
-unit BelgianEidDemo.Main;
-
-{$CODEPAGE UTF8}
+﻿unit BelgianEidDemo.Main;
 
 interface
 

@@ -310,7 +310,9 @@ class DistributionTests(unittest.TestCase):
             self.assertTrue(any('needs UTF-8' in e for e in distribution.check_pascal_encoding(path)))
             for header in ('{$CODEPAGE UTF8}', '{$CODEPAGE 65001}'):
                 path.write_bytes((header + '\r\n' + text).encode('utf-8'))
-                self.assertEqual([], distribution.check_pascal_encoding(path))
+                self.assertTrue(any('not a Delphi directive' in e for e in distribution.check_pascal_encoding(path)))
+                path.write_bytes(b'\xef\xbb\xbf' + (header + '\r\n' + text).encode('utf-8'))
+                self.assertTrue(any('not a Delphi directive' in e for e in distribution.check_pascal_encoding(path)))
             path.write_bytes(b'\xef\xbb\xbf' + text.encode('utf-8'))
             self.assertEqual([], distribution.check_pascal_encoding(path))
             path.write_bytes((text + '{$CODEPAGE UTF8}\r\n').encode('utf-8'))

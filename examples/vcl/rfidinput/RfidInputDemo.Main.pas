@@ -1,6 +1,4 @@
-unit RfidInputDemo.Main;
-
-{$CODEPAGE UTF8}
+﻿unit RfidInputDemo.Main;
 
 interface
 

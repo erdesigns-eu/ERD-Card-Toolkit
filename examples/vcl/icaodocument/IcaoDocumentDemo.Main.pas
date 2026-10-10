@@ -1,6 +1,4 @@
-unit IcaoDocumentDemo.Main;
-
-{$CODEPAGE UTF8}
+﻿unit IcaoDocumentDemo.Main;
 
 interface
 

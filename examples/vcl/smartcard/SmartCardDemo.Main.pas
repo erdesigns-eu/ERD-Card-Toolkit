@@ -1,6 +1,4 @@
-unit SmartCardDemo.Main;
-
-{$CODEPAGE UTF8}
+﻿unit SmartCardDemo.Main;
 
 interface
 

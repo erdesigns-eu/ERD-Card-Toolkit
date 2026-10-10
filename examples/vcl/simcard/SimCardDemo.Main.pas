@@ -1,6 +1,4 @@
-unit SimCardDemo.Main;
-
-{$CODEPAGE UTF8}
+﻿unit SimCardDemo.Main;
 
 interface
 

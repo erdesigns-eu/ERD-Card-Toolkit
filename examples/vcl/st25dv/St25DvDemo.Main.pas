@@ -1,6 +1,4 @@
-unit St25DvDemo.Main;
-
-{$CODEPAGE UTF8}
+﻿unit St25DvDemo.Main;
 
 interface
 

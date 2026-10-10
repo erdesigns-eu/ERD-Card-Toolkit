@@ -1,6 +1,4 @@
-unit ERD.Card.ATR.Legacy;
-
-{$CODEPAGE UTF8}
+﻿unit ERD.Card.ATR.Legacy;
 
 {$IFDEF FPC}
 {$MODE DELPHI}

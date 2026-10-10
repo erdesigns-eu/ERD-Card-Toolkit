@@ -1,6 +1,4 @@
-unit MagStripeProfilesDemo.Main;
-
-{$CODEPAGE UTF8}
+﻿unit MagStripeProfilesDemo.Main;
 
 interface
 

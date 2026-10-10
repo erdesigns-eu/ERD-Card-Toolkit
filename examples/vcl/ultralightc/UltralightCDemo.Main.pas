@@ -1,6 +1,4 @@
-unit UltralightCDemo.Main;
-
-{$CODEPAGE UTF8}
+﻿unit UltralightCDemo.Main;
 
 interface
 

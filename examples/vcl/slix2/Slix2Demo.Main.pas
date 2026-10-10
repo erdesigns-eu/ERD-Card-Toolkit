@@ -1,6 +1,4 @@
-unit Slix2Demo.Main;
-
-{$CODEPAGE UTF8}
+﻿unit Slix2Demo.Main;
 
 interface
 

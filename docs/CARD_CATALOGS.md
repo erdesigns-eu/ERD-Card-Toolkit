@@ -136,9 +136,9 @@ arrival/removal and card-state events; offered ATR inspection uses the latest
 observed snapshot without connecting or transmitting an APDU. `ReaderToolsDemo`
 now also shows expanded instruction/status and historical tag explanations.
 
-Pascal sources containing accented names or Unicode punctuation explicitly declare
-`{$CODEPAGE UTF8}`. This prevents Delphi from interpreting UTF-8 literals using the
-Windows ANSI code page (for example, `Crédit` becoming `CrÃ©dit`). The distribution
-validator rejects non-ASCII Pascal sources without a UTF-8 BOM or an early UTF-8
-code-page directive. Catalog tests compare the accented issuer and APDU punctuation
+Pascal sources containing accented names or Unicode punctuation use UTF-8 with a
+BOM. This prevents Delphi from interpreting UTF-8 literals using the Windows ANSI
+code page (for example, `Crédit` becoming `CrÃ©dit`). The distribution validator
+requires a UTF-8 BOM for non-ASCII Pascal sources and rejects the FPC-only
+`CODEPAGE` directive, which Delphi does not accept. Catalog tests compare the accented issuer and APDU punctuation
 against independently specified Unicode code points.

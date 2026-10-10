@@ -1,6 +1,4 @@
-unit MemoryCardDemo.Main;
-
-{$CODEPAGE UTF8}
+﻿unit MemoryCardDemo.Main;
 
 interface
 

@@ -1,6 +1,4 @@
-unit FelicaDemo.Main;
-
-{$CODEPAGE UTF8}
+﻿unit FelicaDemo.Main;
 
 interface
 

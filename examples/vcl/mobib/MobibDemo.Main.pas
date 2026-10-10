@@ -1,6 +1,4 @@
-unit MobibDemo.Main;
-
-{$CODEPAGE UTF8}
+﻿unit MobibDemo.Main;
 
 interface
 

@@ -1,6 +1,4 @@
-unit DesfireDemo.Main;
-
-{$CODEPAGE UTF8}
+﻿unit DesfireDemo.Main;
 
 interface
 

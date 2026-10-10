@@ -1,6 +1,4 @@
-unit TopazDemo.Main;
-
-{$CODEPAGE UTF8}
+﻿unit TopazDemo.Main;
 
 interface
 
