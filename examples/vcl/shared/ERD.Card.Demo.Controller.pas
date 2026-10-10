@@ -30,6 +30,7 @@ type
   private
     FJob: TCardDemoJob;
     FOperations: ICardDemoOperations;
+    FValidator: ICardDemoRequestValidator;
     FBusyEvent: TCardDemoBusyEvent;
     FResultEvent: TCardDemoResultEvent;
     FCloseEvent: TCardDemoCloseEvent;
@@ -47,9 +48,10 @@ type
       const ADeviceSource: ICardDemoDeviceSource = nil);
     /// <summary>Joins any outstanding worker before discarding callbacks and its executor.</summary>
     destructor Destroy; override;
-    /// <summary>Copies one request and starts work only after worker construction has completed.</summary>
+    /// <summary>Checks optional request metadata, then starts work only after worker construction has completed.</summary>
     /// <param name="ARequest">Explicit request; worker deep-copies credentials and argument arrays.</param>
     /// <exception cref="EInvalidOpException">Another request or deferred close is active.</exception>
+    /// <remarks>Rejected metadata is reported synchronously through the result event without creating a worker.</remarks>
     procedure StartRequest(const ARequest: TCardDemoRequest);
     /// <summary>Checks completion from the demo's own DFM timer, joins the worker, then notifies its form.</summary>
     /// <remarks>A deferred close discards display output and invokes ACloseEvent instead.</remarks>
@@ -84,6 +86,7 @@ begin
   inherited Create;
   if (AOperations = nil) or not Assigned(ABusyEvent) or not Assigned(AResultEvent) or
     not Assigned(ACloseEvent) then raise EArgumentException.Create('Configure the demo controller callbacks.');
+  Supports(AOperations, ICardDemoRequestValidator, FValidator);
   Wrapper := TControllerOperations.Create; FOperations := Wrapper;
   Wrapper.Kind := ADeviceKind; Wrapper.Operations := AOperations; Wrapper.Source := ADeviceSource;
   if Wrapper.Source = nil then Wrapper.Source := CreateCardDemoDeviceSource; FBusyEvent := ABusyEvent; FResultEvent := AResultEvent; FCloseEvent := ACloseEvent;
@@ -93,8 +96,16 @@ destructor TCardDemoController.Destroy;
 begin FJob.Free; inherited Destroy; end;
 
 procedure TCardDemoController.StartRequest(const ARequest: TCardDemoRequest);
+var ErrorText: UnicodeString; Rejected: TCardDemoResult;
 begin
   if (FJob <> nil) or FClosing then raise EInvalidOpException.Create('An operation or deferred close is already active.');
+  if (ARequest.Operation <> cdoDemoDevices) and (FValidator <> nil) then
+    if not FValidator.TryValidateRequest(ARequest, ErrorText) then
+    begin
+      Rejected := Default(TCardDemoResult); Rejected.Operation := ARequest.Operation;
+      Rejected.ErrorClass := 'EArgumentException'; Rejected.Text := ErrorText;
+      FResultEvent(Rejected); Exit;
+    end;
   FJob := TCardDemoJob.Create(ARequest,FOperations);
   try
     FBusyEvent(True); FJob.StartWork;

@@ -190,6 +190,26 @@ or protected counters remain absent. The price is euro cents for the purchase,
 not an electronic balance. `HasSaleDate`, `HasDuration`, `HasCounter`, and
 `HasRemainingTrips` distinguish a real zero from missing information.
 
+## Readable demo output
+
+The snapshot page defaults to **Summary only**. It groups the decoded holder,
+contracts, validations, counters, and acquired files. Purchase prices are shown
+as amounts such as `EUR 62.00`, with purchase dates in `yyyy-mm-dd` format.
+Missing files and access restrictions have readable descriptions; zero-filled
+records are counted rather than printed as long rows of zeros.
+
+Choose **Summary and raw records** to include hexadecimal records in the output.
+The raw-layout selector also includes them. Both display modes export every
+acquired record unchanged, including empty and unsupported records. Single-file
+and authenticated-file actions continue to show their raw records.
+
+Unknown tariff codes remain visible, for example `unidentified (tariff 0x000F)`.
+The summary labels their counters as associated counter values rather than
+assuming they represent remaining trips. Duration unit codes are retained until
+an operator profile supplies their meaning. A purchase date does not by itself
+establish activation or expiry; the offline rule page accepts the evidence and
+operator rules needed to assess those separately.
+
 ## Native operator rules: activation, validity, and zones
 
 `ERD.Card.MOBIB.Rules` contains `TMobibRuleEngine`. This is executable, offline

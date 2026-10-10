@@ -13,7 +13,7 @@ type
   /// <summary>Explicit hardware boundary for family executors, with injectable scripted implementations.</summary>
   ICardFamilyHardware = interface
     ['{E325621B-AC2C-4B6E-9F7C-C5460AB6E611}']
-    /// <summary>Connects the exact named PC/SC reader after component preflight.</summary>
+    /// <summary>Connects the exact named PC/SC reader at the component acquisition boundary.</summary>
     /// <param name="AName">Exact reader name, never auto-selected.</param>
     /// <returns>Retained transport with transaction capability.</returns>
     function AcquireReader(const AName: string): ICardTransport;
@@ -28,7 +28,7 @@ type
   /// <summary>Optional separate, caller-selected Calypso SAM connection for native authentication.</summary>
   ICardFamilySamHardware = interface
     ['{E0388894-B101-4C5B-8F74-96A24B2C3AE2}']
-    /// <summary>Connects the selected provisioned SAM after all action inputs pass preflight.</summary>
+    /// <summary>Connects the selected provisioned SAM at the authentication acquisition boundary.</summary>
     /// <param name="AName">Exact PC/SC SAM reader name, distinct from the card reader.</param>
     /// <returns>Retained transport with exclusive transaction capability.</returns>
     function AcquireSam(const AName: string): ICardTransport;
@@ -51,7 +51,7 @@ type
 /// <summary>Creates an inactive worker executor for one separately runnable family.</summary>
 /// <param name="AFamily">Explicit family matching the request catalog.</param>
 /// <param name="AHardware">Optional injected hardware; nil selects native Windows adapters.</param>
-/// <returns>Executor that preflights component arguments before device acquisition.</returns>
+/// <returns>Executor that validates component arguments before deferred device acquisition.</returns>
 function CreateCardFamilyOperations(const AFamily: TCardDemoFamily;
   const AHardware: ICardFamilyHardware = nil): ICardDemoOperations;
 
@@ -86,10 +86,26 @@ uses
   ERD.Card.Reader.TWN4.Serial, ERD.Card.Demo.Operations;
 
 type
-  EPreflightComplete = class(Exception);
-  TPreflight = class(TInterfacedObject, ICardTransport, ICardTransaction, ITwn4ByteChannel, ICardAesProvider, ICardDesProvider)
+  TDeferredConnection = class(TInterfacedObject, ICardTransport, ICardTransaction,
+    ITwn4ByteChannel, ICardAesProvider, ICardDesProvider)
+  private
+    FHardware: ICardFamilyHardware;
+    FSamHardware: ICardFamilySamHardware;
+    FName: string;
+    FSam, FReaderAcquired: Boolean;
+    FTransport: ICardTransport;
+    FTransaction: ICardTransaction;
+    FChannel: ITwn4ByteChannel;
+    FAes: ICardAesProvider;
+    FDes: ICardDesProvider;
+    procedure Connect;
+    procedure Channel;
+    function Aes: ICardAesProvider;
+    function Des: ICardDesProvider;
   public
-    ReachedBoundary: Boolean;
+    constructor Create(const AHardware: ICardFamilyHardware; const AName: string;
+      const ASam: Boolean = False);
+    procedure Release;
     function Exchange(const ACommand: TBytes): TBytes;
     procedure BeginTransaction;
     procedure EndTransaction;
@@ -115,7 +131,7 @@ type
     procedure ReleaseReader;
     function CreateTwn4Channel(const APort: string): ITwn4ByteChannel;
   end;
-  TFamilyOperations = class(TInterfacedObject, ICardDemoOperations)
+  TFamilyOperations = class(TInterfacedObject, ICardDemoOperations, ICardDemoRequestValidator)
   private
     FFamily: TCardDemoFamily;
     FHardware: ICardFamilyHardware;
@@ -123,6 +139,7 @@ type
     procedure Execute(const R: TCardDemoRequest; const A: TCardFamilyAction;
       const T: ICardTransport; const C: ITwn4ByteChannel; var D: TCardDemoResult);
   public
+    function TryValidateRequest(const ARequest: TCardDemoRequest; out AError: UnicodeString): Boolean;
     procedure Run(const ARequest: TCardDemoRequest; var AResult: TCardDemoResult);
   end;
 
@@ -149,32 +166,177 @@ begin
   end;
 end;
 
-function Action(const F: TCardDemoFamily; const R: TCardDemoRequest): TCardFamilyAction;
+function MobibFileName(const Id: Word): string;
+begin
+  case Id of
+    $2001: Result := 'Environment';
+    $2002: Result := 'Holder';
+    $2010: Result := 'Validation events';
+    $2020: Result := 'Contracts';
+    $2069: Result := 'Counters';
+    $2050: Result := 'Contract list';
+    $2040: Result := 'Special events';
+    $3F1C: Result := 'Extended holder';
+  else Result := 'File'; end;
+end;
+
+function MobibTransportName(const Code: Byte): string;
+begin
+  case Code of
+    0: Result := 'Metro';
+    7: Result := 'Premetro';
+    15: Result := 'Bus';
+    22: Result := 'Tram';
+  else Result := 'Unknown mode (code ' + IntToStr(Code) + ')'; end;
+end;
+
+function MobibTime(const Date: TDateTime; const Minutes: Word): string;
+begin
+  Result := FormatDateTime('yyyy-mm-dd', Date) + Format(' %2.2d:%2.2d', [Minutes div 60, Minutes mod 60]);
+end;
+
+function DescribeMobib(const Data: TMobibData; const Subscriptions: TMobibSubscriptions): string;
+var Lines: TStringList; I: Integer; S: TMobibSubscription; Counters: string;
+begin
+  Lines := TStringList.Create;
+  try
+    Lines.Add('MOBIB CARD');
+    if Data.LayoutMatched then Lines.Add('Data profile: MOBIB 056/001 (matched)')
+    else Lines.Add('Data profile: no matching semantic layout');
+    if Data.HasNetwork then
+    begin
+      if Data.CountryCode = 56 then Lines.Add('Country: Belgium (056)')
+      else Lines.Add(Format('Country code: %3.3d', [Data.CountryCode]));
+      Lines.Add(Format('Network: %3.3d', [Data.NetworkCode]));
+    end;
+    Lines.Add(''); Lines.Add('HOLDER');
+    if Data.Holder.Present then
+    begin
+      Lines.Add('Name: ' + string(Data.Holder.Name));
+      Lines.Add('Cardholder number: ' + string(Data.Holder.Number));
+      if Data.Holder.HasBirthDate then Lines.Add('Birth date: ' + FormatDateTime('yyyy-mm-dd', Data.Holder.BirthDate));
+      Lines.Add('Gender field: code ' + IntToStr(Data.Holder.GenderCode));
+    end
+    else Lines.Add('Holder details: not available in the decoded records');
+    Lines.Add(''); Lines.Add(Format('CONTRACTS (%d decoded)', [Length(Subscriptions)]));
+    if Data.HasContractCount then Lines.Add('Contract list count: ' + IntToStr(Data.ContractCount));
+    for I := 0 to High(Subscriptions) do
+    begin
+      S := Subscriptions[I]; Lines.Add(''); Lines.Add('Contract ' + IntToStr(S.RecordNumber));
+      if not S.LayoutMatched then
+      begin
+        Lines.Add('Unsupported record layout: version ' + IntToStr(S.Version)); Continue;
+      end;
+      if S.ProductName <> '' then Lines.Add('  Product: ' + S.ProductName)
+      else Lines.Add('  Product: unidentified (tariff 0x' + IntToHex(S.Tariff, 4) + ')');
+      Lines.Add(Format('  Purchase price: EUR %d.%2.2d', [S.PriceCents div 100, S.PriceCents mod 100]));
+      if S.HasSaleDate then Lines.Add('  Purchase date: ' + FormatDateTime('yyyy-mm-dd', S.SaleDate))
+      else Lines.Add('  Purchase date: not recorded');
+      if S.HasDuration then Lines.Add(Format('  Recorded duration: %d (unit code %d; unit not mapped)', [S.DurationValue, S.DurationUnitCode]));
+      if S.HasCounter then
+      begin
+        Lines.Add(Format('  Associated counter: %d (counter-use code %d)', [S.Counter, S.CounterUse]));
+        if S.HasRemainingTrips and (S.ProductName <> '') then Lines.Add('  Remaining trips: ' + IntToStr(S.RemainingTrips));
+      end
+      else Lines.Add('  Associated counter: not acquired');
+    end;
+    if Length(Subscriptions) > 0 then Lines.Add('Validity / activation / zones: not available from these decoded contract fields');
+    Lines.Add(''); Lines.Add(Format('VALIDATIONS (%d decoded)', [Length(Data.Events)]));
+    if Length(Data.Events) = 0 then Lines.Add('No nonempty validation events decoded');
+    for I := 0 to High(Data.Events) do
+    begin
+      Lines.Add(Format('Event %d: %s - %s', [Data.Events[I].RecordNumber,
+        MobibTime(Data.Events[I].Date, Data.Events[I].Minutes), MobibTransportName(Data.Events[I].TransportCode)]));
+      Lines.Add('  First validation: ' + MobibTime(Data.Events[I].FirstDate, Data.Events[I].FirstMinutes));
+      if Data.Events[I].HasLocation then Lines.Add('  Location identifier: ' + IntToStr(Data.Events[I].LocationId));
+      if Data.Events[I].TransportCode = 15 then Lines.Add('  Bus route: ' + IntToStr(Data.Events[I].BusRoute));
+      Lines.Add('  Recorded coupon/count value: ' + IntToStr(Data.Events[I].CouponCount));
+    end;
+    Lines.Add(''); Lines.Add(Format('COUNTERS (%d slots)', [Length(Data.Counters)]));
+    Counters := '';
+    for I := 0 to High(Data.Counters) do
+    begin
+      if I > 0 then Counters := Counters + '; ';
+      Counters := Counters + Format('record %d slot %d = %d',
+        [Data.Counters[I].RecordNumber, Data.Counters[I].Slot, Data.Counters[I].Value]);
+    end;
+    if Counters = '' then Counters := 'No counters acquired';
+    Lines.Add(Counters); Lines.Add(''); Lines.Add('ACQUIRED FILES');
+    Result := Lines.Text;
+  finally Lines.Free; end;
+end;
+
+function MobibFileSummary(const FileData: TCalypsoFile): string;
+var I, J, EmptyCount: Integer; Empty: Boolean;
+begin
+  Result := MobibFileName(FileData.LogicalId) + ' (' + IntToHex(FileData.LogicalId, 4) + '): ';
+  if FileData.SelectionStatus <> $9000 then
+  begin
+    case FileData.SelectionStatus of
+      $6A82: Result := Result + 'not present';
+      $6982, $6985: Result := Result + 'access denied';
+    else Result := Result + 'unavailable'; end;
+    Result := Result + ' (SW ' + IntToHex(FileData.SelectionStatus, 4) + ')'; Exit;
+  end;
+  EmptyCount := 0;
+  for I := 0 to High(FileData.Records) do
+  begin
+    Empty := True;
+    for J := 0 to High(FileData.Records[I].Data) do
+      if FileData.Records[I].Data[J] <> 0 then Empty := False;
+    if Empty then Inc(EmptyCount);
+  end;
+  Result := Result + Format('%d records acquired, %d zero-filled', [Length(FileData.Records), EmptyCount]);
+  if FileData.Truncated then Result := Result + '; record limit reached';
+  if (FileData.LastRecordStatus <> $0000) and
+    (FileData.LastRecordStatus <> $9000) and
+    (FileData.LastRecordStatus <> $6A83) then
+    Result := Result + '; stopped at SW ' + IntToHex(FileData.LastRecordStatus, 4);
+end;
+
+function TryAction(const F: TCardDemoFamily; const R: TCardDemoRequest;
+  out Selected: TCardFamilyAction; out ErrorText: UnicodeString): Boolean;
 var Catalog: TCardFamilyActions; I, J, Choices: Integer;
 begin
-  if (R.Operation <> cdoFamily) or (R.FamilyName <> CardFamilyName(F)) then Fail;
+  Result := False; Selected := Default(TCardFamilyAction);
+  ErrorText := 'Select an action for this demo.';
+  if (R.Operation <> cdoFamily) or (R.FamilyName <> CardFamilyName(F)) then Exit;
   Catalog := CardFamilyActions(F);
-  if (R.FamilyAction < 0) or (R.FamilyAction >= Length(Catalog)) then Fail;
-  Result := Catalog[R.FamilyAction];
-  if (Length(R.Arguments) <> Length(Result.Fields)) or
-    (Length(R.Credentials) <> Length(Result.Fields)) then Fail;
-  if Result.Mutation and not R.MutationAcknowledged then Fail;
-  if Result.Pcsc and (Trim(R.ReaderName) = '') then Fail;
-  for I := 0 to High(Result.Fields) do
+  if (R.FamilyAction < 0) or (R.FamilyAction >= Length(Catalog)) then Exit;
+  Selected := Catalog[R.FamilyAction];
+  ErrorText := 'The request fields do not match this action.';
+  if (Length(R.Arguments) <> Length(Selected.Fields)) or
+    (Length(R.Credentials) <> Length(Selected.Fields)) then Exit;
+  ErrorText := 'Confirm the acknowledgement for this action.';
+  if Selected.Mutation and not R.MutationAcknowledged then Exit;
+  ErrorText := 'Select a reader before running this action.';
+  if Selected.Pcsc and (Trim(R.ReaderName) = '') then Exit;
+  for I := 0 to High(Selected.Fields) do
   begin
-    if Length(R.Arguments[I]) > 262144 then Fail;
-    if Result.Fields[I].Secret then
-    begin if R.Arguments[I] <> '' then Fail; if Length(R.Credentials[I]) > 64 then Fail; end
-    else if Length(R.Credentials[I]) <> 0 then Fail;
-    if Result.Fields[I].Choices <> '' then
+    ErrorText := 'Check the input length for ' + UnicodeString(Selected.Fields[I].LabelText) + '.';
+    if Length(R.Arguments[I]) > 262144 then Exit;
+    if Selected.Fields[I].Secret then
     begin
+      if (R.Arguments[I] <> '') or (Length(R.Credentials[I]) > 64) then Exit;
+    end
+    else if Length(R.Credentials[I]) <> 0 then Exit;
+    if Selected.Fields[I].Choices <> '' then
+    begin
+      ErrorText := 'Choose ' + UnicodeString(Selected.Fields[I].LabelText) + '.';
       Choices := 1;
-      for J := 1 to Length(Result.Fields[I].Choices) do
-        if Result.Fields[I].Choices[J] = '|' then Inc(Choices);
-      if not TryStrToInt(string(R.Arguments[I]),J) then Fail;
-      if (J < 0) or (J >= Choices) then Fail;
+      for J := 1 to Length(Selected.Fields[I].Choices) do
+        if Selected.Fields[I].Choices[J] = '|' then Inc(Choices);
+      if not TryStrToInt(string(R.Arguments[I]),J) then Exit;
+      if (J < 0) or (J >= Choices) then Exit;
     end;
   end;
+  Result := True; ErrorText := '';
+end;
+
+function Action(const F: TCardDemoFamily; const R: TCardDemoRequest): TCardFamilyAction;
+var ErrorText: UnicodeString;
+begin
+  if not TryAction(F, R, Result, ErrorText) then Fail;
 end;
 
 function Index(const A: TCardFamilyAction; const Name: string): Integer;
@@ -223,22 +385,96 @@ begin
   try ConfigureCapture(Result,ARequest,A); except Result.Free; raise; end;
 end;
 
-function TPreflight.Exchange(const ACommand: TBytes): TBytes;
-begin Result := nil; raise EInvalidOpException.Create('Unexpected preflight I/O.'); end;
-procedure TPreflight.BeginTransaction;
-begin ReachedBoundary := True; raise EPreflightComplete.Create('Validated.'); end;
-procedure TPreflight.EndTransaction;
-begin raise EInvalidOpException.Create('Unexpected preflight release.'); end;
-procedure TPreflight.Open;
-begin ReachedBoundary := True; raise EPreflightComplete.Create('Validated.'); end;
-procedure TPreflight.Close;
-begin raise EInvalidOpException.Create('Unexpected preflight close.'); end;
-procedure TPreflight.Send(const ABytes: TBytes; const ATimeoutMs: Cardinal);
-begin raise EInvalidOpException.Create('Unexpected preflight send.'); end;
-function TPreflight.ReceiveByte(const ATimeoutMs: Cardinal): Byte;
-begin Result := 0; raise EInvalidOpException.Create('Unexpected preflight receive.'); end;
-function TPreflight.NowMs: UInt64;
-begin Result := 0; end;
+constructor TDeferredConnection.Create(const AHardware: ICardFamilyHardware;
+  const AName: string; const ASam: Boolean);
+begin
+  inherited Create;
+  FHardware := AHardware; FName := AName; FSam := ASam;
+end;
+
+procedure TDeferredConnection.Connect;
+begin
+  if FReaderAcquired then Exit;
+  if FSam then
+  begin
+    if not Supports(FHardware, ICardFamilySamHardware, FSamHardware) then Fail;
+    FTransport := FSamHardware.AcquireSam(FName);
+  end
+  else FTransport := FHardware.AcquireReader(FName);
+  FReaderAcquired := True;
+  if FTransport = nil then raise ECardTransportError.Create('No card transport returned.');
+end;
+
+procedure TDeferredConnection.Channel;
+begin
+  if FChannel = nil then FChannel := FHardware.CreateTwn4Channel(FName);
+  if FChannel = nil then raise ECardTransportError.Create('No reader channel returned.');
+end;
+
+procedure TDeferredConnection.Release;
+begin
+  FAes := nil; FDes := nil; FTransaction := nil; FTransport := nil; FChannel := nil;
+  if not FReaderAcquired then Exit;
+  FReaderAcquired := False;
+  if FSam then FSamHardware.ReleaseSam else FHardware.ReleaseReader;
+end;
+
+function TDeferredConnection.Exchange(const ACommand: TBytes): TBytes;
+begin
+  if FTransport = nil then raise ECardTransportError.Create('Card transaction has not started.');
+  Result := FTransport.Exchange(ACommand);
+end;
+
+procedure TDeferredConnection.BeginTransaction;
+begin
+  Connect;
+  if not Supports(FTransport, ICardTransaction, FTransaction) then
+    raise ECardTransportError.Create('Reader requires transaction support.');
+  FTransaction.BeginTransaction;
+end;
+
+procedure TDeferredConnection.EndTransaction;
+begin
+  if FTransaction = nil then raise ECardTransportError.Create('Card transaction has not started.');
+  FTransaction.EndTransaction; FTransaction := nil;
+end;
+
+procedure TDeferredConnection.Open;
+begin Channel; FChannel.Open; end;
+procedure TDeferredConnection.Close;
+begin if FChannel <> nil then FChannel.Close; end;
+procedure TDeferredConnection.Send(const ABytes: TBytes; const ATimeoutMs: Cardinal);
+begin Channel; FChannel.Send(ABytes, ATimeoutMs); end;
+function TDeferredConnection.ReceiveByte(const ATimeoutMs: Cardinal): Byte;
+begin Channel; Result := FChannel.ReceiveByte(ATimeoutMs); end;
+function TDeferredConnection.NowMs: UInt64;
+begin Channel; Result := FChannel.NowMs; end;
+
+function TDeferredConnection.Aes: ICardAesProvider;
+begin
+  Connect;
+  if FAes = nil then
+    if not Supports(FTransport, ICardAesProvider, FAes) then FAes := TCardWindowsAesProvider.Create;
+  Result := FAes;
+end;
+
+function TDeferredConnection.Des: ICardDesProvider;
+begin
+  Connect;
+  if FDes = nil then
+    if not Supports(FTransport, ICardDesProvider, FDes) then FDes := TCardWindowsAesProvider.Create;
+  Result := FDes;
+end;
+
+function TDeferredConnection.EncryptCbc(const AKey, AIv, AData: TBytes): TBytes;
+begin Result := Aes.EncryptCbc(AKey, AIv, AData); end;
+function TDeferredConnection.DecryptCbc(const AKey, AIv, AData: TBytes): TBytes;
+begin Result := Aes.DecryptCbc(AKey, AIv, AData); end;
+function TDeferredConnection.RandomBytes(const ACount: Integer): TBytes;
+begin Result := Aes.RandomBytes(ACount); end;
+function TDeferredConnection.TripleDesCbc(const AKey, AIv, AData: TBytes;
+  const AEncrypt: Boolean): TBytes;
+begin Result := Des.TripleDesCbc(AKey, AIv, AData, AEncrypt); end;
 
 destructor TNativeHardware.Destroy;
 begin FSamReader.Free; FReader.Free; inherited Destroy; end;
@@ -277,15 +513,6 @@ begin
   if Length(Data) = 0 then Exit; N := Length(D.Artifacts); SetLength(D.Artifacts,N+1);
   D.Artifacts[N].Name := Name; D.Artifacts[N].Data := CopyBytes(Data);
 end;
-
-function TPreflight.EncryptCbc(const AKey, AIv, AData: TBytes): TBytes;
-begin Result := nil; raise EInvalidOpException.Create('Preflight must never perform cryptography.'); end;
-function TPreflight.DecryptCbc(const AKey, AIv, AData: TBytes): TBytes;
-begin Result := nil; raise EInvalidOpException.Create('Preflight must never perform cryptography.'); end;
-function TPreflight.TripleDesCbc(const AKey, AIv, AData: TBytes; const AEncrypt: Boolean): TBytes;
-begin Result := nil; raise EPreflightComplete.Create('Preflight crypto boundary.'); end;
-function TPreflight.RandomBytes(const ACount: Integer): TBytes;
-begin Result := nil; raise EInvalidOpException.Create('Preflight must never perform cryptography.'); end;
 
 function TNativeHardware.HidDevices: THidDevices;
 begin Result := EnumerateWindowsHidDevices; end;
@@ -350,6 +577,7 @@ var Hid: TUsbHidReaderWriter; HidHardware: ICardFamilyHidHardware; Devices: THid
   SamCla: Byte;
   SamTransport: ICardTransport; SamProvider: ICalypsoSecureSessionProvider;
   Subscriptions: TMobibSubscriptions;
+  ShowMobibRaw: Boolean;
   CalypsoIds: array of Word; ChosenMobibLayout: TMobibLayout; ParsedMobib: TMobibData; Calypso: TCalypsoCardReader; Mobib: TMobibSnapshot; TransitFile: TCalypsoFile;
   Emv: TEMVCardReader; Belgian: TBelgianEIDReader; Icao: TICAODocumentReader;
   Directory: TEmvDirectoryData; Application: TEmvApplicationData; ObjectData: TEmvDataObjectResult; Log: TEmvTransactionLogData;
@@ -601,6 +829,7 @@ begin
           if Assessment.HasEnd then Output := Output+'Exclusive end: '+FormatDateTime('yyyy-mm-dd hh:nn:ss',Assessment.EndTime)+sLineBreak;
           for Reason := Low(TMobibRuleReason) to High(TMobibRuleReason) do if Reason in Assessment.Reasons then Output := Output+RuleReasonName(Reason)+sLineBreak;
         end else begin
+        ShowMobibRaw := True;
         Calypso := TCalypsoCardReader.Create(nil);
         try
           Calypso.Transport := T; Calypso.Dialect := TCalypsoDialect(Number(R,A,'dialect',0,1));
@@ -613,12 +842,13 @@ begin
             Count := Number(R,A,'kif',1,255); Address := Number(R,A,'kvc',1,255);
             if Number(R,A,'samclass',0,1) = 0 then SamCla := $80 else SamCla := $94;
             if ((I < 2) and (Calypso.Dialect <> cdLegacy94)) or ((I >= 2) and (Calypso.Dialect <> cdIso00)) then Fail;
-            SamTransport := FSamTransport; if SamTransport = nil then SamTransport := TPreflight.Create;
+            SamTransport := FSamTransport; if SamTransport = nil then Fail;
             SamProvider := TCalypsoSamSessionProvider.Create(SamTransport,TCalypsoSessionRevision(I),Id,J,Count,Address,SamCla);
             Calypso.SecureSessionProvider := SamProvider; Calypso.RequireSecureSession := True;
           end;
           if A.Id = 'snapshot' then begin
             ChosenMobibLayout := TMobibLayout(Number(R,A,'layout',0,1));
+            ShowMobibRaw := (ChosenMobibLayout = mlRaw) or (Number(R,A,'raw',0,1) = 1);
             Lines := TStringList.Create;
             try
               Lines.StrictDelimiter := True; Lines.Delimiter := ';'; Lines.DelimitedText := string(Text(R,A,'files'));
@@ -630,26 +860,8 @@ begin
               ParsedMobib := TMobibCodec.Decode(Calypso.ReadMobibFiles(CalypsoIds,N),ChosenMobibLayout);
             finally Lines.Free; end;
             Mobib := ParsedMobib.Raw; Artifact(D,'ticketing-select.bin',Mobib.TicketingSelection);
-            Output := 'Layout matched '+BoolToStr(ParsedMobib.LayoutMatched,True)+sLineBreak;
-            if ParsedMobib.HasNetwork then Output := Output+'Country '+IntToStr(ParsedMobib.CountryCode)+' network '+IntToStr(ParsedMobib.NetworkCode)+sLineBreak;
-            if ParsedMobib.Holder.Present then begin
-              Output := Output+'Holder '+string(ParsedMobib.Holder.Name)+' number '+string(ParsedMobib.Holder.Number)+' gender code '+IntToStr(ParsedMobib.Holder.GenderCode)+sLineBreak;
-              if ParsedMobib.Holder.HasBirthDate then Output := Output+'Birth date '+FormatDateTime('yyyy-mm-dd',ParsedMobib.Holder.BirthDate)+sLineBreak;
-            end;
-            for I := 0 to High(ParsedMobib.Events) do Output := Output+'Event '+IntToStr(ParsedMobib.Events[I].RecordNumber)+' '+FormatDateTime('yyyy-mm-dd',ParsedMobib.Events[I].Date)+' minutes '+IntToStr(ParsedMobib.Events[I].Minutes)+' transport '+IntToStr(ParsedMobib.Events[I].TransportCode)+' location '+IntToStr(ParsedMobib.Events[I].LocationId)+' bus route '+IntToStr(ParsedMobib.Events[I].BusRoute)+' count '+IntToStr(ParsedMobib.Events[I].CouponCount)+sLineBreak;
             Subscriptions := TMobibSubscriptionCodec.DecodeSnapshot(ParsedMobib);
-            for I := 0 to High(Subscriptions) do begin
-              Output := Output+'Contract '+IntToStr(Subscriptions[I].RecordNumber)+' version '+IntToStr(Subscriptions[I].Version)+' layout matched '+BoolToStr(Subscriptions[I].LayoutMatched,True)+sLineBreak;
-              if Subscriptions[I].LayoutMatched then begin
-                Output := Output+'Tariff '+IntToHex(Subscriptions[I].Tariff,4)+' '+Subscriptions[I].ProductName+' price EUR cents '+IntToStr(Subscriptions[I].PriceCents)+' counter use '+IntToStr(Subscriptions[I].CounterUse)+sLineBreak;
-                if Subscriptions[I].HasSaleDate then Output := Output+'Sale '+FormatDateTime('yyyy-mm-dd',Subscriptions[I].SaleDate)+sLineBreak;
-                if Subscriptions[I].HasDuration then Output := Output+'Duration '+IntToStr(Subscriptions[I].DurationValue)+' unit code '+IntToStr(Subscriptions[I].DurationUnitCode)+sLineBreak;
-                if Subscriptions[I].HasRemainingTrips then Output := Output+'Remaining trips '+IntToStr(Subscriptions[I].RemainingTrips)+sLineBreak
-                else if Subscriptions[I].HasCounter then Output := Output+'Raw counter '+IntToStr(Subscriptions[I].Counter)+' (time product)'+sLineBreak;
-              end;
-            end;
-            for I := 0 to High(ParsedMobib.Counters) do Output := Output+'Counter record '+IntToStr(ParsedMobib.Counters[I].RecordNumber)+' slot '+IntToStr(ParsedMobib.Counters[I].Slot)+' value '+IntToStr(ParsedMobib.Counters[I].Value)+sLineBreak;
-            if ParsedMobib.HasContractCount then Output := Output+'Contract count '+IntToStr(ParsedMobib.ContractCount)+sLineBreak;
+            Output := DescribeMobib(ParsedMobib, Subscriptions);
           end else if (A.Id = 'file') or (A.Id = 'samfile') then begin
             Id := Bytes(R,A,'fid'); if (Length(Id) <> 2) or ((Id[0] = 0) and (Id[1] = 0)) then Fail;
             SetLength(Mobib.Files,1); Mobib.Files[0] := Calypso.ReadFile((Word(Id[0]) shl 8) or Id[1],N);
@@ -657,11 +869,10 @@ begin
           end else Fail;
           for I := 0 to High(Mobib.Files) do begin
             TransitFile := Mobib.Files[I];
-            Output := Output+'File '+IntToHex(TransitFile.LogicalId,4)+' SELECT SW='+IntToHex(TransitFile.SelectionStatus,4)+
-              ' last record SW='+IntToHex(TransitFile.LastRecordStatus,4)+' bound reached='+BoolToStr(TransitFile.Truncated,True)+sLineBreak;
+            Output := Output + MobibFileSummary(TransitFile) + sLineBreak;
             Artifact(D,'file-'+IntToHex(TransitFile.LogicalId,4)+'-select.bin',TransitFile.SelectionData);
             for J := 0 to High(TransitFile.Records) do begin
-              Output := Output+'  Record '+IntToStr(TransitFile.Records[J].Number)+': '+BytesToHex(TransitFile.Records[J].Data)+sLineBreak;
+              if ShowMobibRaw then Output := Output+'  Record '+IntToStr(TransitFile.Records[J].Number)+': '+BytesToHex(TransitFile.Records[J].Data)+sLineBreak;
               Artifact(D,'file-'+IntToHex(TransitFile.LogicalId,4)+'-record-'+IntToStr(TransitFile.Records[J].Number)+'.bin',TransitFile.Records[J].Data);
             end;
           end;
@@ -1378,27 +1589,30 @@ begin
   end;
 end;
 
+function TFamilyOperations.TryValidateRequest(const ARequest: TCardDemoRequest;
+  out AError: UnicodeString): Boolean;
+var Selected: TCardFamilyAction;
+begin
+  Result := TryAction(FFamily, ARequest, Selected, AError);
+end;
+
 procedure TFamilyOperations.Run(const ARequest: TCardDemoRequest; var AResult: TCardDemoResult);
 var A: TCardFamilyAction; T: ICardTransport; C: ITwn4ByteChannel;
-  P: TPreflight; Probe: TCardDemoResult; H: ICardFamilyHardware; SamHardware: ICardFamilySamHardware; Validated, SamAcquired: Boolean;
+  Connection, SamConnection: TDeferredConnection;
+  SamOwner: ICardTransport; H: ICardFamilyHardware;
 begin
   A := Action(FFamily,ARequest); AResult := Default(TCardDemoResult); AResult.Operation := cdoFamily;
   if (A.Pcsc and (FFamily <> dfTools)) or (FFamily = dfTwn4) then
   begin
-    P := TPreflight.Create; T := P; C := P; Validated := False; Probe := Default(TCardDemoResult);
-    try Execute(ARequest,A,T,C,Probe);
-    except on E: Exception do
-      if P.ReachedBoundary then Validated := True else raise; end;
-    T := nil; C := nil;
-    if not Validated then raise EInvalidOpException.Create('Component did not reach its acquisition boundary.');
     H := FHardware; if H = nil then H := TNativeHardware.Create;
-    if FFamily = dfTwn4 then C := H.CreateTwn4Channel(string(Text(ARequest,A,'port')))
-    else T := H.AcquireReader(string(ARequest.ReaderName));
-    SamAcquired := False;
+    if FFamily = dfTwn4 then Connection := TDeferredConnection.Create(H,string(Text(ARequest,A,'port')))
+    else Connection := TDeferredConnection.Create(H,string(ARequest.ReaderName));
+    T := Connection; C := Connection; SamConnection := nil;
     try
-      if (FFamily = dfMobib) and (A.Id = 'samfile') then begin
-        if not Supports(H,ICardFamilySamHardware,SamHardware) then Fail;
-        FSamTransport := SamHardware.AcquireSam(string(Text(ARequest,A,'samreader'))); SamAcquired := True;
+      if (FFamily = dfMobib) and (A.Id = 'samfile') then
+      begin
+        SamConnection := TDeferredConnection.Create(H,string(Text(ARequest,A,'samreader')),True);
+        SamOwner := SamConnection; FSamTransport := SamOwner;
       end;
       try Execute(ARequest,A,T,C,AResult);
       except
@@ -1409,17 +1623,19 @@ begin
       end;
     except
       FSamTransport := nil;
-      if SamAcquired then try SamHardware.ReleaseSam; except end;
-      if FFamily <> dfTwn4 then try H.ReleaseReader; except end;
+      if SamConnection <> nil then try SamConnection.Release; except end;
+      try Connection.Release; except end;
       raise;
     end;
     FSamTransport := nil;
-    if SamAcquired then
-      try SamHardware.ReleaseSam;
-      except try H.ReleaseReader; except end; raise; end;
-    if FFamily <> dfTwn4 then
-      try H.ReleaseReader;
-      except if AResult.WriteVerified then AResult.WriteUncertain := True; raise; end;
+    try
+      if SamConnection <> nil then SamConnection.Release;
+    except
+      try Connection.Release; except end;
+      raise;
+    end;
+    try Connection.Release;
+    except if AResult.WriteVerified then AResult.WriteUncertain := True; raise; end;
   end
   else Execute(ARequest,A,nil,nil,AResult);
   AResult.Success := True;

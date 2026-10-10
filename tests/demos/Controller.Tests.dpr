@@ -16,6 +16,11 @@ type
   Calls: Integer;
   procedure Run(const R: TCardDemoRequest; var D: TCardDemoResult);
  end;
+ TValidatedOperations = class(TOperations, ICardDemoRequestValidator)
+  Validations: Integer;
+  Accept: Boolean;
+  function TryValidateRequest(const R: TCardDemoRequest; out ErrorText: UnicodeString): Boolean;
+ end;
  TObserver = class
   BusyCalls, Results, Closes: Integer;
   Busy, FailBusy: Boolean;
@@ -37,6 +42,8 @@ begin
 end;
 procedure TOperations.Run(const R: TCardDemoRequest; var D: TCardDemoResult);
 begin Inc(Calls); D.Operation := R.Operation; D.Text := 'owned card output'; end;
+function TValidatedOperations.TryValidateRequest(const R: TCardDemoRequest; out ErrorText: UnicodeString): Boolean;
+begin Inc(Validations); Result := Accept; ErrorText := 'Select a reader before running this action.'; end;
 procedure TObserver.OnBusy(const V: Boolean);
 begin
  Check(TThread.CurrentThread.ThreadID = Caller,'Busy callback ran on worker');
@@ -118,13 +125,33 @@ begin
   Check((S.Calls = 1) and (O.Results = 0) and (O.Closes = 0),'Destroy failed to join or dispatched callbacks');
  finally O.Free; end;
 end;
+procedure TestInputValidation;
+var S: TSource; P: TValidatedOperations; SI: ICardDemoDeviceSource; PI: ICardDemoOperations;
+ O: TObserver; C: TCardDemoController; R: TCardDemoRequest;
+begin
+ S := TSource.Create; SI := S; P := TValidatedOperations.Create; PI := P;
+ O := TObserver.Create; O.Caller := TThread.CurrentThread.ThreadID;
+ C := TCardDemoController.Create(ddkPcsc,PI,O.OnBusy,O.OnResult,O.OnClose,SI);
+ try
+  R := Default(TCardDemoRequest); R.Operation := cdoFamily;
+  C.StartRequest(R);
+  Check((P.Validations = 1) and (P.Calls = 0) and (S.Calls = 0),'Rejected input touched hardware');
+  Check((O.Results = 1) and (O.BusyCalls = 0) and C.CanClose,'Rejected input created worker');
+  Check((O.Data.ErrorClass = 'EArgumentException') and not O.Data.Success,'Rejected input reported success');
+  Check(O.Data.Text = 'Select a reader before running this action.','Field-specific validation message lost');
+  R.Operation := cdoDemoDevices; C.StartRequest(R); Await(C,O,False);
+  Check((P.Validations = 1) and (S.Calls = 1),'Reader discovery was blocked by input validation');
+  P.Accept := True; R.Operation := cdoFamily; C.StartRequest(R); Await(C,O,False);
+  Check((P.Validations = 2) and (P.Calls = 1) and (O.Results = 3),'Valid retry did not execute once');
+ finally C.Free; O.Free; end;
+end;
 var Kind: TCardDemoDeviceKind;
 begin
  try
   for Kind := Low(TCardDemoDeviceKind) to High(TCardDemoDeviceKind) do begin
    Test(Kind,False,False); Test(Kind,True,False); Test(Kind,False,True);
   end;
-  TestFailedStartAndJoin;
+  TestFailedStartAndJoin; TestInputValidation;
   Writeln('PASS: ',Checks,' nonvisual demo controller assertions.');
  except on E: Exception do begin Writeln(E.ClassName,': ',E.Message); Halt(1); end; end;
 end.

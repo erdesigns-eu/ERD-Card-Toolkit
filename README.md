@@ -337,7 +337,7 @@ and show card offered/removed notifications without running a card operation.
 | `UidProgrammingDemo` | All programmable-UID profiles |
 | `DesfireDemo` | Public/AES/DES/3DES reads, writes and transactions; native application/file create-delete with explicit application key type/count; AES/DES/3DES key/access-policy mutations |
 | `EmvDemo` | PSE/PPSE, PDOL, GPO/AFL records, extra record scan, GET DATA, logs and exports |
-| `MobibDemo` | Calypso/MOBIB files, contracts, SAM authentication and rule assessment |
+| `MobibDemo` | Readable Calypso/MOBIB holder, contract, validation and file summaries; optional raw records, complete exports, SAM authentication and rule assessment |
 | `BelgianEidDemo` | Identity, address, photo, certificates and signatures with export |
 | `IcaoDocumentDemo` | BAC/PACE, DG1/DG2/COM/SOD, JPEG preview and JPEG 2000 export |
 
