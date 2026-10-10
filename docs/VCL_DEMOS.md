@@ -480,8 +480,8 @@ CardCatalogDemo owns a different designer form. Its reader combo is populated by
 native reader arrival/removal events; nothing is preselected. Card-state events
 retain independent ATR snapshots, and Inspect offered card ATR analyzes the latest
 snapshot without connecting or sending application APDUs. Inventory filtering
-works offline even without a PC/SC service. Original source rows and unverified
-issuer-context labels remain visible. Invalid historical ATR/status/AID entries
+works offline even without a PC/SC service. Card descriptions and issuer-context labels remain visible. The UI omits old
+application names, source filenames, commit identifiers and source-row numbers. Invalid historical ATR/status/AID entries
 have been removed. Lookup covers wildcard-index nested EMV paths as well as exact
 identifiers. Refresh explicitly restarts reader observation.
 
