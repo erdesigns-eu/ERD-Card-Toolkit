@@ -1,7 +1,7 @@
 unit ERD.Card.Contactless.Type2.Password;
 
 {$IFDEF FPC}
-  {$MODE DELPHI}
+{$MODE DELPHI}
 {$ENDIF}
 
 interface
@@ -12,7 +12,8 @@ uses
 {$ELSE}
   System.SysUtils, System.Classes,
 {$ENDIF}
-  ERD.Card.Transport, ERD.Card.Contactless, ERD.Card.Contactless.Raw, ERD.Card.Contactless.Type2, ERD.Card.Contactless.Type2.Ndef;
+  ERD.Card.Transport, ERD.Card.Contactless, ERD.Card.Contactless.Raw,
+  ERD.Card.Contactless.Type2, ERD.Card.Contactless.Type2.Ndef;
 
 type
   /// <summary>A dispatched PWD_AUTH was rejected or could not be verified; no remaining attempt budget is inferred.</summary>
@@ -28,6 +29,7 @@ type
     /// <summary>Original failure class, without its potentially sensitive message.</summary>
     property OriginalErrorClass: string read FOriginalErrorClass;
   end;
+
   /// <summary>Stateless password-model validation and bounded user-only FAST_READ commands.</summary>
   TType2PasswordCodec = class
   public
@@ -54,6 +56,7 @@ type
     class function BuildFastReadCommand(const AModel: TType2TagModel;
       const AFirstPage, APageCount: Integer): TBytes; static;
   end;
+
   /// <summary>Owned non-secret configuration pages for one explicit password-capable Type 2 model.</summary>
   TType2AuthenticationConfiguration = record
     /// <summary>Explicit physical model used to acquire this configuration.</summary>
@@ -75,6 +78,7 @@ type
     /// <summary>Independent eight-byte configuration preimage; no stored password or PACK bytes.</summary>
     RawPages: TBytes;
   end;
+
   /// <summary>Nonvisual supplied-password user-memory access for Ultralight EV1 and NTAG210/212/213/215/216.</summary>
   /// <remarks>Construction performs no I/O. Each operation acquires one exclusive raw Type A session,
   /// freshly selects, dispatches PWD_AUTH once, validates PACK, and retains authentication until release.
@@ -87,14 +91,18 @@ type
     FSelectedUid: TBytes;
     procedure SetReader(const AValue: IRawContactlessReader);
     procedure Reactivate(const APassword, APack: TBytes);
-    function Configuration(const AModel: TType2TagModel): TType2AuthenticationConfiguration;
-    function RawPages(const AModel: TType2TagModel; const APage, ACount: Integer): TBytes;
+    function Configuration(const AModel: TType2TagModel)
+      : TType2AuthenticationConfiguration;
+    function RawPages(const AModel: TType2TagModel;
+      const APage, ACount: Integer): TBytes;
     function Memory(const AModel: TType2TagModel): TBytes;
-    procedure ProgramPage(const APage: Byte; const AData: TBytes; var ADispatched: Boolean);
+    procedure ProgramPage(const APage: Byte; const AData: TBytes;
+      var ADispatched: Boolean);
     procedure ReleaseSession(const ASucceeded: Boolean);
     procedure Authenticate(const APassword, AExpectedPack: TBytes);
     procedure AcquireAndAuthenticate(const APassword, AExpectedPack: TBytes);
-    function ReadRange(const AModel: TType2TagModel; const AFirstPage, APageCount: Integer): TBytes;
+    function ReadRange(const AModel: TType2TagModel;
+      const AFirstPage, APageCount: Integer): TBytes;
     procedure RequireAck(const AResponse: TRawRfResponse);
   public
     /// <summary>Creates an inactive component without a raw reader.</summary>
@@ -152,7 +160,8 @@ type
     /// <param name="AExpectedPack">Two expected current PACK bytes.</param>
     /// <returns>Owned configuration after successful session release.</returns>
     function ReadConfiguration(const AModel: TType2TagModel;
-      const APassword, AExpectedPack: TBytes): TType2AuthenticationConfiguration;
+      const APassword, AExpectedPack: TBytes)
+      : TType2AuthenticationConfiguration;
     /// <summary>Changes only AUTH0, PROT and AUTHLIM after exact preimage/lock checks, then verifies fresh authentication and configuration.</summary>
     /// <param name="AModel">Explicit supported physical model.</param>
     /// <param name="AFirstProtectedPage">Explicit AUTH0 byte; no inferred protection boundary.</param>
@@ -164,8 +173,9 @@ type
     /// <returns>Owned verified configuration, preserving CFGLCK, mirror/counter and reserved bits.</returns>
     /// <exception cref="EContactlessWriteUncertain">Any failure after write dispatch; no replay or rollback.</exception>
     function ConfigureAuthenticationVerified(const AModel: TType2TagModel;
-      const AFirstProtectedPage: Byte; const AProtectReads: Boolean; const AAuthenticationLimit: Byte;
-      const AExpectedPages, APassword, AExpectedPack: TBytes): TType2AuthenticationConfiguration;
+      const AFirstProtectedPage: Byte; const AProtectReads: Boolean;
+      const AAuthenticationLimit: Byte; const AExpectedPages, APassword,
+      AExpectedPack: TBytes): TType2AuthenticationConfiguration;
     /// <summary>Writes PACK then PWD once and proves the replacement through fresh same-UID RF authentication.</summary>
     /// <param name="AModel">Explicit supported model; no credential discovery.</param>
     /// <param name="ACurrentPassword">Four current password bytes, copied before I/O.</param>
@@ -175,7 +185,8 @@ type
     /// <returns>True only after fresh PWD_AUTH/PACK proof and successful release; unchanged credentials still receive fresh proof.</returns>
     /// <exception cref="EContactlessWriteUncertain">Any failure after first credential write; stored credentials cannot be read back.</exception>
     function ChangeCredentialsVerified(const AModel: TType2TagModel;
-      const ACurrentPassword, ACurrentPack, ANewPassword, ANewPack: TBytes): Boolean;
+      const ACurrentPassword, ACurrentPack, ANewPassword,
+      ANewPack: TBytes): Boolean;
     /// <summary>Reads one supported 24-bit counter after supplied-password authentication.</summary>
     /// <param name="AModel">Ultralight EV1 48/128 or NTAG213/215/216; NTAG210/212 have no READ_CNT profile.</param>
     /// <param name="ACounter">EV1 counter 0..2; NTAG NFC counter must be 2.</param>
@@ -210,37 +221,45 @@ implementation
 
 uses ERD.Card.Bytes, ERD.Card.Ndef;
 
-const ReadChunkPages = 16;
+const
+  ReadChunkPages = 16;
 
 procedure Fail(const AReason: string);
 begin
-  raise EContactlessError.Create('Type 2 password operation failed: ' + AReason + '.');
+  raise EContactlessError.Create('Type 2 password operation failed: ' +
+    AReason + '.');
 end;
 
 function LastUserPage(const AModel: TType2TagModel): Integer;
 begin
   Result := TType2Layout.LastUserPage(AModel);
-  if AModel = ttmUltralight then raise EType2DataError.Create('Original Ultralight has no PWD_AUTH profile.');
+  if AModel = ttmUltralight then
+    raise EType2DataError.Create
+      ('Original Ultralight has no PWD_AUTH profile.');
 end;
 
 constructor EType2AuthenticationError.Create(const AOriginalErrorClass: string);
 begin
-  inherited Create('Type 2 authentication was not verified; do not blindly repeat the attempt.');
+  inherited Create
+    ('Type 2 authentication was not verified; do not blindly repeat the attempt.');
   FOriginalErrorClass := AOriginalErrorClass;
 end;
 
-class procedure TType2PasswordCodec.ValidateCredentials(const AModel: TType2TagModel;
-  const APassword, AExpectedPack: TBytes);
-var LastPage: Integer;
+class procedure TType2PasswordCodec.ValidateCredentials
+  (const AModel: TType2TagModel; const APassword, AExpectedPack: TBytes);
+var
+  LastPage: Integer;
 begin
   LastPage := LastUserPage(AModel);
-  if (LastPage < Type2FirstUserPage) or (Length(APassword) <> 4) or (Length(AExpectedPack) <> 2) then
+  if (LastPage < Type2FirstUserPage) or (Length(APassword) <> 4) or
+    (Length(AExpectedPack) <> 2) then
     raise EType2DataError.Create('Invalid Type 2 password credential sizes.');
 end;
 
-class procedure TType2PasswordCodec.ValidateUserRange(const AModel: TType2TagModel;
-  const AFirstPage, APageCount: Integer);
-var LastPage: Integer;
+class procedure TType2PasswordCodec.ValidateUserRange
+  (const AModel: TType2TagModel; const AFirstPage, APageCount: Integer);
+var
+  LastPage: Integer;
 begin
   LastPage := LastUserPage(AModel);
   if (AFirstPage < Type2FirstUserPage) or (AFirstPage > LastPage) then
@@ -251,9 +270,10 @@ begin
     raise EType2DataError.Create('Type 2 read range crosses excluded pages.');
 end;
 
-class function TType2PasswordCodec.BuildFastReadCommand(const AModel: TType2TagModel;
-  const AFirstPage, APageCount: Integer): TBytes;
-var Payload: TBytes;
+class function TType2PasswordCodec.BuildFastReadCommand
+  (const AModel: TType2TagModel; const AFirstPage, APageCount: Integer): TBytes;
+var
+  Payload: TBytes;
 begin
   ValidateUserRange(AModel, AFirstPage, APageCount);
   SetLength(Payload, 3);
@@ -271,14 +291,27 @@ end;
 procedure TType2PasswordCardReader.ReleaseSession(const ASucceeded: Boolean);
 begin
   try
-    if ASucceeded then FReader.EndSession else try FReader.EndSession; except end;
-  finally FSelectedUid := nil; FBusy := False; end;
+    if ASucceeded then
+      FReader.EndSession
+    else
+      try
+        FReader.EndSession;
+      except
+      end;
+  finally
+    FSelectedUid := nil;
+    FBusy := False;
+  end;
 end;
 
-procedure TType2PasswordCardReader.Authenticate(const APassword, AExpectedPack: TBytes);
-var Payload, Wire, Pack: TBytes; Response: TRawRfResponse; Dispatched: Boolean;
+procedure TType2PasswordCardReader.Authenticate(const APassword,
+  AExpectedPack: TBytes);
+var
+  Payload, Wire, Pack: TBytes;
+  Response: TRawRfResponse;
+  Dispatched: Boolean;
 begin
-  Response := Default(TRawRfResponse);
+  Response := Default (TRawRfResponse);
   Dispatched := False;
   try
     try
@@ -289,34 +322,51 @@ begin
       Dispatched := True;
       Response := FReader.Exchange(Wire, Length(Wire) * 8);
       Pack := TRawUidCodec.DecodeCrcA(Response, 2);
-      if ((Pack[0] xor AExpectedPack[0]) or (Pack[1] xor AExpectedPack[1])) <> 0 then
+      if ((Pack[0] xor AExpectedPack[0]) or (Pack[1] xor AExpectedPack[1])) <> 0
+      then
         Fail('PACK verification mismatch');
     except
       on E: Exception do
       begin
-        if Dispatched then raise EType2AuthenticationError.Create(E.ClassName);
+        if Dispatched then
+          raise EType2AuthenticationError.Create(E.ClassName);
         raise;
       end;
     end;
   finally
-    if Length(Payload) > 0 then FillChar(Payload[0], Length(Payload), 0);
-    if Length(Wire) > 0 then FillChar(Wire[0], Length(Wire), 0);
-    if Length(Pack) > 0 then FillChar(Pack[0], Length(Pack), 0);
-    if Length(Response.Data) > 0 then FillChar(Response.Data[0], Length(Response.Data), 0);
+    if Length(Payload) > 0 then
+      FillChar(Payload[0], Length(Payload), 0);
+    if Length(Wire) > 0 then
+      FillChar(Wire[0], Length(Wire), 0);
+    if Length(Pack) > 0 then
+      FillChar(Pack[0], Length(Pack), 0);
+    if Length(Response.Data) > 0 then
+      FillChar(Response.Data[0], Length(Response.Data), 0);
   end;
 end;
 
-procedure TType2PasswordCardReader.AcquireAndAuthenticate(const APassword, AExpectedPack: TBytes);
-var Uid: TBytes;
+procedure TType2PasswordCardReader.AcquireAndAuthenticate(const APassword,
+  AExpectedPack: TBytes);
+var
+  Uid: TBytes;
 begin
-  if FBusy then Fail('operation already active');
-  if FReader = nil then Fail('raw reader missing');
+  if FBusy then
+    Fail('operation already active');
+  if FReader = nil then
+    Fail('raw reader missing');
   FBusy := True;
-  try FReader.BeginSession; except FBusy := False; raise; end;
+  try
+    FReader.BeginSession;
+  except
+    FBusy := False;
+    raise;
+  end;
   try
     Uid := FReader.Activate;
-    if Length(Uid) <> 7 then Fail('selected UID must have seven bytes');
-    if Uid[3] = $88 then Fail('selected UID has an invalid cascade position');
+    if Length(Uid) <> 7 then
+      Fail('selected UID must have seven bytes');
+    if Uid[3] = $88 then
+      Fail('selected UID has an invalid cascade position');
     FSelectedUid := CopyBytes(Uid);
     Authenticate(APassword, AExpectedPack);
   except
@@ -327,22 +377,29 @@ end;
 
 function TType2PasswordCardReader.ReadRange(const AModel: TType2TagModel;
   const AFirstPage, APageCount: Integer): TBytes;
-var Wire: TBytes;
+var
+  Wire: TBytes;
 begin
-  Wire := TType2PasswordCodec.BuildFastReadCommand(AModel, AFirstPage, APageCount);
-  Result := TRawUidCodec.DecodeCrcA(FReader.Exchange(Wire, Length(Wire) * 8), APageCount * Type2PageBytes);
+  Wire := TType2PasswordCodec.BuildFastReadCommand(AModel, AFirstPage,
+    APageCount);
+  Result := TRawUidCodec.DecodeCrcA(FReader.Exchange(Wire, Length(Wire) * 8),
+    APageCount * Type2PageBytes);
 end;
 
 procedure TType2PasswordCardReader.RequireAck(const AResponse: TRawRfResponse);
 begin
-  if AResponse.TimedOut or (AResponse.BitCount <> 4) or (Length(AResponse.Data) <> 1) then
+  if AResponse.TimedOut or (AResponse.BitCount <> 4) or
+    (Length(AResponse.Data) <> 1) then
     Fail('missing four-bit write acknowledgment');
-  if (AResponse.Data[0] and $0F) <> $0A then Fail('card denied user-page write');
+  if (AResponse.Data[0] and $0F) <> $0A then
+    Fail('card denied user-page write');
 end;
 
-function TType2PasswordCardReader.ReadUserPage(const AModel: TType2TagModel; const APage: Integer;
-  const APassword, AExpectedPack: TBytes): TBytes;
-var Data: TBytes; Succeeded: Boolean;
+function TType2PasswordCardReader.ReadUserPage(const AModel: TType2TagModel;
+  const APage: Integer; const APassword, AExpectedPack: TBytes): TBytes;
+var
+  Data: TBytes;
+  Succeeded: Boolean;
 begin
   Result := nil;
   TType2PasswordCodec.ValidateCredentials(AModel, APassword, AExpectedPack);
@@ -352,18 +409,24 @@ begin
   try
     Data := ReadRange(AModel, APage, 1);
     Succeeded := True;
-  finally ReleaseSession(Succeeded); end;
+  finally
+    ReleaseSession(Succeeded);
+  end;
   Result := Data;
 end;
 
 function TType2PasswordCardReader.ReadUserMemory(const AModel: TType2TagModel;
   const APassword, AExpectedPack: TBytes): TType2UserMemory;
-var Data: TType2UserMemory; Chunk: TBytes; Page, LastPage, Count, Offset: Integer; Succeeded: Boolean;
+var
+  Data: TType2UserMemory;
+  Chunk: TBytes;
+  Page, LastPage, Count, Offset: Integer;
+  Succeeded: Boolean;
 begin
-  Result := Default(TType2UserMemory);
+  Result := Default (TType2UserMemory);
   TType2PasswordCodec.ValidateCredentials(AModel, APassword, AExpectedPack);
   LastPage := LastUserPage(AModel);
-  Data := Default(TType2UserMemory);
+  Data := Default (TType2UserMemory);
   Data.Model := AModel;
   Data.FirstPage := Type2FirstUserPage;
   Data.PageCount := LastPage - Type2FirstUserPage + 1;
@@ -376,24 +439,30 @@ begin
     while Page <= LastPage do
     begin
       Count := LastPage - Page + 1;
-      if Count > ReadChunkPages then Count := ReadChunkPages;
+      if Count > ReadChunkPages then
+        Count := ReadChunkPages;
       Chunk := ReadRange(AModel, Page, Count);
       Move(Chunk[0], Data.Data[Offset], Length(Chunk));
       Inc(Offset, Length(Chunk));
       Inc(Page, Count);
     end;
     Succeeded := True;
-  finally ReleaseSession(Succeeded); end;
+  finally
+    ReleaseSession(Succeeded);
+  end;
   Result := Data;
 end;
 
-procedure TType2PasswordCardReader.WriteUserPage(const AModel: TType2TagModel; const APage: Integer;
-  const APassword, AExpectedPack, AData: TBytes);
-var Wire, Verified: TBytes; Succeeded, Dispatched: Boolean;
+procedure TType2PasswordCardReader.WriteUserPage(const AModel: TType2TagModel;
+  const APage: Integer; const APassword, AExpectedPack, AData: TBytes);
+var
+  Wire, Verified: TBytes;
+  Succeeded, Dispatched: Boolean;
 begin
   TType2PasswordCodec.ValidateCredentials(AModel, APassword, AExpectedPack);
   TType2PasswordCodec.ValidateUserRange(AModel, APage, 1);
-  if Length(AData) <> Type2PageBytes then raise EType2DataError.Create('Invalid Type 2 page data size.');
+  if Length(AData) <> Type2PageBytes then
+    raise EType2DataError.Create('Invalid Type 2 page data size.');
   SetLength(Wire, 6);
   Wire[0] := $A2;
   Wire[1] := Byte(APage);
@@ -407,206 +476,401 @@ begin
       Dispatched := True;
       RequireAck(FReader.Exchange(Wire, Length(Wire) * 8));
       Verified := ReadRange(AModel, APage, 1);
-      if not BytesEqual(Verified, AData) then Fail('user-page read-back mismatch');
+      if not BytesEqual(Verified, AData) then
+        Fail('user-page read-back mismatch');
       Succeeded := True;
-    finally ReleaseSession(Succeeded); end;
+    finally
+      ReleaseSession(Succeeded);
+    end;
   except
     on E: Exception do
     begin
-      if Dispatched then raise EContactlessWriteUncertain.Create(E.ClassName);
+      if Dispatched then
+        raise EContactlessWriteUncertain.Create(E.ClassName);
       raise;
     end;
   end;
 end;
 
-procedure TType2PasswordCardReader.SetReader(const AValue: IRawContactlessReader);
-begin if FBusy then Fail('operation already active'); FReader := AValue; end;
+procedure TType2PasswordCardReader.SetReader(const AValue
+  : IRawContactlessReader);
+begin
+  if FBusy then
+    Fail('operation already active');
+  FReader := AValue;
+end;
 
 procedure TType2PasswordCardReader.Reactivate(const APassword, APack: TBytes);
-var Uid: TBytes;
+var
+  Uid: TBytes;
 begin
   Uid := FReader.Activate;
-  if not BytesEqual(Uid, FSelectedUid) then Fail('selected card changed');
+  if not BytesEqual(Uid, FSelectedUid) then
+    Fail('selected card changed');
   Authenticate(APassword, APack);
 end;
 
 function ConfigurationPage(const AModel: TType2TagModel): Integer;
-begin LastUserPage(AModel); Result := TType2Layout.PageCount(AModel)-4; end;
-
-function TType2PasswordCardReader.RawPages(const AModel: TType2TagModel; const APage, ACount: Integer): TBytes;
-var Wire: TBytes;
 begin
-  if (APage<0) or (ACount<1) or (ACount>16) or (APage>TType2Layout.PageCount(AModel)-ACount) then Fail('invalid raw range');
-  SetLength(Wire,3); Wire[0]:=$3A; Wire[1]:=APage; Wire[2]:=APage+ACount-1;
-  Wire:=TRawUidCodec.AppendCrcA(Wire);
-  Result:=TRawUidCodec.DecodeCrcA(FReader.Exchange(Wire,Length(Wire)*8),ACount*4);
+  LastUserPage(AModel);
+  Result := TType2Layout.PageCount(AModel) - 4;
 end;
 
-function TType2PasswordCardReader.Configuration(const AModel: TType2TagModel): TType2AuthenticationConfiguration;
+function TType2PasswordCardReader.RawPages(const AModel: TType2TagModel;
+  const APage, ACount: Integer): TBytes;
+var
+  Wire: TBytes;
 begin
-  Result:=Default(TType2AuthenticationConfiguration); Result.Model:=AModel;
-  Result.FirstPage:=ConfigurationPage(AModel); Result.RawPages:=RawPages(AModel,Result.FirstPage,2);
-  Result.FirstProtectedPage:=Result.RawPages[3]; Result.ProtectReads:=(Result.RawPages[4] and $80)<>0;
-  Result.AuthenticationLimit:=Result.RawPages[4] and 7; Result.ConfigurationLocked:=(Result.RawPages[4] and $40)<>0;
-  if AModel in [ttmNtag210,ttmNtag212] then Result.MirrorConfigured:=Result.RawPages[2]>3
-  else if AModel in [ttmNtag213,ttmNtag215,ttmNtag216] then begin
-    Result.MirrorConfigured:=(Result.RawPages[0] and $C0)<>0; Result.NfcCounterEnabled:=(Result.RawPages[4] and $10)<>0;
+  if (APage < 0) or (ACount < 1) or (ACount > 16) or
+    (APage > TType2Layout.PageCount(AModel) - ACount) then
+    Fail('invalid raw range');
+  SetLength(Wire, 3);
+  Wire[0] := $3A;
+  Wire[1] := APage;
+  Wire[2] := APage + ACount - 1;
+  Wire := TRawUidCodec.AppendCrcA(Wire);
+  Result := TRawUidCodec.DecodeCrcA(FReader.Exchange(Wire, Length(Wire) * 8),
+    ACount * 4);
+end;
+
+function TType2PasswordCardReader.Configuration(const AModel: TType2TagModel)
+  : TType2AuthenticationConfiguration;
+begin
+  Result := Default (TType2AuthenticationConfiguration);
+  Result.Model := AModel;
+  Result.FirstPage := ConfigurationPage(AModel);
+  Result.RawPages := RawPages(AModel, Result.FirstPage, 2);
+  Result.FirstProtectedPage := Result.RawPages[3];
+  Result.ProtectReads := (Result.RawPages[4] and $80) <> 0;
+  Result.AuthenticationLimit := Result.RawPages[4] and 7;
+  Result.ConfigurationLocked := (Result.RawPages[4] and $40) <> 0;
+  if AModel in [ttmNtag210, ttmNtag212] then
+    Result.MirrorConfigured := Result.RawPages[2] > 3
+  else if AModel in [ttmNtag213, ttmNtag215, ttmNtag216] then
+  begin
+    Result.MirrorConfigured := (Result.RawPages[0] and $C0) <> 0;
+    Result.NfcCounterEnabled := (Result.RawPages[4] and $10) <> 0;
   end;
 end;
 
 function TType2PasswordCardReader.Memory(const AModel: TType2TagModel): TBytes;
-var Page,Count,Last: Integer; Chunk: TBytes;
+var
+  Page, Count, Last: Integer;
+  Chunk: TBytes;
 begin
-  Result:=nil; Last:=LastUserPage(AModel); SetLength(Result,TType2Layout.UserByteCount(AModel)); Page:=4;
-  while Page<=Last do begin
-    Count:=Last-Page+1; if Count>16 then Count:=16;
-    Chunk:=ReadRange(AModel,Page,Count); Move(Chunk[0],Result[(Page-4)*4],Length(Chunk)); Inc(Page,Count);
+  Result := nil;
+  Last := LastUserPage(AModel);
+  SetLength(Result, TType2Layout.UserByteCount(AModel));
+  Page := 4;
+  while Page <= Last do
+  begin
+    Count := Last - Page + 1;
+    if Count > 16 then
+      Count := 16;
+    Chunk := ReadRange(AModel, Page, Count);
+    Move(Chunk[0], Result[(Page - 4) * 4], Length(Chunk));
+    Inc(Page, Count);
   end;
 end;
 
-procedure TType2PasswordCardReader.ProgramPage(const APage: Byte; const AData: TBytes; var ADispatched: Boolean);
-var Payload,Wire: TBytes;
+procedure TType2PasswordCardReader.ProgramPage(const APage: Byte;
+  const AData: TBytes; var ADispatched: Boolean);
+var
+  Payload, Wire: TBytes;
 begin
-  Payload:=nil; Wire:=nil;
+  Payload := nil;
+  Wire := nil;
   try
-    if Length(AData)<>4 then Fail('invalid page size'); SetLength(Payload,6);
-    Payload[0]:=$A2; Payload[1]:=APage; Move(AData[0],Payload[2],4); Wire:=TRawUidCodec.AppendCrcA(Payload);
-    ADispatched:=True; RequireAck(FReader.Exchange(Wire,Length(Wire)*8));
+    if Length(AData) <> 4 then
+      Fail('invalid page size');
+    SetLength(Payload, 6);
+    Payload[0] := $A2;
+    Payload[1] := APage;
+    Move(AData[0], Payload[2], 4);
+    Wire := TRawUidCodec.AppendCrcA(Payload);
+    ADispatched := True;
+    RequireAck(FReader.Exchange(Wire, Length(Wire) * 8));
   finally
-    if Length(Payload)>0 then FillChar(Payload[0],Length(Payload),0);
-    if Length(Wire)>0 then FillChar(Wire[0],Length(Wire),0);
+    if Length(Payload) > 0 then
+      FillChar(Payload[0], Length(Payload), 0);
+    if Length(Wire) > 0 then
+      FillChar(Wire[0], Length(Wire), 0);
   end;
 end;
 
-function TType2PasswordCardReader.ReadConfiguration(const AModel: TType2TagModel;
-  const APassword, AExpectedPack: TBytes): TType2AuthenticationConfiguration;
-var C: TType2AuthenticationConfiguration; Succeeded: Boolean;
+function TType2PasswordCardReader.ReadConfiguration(const AModel
+  : TType2TagModel; const APassword, AExpectedPack: TBytes)
+  : TType2AuthenticationConfiguration;
+var
+  C: TType2AuthenticationConfiguration;
+  Succeeded: Boolean;
 begin
-  Result:=Default(TType2AuthenticationConfiguration); TType2PasswordCodec.ValidateCredentials(AModel,APassword,AExpectedPack);
-  AcquireAndAuthenticate(APassword,AExpectedPack); Succeeded:=False;
-  try C:=Configuration(AModel); Succeeded:=True; finally ReleaseSession(Succeeded); end; Result:=C;
+  Result := Default (TType2AuthenticationConfiguration);
+  TType2PasswordCodec.ValidateCredentials(AModel, APassword, AExpectedPack);
+  AcquireAndAuthenticate(APassword, AExpectedPack);
+  Succeeded := False;
+  try
+    C := Configuration(AModel);
+    Succeeded := True;
+  finally
+    ReleaseSession(Succeeded);
+  end;
+  Result := C;
 end;
 
-function TType2PasswordCardReader.ConfigureAuthenticationVerified(const AModel: TType2TagModel;
-  const AFirstProtectedPage: Byte; const AProtectReads: Boolean; const AAuthenticationLimit: Byte;
-  const AExpectedPages, APassword, AExpectedPack: TBytes): TType2AuthenticationConfiguration;
-var P,K,Expected,Desired: TBytes; Before,After: TType2AuthenticationConfiguration; Succeeded,Dispatched: Boolean;
+function TType2PasswordCardReader.ConfigureAuthenticationVerified
+  (const AModel: TType2TagModel; const AFirstProtectedPage: Byte;
+  const AProtectReads: Boolean; const AAuthenticationLimit: Byte;
+  const AExpectedPages, APassword, AExpectedPack: TBytes)
+  : TType2AuthenticationConfiguration;
+var
+  P, K, Expected, Desired: TBytes;
+  Before, After: TType2AuthenticationConfiguration;
+  Succeeded, Dispatched: Boolean;
 begin
-  Result:=Default(TType2AuthenticationConfiguration); Dispatched:=False;
-  TType2PasswordCodec.ValidateCredentials(AModel,APassword,AExpectedPack);
-  if (AAuthenticationLimit>7) or (Length(AExpectedPages)<>8) then Fail('invalid configuration input');
-  P:=CopyBytes(APassword); K:=CopyBytes(AExpectedPack); Expected:=CopyBytes(AExpectedPages); Desired:=CopyBytes(Expected);
+  Result := Default (TType2AuthenticationConfiguration);
+  Dispatched := False;
+  TType2PasswordCodec.ValidateCredentials(AModel, APassword, AExpectedPack);
+  if (AAuthenticationLimit > 7) or (Length(AExpectedPages) <> 8) then
+    Fail('invalid configuration input');
+  P := CopyBytes(APassword);
+  K := CopyBytes(AExpectedPack);
+  Expected := CopyBytes(AExpectedPages);
+  Desired := CopyBytes(Expected);
   try
-    Desired[3]:=AFirstProtectedPage; Desired[4]:=(Desired[4] and $78) or AAuthenticationLimit;
-    if AProtectReads then Desired[4]:=Desired[4] or $80;
+    Desired[3] := AFirstProtectedPage;
+    Desired[4] := (Desired[4] and $78) or AAuthenticationLimit;
+    if AProtectReads then
+      Desired[4] := Desired[4] or $80;
     try
-      AcquireAndAuthenticate(P,K); Succeeded:=False;
+      AcquireAndAuthenticate(P, K);
+      Succeeded := False;
       try
-        Before:=Configuration(AModel); if not BytesEqual(Before.RawPages,Expected) then Fail('configuration preimage changed');
-        if not BytesEqual(Expected,Desired) and Before.ConfigurationLocked then Fail('configuration locked');
-        if not BytesEqual(Copy(Expected,4,4),Copy(Desired,4,4)) then ProgramPage(Before.FirstPage+1,Copy(Desired,4,4),Dispatched);
-        if not BytesEqual(Copy(Expected,0,4),Copy(Desired,0,4)) then ProgramPage(Before.FirstPage,Copy(Desired,0,4),Dispatched);
-        Reactivate(P,K); After:=Configuration(AModel);
-        if not BytesEqual(After.RawPages,Desired) then Fail('configuration verification failed'); Succeeded:=True;
-      finally ReleaseSession(Succeeded); end;
-      Result:=After;
-    except on E: Exception do begin if Dispatched then raise EContactlessWriteUncertain.Create(E.ClassName); raise; end; end;
-  finally FillChar(P[0],Length(P),0); FillChar(K[0],Length(K),0); end;
+        Before := Configuration(AModel);
+        if not BytesEqual(Before.RawPages, Expected) then
+          Fail('configuration preimage changed');
+        if not BytesEqual(Expected, Desired) and Before.ConfigurationLocked then
+          Fail('configuration locked');
+        if not BytesEqual(Copy(Expected, 4, 4), Copy(Desired, 4, 4)) then
+          ProgramPage(Before.FirstPage + 1, Copy(Desired, 4, 4), Dispatched);
+        if not BytesEqual(Copy(Expected, 0, 4), Copy(Desired, 0, 4)) then
+          ProgramPage(Before.FirstPage, Copy(Desired, 0, 4), Dispatched);
+        Reactivate(P, K);
+        After := Configuration(AModel);
+        if not BytesEqual(After.RawPages, Desired) then
+          Fail('configuration verification failed');
+        Succeeded := True;
+      finally
+        ReleaseSession(Succeeded);
+      end;
+      Result := After;
+    except
+      on E: Exception do
+      begin
+        if Dispatched then
+          raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    FillChar(P[0], Length(P), 0);
+    FillChar(K[0], Length(K), 0);
+  end;
 end;
 
-function TType2PasswordCardReader.ChangeCredentialsVerified(const AModel: TType2TagModel;
-  const ACurrentPassword, ACurrentPack, ANewPassword, ANewPack: TBytes): Boolean;
-var P,K,NewP,NewK,PackPage: TBytes; Succeeded,Dispatched: Boolean; Page: Integer;
+function TType2PasswordCardReader.ChangeCredentialsVerified
+  (const AModel: TType2TagModel; const ACurrentPassword, ACurrentPack,
+  ANewPassword, ANewPack: TBytes): Boolean;
+var
+  P, K, NewP, NewK, PackPage: TBytes;
+  Succeeded, Dispatched: Boolean;
+  Page: Integer;
 begin
-  Dispatched:=False;
-  TType2PasswordCodec.ValidateCredentials(AModel,ACurrentPassword,ACurrentPack);
-  TType2PasswordCodec.ValidateCredentials(AModel,ANewPassword,ANewPack); Page:=ConfigurationPage(AModel);
-  P:=CopyBytes(ACurrentPassword); K:=CopyBytes(ACurrentPack); NewP:=CopyBytes(ANewPassword); NewK:=CopyBytes(ANewPack);
-  SetLength(PackPage,4); Move(NewK[0],PackPage[0],2);
+  Dispatched := False;
+  TType2PasswordCodec.ValidateCredentials(AModel, ACurrentPassword,
+    ACurrentPack);
+  TType2PasswordCodec.ValidateCredentials(AModel, ANewPassword, ANewPack);
+  Page := ConfigurationPage(AModel);
+  P := CopyBytes(ACurrentPassword);
+  K := CopyBytes(ACurrentPack);
+  NewP := CopyBytes(ANewPassword);
+  NewK := CopyBytes(ANewPack);
+  SetLength(PackPage, 4);
+  Move(NewK[0], PackPage[0], 2);
   try
     try
-      AcquireAndAuthenticate(P,K); Succeeded:=False;
+      AcquireAndAuthenticate(P, K);
+      Succeeded := False;
       try
-        if not BytesEqual(P,NewP) or not BytesEqual(K,NewK) then begin
-          ProgramPage(Page+3,PackPage,Dispatched); ProgramPage(Page+2,NewP,Dispatched);
+        if not BytesEqual(P, NewP) or not BytesEqual(K, NewK) then
+        begin
+          ProgramPage(Page + 3, PackPage, Dispatched);
+          ProgramPage(Page + 2, NewP, Dispatched);
         end;
-        Reactivate(NewP,NewK); Succeeded:=True;
-      finally ReleaseSession(Succeeded); end;
-      Result:=True;
-    except on E: Exception do begin if Dispatched then raise EContactlessWriteUncertain.Create(E.ClassName); raise; end; end;
+        Reactivate(NewP, NewK);
+        Succeeded := True;
+      finally
+        ReleaseSession(Succeeded);
+      end;
+      Result := True;
+    except
+      on E: Exception do
+      begin
+        if Dispatched then
+          raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
   finally
-    FillChar(P[0],Length(P),0); FillChar(K[0],Length(K),0); FillChar(NewP[0],Length(NewP),0);
-    FillChar(NewK[0],Length(NewK),0); FillChar(PackPage[0],Length(PackPage),0);
+    FillChar(P[0], Length(P), 0);
+    FillChar(K[0], Length(K), 0);
+    FillChar(NewP[0], Length(NewP), 0);
+    FillChar(NewK[0], Length(NewK), 0);
+    FillChar(PackPage[0], Length(PackPage), 0);
   end;
 end;
 
-function TType2PasswordCardReader.ReadCounter(const AModel: TType2TagModel; const ACounter: Byte;
-  const APassword, AExpectedPack: TBytes): Cardinal;
-var Wire,Data: TBytes; Succeeded: Boolean; Value: Cardinal;
+function TType2PasswordCardReader.ReadCounter(const AModel: TType2TagModel;
+  const ACounter: Byte; const APassword, AExpectedPack: TBytes): Cardinal;
+var
+  Wire, Data: TBytes;
+  Succeeded: Boolean;
+  Value: Cardinal;
 begin
-  TType2PasswordCodec.ValidateCredentials(AModel,APassword,AExpectedPack);
-  if not (AModel in [ttmUltralightEv1_48,ttmUltralightEv1_128,ttmNtag213,ttmNtag215,ttmNtag216]) or
-    (ACounter>2) or ((AModel in [ttmNtag213,ttmNtag215,ttmNtag216]) and (ACounter<>2)) then Fail('unsupported counter');
-  Wire:=TRawUidCodec.AppendCrcA(TBytes.Create($39,ACounter)); AcquireAndAuthenticate(APassword,AExpectedPack); Succeeded:=False;
+  TType2PasswordCodec.ValidateCredentials(AModel, APassword, AExpectedPack);
+  if not(AModel in [ttmUltralightEv1_48, ttmUltralightEv1_128, ttmNtag213,
+    ttmNtag215, ttmNtag216]) or (ACounter > 2) or
+    ((AModel in [ttmNtag213, ttmNtag215, ttmNtag216]) and (ACounter <> 2)) then
+    Fail('unsupported counter');
+  Wire := TRawUidCodec.AppendCrcA(TBytes.Create($39, ACounter));
+  AcquireAndAuthenticate(APassword, AExpectedPack);
+  Succeeded := False;
   try
-    Data:=TRawUidCodec.DecodeCrcA(FReader.Exchange(Wire,Length(Wire)*8),3);
-    Value:=Cardinal(Data[0]) or (Cardinal(Data[1]) shl 8) or (Cardinal(Data[2]) shl 16); Succeeded:=True;
-  finally ReleaseSession(Succeeded); end; Result:=Value;
+    Data := TRawUidCodec.DecodeCrcA(FReader.Exchange(Wire,
+      Length(Wire) * 8), 3);
+    Value := Cardinal(Data[0]) or (Cardinal(Data[1]) shl 8) or
+      (Cardinal(Data[2]) shl 16);
+    Succeeded := True;
+  finally
+    ReleaseSession(Succeeded);
+  end;
+  Result := Value;
 end;
 
 function TType2PasswordCardReader.ReadNdef(const AModel: TType2TagModel;
   const APassword, AExpectedPack: TBytes): TType2NdefSnapshot;
-var Cc,Data: TBytes; S: TType2NdefSnapshot; Succeeded: Boolean;
+var
+  Cc, Data: TBytes;
+  S: TType2NdefSnapshot;
+  Succeeded: Boolean;
 begin
-  Result:=Default(TType2NdefSnapshot); TType2PasswordCodec.ValidateCredentials(AModel,APassword,AExpectedPack);
-  AcquireAndAuthenticate(APassword,AExpectedPack); Succeeded:=False;
-  try Cc:=RawPages(AModel,3,1); Data:=Memory(AModel); S:=TType2NdefMapping.Decode(AModel,Cc,Data);
-    Succeeded:=True; finally ReleaseSession(Succeeded); end; Result:=S;
+  Result := Default (TType2NdefSnapshot);
+  TType2PasswordCodec.ValidateCredentials(AModel, APassword, AExpectedPack);
+  AcquireAndAuthenticate(APassword, AExpectedPack);
+  Succeeded := False;
+  try
+    Cc := RawPages(AModel, 3, 1);
+    Data := Memory(AModel);
+    S := TType2NdefMapping.Decode(AModel, Cc, Data);
+    Succeeded := True;
+  finally
+    ReleaseSession(Succeeded);
+  end;
+  Result := S;
 end;
 
-function TType2PasswordCardReader.WriteNdefVerified(const AModel: TType2TagModel;
-  const ANdef, APassword, AExpectedPack: TBytes): TType2NdefSnapshot;
-var Cc,Current,Verify,Locks,P,K,Ndef: TBytes; Config: TType2AuthenticationConfiguration;
-  Plan: TType2NdefWritePlan; Snapshot: TType2NdefSnapshot; Succeeded,Dispatched: Boolean;
+function TType2PasswordCardReader.WriteNdefVerified(const AModel
+  : TType2TagModel; const ANdef, APassword, AExpectedPack: TBytes)
+  : TType2NdefSnapshot;
+var
+  Cc, Current, Verify, Locks, P, K, Ndef: TBytes;
+  Config: TType2AuthenticationConfiguration;
+  Plan: TType2NdefWritePlan;
+  Snapshot: TType2NdefSnapshot;
+  Succeeded, Dispatched: Boolean;
   procedure Apply(const Target: TBytes; const Descending: Boolean);
-  var I,PageIndex,Pages: Integer; Data: TBytes;
+  var
+    I, PageIndex, Pages: Integer;
+    Data: TBytes;
   begin
-    Pages:=Length(Current) div 4;
-    for I:=0 to Pages-1 do begin
-      PageIndex:=I; if Descending then PageIndex:=Pages-I-1; Data:=Copy(Target,PageIndex*4,4);
-      if BytesEqual(Data,Copy(Current,PageIndex*4,4)) then Continue;
-      ProgramPage(PageIndex+4,Data,Dispatched);
-      if not BytesEqual(ReadRange(AModel,PageIndex+4,1),Data) then Fail('NDEF page verification failed');
-      Move(Data[0],Current[PageIndex*4],4);
+    Pages := Length(Current) div 4;
+    for I := 0 to Pages - 1 do
+    begin
+      PageIndex := I;
+      if Descending then
+        PageIndex := Pages - I - 1;
+      Data := Copy(Target, PageIndex * 4, 4);
+      if BytesEqual(Data, Copy(Current, PageIndex * 4, 4)) then
+        Continue;
+      ProgramPage(PageIndex + 4, Data, Dispatched);
+      if not BytesEqual(ReadRange(AModel, PageIndex + 4, 1), Data) then
+        Fail('NDEF page verification failed');
+      Move(Data[0], Current[PageIndex * 4], 4);
     end;
   end;
+
 begin
-  Result:=Default(TType2NdefSnapshot); Dispatched:=False;
-  TType2PasswordCodec.ValidateCredentials(AModel,APassword,AExpectedPack);
-  P:=CopyBytes(APassword); K:=CopyBytes(AExpectedPack); Ndef:=CopyBytes(ANdef);
+  Result := Default (TType2NdefSnapshot);
+  Dispatched := False;
+  TType2PasswordCodec.ValidateCredentials(AModel, APassword, AExpectedPack);
+  P := CopyBytes(APassword);
+  K := CopyBytes(AExpectedPack);
+  Ndef := CopyBytes(ANdef);
   try
-    if Length(Ndef)>0 then TNdefCodec.Decode(Ndef);
+    if Length(Ndef) > 0 then
+      TNdefCodec.Decode(Ndef);
     try
-      AcquireAndAuthenticate(P,K); Succeeded:=False;
+      AcquireAndAuthenticate(P, K);
+      Succeeded := False;
       try
-        Config:=Configuration(AModel); if Config.MirrorConfigured then Fail('mirrored memory');
-        Cc:=RawPages(AModel,3,1); Current:=Memory(AModel); Snapshot:=TType2NdefMapping.Decode(AModel,Cc,Current); Plan:=TType2NdefMapping.Prepare(AModel,Cc,Current,Ndef);
-        Locks:=RawPages(AModel,2,1); if ((Locks[2] and $F0)<>0) or (Locks[3]<>0) then Fail('static user locks');
-        if not (AModel in [ttmUltralightEv1_48,ttmNtag210]) then begin
-          Locks:=RawPages(AModel,LastUserPage(AModel)+1,1);
-          if (Locks[0]<>0) or (Locks[1]<>0) or (Locks[2]<>0) then Fail('dynamic user locks');
+        Config := Configuration(AModel);
+        if Config.MirrorConfigured then
+          Fail('mirrored memory');
+        Cc := RawPages(AModel, 3, 1);
+        Current := Memory(AModel);
+        Snapshot := TType2NdefMapping.Decode(AModel, Cc, Current);
+        Plan := TType2NdefMapping.Prepare(AModel, Cc, Current, Ndef);
+        Locks := RawPages(AModel, 2, 1);
+        if ((Locks[2] and $F0) <> 0) or (Locks[3] <> 0) then
+          Fail('static user locks');
+        if not(AModel in [ttmUltralightEv1_48, ttmNtag210]) then
+        begin
+          Locks := RawPages(AModel, LastUserPage(AModel) + 1, 1);
+          if (Locks[0] <> 0) or (Locks[1] <> 0) or (Locks[2] <> 0) then
+            Fail('dynamic user locks');
         end;
-        if not BytesEqual(Snapshot.MessageBytes,Ndef) then begin
-          Apply(Plan.Invalidated,False); Apply(Plan.ShortEmpty,False); Apply(Plan.Prepared,True); Apply(Plan.Committed,False);
-          Verify:=Memory(AModel);
-          if not BytesEqual(Verify,Plan.Committed) then Fail('NDEF full verification failed');
-        end else Verify:=CopyBytes(Current);
-        if not BytesEqual(RawPages(AModel,3,1),Cc) then Fail('NDEF CC verification failed');
-        Snapshot:=TType2NdefMapping.Decode(AModel,Cc,Verify); Succeeded:=True;
-      finally ReleaseSession(Succeeded); end;
-      Result:=Snapshot;
-    except on E: Exception do begin if Dispatched then raise EContactlessWriteUncertain.Create(E.ClassName); raise; end; end;
-  finally FillChar(P[0],Length(P),0); FillChar(K[0],Length(K),0); end;
+        if not BytesEqual(Snapshot.MessageBytes, Ndef) then
+        begin
+          Apply(Plan.Invalidated, False);
+          Apply(Plan.ShortEmpty, False);
+          Apply(Plan.Prepared, True);
+          Apply(Plan.Committed, False);
+          Verify := Memory(AModel);
+          if not BytesEqual(Verify, Plan.Committed) then
+            Fail('NDEF full verification failed');
+        end
+        else
+          Verify := CopyBytes(Current);
+        if not BytesEqual(RawPages(AModel, 3, 1), Cc) then
+          Fail('NDEF CC verification failed');
+        Snapshot := TType2NdefMapping.Decode(AModel, Cc, Verify);
+        Succeeded := True;
+      finally
+        ReleaseSession(Succeeded);
+      end;
+      Result := Snapshot;
+    except
+      on E: Exception do
+      begin
+        if Dispatched then
+          raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    FillChar(P[0], Length(P), 0);
+    FillChar(K[0], Length(K), 0);
+  end;
 end;
 
 end.

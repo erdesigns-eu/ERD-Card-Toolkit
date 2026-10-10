@@ -1,7 +1,7 @@
 unit ERD.Card.Ndef;
 
 {$IFDEF FPC}
-  {$MODE DELPHI}
+{$MODE DELPHI}
 {$ENDIF}
 
 interface
@@ -38,8 +38,8 @@ type
     /// <summary>External domain:type record.</summary>
     ntfExternal,
     /// <summary>Opaque payload without a type field.</summary>
-    ntfUnknown
-  );
+    ntfUnknown);
+
   /// <summary>Logical record with independent buffers when created or decoded by the codec.</summary>
   /// <remarks>Ordinary record assignment shares arrays; clone before modifying an assigned copy.</remarks>
   TNdefRecord = record
@@ -52,8 +52,10 @@ type
     /// <summary>Application payload; chunk framing has been removed.</summary>
     Payload: TBytes;
   end;
+
   /// <summary>Ordered logical records; assignment shares the array and its member buffers.</summary>
   TNdefMessage = array of TNdefRecord;
+
   /// <summary>Transport-independent bounded NDEF framing and chunk reassembly.</summary>
   /// <remarks>Reserved TNF seven is rejected by policy. Encoding uses unchunked records,
   /// shortest payload lengths and omits IL for empty identifiers. RTD semantics are separate.</remarks>
@@ -96,28 +98,38 @@ type
 implementation
 
 procedure Fail;
-begin raise ENdefError.Create('Invalid or unsupported NDEF message.'); end;
+begin
+  raise ENdefError.Create('Invalid or unsupported NDEF message.');
+end;
 
 class procedure TNdefCodec.ValidateRecord(const ARecord: TNdefRecord);
 begin
   if (Ord(ARecord.Tnf) > Ord(ntfUnknown)) or (Ord(ARecord.Tnf) < 0) or
     (Length(ARecord.RecordType) > 255) or (Length(ARecord.Id) > 255) or
-    (Length(ARecord.Payload) > NdefMaxMessageBytes) then Fail;
+    (Length(ARecord.Payload) > NdefMaxMessageBytes) then
+    Fail;
   case ARecord.Tnf of
-    ntfEmpty: if (Length(ARecord.RecordType) <> 0) or (Length(ARecord.Id) <> 0) or
-      (Length(ARecord.Payload) <> 0) then Fail;
-    ntfUnknown: if Length(ARecord.RecordType) <> 0 then Fail;
+    ntfEmpty:
+      if (Length(ARecord.RecordType) <> 0) or (Length(ARecord.Id) <> 0) or
+        (Length(ARecord.Payload) <> 0) then
+        Fail;
+    ntfUnknown:
+      if Length(ARecord.RecordType) <> 0 then
+        Fail;
     ntfWellKnown, ntfMime, ntfAbsoluteUri, ntfExternal:
-      if Length(ARecord.RecordType) = 0 then Fail;
+      if Length(ARecord.RecordType) = 0 then
+        Fail;
   end;
 end;
 
 class function TNdefCodec.NewRecord(const ATnf: TNdefTypeNameFormat;
   const AType, AId, APayload: TBytes): TNdefRecord;
 begin
-  Result := Default(TNdefRecord);
+  Result := Default (TNdefRecord);
   Result.Tnf := ATnf;
-  Result.RecordType := AType; Result.Id := AId; Result.Payload := APayload;
+  Result.RecordType := AType;
+  Result.Id := AId;
+  Result.Payload := APayload;
   ValidateRecord(Result);
   Result.RecordType := CopyBytes(AType);
   Result.Id := CopyBytes(AId);
@@ -125,23 +137,30 @@ begin
 end;
 
 function EncodedMessageSize(const AMessage: TNdefMessage): Integer;
-var I, ItemSize: Integer;
+var
+  I, ItemSize: Integer;
 begin
-  if (Length(AMessage) < 1) or (Length(AMessage) > NdefMaxRecords) then Fail;
+  if (Length(AMessage) < 1) or (Length(AMessage) > NdefMaxRecords) then
+    Fail;
   Result := 0;
   for I := 0 to High(AMessage) do
   begin
     TNdefCodec.ValidateRecord(AMessage[I]);
-    ItemSize := 3 + Length(AMessage[I].RecordType) + Length(AMessage[I].Id) + Length(AMessage[I].Payload);
-    if Length(AMessage[I].Payload) > 255 then Inc(ItemSize, 3);
-    if Length(AMessage[I].Id) > 0 then Inc(ItemSize);
-    if ItemSize > NdefMaxMessageBytes - Result then Fail;
+    ItemSize := 3 + Length(AMessage[I].RecordType) + Length(AMessage[I].Id) +
+      Length(AMessage[I].Payload);
+    if Length(AMessage[I].Payload) > 255 then
+      Inc(ItemSize, 3);
+    if Length(AMessage[I].Id) > 0 then
+      Inc(ItemSize);
+    if ItemSize > NdefMaxMessageBytes - Result then
+      Fail;
     Inc(Result, ItemSize);
   end;
 end;
 
 class function TNdefCodec.Clone(const AMessage: TNdefMessage): TNdefMessage;
-var I: Integer;
+var
+  I: Integer;
 begin
   Result := nil;
   EncodedMessageSize(AMessage);
@@ -152,12 +171,16 @@ begin
 end;
 
 class function TNdefCodec.Encode(const AMessage: TNdefMessage): TBytes;
-var I, P, Size, N: Integer; Flags: Byte;
+var
+  I, P, Size, N: Integer;
+  Flags: Byte;
   procedure Put(const AData: TBytes);
   begin
-    if Length(AData) > 0 then Move(AData[0], Result[P], Length(AData));
+    if Length(AData) > 0 then
+      Move(AData[0], Result[P], Length(AData));
     Inc(P, Length(AData));
   end;
+
 begin
   Result := nil;
   Size := EncodedMessageSize(AMessage);
@@ -167,52 +190,93 @@ begin
   begin
     N := Length(AMessage[I].Payload);
     Flags := Ord(AMessage[I].Tnf);
-    if I = 0 then Flags := Flags or $80;
-    if I = High(AMessage) then Flags := Flags or $40;
-    if N <= 255 then Flags := Flags or $10;
-    if Length(AMessage[I].Id) > 0 then Flags := Flags or $08;
-    Result[P] := Flags; Inc(P);
-    Result[P] := Length(AMessage[I].RecordType); Inc(P);
-    if N <= 255 then begin Result[P] := N; Inc(P); end
+    if I = 0 then
+      Flags := Flags or $80;
+    if I = High(AMessage) then
+      Flags := Flags or $40;
+    if N <= 255 then
+      Flags := Flags or $10;
+    if Length(AMessage[I].Id) > 0 then
+      Flags := Flags or $08;
+    Result[P] := Flags;
+    Inc(P);
+    Result[P] := Length(AMessage[I].RecordType);
+    Inc(P);
+    if N <= 255 then
+    begin
+      Result[P] := N;
+      Inc(P);
+    end
     else
     begin
-      Result[P] := Byte(Cardinal(N) shr 24); Result[P + 1] := Byte(Cardinal(N) shr 16);
-      Result[P + 2] := Byte(Cardinal(N) shr 8); Result[P + 3] := Byte(N and $FF); Inc(P, 4);
+      Result[P] := Byte(Cardinal(N) shr 24);
+      Result[P + 1] := Byte(Cardinal(N) shr 16);
+      Result[P + 2] := Byte(Cardinal(N) shr 8);
+      Result[P + 3] := Byte(N and $FF);
+      Inc(P, 4);
     end;
-    if Length(AMessage[I].Id) > 0 then begin Result[P] := Length(AMessage[I].Id); Inc(P); end;
-    Put(AMessage[I].RecordType); Put(AMessage[I].Id); Put(AMessage[I].Payload);
+    if Length(AMessage[I].Id) > 0 then
+    begin
+      Result[P] := Length(AMessage[I].Id);
+      Inc(P);
+    end;
+    Put(AMessage[I].RecordType);
+    Put(AMessage[I].Id);
+    Put(AMessage[I].Payload);
   end;
 end;
 
 class function TNdefCodec.Decode(const AWire: TBytes;
   const AMaxBytes, AMaxRecords: Integer): TNdefMessage;
-var P, Physical, Count, TypeLen, IdLen, N, Total: Integer;
-  Flags, Tnf: Byte; PayloadLen: Cardinal; InChunk, First, CF, ME, IL: Boolean;
-  Current: TNdefRecord; ChunkData: TBytes;
+var
+  P, Physical, Count, TypeLen, IdLen, N, Total: Integer;
+  Flags, Tnf: Byte;
+  PayloadLen: Cardinal;
+  InChunk, First, CF, ME, IL: Boolean;
+  Current: TNdefRecord;
+  ChunkData: TBytes;
   function TakeByte: Byte;
   begin
-    if P >= Length(AWire) then Fail;
-    Result := AWire[P]; Inc(P);
+    if P >= Length(AWire) then
+      Fail;
+    Result := AWire[P];
+    Inc(P);
   end;
   function Take(const ACount: Integer): TBytes;
   begin
-    if ACount > Length(AWire) - P then Fail;
-    Result := Copy(AWire, P, ACount); Inc(P, ACount);
+    if ACount > Length(AWire) - P then
+      Fail;
+    Result := Copy(AWire, P, ACount);
+    Inc(P, ACount);
   end;
+
 begin
   Result := nil;
-  if (AMaxBytes < 1) or (AMaxBytes > NdefMaxMessageBytes) or
-    (AMaxRecords < 1) or (AMaxRecords > NdefMaxRecords) or
-    (Length(AWire) = 0) or (Length(AWire) > AMaxBytes) then Fail;
-  P := 0; Physical := 0; Count := 0; Total := 0; InChunk := False; First := True;
+  if (AMaxBytes < 1) or (AMaxBytes > NdefMaxMessageBytes) or (AMaxRecords < 1)
+    or (AMaxRecords > NdefMaxRecords) or (Length(AWire) = 0) or
+    (Length(AWire) > AMaxBytes) then
+    Fail;
+  P := 0;
+  Physical := 0;
+  Count := 0;
+  Total := 0;
+  InChunk := False;
+  First := True;
   repeat
-    Inc(Physical); if Physical > NdefMaxChunks then Fail;
-    Flags := TakeByte; Tnf := Flags and 7;
-    CF := (Flags and $20) <> 0; ME := (Flags and $40) <> 0; IL := (Flags and $08) <> 0;
-    if (((Flags and $80) <> 0) <> First) or (CF and ME) or (Tnf = 7) then Fail;
+    Inc(Physical);
+    if Physical > NdefMaxChunks then
+      Fail;
+    Flags := TakeByte;
+    Tnf := Flags and 7;
+    CF := (Flags and $20) <> 0;
+    ME := (Flags and $40) <> 0;
+    IL := (Flags and $08) <> 0;
+    if (((Flags and $80) <> 0) <> First) or (CF and ME) or (Tnf = 7) then
+      Fail;
     First := False;
     TypeLen := TakeByte;
-    if (Flags and $10) <> 0 then PayloadLen := TakeByte
+    if (Flags and $10) <> 0 then
+      PayloadLen := TakeByte
     else
     begin
       PayloadLen := Cardinal(TakeByte) shl 24;
@@ -220,45 +284,64 @@ begin
       PayloadLen := PayloadLen or (Cardinal(TakeByte) shl 8);
       PayloadLen := PayloadLen or Cardinal(TakeByte);
     end;
-    if PayloadLen > Cardinal(Length(AWire) - P) then Fail;
+    if PayloadLen > Cardinal(Length(AWire) - P) then
+      Fail;
     N := Integer(PayloadLen);
-    if IL then IdLen := TakeByte else IdLen := 0;
+    if IL then
+      IdLen := TakeByte
+    else
+      IdLen := 0;
     if InChunk then
     begin
-      if (Tnf <> 6) or IL or (TypeLen <> 0) then Fail;
+      if (Tnf <> 6) or IL or (TypeLen <> 0) then
+        Fail;
     end
     else
     begin
-      if (Tnf = 6) or ((Tnf = 0) and CF) then Fail;
-      Current := Default(TNdefRecord);
+      if (Tnf = 6) or ((Tnf = 0) and CF) then
+        Fail;
+      Current := Default (TNdefRecord);
       Current.Tnf := TNdefTypeNameFormat(Tnf);
-      Current.RecordType := Take(TypeLen); Current.Id := Take(IdLen);
+      Current.RecordType := Take(TypeLen);
+      Current.Id := Take(IdLen);
       Total := 0;
-      if CF then SetLength(ChunkData, Length(AWire));
+      if CF then
+        SetLength(ChunkData, Length(AWire));
     end;
-    if N > Length(AWire) - P then Fail;
+    if N > Length(AWire) - P then
+      Fail;
     if CF or InChunk then
     begin
-      if N > Length(ChunkData) - Total then Fail;
-      if N > 0 then Move(AWire[P], ChunkData[Total], N);
-      Inc(Total, N); Inc(P, N);
-      if not CF then Current.Payload := Copy(ChunkData, 0, Total);
+      if N > Length(ChunkData) - Total then
+        Fail;
+      if N > 0 then
+        Move(AWire[P], ChunkData[Total], N);
+      Inc(Total, N);
+      Inc(P, N);
+      if not CF then
+        Current.Payload := Copy(ChunkData, 0, Total);
     end
-    else Current.Payload := Take(N);
+    else
+      Current.Payload := Take(N);
     if not CF then
     begin
       ValidateRecord(Current);
-      if Count >= AMaxRecords then Fail;
-      SetLength(Result, Count + 1); Result[Count] := Current; Inc(Count);
+      if Count >= AMaxRecords then
+        Fail;
+      SetLength(Result, Count + 1);
+      Result[Count] := Current;
+      Inc(Count);
       ChunkData := nil;
     end;
     InChunk := CF;
     if ME then
     begin
-      if InChunk or (P <> Length(AWire)) then Fail;
+      if InChunk or (P <> Length(AWire)) then
+        Fail;
       Break;
     end;
-    if P = Length(AWire) then Fail;
+    if P = Length(AWire) then
+      Fail;
   until False;
 end;
 

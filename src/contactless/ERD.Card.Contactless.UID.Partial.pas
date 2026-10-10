@@ -1,7 +1,7 @@
 unit ERD.Card.Contactless.UID.Partial;
 
 {$IFDEF FPC}
-  {$MODE DELPHI}
+{$MODE DELPHI}
 {$ENDIF}
 
 interface
@@ -23,8 +23,8 @@ type
     /// <summary>ZUID with zero reserved marker and E0 configuration read; no hidden blocks.</summary>
     pupZuid,
     /// <summary>PFUID with BAFA3585 marker and E1 configuration read; no configuration data is written.</summary>
-    pupPfuid
-  );
+    pupPfuid);
+
   /// <summary>Verified partial-USCUID manufacturer block and unchanged configuration after fresh selection.</summary>
   /// <remarks>Buffers are independent on return; ordinary record assignment shares arrays.</remarks>
   TPartialUscuidUidResult = record
@@ -41,6 +41,7 @@ type
     /// <summary>True on every returned result: fresh selection or a verified no-op reports RequestedUid.</summary>
     ActiveUidVerified: Boolean;
   end;
+
   /// <summary>Explicit partial-USCUID configuration shapes, without full-USCUID personalization interpretation.</summary>
   TPartialUscuidUidCodec = class
   public
@@ -49,7 +50,8 @@ type
     /// <returns>E0 for UFUID/ZUID; E1 for PFUID, followed by block byte00 and CRC-A by the raw programmer.</returns>
     /// <exception cref="EProgrammableUidError">Profile is invalid.</exception>
     /// <remarks>Never probe E1 on another variant: it can start a configuration-write handshake there.</remarks>
-    class function ConfigurationReadCommand(const AProfile: TPartialUscuidProfile): Byte; static;
+    class function ConfigurationReadCommand(const AProfile
+      : TPartialUscuidProfile): Byte; static;
     /// <summary>Validates a documented enabled four-byte partial configuration without modifying it.</summary>
     /// <param name="AProfile">Explicit variant, not automatically inferred from the response.</param>
     /// <param name="AConfiguration">Exactly sixteen caller-owned bytes from the variant's configuration read.</param>
@@ -67,34 +69,52 @@ uses ERD.Card.Bytes;
 
 procedure Invalid;
 begin
-  raise EProgrammableUidError.Create('Invalid or unsupported partial USCUID profile data.');
+  raise EProgrammableUidError.Create
+    ('Invalid or unsupported partial USCUID profile data.');
 end;
 
-class function TPartialUscuidUidCodec.ConfigurationReadCommand(const AProfile: TPartialUscuidProfile): Byte;
+class function TPartialUscuidUidCodec.ConfigurationReadCommand
+  (const AProfile: TPartialUscuidProfile): Byte;
 begin
   case AProfile of
-    pupUnsealedUfuid, pupZuid: Result := $E0;
-    pupPfuid: Result := $E1;
-  else Invalid; Result := 0; end;
+    pupUnsealedUfuid, pupZuid:
+      Result := $E0;
+    pupPfuid:
+      Result := $E1;
+  else
+    Invalid;
+    Result := 0;
+  end;
 end;
 
-class procedure TPartialUscuidUidCodec.ValidateConfiguration(const AProfile: TPartialUscuidProfile;
-  const AConfiguration: TBytes);
-var Expected: TBytes; I: Integer;
+class procedure TPartialUscuidUidCodec.ValidateConfiguration(const AProfile
+  : TPartialUscuidProfile; const AConfiguration: TBytes);
+var
+  Expected: TBytes;
+  I: Integer;
 begin
   case AProfile of
-    pupUnsealedUfuid: Expected := HexToBytes('7AFF000000000000BAFA000000000008');
-    pupZuid: Expected := HexToBytes('7AFF0000000000000000000000000008');
-    pupPfuid: Expected := HexToBytes('7AFF000000000000BAFA358500000008');
-  else Invalid; end;
-  if Length(AConfiguration) <> 16 then Invalid;
+    pupUnsealedUfuid:
+      Expected := HexToBytes('7AFF000000000000BAFA000000000008');
+    pupZuid:
+      Expected := HexToBytes('7AFF0000000000000000000000000008');
+    pupPfuid:
+      Expected := HexToBytes('7AFF000000000000BAFA358500000008');
+  else
+    Invalid;
+  end;
+  if Length(AConfiguration) <> 16 then
+    Invalid;
   for I := 0 to 14 do
     if I in [6, 7] then
     begin
-      if not (AConfiguration[I] in [0, $5A]) then Invalid;
+      if not(AConfiguration[I] in [0, $5A]) then
+        Invalid;
     end
-    else if AConfiguration[I] <> Expected[I] then Invalid;
-  if (AConfiguration[15] and $04) <> 0 then Invalid;
+    else if AConfiguration[I] <> Expected[I] then
+      Invalid;
+  if (AConfiguration[15] and $04) <> 0 then
+    Invalid;
 end;
 
 end.

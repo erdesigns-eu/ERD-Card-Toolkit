@@ -123,34 +123,34 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="rtl.dcp"/>
+        <DCCReference Include="vcl.dcp"/>
+        <DCCReference Include="designide.dcp"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Topaz.pas"/>
-    <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.ACR122.Topaz.pas"/>
-    <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Type1.Ndef.pas"/>
-    <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Felica.pas" />
-        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.ACR122.Felica.pas" />
-        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Type3.Ndef.pas" />
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.ACR122.Topaz.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Type1.Ndef.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Felica.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.ACR122.Felica.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Type3.Ndef.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.UltralightC.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.DESFire.DES.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Crypto.DES.pas"/>
         <DCCReference Include="..\..\src\input\ERD.Card.HID.Monitor.pas"/>
         <DCCReference Include="..\..\src\pcsc\ERD.Card.PCSC.Monitor.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Events.pas"/>
-        <DCCReference Include="rtl.dcp"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Rules.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Subscriptions.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Data.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Calypso.SAM.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Calypso.pas"/>
+        <DCCReference Include="..\..\src\sim\ERD.Card.SIM.Data.pas"/>
+        <DCCReference Include="..\..\src\sim\ERD.Card.SIM.Reader.pas"/>
         <DCCReference Include="..\..\src\readers\ERD.Card.Reader.TWN4.pas"/>
-
         <DCCReference Include="..\..\src\input\ERD.Card.RFID.Input.pas"/>
         <DCCReference Include="..\..\src\input\ERD.Card.HID.pas"/>
         <DCCReference Include="..\..\src\input\ERD.Card.RFID.HID.pas"/>
-
-        <DCCReference Include="vcl.dcp"/>
-        <DCCReference Include="designide.dcp"/>
         <DCCReference Include="..\..\src\core\ERD.Card.APDU.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Bytes.pas"/>
-        <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Rules.pas" />
-        <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Subscriptions.pas" />
-        <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Data.pas" />
-        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Calypso.SAM.pas" />
-        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Calypso.pas" />
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.DESFire.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.DESFire.EV1.pas"/>
@@ -168,8 +168,6 @@
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.UID.USCUID.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Crypto.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Crypto.EAC.pas"/>
-        <DCCReference Include="..\..\src\sim\ERD.Card.SIM.Data.pas"/>
-        <DCCReference Include="..\..\src\sim\ERD.Card.SIM.Reader.pas"/>
         <DCCReference Include="..\..\src\design\ERD.Card.Design.Register.pas"/>
         <DCCReference Include="..\..\src\eid\ERD.Card.EID.Access.pas"/>
         <DCCReference Include="..\..\src\eid\ERD.Card.EID.Data.pas"/>
@@ -182,9 +180,9 @@
         <DCCReference Include="..\..\src\emv\ERD.Card.EMV.Reader.pas"/>
         <DCCReference Include="..\..\src\magstripe\ERD.Card.MagStripe.pas"/>
         <DCCReference Include="..\..\src\magstripe\ERD.Card.MagStripe.Tracks.pas"/>
-        <DCCReference Include="..\..\src\memory\ERD.Card.Memory.Sle4404.pas" />
-        <DCCReference Include="..\..\src\memory\ERD.Card.Memory.Counter.pas" />
-        <DCCReference Include="..\..\src\memory\ERD.Card.Memory.Capabilities.pas" />
+        <DCCReference Include="..\..\src\memory\ERD.Card.Memory.Sle4404.pas"/>
+        <DCCReference Include="..\..\src\memory\ERD.Card.Memory.Counter.pas"/>
+        <DCCReference Include="..\..\src\memory\ERD.Card.Memory.Capabilities.pas"/>
         <DCCReference Include="..\..\src\memory\ERD.Card.Memory.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Ndef.pas"/>
         <DCCReference Include="..\..\src\pcsc\ERD.Card.PCSC.Api.pas"/>
