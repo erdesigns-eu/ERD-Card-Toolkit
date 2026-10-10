@@ -1,5 +1,16 @@
 # Library validation record
 
+## Latest run: Delphi Topaz timer import (2026-10-10)
+
+The supplied RAD Studio 12 Win32 log reports E2003 for GetTickCount64 in the
+ACR122 Topaz adapter. Delphi declares that API in Winapi.Windows, whereas Free
+Pascal exposes it through SysUtils. The adapter now imports Winapi.Windows in
+its Delphi-only implementation uses clause; RF timing and protocol behavior
+are unchanged. The focused Topaz suite passed **26,938 assertions**, all **21
+Pascal readers** passed on the changed unit, and distribution checks passed for
+**39 projects, two groups and 26 DFM forms**. This records the source correction
+and supplemental validation, not a new native Delphi compilation.
+
 ## Latest run: Topaz / Type 1 and reported Delphi diagnostics (2026-10-10)
 
 The complete supplemental runner passed with Topaz 96/512 memory and initialized
