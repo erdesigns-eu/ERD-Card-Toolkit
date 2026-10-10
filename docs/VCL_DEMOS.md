@@ -1,9 +1,10 @@
 # VCL read/write demos
 
-Twenty-five applications demonstrate implemented APIs: SmartCardDemo,
-MagStripeDemo and twenty-four family projects. Each application owns a direct TForm
+Twenty-eight applications demonstrate implemented APIs: SmartCardDemo,
+MagStripeDemo, twenty-four family projects and two independent offline-tool demos. Each application owns a direct TForm
 class and its own designer-editable Main.dfm, including all action inputs and a
-reader dropdown.
+reader dropdown where hardware is involved. EmvCalculatorDemo is fully offline;
+CardCatalogDemo uses native reader/card snapshots rather than card commands.
 Only nonvisual operation, metadata and worker/controller units are shared.
 The complete current/missing coverage is recorded in
 [VCL_COVERAGE.md](VCL_COVERAGE.md).
@@ -46,6 +47,8 @@ that byte-buffer wiping guarantee. Errors display their class, never backend tex
 
 | Project | Actual actions |
 | --- | --- |
+| `emvcalculator/EmvCalculatorDemo.dproj` | All offline key/MAC/AC/ARPC/script/PIN calculations; explicit CVN transaction inputs and verification |
+| `cardcatalog/CardCatalogDemo.dproj` | Filterable complete valid ATR/tag/path/APDU/AID inventories, offline lookup, native reader/card events and offered ATR snapshot |
 | `readertools/ReaderToolsDemo.dproj` | Offline command/response APDU decode/encode, validated ATR/protocol/catalog hints, decoded BER-TLV tree/roundtrip, EMV tag metadata, NDEF roundtrip; PC/SC reader list and connected ATR/protocol |
 | `rfidinput/RfidInputDemo.dproj` | Offline ASCII/hex/decimal identifier inspection and explicit width/order conversion; live foreground keyboard capture; decoding host-provided boot 8-byte, report-ID 9-byte and fixed ASCII reports |
 | `twn4/Twn4Demo.dproj` | Explicit PRS/USB-CDC port, CRC and deadline; version/tag identity, supplied-key Classic block reads/data writes, public Type 2 user-page reads/writes; ID/expected-state/read-back checks |
@@ -460,3 +463,22 @@ The NDEF page decodes records and exports the message; replacement accepts encod
 NDEF hex, with empty input clearing an existing message. The writer preserves CC,
 control/lock/reserved bytes and verifies each phase. See [exact mapping, capacities
 and native CIU protocol](TOPAZ_TYPE1.md). Formatting/permanent locks are excluded.
+
+## Offline EMV and metadata tools
+
+EmvCalculatorDemo owns its own designer form and exposes every calculation in
+[EMV_CALCULATORS.md](EMV_CALCULATORS.md). Select the operation, supply only its
+required inputs, and select an explicit scheme/CVN for profile operations.
+Full profile transaction fields have their own DFM page. No reader is needed.
+Check wrong-length inputs and changed expected AC/ARPC values: calculation errors
+clear output, and mismatched cryptograms return false. Clear inputs removes all
+entered keys/PINs and result text.
+
+CardCatalogDemo owns a different designer form. Its reader combo is populated by
+native reader arrival/removal events; nothing is preselected. Card-state events
+retain independent ATR snapshots, and Inspect offered card ATR analyzes the latest
+snapshot without connecting or sending application APDUs. Inventory filtering
+works offline even without a PC/SC service. Original source rows and unverified
+issuer-context labels remain visible. Invalid historical ATR/status/AID entries
+have been removed. Lookup covers wildcard-index nested EMV paths as well as exact
+identifiers. Refresh explicitly restarts reader observation.

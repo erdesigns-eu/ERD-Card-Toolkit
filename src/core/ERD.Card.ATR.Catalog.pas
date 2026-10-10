@@ -16,7 +16,7 @@ uses
 
 const
   /// <summary>Maximum caller-supplied ATR entries in one bounded catalog.</summary>
-  AtrCatalogMaxEntries = 512;
+  AtrCatalogMaxEntries = 4096;
 
 type
   /// <summary>Invalid catalog metadata, duplicate identifier or masked pattern.</summary>
@@ -26,7 +26,9 @@ type
     /// <summary>Reader-reported protocol family, with masked card-name/checksum positions.</summary>
     ahkFamily,
     /// <summary>Exact documented reader-reported card name, potentially shared by other chips/emulations.</summary>
-    ahkReportedModel);
+    ahkReportedModel,
+    /// <summary>Unverified original CardStudio issuer/country report; not a verified card identity.</summary>
+    ahkHistoricalReport);
 
   /// <summary>One caller-supplied ATR recognition rule, bounded to AtrMaxSize bytes.</summary>
   /// <remarks>Every byte compares (input and Mask) to Pattern. Pattern bits outside Mask must be zero.
@@ -44,6 +46,16 @@ type
     Mask: TBytes;
     /// <summary>Required provenance/document reference, at most 1024 characters.</summary>
     Source: string;
+    /// <summary>Optional historical scheme observation; empty for protocol-only entries.</summary>
+    Scheme: string;
+    /// <summary>Optional historical cardtype observation; empty for protocol-only entries.</summary>
+    CardType: string;
+    /// <summary>Optional historical country observation; empty for protocol-only entries.</summary>
+    Country: string;
+    /// <summary>Optional historical issuer observation; empty for protocol-only entries.</summary>
+    Issuer: string;
+    /// <summary>Optional historical category observation; empty for protocol-only entries.</summary>
+    Category: string;
   end;
 
   /// <summary>Caller-owned array of catalog entry definitions; copied by the catalog constructor.</summary>
@@ -59,6 +71,16 @@ type
     Kind: TAtrHintKind;
     /// <summary>Provenance for assessing the hint.</summary>
     Source: string;
+    /// <summary>Optional historical scheme observation; empty for protocol-only entries.</summary>
+    Scheme: string;
+    /// <summary>Optional historical cardtype observation; empty for protocol-only entries.</summary>
+    CardType: string;
+    /// <summary>Optional historical country observation; empty for protocol-only entries.</summary>
+    Country: string;
+    /// <summary>Optional historical issuer observation; empty for protocol-only entries.</summary>
+    Issuer: string;
+    /// <summary>Optional historical category observation; empty for protocol-only entries.</summary>
+    Category: string;
   end;
 
   /// <summary>All matching hints in catalog order; empty means unknown, never guessed.</summary>
@@ -84,14 +106,15 @@ type
   end;
 
   /// <summary>Creates an owned catalog of ACS 1.09 PC/SC storage-family and documented card-name hints.</summary>
+  /// <param name="AIncludeLegacy">True includes every strictly valid historical report; false selects protocol-only hints.</param>
   /// <returns>Inactive immutable catalog; caller must Free.</returns>
-  /// <remarks>Curated protocol facts, not the legacy issuer database. Classic fingerprints are shared
+  /// <remarks>Historical reports remain explicitly labelled and preserve all issuer/country ambiguities. Classic fingerprints are shared
   /// by Plus/SmartMX emulations; SLIX/SLIX2 also share a fingerprint. All overlapping hints are retained.</remarks>
-function CreateDefaultAtrCatalog: TAtrCatalog;
+function CreateDefaultAtrCatalog(const AIncludeLegacy: Boolean = True): TAtrCatalog;
 
 implementation
 
-uses ERD.Card.Bytes;
+uses ERD.Card.Bytes, ERD.Card.ATR.Legacy;
 
 procedure InvalidCatalog;
 begin
@@ -116,6 +139,10 @@ begin
       (Length(AEntries[I].Source) < 1) or (Length(AEntries[I].Source) > 1024) or
       (Ord(AEntries[I].Kind) < Ord(Low(TAtrHintKind))) or
       (Ord(AEntries[I].Kind) > Ord(High(TAtrHintKind))) then
+      InvalidCatalog;
+    if (Length(AEntries[I].Scheme) > 128) or (Length(AEntries[I].CardType) > 128) or
+      (Length(AEntries[I].Country) > 128) or (Length(AEntries[I].Issuer) > 256) or
+      (Length(AEntries[I].Category) > 256) then
       InvalidCatalog;
     N := Length(AEntries[I].Pattern);
     if (N < 2) or (N > AtrMaxSize) or (Length(AEntries[I].Mask) <> N) then
@@ -165,15 +192,21 @@ begin
       Result[N].Id := FEntries[I].Id;
       Result[N].Description := FEntries[I].Description;
       Result[N].Kind := FEntries[I].Kind;
+      Result[N].Scheme := FEntries[I].Scheme;
+      Result[N].CardType := FEntries[I].CardType;
+      Result[N].Country := FEntries[I].Country;
+      Result[N].Issuer := FEntries[I].Issuer;
+      Result[N].Category := FEntries[I].Category;
       Result[N].Source := FEntries[I].Source;
     end;
   end;
 end;
 
-function CreateDefaultAtrCatalog: TAtrCatalog;
+function CreateDefaultAtrCatalog(const AIncludeLegacy: Boolean): TAtrCatalog;
 var
   E: TAtrCatalogEntries;
-  N: Integer;
+  N, I, J: Integer;
+  Reports: TLegacyAtrReports;
   procedure Exact(const Id, LabelText, Hex: string);
   var
     J: Integer;
@@ -229,6 +262,31 @@ begin
   E[N].Mask[13] := 0;
   E[N].Mask[14] := 0;
   E[N].Mask[19] := 0;
+  if AIncludeLegacy then
+  begin
+    Reports := TLegacyAtrCatalog.GetReports;
+    for I := 0 to High(Reports) do
+      begin
+        N := Length(E);
+        SetLength(E, N + 1);
+        E[N].Id := 'cardstudio-legacy-' + IntToStr(Reports[I].SourceRow);
+        E[N].Kind := ahkHistoricalReport;
+        E[N].Description := Reports[I].Issuer;
+        if E[N].Description = '' then
+          E[N].Description := 'Historical ' + Reports[I].Scheme + ' report';
+        E[N].Source := 'Original CardStudio 01faaef, untATRList.pas, row ' + IntToStr(Reports[I].SourceRow) +
+          '; historical report, not independently verified';
+        E[N].Pattern := HexToBytes(Reports[I].AtrHex);
+        SetLength(E[N].Mask, Length(E[N].Pattern));
+        for J := 0 to High(E[N].Mask) do
+          E[N].Mask[J] := $FF;
+        E[N].Scheme := Reports[I].Scheme;
+        E[N].CardType := Reports[I].CardType;
+        E[N].Country := Reports[I].Country;
+        E[N].Issuer := Reports[I].Issuer;
+        E[N].Category := Reports[I].Category;
+      end;
+  end;
   Result := TAtrCatalog.Create(E);
 end;
 

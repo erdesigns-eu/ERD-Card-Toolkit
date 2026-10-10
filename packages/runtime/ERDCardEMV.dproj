@@ -180,6 +180,9 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="..\..\src\emv\ERD.Card.EMV.Aids.pas"/>
+        <DCCReference Include="..\..\src\emv\ERD.Card.EMV.LegacyTags.pas"/>
+        <DCCReference Include="..\..\src\emv\ERD.Card.EMV.Calculator.pas"/>
         <DCCReference Include="rtl.dcp"/>
         <DCCReference Include="ERDCardCore.dcp"/>
         <DCCReference Include="..\..\src\emv\ERD.Card.EMV.Tags.pas"/>

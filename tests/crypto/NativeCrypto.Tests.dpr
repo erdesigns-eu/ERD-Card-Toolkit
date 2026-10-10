@@ -1,10 +1,10 @@
 ﻿program NativeCryptoTests;
 {$IFDEF FPC}{$MODE DELPHI}{$ENDIF}
-uses SysUtils, ERD.Card.Bytes, ERD.Card.Crypto, ERD.Card.Crypto.DES, ERD.Card.Crypto.Windows;
+uses SysUtils, ERD.Card.Bytes, ERD.Card.Crypto, ERD.Card.Crypto.DES, ERD.Card.Crypto.Hash, ERD.Card.Crypto.Hash.Windows, ERD.Card.Crypto.Windows;
 function test_crypto_live:Integer; cdecl; external 'bcrypt.dll';
 function test_crypto_calls:Integer; cdecl; external 'bcrypt.dll';
 procedure test_crypto_reset(Fail,Wrong:Integer); cdecl; external 'bcrypt.dll';
-var Assertions:Integer; P:ICardAesProvider; Des:ICardDesProvider; Key,Iv,Plain,Data,Original:TBytes;
+var Assertions:Integer; P:ICardAesProvider; Des:ICardDesProvider; Hash:ICardHashProvider; Key,Iv,Plain,Data,Original:TBytes;
   I,Mode:Integer; Failed:Boolean;
 procedure Check(const Condition:Boolean; const Text:string);
 begin Inc(Assertions); if not Condition then raise Exception.Create(Text); end;
@@ -59,6 +59,22 @@ begin
     test_crypto_reset(0,0);Failed:=False;
     try Data:=Des.TripleDesCbc(nil,Iv,Plain,True);except on E:ECardCryptoError do Failed:=True;end;
     Check(Failed and (test_crypto_calls=0),'Invalid DES arguments fail before native calls');
+    Hash := TCardWindowsHashProvider.Create;
+    test_crypto_reset(0,0);
+    Data := Hash.Sha1(HexToBytes('616263'));
+    Check(BytesToHex(Data)='A9993E364706816ABA3E25717850C26C9CD0D89D','Native SHA-1 published abc vector');
+    Check(test_crypto_live=0,'Hash handles released');
+    for I := 1 to 4 do
+    begin
+      test_crypto_reset(I,0);
+      Failed := False;
+      try Data := Hash.Sha1(HexToBytes('616263')); except on ECardCryptoError do Failed := True; end;
+      Check(Failed and (test_crypto_live=0),'Every SHA-1 native failure cleans handles');
+    end;
+    test_crypto_reset(0,0);
+    Data := Hash.Sha1(nil);
+    Check(BytesToHex(Data)='DA39A3EE5E6B4B0D3255BFEF95601890AFD80709','Native SHA-1 empty vector');
+    Check(test_crypto_live=0,'Empty hash handles released');
     Writeln('PASS: ',Assertions,' assertions against Linux native CNG ABI shim.');
   except on E:Exception do begin Writeln(E.ClassName,': ',E.Message); ExitCode:=1; end; end;
 end.

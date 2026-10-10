@@ -22,9 +22,9 @@ int test_crypto_calls(void) { return calls; }
 int32_t BCryptOpenAlgorithmProvider(void **out, const uint16_t *id,
                                    const uint16_t *provider, uint32_t flags) {
     if (tick()) return failure();
-    if (!out || (!wide_equal(id,"AES") && !wide_equal(id,"3DES")) || provider || flags) return failure();
+    if (!out || (!wide_equal(id,"AES") && !wide_equal(id,"3DES") && !wide_equal(id,"SHA1")) || provider || flags) return failure();
     struct algorithm *a=calloc(1,sizeof(*a)); if (!a) return failure();
-    a->marker=0x12345678; a->des=wide_equal(id,"3DES"); *out=a; live++; return 0;
+    a->marker=0x12345678; a->des=wide_equal(id,"SHA1") ? 2 : wide_equal(id,"3DES"); *out=a; live++; return 0;
 }
 int32_t BCryptSetProperty(void *handle, const uint16_t *name, const void *data,
                           uint32_t count, uint32_t flags) {
@@ -85,4 +85,34 @@ int32_t BCryptGenRandom(void *algorithm,void *out,uint32_t count,uint32_t flags)
     if (tick()) return failure();
     if (algorithm || !out || !count || flags!=2 || RAND_bytes(out,(int)count)!=1) return failure();
     return 0;
+}
+
+/* SHA-1 branch used only by explicit EMV Option B derivation tests. */
+struct hash { EVP_MD_CTX *ctx; };
+int32_t BCryptCreateHash(void *algorithm,void **out,void *object,uint32_t object_length,
+                         const void *secret,uint32_t secret_length,uint32_t flags) {
+    if (tick()) return failure();
+    if (!algorithm || ((struct algorithm *)algorithm)->des!=2 || !out || object ||
+        object_length || secret || secret_length || flags) return failure();
+    struct hash *h=calloc(1,sizeof(*h)); if (!h) return failure();
+    h->ctx=EVP_MD_CTX_new();
+    if (!h->ctx || EVP_DigestInit_ex(h->ctx,EVP_sha1(),NULL)!=1) {
+        EVP_MD_CTX_free(h->ctx); free(h); return failure();
+    }
+    *out=h; live++; return 0;
+}
+int32_t BCryptHashData(void *handle,const void *input,uint32_t count,uint32_t flags) {
+    if (tick()) return failure();
+    if (!handle || !input || !count || flags) return failure();
+    return EVP_DigestUpdate(((struct hash *)handle)->ctx,input,count)==1 ? 0 : failure();
+}
+int32_t BCryptFinishHash(void *handle,void *output,uint32_t count,uint32_t flags) {
+    if (tick()) return failure();
+    if (!handle || !output || count!=20 || flags) return failure();
+    unsigned int received=0;
+    return EVP_DigestFinal_ex(((struct hash *)handle)->ctx,output,&received)==1 && received==20 ? 0 : failure();
+}
+int32_t BCryptDestroyHash(void *handle) {
+    int failed=tick(); if (!handle) return failure();
+    struct hash *h=handle; EVP_MD_CTX_free(h->ctx); free(h); live--; return failed ? failure() : 0;
 }

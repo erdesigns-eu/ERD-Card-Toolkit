@@ -35,6 +35,15 @@ requires
   designide;
 
 contains
+  ERD.Card.EMV.Tags in '..\..\src\emv\ERD.Card.EMV.Tags.pas',
+  ERD.Card.ATR.Catalog in '..\..\src\core\ERD.Card.ATR.Catalog.pas',
+  ERD.Card.ATR in '..\..\src\core\ERD.Card.ATR.pas',
+  ERD.Card.EMV.Aids in '..\..\src\emv\ERD.Card.EMV.Aids.pas',
+  ERD.Card.EMV.LegacyTags in '..\..\src\emv\ERD.Card.EMV.LegacyTags.pas',
+  ERD.Card.EMV.Calculator in '..\..\src\emv\ERD.Card.EMV.Calculator.pas',
+  ERD.Card.APDU.Catalog in '..\..\src\core\ERD.Card.APDU.Catalog.pas',
+  ERD.Card.ATR.Legacy in '..\..\src\core\ERD.Card.ATR.Legacy.pas',
+  ERD.Card.Crypto.Hash in '..\..\src\core\ERD.Card.Crypto.Hash.pas',
   ERD.Card.Contactless.Topaz in '..\..\src\contactless\ERD.Card.Contactless.Topaz.pas',
   ERD.Card.Contactless.ACR122.Topaz in '..\..\src\contactless\ERD.Card.Contactless.ACR122.Topaz.pas',
   ERD.Card.Contactless.Type1.Ndef in '..\..\src\contactless\ERD.Card.Contactless.Type1.Ndef.pas',
