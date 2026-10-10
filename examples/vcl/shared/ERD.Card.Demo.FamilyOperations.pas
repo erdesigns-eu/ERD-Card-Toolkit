@@ -68,7 +68,7 @@ uses
 {$ELSE}
   System.SysUtils, System.Classes,
 {$ENDIF}
-  ERD.Card.MOBIB.Rules, ERD.Card.Contactless.Calypso.SAM, ERD.Card.MOBIB.Subscriptions, ERD.Card.MOBIB.Data, ERD.Card.Contactless.Calypso, ERD.Card.EMV.Data, ERD.Card.EMV.Reader, ERD.Card.EID.Data, ERD.Card.EID.Reader,
+  ERD.Card.MOBIB.Rules, ERD.Card.Contactless.Calypso.SAM, ERD.Card.MOBIB.Subscriptions, ERD.Card.MOBIB.Data, ERD.Card.MOBIB.Lookup, ERD.Card.MOBIB.Report, ERD.Card.Contactless.Calypso, ERD.Card.EMV.Data, ERD.Card.EMV.Reader, ERD.Card.EID.Data, ERD.Card.EID.Reader,
   ERD.Card.EID.DocumentReader, ERD.Card.EID.ICAO, ERD.Card.Crypto.EAC, ERD.Card.Crypto.EAC.OpenSSL,
   ERD.Card.EID.Access, ERD.Card.Bytes, ERD.Card.APDU.Catalog, ERD.Card.APDU, ERD.Card.ATR, ERD.Card.ATR.Catalog,
   ERD.Card.TLV, ERD.Card.EMV.Tags, ERD.Card.Ndef, ERD.Card.Ndef.Records,
@@ -166,110 +166,38 @@ begin
   end;
 end;
 
-function MobibFileName(const Id: Word): string;
+function DescribeMobib(const Data: TMobibData; const Subscriptions: TMobibSubscriptions;
+  const Context: TMobibOperatorContext; const ShowPersonal: Boolean): string;
+var Options: TMobibReportOptions;
 begin
-  case Id of
-    $2001: Result := 'Environment';
-    $2002: Result := 'Holder';
-    $2010: Result := 'Validation events';
-    $2020: Result := 'Contracts';
-    $2069: Result := 'Counters';
-    $2050: Result := 'Contract list';
-    $2040: Result := 'Special events';
-    $3F1C: Result := 'Extended holder';
-  else Result := 'File'; end;
+  Options := TMobibReport.DefaultOptions; Options.Context := Context; Options.ShowPersonal := ShowPersonal;
+  Options.HasNow := True; Options.Now := Now;
+  Result := TMobibReport.ToText(TMobibReport.Build(Data, Subscriptions, nil, Options)) +
+    sLineBreak + 'ACQUIRED FILES' + sLineBreak;
 end;
 
-function MobibTransportName(const Code: Byte): string;
+function MobibReportJson(const Data: TMobibData; const Subscriptions: TMobibSubscriptions;
+  const Context: TMobibOperatorContext; const ShowPersonal: Boolean): TBytes;
+var Options: TMobibReportOptions; Json: string; I: Integer;
 begin
-  case Code of
-    0: Result := 'Metro';
-    7: Result := 'Premetro';
-    15: Result := 'Bus';
-    22: Result := 'Tram';
-  else Result := 'Unknown mode (code ' + IntToStr(Code) + ')'; end;
+  Options := TMobibReport.DefaultOptions; Options.Context := Context; Options.ShowPersonal := ShowPersonal;
+  Options.HasNow := True; Options.Now := Now;
+  Json := TMobibReport.ToJson(TMobibReport.Build(Data, Subscriptions, nil, Options));
+  Result := nil; SetLength(Result, Length(Json));
+  for I := 1 to Length(Json) do Result[I-1] := Byte(Ord(Json[I]));
 end;
 
-function MobibTime(const Date: TDateTime; const Minutes: Word): string;
+function MobibArtifactName(const FileData: TCalypsoFile): string;
 begin
-  Result := FormatDateTime('yyyy-mm-dd', Date) + Format(' %2.2d:%2.2d', [Minutes div 60, Minutes mod 60]);
-end;
-
-function DescribeMobib(const Data: TMobibData; const Subscriptions: TMobibSubscriptions): string;
-var Lines: TStringList; I: Integer; S: TMobibSubscription; Counters: string;
-begin
-  Lines := TStringList.Create;
-  try
-    Lines.Add('MOBIB CARD');
-    if Data.LayoutMatched then Lines.Add('Data profile: MOBIB 056/001 (matched)')
-    else Lines.Add('Data profile: no matching semantic layout');
-    if Data.HasNetwork then
-    begin
-      if Data.CountryCode = 56 then Lines.Add('Country: Belgium (056)')
-      else Lines.Add(Format('Country code: %3.3d', [Data.CountryCode]));
-      Lines.Add(Format('Network: %3.3d', [Data.NetworkCode]));
-    end;
-    Lines.Add(''); Lines.Add('HOLDER');
-    if Data.Holder.Present then
-    begin
-      Lines.Add('Name: ' + string(Data.Holder.Name));
-      Lines.Add('Cardholder number: ' + string(Data.Holder.Number));
-      if Data.Holder.HasBirthDate then Lines.Add('Birth date: ' + FormatDateTime('yyyy-mm-dd', Data.Holder.BirthDate));
-      Lines.Add('Gender field: code ' + IntToStr(Data.Holder.GenderCode));
-    end
-    else Lines.Add('Holder details: not available in the decoded records');
-    Lines.Add(''); Lines.Add(Format('CONTRACTS (%d decoded)', [Length(Subscriptions)]));
-    if Data.HasContractCount then Lines.Add('Contract list count: ' + IntToStr(Data.ContractCount));
-    for I := 0 to High(Subscriptions) do
-    begin
-      S := Subscriptions[I]; Lines.Add(''); Lines.Add('Contract ' + IntToStr(S.RecordNumber));
-      if not S.LayoutMatched then
-      begin
-        Lines.Add('Unsupported record layout: version ' + IntToStr(S.Version)); Continue;
-      end;
-      if S.ProductName <> '' then Lines.Add('  Product: ' + S.ProductName)
-      else Lines.Add('  Product: unidentified (tariff 0x' + IntToHex(S.Tariff, 4) + ')');
-      Lines.Add(Format('  Purchase price: EUR %d.%2.2d', [S.PriceCents div 100, S.PriceCents mod 100]));
-      if S.HasSaleDate then Lines.Add('  Purchase date: ' + FormatDateTime('yyyy-mm-dd', S.SaleDate))
-      else Lines.Add('  Purchase date: not recorded');
-      if S.HasDuration then Lines.Add(Format('  Recorded duration: %d (unit code %d; unit not mapped)', [S.DurationValue, S.DurationUnitCode]));
-      if S.HasCounter then
-      begin
-        Lines.Add(Format('  Associated counter: %d (counter-use code %d)', [S.Counter, S.CounterUse]));
-        if S.HasRemainingTrips and (S.ProductName <> '') then Lines.Add('  Remaining trips: ' + IntToStr(S.RemainingTrips));
-      end
-      else Lines.Add('  Associated counter: not acquired');
-    end;
-    if Length(Subscriptions) > 0 then Lines.Add('Validity / activation / zones: not available from these decoded contract fields');
-    Lines.Add(''); Lines.Add(Format('VALIDATIONS (%d decoded)', [Length(Data.Events)]));
-    if Length(Data.Events) = 0 then Lines.Add('No nonempty validation events decoded');
-    for I := 0 to High(Data.Events) do
-    begin
-      Lines.Add(Format('Event %d: %s - %s', [Data.Events[I].RecordNumber,
-        MobibTime(Data.Events[I].Date, Data.Events[I].Minutes), MobibTransportName(Data.Events[I].TransportCode)]));
-      Lines.Add('  First validation: ' + MobibTime(Data.Events[I].FirstDate, Data.Events[I].FirstMinutes));
-      if Data.Events[I].HasLocation then Lines.Add('  Location identifier: ' + IntToStr(Data.Events[I].LocationId));
-      if Data.Events[I].TransportCode = 15 then Lines.Add('  Bus route: ' + IntToStr(Data.Events[I].BusRoute));
-      Lines.Add('  Recorded coupon/count value: ' + IntToStr(Data.Events[I].CouponCount));
-    end;
-    Lines.Add(''); Lines.Add(Format('COUNTERS (%d slots)', [Length(Data.Counters)]));
-    Counters := '';
-    for I := 0 to High(Data.Counters) do
-    begin
-      if I > 0 then Counters := Counters + '; ';
-      Counters := Counters + Format('record %d slot %d = %d',
-        [Data.Counters[I].RecordNumber, Data.Counters[I].Slot, Data.Counters[I].Value]);
-    end;
-    if Counters = '' then Counters := 'No counters acquired';
-    Lines.Add(Counters); Lines.Add(''); Lines.Add('ACQUIRED FILES');
-    Result := Lines.Text;
-  finally Lines.Free; end;
+  Result := 'file-';
+  if (FileData.Folder <> 0) and (FileData.Folder <> $2000) then Result := Result+IntToHex(FileData.Folder,4)+'-';
+  if FileData.BySfi then Result := Result+'sfi'+IntToHex(FileData.Sfi,2) else Result := Result+IntToHex(FileData.LogicalId,4);
 end;
 
 function MobibFileSummary(const FileData: TCalypsoFile): string;
 var I, J, EmptyCount: Integer; Empty: Boolean;
 begin
-  Result := MobibFileName(FileData.LogicalId) + ' (' + IntToHex(FileData.LogicalId, 4) + '): ';
+  Result := TMobibReport.FileLabel(FileData) + ': ';
   if FileData.SelectionStatus <> $9000 then
   begin
     case FileData.SelectionStatus of
@@ -577,7 +505,7 @@ var Hid: TUsbHidReaderWriter; HidHardware: ICardFamilyHidHardware; Devices: THid
   SamCla: Byte;
   SamTransport: ICardTransport; SamProvider: ICalypsoSecureSessionProvider;
   Subscriptions: TMobibSubscriptions;
-  ShowMobibRaw: Boolean;
+  ShowMobibRaw, ShowMobibPersonal: Boolean; MobibContext: TMobibOperatorContext; MobibPlan: TCalypsoFileRefs; MobibJson: TBytes;
   CalypsoIds: array of Word; ChosenMobibLayout: TMobibLayout; ParsedMobib: TMobibData; Calypso: TCalypsoCardReader; Mobib: TMobibSnapshot; TransitFile: TCalypsoFile;
   Emv: TEMVCardReader; Belgian: TBelgianEIDReader; Icao: TICAODocumentReader;
   Directory: TEmvDirectoryData; Application: TEmvApplicationData; ObjectData: TEmvDataObjectResult; Log: TEmvTransactionLogData;
@@ -829,7 +757,7 @@ begin
           if Assessment.HasEnd then Output := Output+'Exclusive end: '+FormatDateTime('yyyy-mm-dd hh:nn:ss',Assessment.EndTime)+sLineBreak;
           for Reason := Low(TMobibRuleReason) to High(TMobibRuleReason) do if Reason in Assessment.Reasons then Output := Output+RuleReasonName(Reason)+sLineBreak;
         end else begin
-        ShowMobibRaw := True;
+        ShowMobibRaw := True; ShowMobibPersonal := True; MobibJson := nil;
         Calypso := TCalypsoCardReader.Create(nil);
         try
           Calypso.Transport := T; Calypso.Dialect := TCalypsoDialect(Number(R,A,'dialect',0,1));
@@ -849,6 +777,10 @@ begin
           if A.Id = 'snapshot' then begin
             ChosenMobibLayout := TMobibLayout(Number(R,A,'layout',0,1));
             ShowMobibRaw := (ChosenMobibLayout = mlRaw) or (Number(R,A,'raw',0,1) = 1);
+            MobibContext := TMobibOperatorContext(Number(R,A,'operator',0,4));
+            ShowMobibPersonal := Number(R,A,'personal',0,1) = 1;
+            Calypso.RecordSizeFromCard := Number(R,A,'recordsize',0,1) = 1;
+            Count := Number(R,A,'plan',0,2); if Count > 0 then Calypso.ApplicationName := '1TIC.ICA';
             Lines := TStringList.Create;
             try
               Lines.StrictDelimiter := True; Lines.Delimiter := ';'; Lines.DelimitedText := string(Text(R,A,'files'));
@@ -857,11 +789,18 @@ begin
                 Id := HexToBytes(Trim(Lines[I])); if Length(Id) <> 2 then Fail;
                 CalypsoIds[I] := (Word(Id[0]) shl 8) or Id[1];
               end;
-              ParsedMobib := TMobibCodec.Decode(Calypso.ReadMobibFiles(CalypsoIds,N),ChosenMobibLayout);
+              if Count = 2 then MobibPlan := TCalypsoCardReader.MobibInventoryPlan
+              else begin
+                SetLength(MobibPlan,Length(CalypsoIds));
+                for I := 0 to High(CalypsoIds) do MobibPlan[I] := TCalypsoCardReader.FileRef(0,CalypsoIds[I]);
+              end;
+              if Count = 0 then ParsedMobib := TMobibCodec.Decode(Calypso.ReadMobibFiles(CalypsoIds,N),ChosenMobibLayout)
+              else ParsedMobib := TMobibCodec.Decode(Calypso.ReadMobibPlan(MobibPlan,N),ChosenMobibLayout);
             finally Lines.Free; end;
             Mobib := ParsedMobib.Raw; Artifact(D,'ticketing-select.bin',Mobib.TicketingSelection);
             Subscriptions := TMobibSubscriptionCodec.DecodeSnapshot(ParsedMobib);
-            Output := DescribeMobib(ParsedMobib, Subscriptions);
+            Output := DescribeMobib(ParsedMobib, Subscriptions, MobibContext, ShowMobibPersonal);
+            MobibJson := MobibReportJson(ParsedMobib, Subscriptions, MobibContext, ShowMobibPersonal);
           end else if (A.Id = 'file') or (A.Id = 'samfile') then begin
             Id := Bytes(R,A,'fid'); if (Length(Id) <> 2) or ((Id[0] = 0) and (Id[1] = 0)) then Fail;
             SetLength(Mobib.Files,1); Mobib.Files[0] := Calypso.ReadFile((Word(Id[0]) shl 8) or Id[1],N);
@@ -870,12 +809,15 @@ begin
           for I := 0 to High(Mobib.Files) do begin
             TransitFile := Mobib.Files[I];
             Output := Output + MobibFileSummary(TransitFile) + sLineBreak;
-            Artifact(D,'file-'+IntToHex(TransitFile.LogicalId,4)+'-select.bin',TransitFile.SelectionData);
+            Artifact(D,MobibArtifactName(TransitFile)+'-select.bin',TransitFile.SelectionData);
             for J := 0 to High(TransitFile.Records) do begin
-              if ShowMobibRaw then Output := Output+'  Record '+IntToStr(TransitFile.Records[J].Number)+': '+BytesToHex(TransitFile.Records[J].Data)+sLineBreak;
-              Artifact(D,'file-'+IntToHex(TransitFile.LogicalId,4)+'-record-'+IntToStr(TransitFile.Records[J].Number)+'.bin',TransitFile.Records[J].Data);
+              if ShowMobibRaw and not ShowMobibPersonal and TMobibReport.IsPersonalFile(TransitFile) then
+                Output := Output+'  Record '+IntToStr(TransitFile.Records[J].Number)+': '+TMobibReport.MaskText+sLineBreak
+              else if ShowMobibRaw then Output := Output+'  Record '+IntToStr(TransitFile.Records[J].Number)+': '+BytesToHex(TransitFile.Records[J].Data)+sLineBreak;
+              Artifact(D,MobibArtifactName(TransitFile)+'-record-'+IntToStr(TransitFile.Records[J].Number)+'.bin',TransitFile.Records[J].Data);
             end;
           end;
+          Artifact(D,'mobib-report.json',MobibJson);
         finally Calypso.Free; end;
         end;
       end;

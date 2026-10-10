@@ -73,6 +73,22 @@ type
     ActSnapshotRawLabel: TLabel;
     /// <summary>Choose readable summary or summary with hexadecimal records.</summary>
     ActSnapshotRawBox: TComboBox;
+    /// <summary>Operator context label.</summary>
+    ActSnapshotOperatorLabel: TLabel;
+    /// <summary>Choose the operator context used for stop and product names; the card does not record it.</summary>
+    ActSnapshotOperatorBox: TComboBox;
+    /// <summary>Personal field display label.</summary>
+    ActSnapshotPersonalLabel: TLabel;
+    /// <summary>Mask personal fields (default) or show them explicitly.</summary>
+    ActSnapshotPersonalBox: TComboBox;
+    /// <summary>Record size label.</summary>
+    ActSnapshotRecordsizeLabel: TLabel;
+    /// <summary>Use the initial expected bytes or the record size reported in each file header.</summary>
+    ActSnapshotRecordsizeBox: TComboBox;
+    /// <summary>Read plan label.</summary>
+    ActSnapshotPlanLabel: TLabel;
+    /// <summary>Choose listed files, listed files after application select, or the bounded MOBIB inventory plan.</summary>
+    ActSnapshotPlanBox: TComboBox;
     /// <summary>Read explicit Calypso logical file page.</summary>
     ActFileTab: TTabSheet;
     /// <summary>Read explicit Calypso logical file inputs.</summary>
@@ -309,13 +325,17 @@ begin
   case ActionPages.ActivePageIndex of
     0:
     begin
-      SetLength(FInputs,6);
+      SetLength(FInputs,10);
       FInputs[0] := ActSnapshotDialectBox;
       FInputs[1] := ActSnapshotLeEdit;
       FInputs[2] := ActSnapshotLimitEdit;
       FInputs[3] := ActSnapshotLayoutBox;
       FInputs[4] := ActSnapshotFilesEdit;
       FInputs[5] := ActSnapshotRawBox;
+      FInputs[6] := ActSnapshotOperatorBox;
+      FInputs[7] := ActSnapshotPersonalBox;
+      FInputs[8] := ActSnapshotRecordsizeBox;
+      FInputs[9] := ActSnapshotPlanBox;
     end;
     1:
     begin

@@ -1373,7 +1373,7 @@ begin
       Result[0].Pcsc := True; Result[0].Mutation := False;
       Result[1].Id := 'file'; Result[1].LabelText := 'Read explicit Calypso logical file';
       Result[1].Pcsc := True; Result[1].Mutation := False;
-      SetLength(Result[0].Fields,6); SetLength(Result[1].Fields,4);
+      SetLength(Result[0].Fields,10); SetLength(Result[1].Fields,4);
       Result[0].Fields[0].Name := 'dialect'; Result[0].Fields[0].LabelText := 'Explicit Calypso dialect';
       Result[0].Fields[0].DefaultText := ''; Result[0].Fields[0].Secret := False; Result[0].Fields[0].Choices := 'Legacy CLA 94 / LFI 00|Revision 3 CLA 00 / path 09';
       Result[0].Fields[1].Name := 'le'; Result[0].Fields[1].LabelText := 'Initial expected record bytes';
@@ -1394,6 +1394,14 @@ begin
       Result[0].Fields[4].DefaultText := '2001;2002;2010;2020;2069;2050;2040;3F1C'; Result[0].Fields[4].Secret := False; Result[0].Fields[4].Choices := '';
       Result[0].Fields[5].Name := 'raw'; Result[0].Fields[5].LabelText := 'Include raw hexadecimal records in output';
       Result[0].Fields[5].DefaultText := '0'; Result[0].Fields[5].Secret := False; Result[0].Fields[5].Choices := 'Summary only|Summary and raw records';
+      Result[0].Fields[6].Name := 'operator'; Result[0].Fields[6].LabelText := 'Operator context (the card does not name the operator)';
+      Result[0].Fields[6].DefaultText := '0'; Result[0].Fields[6].Secret := False; Result[0].Fields[6].Choices := 'Unspecified|STIB-MIVB|De Lijn|TEC|SNCB-NMBS';
+      Result[0].Fields[7].Name := 'personal'; Result[0].Fields[7].LabelText := 'Personal fields (card number, birth date, postal code, holder files)';
+      Result[0].Fields[7].DefaultText := '0'; Result[0].Fields[7].Secret := False; Result[0].Fields[7].Choices := 'Masked|Shown';
+      Result[0].Fields[8].Name := 'recordsize'; Result[0].Fields[8].LabelText := 'Record size';
+      Result[0].Fields[8].DefaultText := '0'; Result[0].Fields[8].Secret := False; Result[0].Fields[8].Choices := 'Use initial expected bytes|Use size reported by card';
+      Result[0].Fields[9].Name := 'plan'; Result[0].Fields[9].LabelText := 'Read plan';
+      Result[0].Fields[9].DefaultText := '0'; Result[0].Fields[9].Secret := False; Result[0].Fields[9].Choices := 'Files listed|Files listed after selecting application 1TIC.ICA|MOBIB inventory plan after selecting application 1TIC.ICA';
       Result[2].Id := 'samfile'; Result[2].LabelText := 'Authenticated Calypso file via provisioned SAM';
       Result[2].Pcsc := True; Result[2].Mutation := False;
       SetLength(Result[2].Fields,11);

@@ -51,7 +51,7 @@ type
   TCalypsoApplicationInfo = record
     /// <summary>True when the selection succeeded and a complete FCI was decoded.</summary>
     Valid: Boolean;
-    /// <summary>SELECT APPLICATION status word; zero when no selection was attempted.</summary>
+    /// <summary>SELECT APPLICATION status word; zero when no selection was attempted, 6A82/6A81 when the name was not found.</summary>
     StatusWord: Word;
     /// <summary>Exact response bytes without status.</summary>
     Response: TBytes;
@@ -328,7 +328,8 @@ type
     /// <summary>Selects an application by DF name and decodes its FCI and startup information.</summary>
     /// <param name="AName">ASCII DF name, 1..16 characters, for example 1TIC.ICA.</param>
     /// <returns>Decoded information; the recommended dialect is not applied.</returns>
-    /// <remarks>Uses ISO SELECT (CLA 00, P1 04). A non-9000 status raises ECalypsoStatusError.</remarks>
+    /// <remarks>Uses ISO SELECT (CLA 00, P1 04). 6A82/6A81 (not found or not supported) return Valid false with StatusWord set;
+    /// 6283 (invalidated) is decoded and keeps its status; any other non-9000 status raises ECalypsoStatusError.</remarks>
     function SelectApplication(const AName: string): TCalypsoApplicationInfo;
     /// <summary>Selects a known logical file and reads public records up to the caller's bound.</summary>
     /// <param name="ALogicalId">Known nonzero logical file identifier in the current application.</param>
@@ -854,7 +855,13 @@ begin
   C.HasLe := True;
   C.Le := 256;
   R := Exchange(C);
-  if R.StatusWord <> $9000 then
+  if (R.StatusWord = $6A82) or (R.StatusWord = $6A81) then
+  begin
+    Result := Default (TCalypsoApplicationInfo);
+    Result.StatusWord := R.StatusWord;
+    Exit;
+  end;
+  if (R.StatusWord <> $9000) and (R.StatusWord <> $6283) then
     raise ECalypsoStatusError.Create(R.StatusWord);
   Result := TCalypsoFci.DecodeApplication(R.Data);
   Result.StatusWord := R.StatusWord;

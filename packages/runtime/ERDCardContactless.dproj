@@ -206,6 +206,7 @@
         <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Brussels.pas" />
         <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Lookup.pas" />
         <DCCReference Include="..\..\src\contactless\ERD.Card.Calypso.Networks.pas" />
+        <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Report.pas" />
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Calypso.SAM.pas" />
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Calypso.pas" />
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.pas"/>

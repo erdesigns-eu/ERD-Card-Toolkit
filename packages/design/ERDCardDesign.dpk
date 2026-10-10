@@ -69,6 +69,7 @@ contains
   ERD.Card.MOBIB.Brussels in '..\..\src\contactless\ERD.Card.MOBIB.Brussels.pas',
   ERD.Card.MOBIB.Lookup in '..\..\src\contactless\ERD.Card.MOBIB.Lookup.pas',
   ERD.Card.Calypso.Networks in '..\..\src\contactless\ERD.Card.Calypso.Networks.pas',
+  ERD.Card.MOBIB.Report in '..\..\src\contactless\ERD.Card.MOBIB.Report.pas',
   ERD.Card.Contactless.Calypso.SAM in '..\..\src\contactless\ERD.Card.Contactless.Calypso.SAM.pas',
   ERD.Card.Contactless.Calypso in '..\..\src\contactless\ERD.Card.Contactless.Calypso.pas',
   ERD.Card.SIM.Data in '..\..\src\sim\ERD.Card.SIM.Data.pas',

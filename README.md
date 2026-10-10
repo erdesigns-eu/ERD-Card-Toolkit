@@ -505,6 +505,7 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 | `ERD.Card.MOBIB.Lookup` | `TMobibLookup` operator context, stop/tariff names and caller CSV tables |
 | `ERD.Card.MOBIB.Brussels` | Bundled STIB-MIVB stop tables (MOBIB Extractor data) |
 | `ERD.Card.Calypso.Networks` | `TCalypsoNetworks` registry: recommends Intercode, Lisboa Viva, Rav-Kav, OPUS, Venezia, Pisa or MOBIB profiles and applies the one you choose |
+| `ERD.Card.MOBIB.Report` | `TMobibReport`: structured MOBIB result tree with confidence labels, text and JSON output; personal fields masked unless explicitly shown |
 | `ERD.Card.Memory` | `TMemoryCardReaderWriter` and memory codec |
 | `ERD.Card.Memory.Capabilities` | ACS memory capability catalog |
 | `ERD.Card.Memory.Counter` | `TSleCounterCardReaderWriter` |
