@@ -1,0 +1,16 @@
+MOBIB Extractor project databases (Database/Metro.csv, Database/Bus.csv)
+Bundled, converted form: src/contactless/ERD.Card.MOBIB.Brussels.pas
+Source: https://github.com/zoobab/mobib-extractor
+
+(c) 2009 MOBIB Extractor project. This software is provided 'as-is',
+without any express or implied warranty. In no event will the authors be held
+liable for any damages arising from the use of this software.
+
+Permission is granted to anyone to use this software for any purpose,
+including commercial applications, and to alter it and redistribute it
+freely, subject to no restriction.
+
+Changes made for this repository: map coordinates were omitted, binary keys
+were converted to integers, the 442 bus rows whose stop code exceeds the
+twelve-bit event field were dropped, and non-ASCII characters are stored as \uXXXX
+escapes that the lookup unit decodes at run time.
