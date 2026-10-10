@@ -111,7 +111,6 @@ var
   I, J, Tag, Size, Total, Posn, N, Offset, Count: Integer;
   Header, Applet, L: TBytes;
 begin
-  Result := nil;
   if (Length(AComponents) < 8) or (Length(AComponents) > 12) then Invalid;
   Total := 0;
   for I := 1 to 12 do Parts[I] := nil;
@@ -228,7 +227,6 @@ var
   Name, Prefix, FoundPrefix: string;
   Bytes: TBytes;
 begin
-  Result := nil;
   Source := TFileStream.Create(AFileName, fmOpenRead or fmShareDenyWrite);
   try
     if Source.Size > GpMaxCapBytes * 4 then Invalid;
