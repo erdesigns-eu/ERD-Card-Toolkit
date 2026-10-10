@@ -12,13 +12,13 @@ type
     /// <summary>EMV data object label.</summary>
     TagLabel: TLabel;
 
-    /// <summary>Explicit AIP/AUC/TVR/IAC/CVM List tag.</summary>
+    /// <summary>Explicit AIP/AUC/TVR/IAC/CVM or terminal-capability tag.</summary>
     TagBox: TComboBox;
 
     /// <summary>Specification version label.</summary>
     VersionLabel: TLabel;
 
-    /// <summary>Explicit EMV Book 3 4.3 or 4.4.</summary>
+    /// <summary>Explicit EMV 4.3 or 4.4 for Book 3/4 allocations.</summary>
     VersionBox: TComboBox;
 
     /// <summary>Raw hexadecimal value label.</summary>
@@ -83,7 +83,9 @@ end;
 procedure TEmvSemanticsDemoForm.TagChanged(Sender: TObject);
 begin
   OutputMemo.Clear;
-  HelpMemo.Text := 'Select Book 3 version explicitly. Contactless-reserved bits require a kernel specification. IAC bits are issuer policy criteria, not observed failures. CVM amounts are binary application-currency thresholds; rules are decoded without execution.';
+  ShowUnsetCheck.Enabled := not (TagBox.ItemIndex in [6, 7]);
+  ShowReservedCheck.Enabled := ShowUnsetCheck.Enabled;
+  HelpMemo.Text := 'Select EMV version explicitly. Contactless-reserved bits require a kernel specification. IAC bits are issuer policy criteria, not observed failures. CVM amounts are binary application-currency thresholds; rules are decoded without execution. CVM Results are terminal-reported outcomes; capabilities describe terminal support, not card features.';
 end;
 
 procedure TEmvSemanticsDemoForm.ExampleClick(Sender: TObject);
@@ -94,24 +96,30 @@ begin
     2: ValueEdit.Text := '0080040800';
     3..5: ValueEdit.Text := '8000000000';
     6: ValueEdit.Text := '00000064000003E842031F00';
+    7: ValueEdit.Text := '420300';
+    8: ValueEdit.Text := 'E0F8C8';
+    9: ValueEdit.Text := 'FF80F0F301';
   end;
   OutputMemo.Clear;
 end;
 
 procedure TEmvSemanticsDemoForm.DecodeClick(Sender: TObject);
 const
-  Tags: array[0..5] of Cardinal = ($82, $9F07, $95, $9F0D, $9F0E, $9F0F);
+  Tags: array[0..9] of Cardinal = ($82, $9F07, $95, $9F0D, $9F0E, $9F0F,
+    $8E, $9F34, $9F33, $9F40);
 var
   Data: TBytes;
   Bits: TEmvBitMeanings;
   List: TEmvCvmList;
+  CvmResult: TEmvCvmResult;
   Version: TEmvSemanticVersion;
   I: Integer;
   Marker: string;
 begin
   OutputMemo.Clear;
   try
-    if (TagBox.ItemIndex < 0) or (VersionBox.ItemIndex < 0) then
+    if (TagBox.ItemIndex < 0) or (TagBox.ItemIndex > High(Tags)) or
+      (VersionBox.ItemIndex < 0) or (VersionBox.ItemIndex > Ord(High(TEmvSemanticVersion))) then
       raise EEmvSemanticError.Create('Choose a tag and version.');
     Version := TEmvSemanticVersion(VersionBox.ItemIndex);
     Data := HexToBytes(ValueEdit.Text, True);
@@ -128,6 +136,19 @@ begin
           [IntToHex(List.Rules[I].RawMethod, 2), IntToHex(List.Rules[I].Condition, 2),
            BoolToStr(List.Rules[I].ContinueOnFailure, True), BoolToStr(List.Rules[I].ReservedBitSet, True)]));
       end;
+    end
+    else if TagBox.ItemIndex = 7 then
+    begin
+      CvmResult := TEmvSemanticCodec.DecodeCvmResults(Data, Version);
+      OutputMemo.Lines.Add('CVM performed: ' + CvmResult.Rule.MethodMeaning);
+      OutputMemo.Lines.Add('Condition: ' + CvmResult.Rule.ConditionMeaning);
+      OutputMemo.Lines.Add('Reported result: ' + CvmResult.ResultMeaning);
+      OutputMemo.Lines.Add(Format('Raw method %s; condition %s; result %s',
+        [IntToHex(CvmResult.Rule.RawMethod, 2), IntToHex(CvmResult.Rule.Condition, 2),
+         IntToHex(CvmResult.ResultCode, 2)]));
+      OutputMemo.Lines.Add('No CVM performed: ' + BoolToStr(CvmResult.NoCvmPerformed, True));
+      OutputMemo.Lines.Add('Continue on failure flag: ' + BoolToStr(CvmResult.Rule.ContinueOnFailure, True));
+      OutputMemo.Lines.Add('Reserved method bit: ' + BoolToStr(CvmResult.Rule.ReservedBitSet, True));
     end
     else
     begin

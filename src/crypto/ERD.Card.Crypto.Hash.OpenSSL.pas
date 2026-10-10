@@ -39,9 +39,9 @@ begin
 end;
 
 function TCardOpenSSLHashProvider.Sha1(const AData: TBytes): TBytes;
+{$IFDEF LINUX}
 var
   Input: Pointer;
-{$IFDEF LINUX}
   Count: NativeUInt;
 {$ENDIF}
 
@@ -49,9 +49,11 @@ begin
   Result := nil;
   if Length(AData) > 1048576 then
     HashError;
+{$IFDEF LINUX}
   Input := nil;
   if Length(AData) > 0 then
     Input := @AData[0];
+{$ENDIF}
   SetLength(Result, 20);
   try
 {$IFDEF LINUX}

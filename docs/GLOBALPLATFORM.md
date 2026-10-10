@@ -175,9 +175,24 @@ It discovers readers through native events and captures one background request
 per click. Each action selects/authenticates and closes its own session. Key
 inputs are masked and copied into the existing worker's cleared credential
 buffers. Authentication/management requires per-action acknowledgement. LOAD
-progress is collected by the worker and displayed with its completed result;
-reader/card presence remains event-driven. No live form controls are accessed
+progress is published through a locked, single-snapshot channel. The form's
+existing completion timer displays confirmed bytes, acknowledged block count and
+percentage while the worker is running; it never polls hardware. Counts include
+DAP blocks and C4 framing. Failed/uncertain operations retain the last confirmed
+counts, and a full progress bar does not hide a later cleanup failure.
+Reader/card presence remains event-driven. No live form controls are accessed
 from the worker. Close is deferred while an operation owns the card.
+
+The designer-owned **Inspect CAP** button works without a selected reader,
+authentication or card connection. Choosing a CAP file also opens this local
+preview: archive size, package AID, every applet AID (or zero for libraries), raw
+load-file size and C4-framed size excluding separately supplied DAP blocks.
+The worker validates the archive again for the actual load/install request;
+previewing a file does not authorize or perform any card mutation.
+
+Headless demo tests exercise 4,096 concurrent progress updates, atomic snapshots,
+invalid-update refusal, retained final state and preservation of structured card
+failures through the shared worker.
 
 Committed independent Python/cryptography transcripts cover **154 sessions and
 1,232 protected exchanges**, including all supported command/response protection

@@ -10,13 +10,42 @@ uses
 {$IFDEF FPC}
   SysUtils, Classes,
 {$ELSE}
-  System.SysUtils, System.Classes,
+  System.SysUtils, System.Classes, System.SyncObjs,
 {$ENDIF}
   ERD.Card.Demo.Job;
 
+type
+  /// <summary>Latest confirmed LOAD state, copied atomically between worker and form.</summary>
+  TCardGpDemoProgress = record
+    /// <summary>Bytes acknowledged by the card, including DAP blocks and C4 framing.</summary>
+    AcknowledgedBytes: Integer;
+    /// <summary>Complete LOAD payload byte count; zero before the first acknowledged block.</summary>
+    TotalBytes: Integer;
+    /// <summary>Number of successfully acknowledged LOAD blocks, not attempted blocks.</summary>
+    AcknowledgedBlocks: Integer;
+  end;
+
+  /// <summary>Bounded one-snapshot progress channel; contains no UI pointers or queued callbacks.</summary>
+  ICardGpDemoProgress = interface
+    ['{52635839-1D4F-4AC7-9589-F61A2A76F9D7}']
+    /// <summary>Copies the latest confirmed progress under a lock without waiting for hardware.</summary>
+    /// <returns>Zero-initialized state until the first confirmed block.</returns>
+    function ReadSnapshot: TCardGpDemoProgress;
+    /// <summary>Publishes one newly acknowledged LOAD block from the worker.</summary>
+    /// <param name="ADone">Strictly increasing positive acknowledged byte count.</param>
+    /// <param name="ATotal">Constant positive total for this single-request channel.</param>
+    /// <exception cref="EArgumentException">Non-monotonic, inconsistent or out-of-range input.</exception>
+    procedure Publish(const ADone, ATotal: Integer);
+  end;
+
+/// <summary>Creates a fresh thread-safe progress channel for one CAP upload.</summary>
+/// <returns>Retained channel; may outlive the worker without retaining forms or card connections.</returns>
+function CreateGlobalPlatformDemoProgress: ICardGpDemoProgress;
+
 /// <summary>Creates a nonvisual single-request GP executor for the independent designer demo.</summary>
+/// <param name="AProgress">Optional fresh channel for acknowledged LOAD blocks; no UI callback.</param>
 /// <returns>Retained worker operations; no hardware or crypto library opened until Run.</returns>
-function CreateGlobalPlatformDemoOperations: ICardDemoOperations;
+function CreateGlobalPlatformDemoOperations(const AProgress: ICardGpDemoProgress = nil): ICardDemoOperations;
 
 implementation
 
@@ -32,16 +61,95 @@ uses
 {$ENDIF}
 
 type
+  TGpDemoProgress = class(TInterfacedObject, ICardGpDemoProgress)
+  private
+    FLock: TCardDemoLock;
+    FSnapshot: TCardGpDemoProgress;
+    procedure Lock;
+    procedure Unlock;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    function ReadSnapshot: TCardGpDemoProgress;
+    procedure Publish(const ADone, ATotal: Integer);
+  end;
+
   TGpDemoOperations = class(TInterfacedObject, ICardDemoOperations)
   private
     FLog: TStringList;
+    FProgress: ICardGpDemoProgress;
     procedure Progress(Sender: TObject; const Done, Total: Integer);
   public
+    constructor Create(const AProgress: ICardGpDemoProgress);
     procedure Run(const ARequest: TCardDemoRequest; var AResult: TCardDemoResult);
   end;
 
+constructor TGpDemoProgress.Create;
+begin
+  inherited Create;
+{$IFDEF FPC}
+  InitCriticalSection(FLock);
+{$ELSE}
+  FLock := TCriticalSection.Create;
+{$ENDIF}
+end;
+
+destructor TGpDemoProgress.Destroy;
+begin
+{$IFDEF FPC}
+  DoneCriticalSection(FLock);
+{$ELSE}
+  FLock.Free;
+{$ENDIF}
+  inherited Destroy;
+end;
+
+procedure TGpDemoProgress.Lock;
+begin
+{$IFDEF FPC}
+  EnterCriticalSection(FLock);
+{$ELSE}
+  FLock.Acquire;
+{$ENDIF}
+end;
+
+procedure TGpDemoProgress.Unlock;
+begin
+{$IFDEF FPC}
+  LeaveCriticalSection(FLock);
+{$ELSE}
+  FLock.Release;
+{$ENDIF}
+end;
+
+function TGpDemoProgress.ReadSnapshot: TCardGpDemoProgress;
+begin
+  Lock;
+  try Result := FSnapshot;
+  finally Unlock; end;
+end;
+
+procedure TGpDemoProgress.Publish(const ADone, ATotal: Integer);
+begin
+  Lock;
+  try
+    if (ADone <= FSnapshot.AcknowledgedBytes) or (ATotal < ADone) or
+      ((FSnapshot.TotalBytes <> 0) and (FSnapshot.TotalBytes <> ATotal)) then
+      raise EArgumentException.Create('Invalid acknowledged LOAD progress.');
+    FSnapshot.AcknowledgedBytes := ADone; FSnapshot.TotalBytes := ATotal;
+    Inc(FSnapshot.AcknowledgedBlocks);
+  finally Unlock; end;
+end;
+
+constructor TGpDemoOperations.Create(const AProgress: ICardGpDemoProgress);
+begin
+  inherited Create;
+  FProgress := AProgress;
+end;
+
 procedure TGpDemoOperations.Progress(Sender: TObject; const Done, Total: Integer);
 begin
+  if FProgress <> nil then FProgress.Publish(Done, Total);
   FLog.Add(Format('Acknowledged LOAD: %d / %d bytes', [Done, Total]));
 end;
 
@@ -59,6 +167,7 @@ var
   Hash: ICardHashProvider;
   Rsa: ICardRsaProvider;
   KeyInfo: TGpKeyInformationList;
+  Applets: TGpAppletAids;
   Receipt: TGpReceiptVerifier;
   NewVersion, NewId, OldVersion, KeyType, TokenType, ReceiptType, LastCounter: Integer;
   I, Version, KeyId, Lifecycle, BlockSize, Protocol, Level: Integer;
@@ -126,6 +235,9 @@ begin
       Cap := TGpCapFile.FromFile(string(ARequest.Arguments[6]));
 {$ENDIF}
       FLog.Add('CAP package: ' + BytesToHex(Cap.PackageAid));
+      Applets := Cap.Applets;
+      for I := 0 to High(Applets) do FLog.Add('CAP applet: ' + BytesToHex(Applets[I]));
+      FLog.Add(Format('CAP load image: %d bytes (including C4 framing).', [Length(Cap.LoadImage)]));
     end;
 {$IFDEF MSWINDOWS}
     Hash := TCardWindowsHashProvider.Create;
@@ -245,9 +357,14 @@ begin
   end;
 end;
 
-function CreateGlobalPlatformDemoOperations: ICardDemoOperations;
+function CreateGlobalPlatformDemoProgress: ICardGpDemoProgress;
 begin
-  Result := TGpDemoOperations.Create;
+  Result := TGpDemoProgress.Create;
+end;
+
+function CreateGlobalPlatformDemoOperations(const AProgress: ICardGpDemoProgress): ICardDemoOperations;
+begin
+  Result := TGpDemoOperations.Create(AProgress);
 end;
 
 end.

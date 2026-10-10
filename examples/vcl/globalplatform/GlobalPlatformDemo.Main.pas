@@ -4,8 +4,9 @@ interface
 
 uses
   System.SysUtils, System.Classes, Vcl.Forms, Vcl.Controls, Vcl.StdCtrls,
-  Vcl.ExtCtrls, Vcl.Dialogs, ERD.Card.Bytes, ERD.Card.Crypto,
-  ERD.Card.PCSC.Monitor, ERD.Card.PCSC.Api, ERD.Card.Demo.Job;
+  Vcl.ExtCtrls, Vcl.Dialogs, Vcl.ComCtrls, ERD.Card.Bytes, ERD.Card.Crypto,
+  ERD.Card.PCSC.Monitor, ERD.Card.PCSC.Api, ERD.Card.Demo.Job,
+  ERD.Card.Demo.GlobalPlatform.Operations;
 
 type
   /// <summary>Independent designer-editable GP demo; no shared form or visual ancestor.</summary>
@@ -278,10 +279,19 @@ type
     /// <summary>Completed metadata and acknowledged LOAD progress.</summary>
     OutputMemo: TMemo;
 
+    /// <summary>Inspects the local CAP package before any card connection.</summary>
+    PreviewButton: TButton;
+
+    /// <summary>Confirmed LOAD percentage; completion of other management steps is separate.</summary>
+    LoadProgress: TProgressBar;
+
+    /// <summary>Confirmed LOAD byte and block counts, separate from reader observation.</summary>
+    ProgressLabel: TLabel;
+
     /// <summary>Native reader/card observation status.</summary>
     StatusLabel: TLabel;
 
-    /// <summary>Poll worker completion only; never polls readers or cards.</summary>
+    /// <summary>Reads worker progress and completion only; never polls readers or cards.</summary>
     JobTimer: TTimer;
 
     /// <summary>Designer-owned CAP chooser.</summary>
@@ -311,11 +321,15 @@ type
     /// <param name="Sender">The form or initiating designer control.</param>
     procedure BrowseClick(Sender: TObject);
 
+    /// <summary>Displays validated package/applet AIDs and sizes without connecting a card.</summary>
+    /// <param name="Sender">The form or initiating designer control.</param>
+    procedure PreviewClick(Sender: TObject);
+
     /// <summary>Explains the explicitly chosen action.</summary>
     /// <param name="Sender">The form or initiating designer control.</param>
     procedure ActionChanged(Sender: TObject);
 
-    /// <summary>Consumes a completed background result without hardware polling.</summary>
+    /// <summary>Displays confirmed upload progress and consumes completed results without hardware polling.</summary>
     /// <param name="Sender">The form or initiating designer control.</param>
     procedure JobTick(Sender: TObject);
 
@@ -327,6 +341,7 @@ type
   private
     FMonitor: TSmartCardMonitor;
     FJob: TCardDemoJob;
+    FProgress: ICardGpDemoProgress;
     FClosing: Boolean;
     FPreviousReader: string;
     procedure ReaderAdded(Sender: TObject; const AName: UnicodeString);
@@ -334,6 +349,7 @@ type
     procedure CardChanged(Sender: TObject; const ASnapshot: TPcscReaderSnapshot);
     procedure MonitorError(Sender: TObject; const AStatus: Cardinal);
     procedure SetBusy(const Busy: Boolean);
+    procedure UpdateProgress;
   end;
 
 var
@@ -343,7 +359,7 @@ var
 implementation
 
 uses
-  ERD.Card.Demo.GlobalPlatform.Operations;
+  ERD.Card.GlobalPlatform.CAP;
 
 {$R *.dfm}
 
@@ -413,6 +429,7 @@ end;
 procedure TGlobalPlatformDemoForm.SetBusy(const Busy: Boolean);
 begin
   RunButton.Enabled := not Busy; RefreshButton.Enabled := not Busy;
+  BrowseButton.Enabled := not Busy; PreviewButton.Enabled := not Busy;
   ReaderBox.Enabled := not Busy; ClearButton.Enabled := not Busy;
   JobTimer.Enabled := Busy;
 end;
@@ -477,8 +494,10 @@ begin
       Q.Credentials[7] := HexToBytes(ReceiptKeyEdit.Text, True); Q.Credentials[8] := HexToBytes(RsaDEdit.Text, True);
       Q.Credentials[9] := HexToBytes(RsaPEdit.Text, True); Q.Credentials[10] := HexToBytes(RsaQEdit.Text, True);
     end;
-    OutputMemo.Clear;
-    FJob := TCardDemoJob.Create(Q, CreateGlobalPlatformDemoOperations);
+    OutputMemo.Clear; LoadProgress.Position := 0;
+    ProgressLabel.Caption := 'No LOAD blocks acknowledged.';
+    FProgress := CreateGlobalPlatformDemoProgress;
+    FJob := TCardDemoJob.Create(Q, CreateGlobalPlatformDemoOperations(FProgress));
     try FJob.StartWork;
     except FreeAndNil(FJob); raise; end;
     SetBusy(True); AcknowledgeCheck.Checked := False;
@@ -488,19 +507,38 @@ begin
   for I := 0 to High(Q.Credentials) do TCardCrypto.Clear(Q.Credentials[I]);
 end;
 
+procedure TGlobalPlatformDemoForm.UpdateProgress;
+var
+  P: TCardGpDemoProgress;
+begin
+  if FProgress <> nil then
+  begin
+    P := FProgress.ReadSnapshot;
+    if P.TotalBytes > 0 then
+    begin
+      LoadProgress.Position := Integer(Int64(P.AcknowledgedBytes) * 100 div P.TotalBytes);
+      ProgressLabel.Caption := Format('Acknowledged LOAD: %d / %d bytes; %d blocks.',
+        [P.AcknowledgedBytes, P.TotalBytes, P.AcknowledgedBlocks]);
+    end;
+  end;
+end;
+
 procedure TGlobalPlatformDemoForm.JobTick(Sender: TObject);
 var
   R: TCardDemoResult;
 begin
   if FJob = nil then Exit;
+  UpdateProgress;
   R := Default(TCardDemoResult);
   if not FJob.TryTakeResult(R) then Exit;
-  FreeAndNil(FJob); SetBusy(False);
+  UpdateProgress;
+  FreeAndNil(FJob); FProgress := nil; SetBusy(False);
   if R.Success then OutputMemo.Text := R.Text
   else
   begin
     OutputMemo.Text := R.ErrorClass + ': operation failed; no retry was performed.';
     if R.Text <> '' then OutputMemo.Lines.Add(R.Text);
+    ProgressLabel.Caption := ProgressLabel.Caption + ' Operation failed.';
     if R.WriteUncertain then OutputMemo.Lines.Add('Management may be partially applied. Inspect card state before a new action.');
   end;
   if FClosing then Close;
@@ -508,6 +546,7 @@ end;
 
 procedure TGlobalPlatformDemoForm.ClearClick(Sender: TObject);
 begin
+  LoadProgress.Position := 0; ProgressLabel.Caption := 'No LOAD blocks acknowledged.';
   EncEdit.Clear; MacEdit.Clear;
   DekEdit.Clear; NewEncEdit.Clear; NewMacEdit.Clear; NewDekEdit.Clear;
   TokenKeyEdit.Clear; ReceiptKeyEdit.Clear; RsaDEdit.Clear; RsaPEdit.Clear; RsaQEdit.Clear; OutputMemo.Clear; AcknowledgeCheck.Checked := False;
@@ -515,7 +554,39 @@ end;
 
 procedure TGlobalPlatformDemoForm.BrowseClick(Sender: TObject);
 begin
-  if CapDialog.Execute then CapEdit.Text := CapDialog.FileName;
+  if CapDialog.Execute then
+  begin
+    CapEdit.Text := CapDialog.FileName;
+    PreviewClick(Self);
+  end;
+end;
+
+procedure TGlobalPlatformDemoForm.PreviewClick(Sender: TObject);
+var
+  Cap: TGpCapFile;
+  Source: TFileStream;
+  Applets: TGpAppletAids;
+  I: Integer;
+begin
+  if FJob <> nil then Exit;
+  OutputMemo.Clear;
+  try
+    Cap := TGpCapFile.FromFile(CapEdit.Text);
+    try
+      Source := TFileStream.Create(CapEdit.Text, fmOpenRead or fmShareDenyWrite);
+      try OutputMemo.Lines.Add(Format('Archive size: %d bytes.', [Source.Size]));
+      finally Source.Free; end;
+      OutputMemo.Lines.Add('Package AID: ' + BytesToHex(Cap.PackageAid));
+      Applets := Cap.Applets;
+      OutputMemo.Lines.Add(Format('Applets: %d', [Length(Applets)]));
+      for I := 0 to High(Applets) do OutputMemo.Lines.Add('  ' + BytesToHex(Applets[I]));
+      OutputMemo.Lines.Add(Format('Raw load-file data: %d bytes.', [Length(Cap.LoadFileData)]));
+      OutputMemo.Lines.Add(Format('C4 load image: %d bytes (DAP blocks excluded).', [Length(Cap.LoadImage)]));
+      OutputMemo.Lines.Add('Local structural preview; no card connection or upload performed.');
+    finally Cap.Free; end;
+  except
+    on E: Exception do OutputMemo.Text := E.ClassName + ': CAP preview failed; check the archive and path.';
+  end;
 end;
 
 end.
