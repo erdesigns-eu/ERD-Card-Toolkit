@@ -527,6 +527,7 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 **Card families**
 
 - [Offline EMV calculators](docs/EMV_CALCULATORS.md)
+- [CardPeek comparison and candidate extensions](docs/CARDPEEK_REVIEW.md)
 - [Belgian eID](docs/BELGIAN_EID.md) · [European eID / ICAO](docs/EUROPEAN_EID.md) · [EMV](docs/EMV_READER.md)
 - [Topaz / Type 1](docs/TOPAZ_TYPE1.md)
 - [FeliCa / Type 3](docs/FELICA_TYPE3.md) · [Type 2 management and protected NDEF](docs/TYPE2_MANAGEMENT.md)
