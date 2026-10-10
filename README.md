@@ -3,7 +3,7 @@
 A Delphi component library for **reading and writing smart cards, contactless tags,
 magnetic stripes and RFID input** on Windows. It covers PC/SC readers, identity
 documents (Belgian eID, ICAO eMRTD), EMV application data, MIFARE/NTAG/DESFire,
-ISO 15693, Calypso/MOBIB, SIM/USIM, SLE/I²C contact-memory chips, magnetic-stripe
+ISO 15693, Topaz, Calypso/MOBIB, SIM/USIM, SLE/I²C contact-memory chips, magnetic-stripe
 readers/writers, USB-HID and ELATEC TWN4 readers.
 
 The library replaces the former CardStudio application with standalone,
@@ -45,7 +45,8 @@ out of scope (see [Not supported](#not-supported)).
 | **MIFARE Classic** | `TContactlessCardReader` | Classic Mini/1K/4K layouts. Read blocks with a supplied key A/B and write data blocks; block 0 and sector trailers are refused. |
 | **Ultralight / NTAG (Type 2)** | `TContactlessCardReader`, `TType2PasswordCardReader` | Ultralight, Ultralight EV1 (48/128), NTAG210/212/213/215/216 page reads, user-memory snapshots and user-page writes. PWD_AUTH/PACK access, verified AUTH0/PROT/AUTHLIM configuration and password/PACK replacement, supported counter reads, and protected NDEF through an ACR122U adapter. |
 | **Ultralight C** | `TUltralightCCardReaderWriter` | Supplied-key 2K3DES mutual authentication, exact user-page reads, a 144-byte user-memory snapshot and verified four-byte user-page writes through raw RF (ACR122U adapter). Read authentication configuration; verified AUTH0/AUTH1 updates and key replacement with same-UID fresh RF authentication. Manufacturer, OTP, lock and counter writes remain excluded. |
-| **NDEF** | `TType2NdefCardReader`, `TType3NdefCardReader`, `TType4NdefCardReader`, `TType5NdefCardReader` | Complete NDEF message codec with chunk reassembly, plus Text, URI, MIME, external and Smart Poster record helpers. Read, replace and clear public NDEF messages on Type 2, Type 3 (mapping 1.0), Type 4 (mapping 1.0/2.0) and Type 5 tags, with read-back verification. Type 2 also supports NDEF within supplied-password sessions. |
+| **NDEF** | `TType1NdefCardReader`, `TType2NdefCardReader`, `TType3NdefCardReader`, `TType4NdefCardReader`, `TType5NdefCardReader` | Complete NDEF message codec with chunk reassembly, plus Text, URI, MIME, external and Smart Poster record helpers. Read, replace and clear public NDEF messages on Topaz Type 1 (mapping 1.0), Type 2, Type 3 (mapping 1.0), Type 4 (mapping 1.0/2.0) and Type 5 tags, with read-back verification. Type 2 also supports NDEF within supplied-password sessions. |
+| **Topaz / NFC Forum Type 1** | `TTopazCardReader`, `TType1NdefCardReader` | Topaz 96/512 identity, complete physical memory/locks, preimage-checked user writes and initialized NDEF read/parse/replace/clear via explicit ACR122U/PN532 Jewel and CIU commands. No formatting or lock/OTP programming. |
 | **FeliCa / NFC Forum Type 3** | `TFelicaCardReader`, `TType3NdefCardReader` | Fresh explicit-system polling, IDm/PMm, unencrypted service block reads and preimage-checked verified writes, including 16-bit block addresses. Type 3 attribute parsing and verified NDEF read/replace/clear through an ACR122U/PN532 adapter at explicit 212/424 kbit/s. |
 | **ISO 15693 / NFC-V** | `TIso15693CardReader` | Ordinary/extended addressing, system information, single or explicit native multiple-block reads and verified data writes through ACS ACR1552 FF FB. `TIso15693PasswordSession` adds supplied-password user-memory access for ICODE SLIX2 and original ST25DV04K/16K/64K, including Type 5 NDEF. `TIso15693SecurityManager` adds decoded protection snapshots, RF password replacement with fresh RF proof, SLIX2 page protection and ST25DV RF area policy updates. |
 | **MIFARE DESFire** | `TDesfireCardReader` | Public, EV1/EV2 AES, EV1 2K3DES/3K3DES and explicit D40 DES/2K3DES (Plain, MACed, Full) access. Discover applications/files, read standard/backup/value/record files and write standard data. Transactions with commit/abort; application and ordinary-file create/delete across the explicit profiles, including selectable DES/2K3DES, 3K3DES or AES application storage. AES/DES/3DES key rotation, key-policy and ordinary-file access administration. EV2 NonFirst re-authentication. |
@@ -94,7 +95,7 @@ These rules apply to every component and are worth knowing before you start:
 | `src/pcsc` | PC/SC API abstraction, Windows `winscard.dll` binding, `TSmartCardReader`, `TSmartCardMonitor` |
 | `src/eid` | Belgian eID, ICAO document reader, MRZ, LDS, BAC/PACE access and secure messaging |
 | `src/emv` | EMV reader, data model and tag catalog |
-| `src/contactless` | MIFARE Classic, Type 2/3/4/5, FeliCa, NDEF, ISO 15693, DESFire, UID programming, Calypso/MOBIB |
+| `src/contactless` | MIFARE Classic, Type 1/2/3/4/5, FeliCa, NDEF, ISO 15693, DESFire, UID programming, Calypso/MOBIB |
 | `src/memory` | SLE/I²C memory chips, SLE counter chips, SLE4404, ACS capability catalog |
 | `src/sim` | SIM/USIM reader/writer and data codecs |
 | `src/magstripe` | Track codecs, serial port, MSR206/MSR605, MSR206-7HL, MagTek adapters |
@@ -146,7 +147,7 @@ Output goes to `dist/packages/<Platform>/<Config>`.
 | `ERDCardPCSC` | PC/SC reader and monitor | `ERDCardCore` |
 | `ERDCardEID` | Belgian eID and ICAO documents | `ERDCardCore` |
 | `ERDCardEMV` | EMV reader and tag catalog | `ERDCardCore` |
-| `ERDCardContactless` | Classic, Type 2/3/4/5, FeliCa, NDEF, ISO 15693, DESFire, UID, Calypso/MOBIB | `ERDCardCore` |
+| `ERDCardContactless` | Classic, Type 1/2/3/4/5, FeliCa, NDEF, ISO 15693, DESFire, UID, Calypso/MOBIB | `ERDCardCore` |
 | `ERDCardMemory` | Memory, counter and SLE4404 chips | `ERDCardCore` |
 | `ERDCardSIM` | SIM/USIM | `ERDCardCore` |
 | `ERDCardInput` | USB-HID, HID monitors, RFID input | `ERDCardCore` |
@@ -167,13 +168,13 @@ tools\build-packages.cmd dcc32 design
 ```
 
 Then use **Component > Install Packages > Add** and select `ERDCardDesign.bpl`.
-It registers 29 components:
+It registers 31 components:
 
 | Palette page | Components |
 | --- | --- |
 | **ERD Cards** | `TSmartCardMonitor`, `TSmartCardReader`, `TBelgianEIDReader`, `TICAODocumentReader`, `TSimCardReaderWriter`, `TEMVCardReader`, `TMagStripeReaderWriter`, `TMemoryCardReaderWriter`, `TSleCounterCardReaderWriter`, `TSle4404CardReaderWriter` |
 | **ERD Input** | `THidDeviceMonitor`, `TUsbHidInputMonitor`, `TRfidKeyboardReader`, `TRfidHidReportReader`, `TUsbHidReaderWriter`, `TTwn4CardReaderWriter` |
-| **ERD Contactless** | `TFelicaCardReader`, `TType3NdefCardReader`, `TUltralightCCardReaderWriter`, `TCalypsoCardReader`, `TContactlessCardReader`, `TType2NdefCardReader`, `TType4NdefCardReader`, `TIso15693CardReader`, `TIso15693SecurityManager`, `TType5NdefCardReader`, `TDesfireCardReader`, `TType2PasswordCardReader`, `TRawUidProgrammer` |
+| **ERD Contactless** | `TTopazCardReader`, `TType1NdefCardReader`, `TFelicaCardReader`, `TType3NdefCardReader`, `TUltralightCCardReaderWriter`, `TCalypsoCardReader`, `TContactlessCardReader`, `TType2NdefCardReader`, `TType4NdefCardReader`, `TIso15693CardReader`, `TIso15693SecurityManager`, `TType5NdefCardReader`, `TDesfireCardReader`, `TType2PasswordCardReader`, `TRawUidProgrammer` |
 
 Scalar settings are stored in the DFM. Interface properties such as `Transport`,
 `Profile`, `Device`, `Session`, `Channel` and `CryptoProvider` must be assigned at
@@ -316,6 +317,7 @@ and show card offered/removed notifications without running a card operation.
 | `SimCardDemo` | SIM/USIM files, identities, services, PIN/PUK, contacts, SMS and linked records |
 | `MifareClassicDemo` | UID, layout/trailers, block reads and writes |
 | `Type2Demo` | Ultralight/NTAG memory, public/protected NDEF, PWD_AUTH/PACK, verified configuration/credentials and counter reads |
+| `TopazDemo` | Topaz 96/512 identity, full memory/lock export, byte-range reads, verified user writes and parsed Type 1 NDEF read/replace/clear; own form/DFM and reader events |
 | `FelicaDemo` | Explicit FeliCa system/services/blocks and Type 3 attributes/NDEF; own form, DFM, reader selection and presence events |
 | `UltralightCDemo` | Supplied-key authentication, exact user-page/full user-memory reads and verified page writes, configuration and key replacement; own form and DFM |
 | `Type4NdefDemo` | Capability container, file descriptors and NDEF read/write/clear |
@@ -385,7 +387,8 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
   online services are not validated; extra PACE/EAC profiles are missing
   ([docs/EUROPEAN_EID.md](docs/EUROPEAN_EID.md)).
 - **MIFARE/DESFire variants:** MIFARE Plus, DESFire LRP,
-  TMAC, SDM and extended key-set/configuration management. Ultralight C irreversible lock/counter/OTP programming. NFC Forum Type 1 tags; encrypted FeliCa services and FeliCa formatting/key provisioning.
+  TMAC, SDM and extended key-set/configuration management. Ultralight C irreversible lock/counter/OTP programming. Encrypted FeliCa services and FeliCa formatting/key provisioning.
+- **Topaz / Type 1:** formatting, arbitrary chips/control layouts, permanent locks/OTP/UID writes and other native reader protocols; [exact supported scope](docs/TOPAZ_TYPE1.md).
 - **ISO 15693 vendor management:** no irreversible lock programming, SLIX2
   privacy/destroy, ST25DV area resizing/mailbox/I²C or ST25TV/KC password dialects.
   Supplied-password access and verified password/protection management cover SLIX2
@@ -443,6 +446,9 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 | `ERD.Card.EMV.Reader` | `TEMVCardReader` |
 | `ERD.Card.Contactless` | `TContactlessCardReader`, reader profiles, Classic layout |
 | `ERD.Card.Contactless.Felica` | Explicit-system target information, service block codec and verified block component |
+| `ERD.Card.Contactless.Topaz` | Exact Topaz 96/512 memory/locks and verified user-range component |
+| `ERD.Card.Contactless.ACR122.Topaz` | Explicit PN532 Jewel adapter, native CIU READ8/WRITE-E8, CRC-B/parity and bounded receive |
+| `ERD.Card.Contactless.Type1.Ndef` | Initialized Type 1 mapping, parsed messages and verified length-last writes |
 | `ERD.Card.Contactless.ACR122.Felica` | Explicit PN532 FeliCa polling/transfer at 212 or 424 kbit/s |
 | `ERD.Card.Contactless.Type3.Ndef` | Strict Type 3 attribute mapping, NDEF reader and verified length-last writer |
 | `ERD.Card.Contactless.UltralightC` | Supplied-key Ultralight C authentication and verified user-memory access |
@@ -512,6 +518,7 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 **Card families**
 
 - [Belgian eID](docs/BELGIAN_EID.md) · [European eID / ICAO](docs/EUROPEAN_EID.md) · [EMV](docs/EMV_READER.md)
+- [Topaz / Type 1](docs/TOPAZ_TYPE1.md)
 - [FeliCa / Type 3](docs/FELICA_TYPE3.md) · [Type 2 management and protected NDEF](docs/TYPE2_MANAGEMENT.md)
 - [Contactless / MIFARE](docs/CONTACTLESS.md) · [NDEF](docs/NDEF.md) · [Type 2 passwords](docs/TYPE2_PASSWORD.md) · [Ultralight C / DES security](docs/LEGACY_MIFARE_SECURITY.md) · [NTAG210/212](docs/NTAG210_212.md) · [Type 4 NDEF](docs/TYPE4_NDEF.md) · [ISO 15693 / Type 5](docs/ISO15693_TYPE5.md)
 - [DESFire](docs/DESFIRE.md) · [DESFire application/file management](docs/DESFIRE_APPLICATIONS.md) · [MOBIB / Calypso](docs/MOBIB_CALYPSO.md)

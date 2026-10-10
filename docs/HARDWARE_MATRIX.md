@@ -37,3 +37,9 @@ synthetic tests. Real TWN4 firmware/CDC driver, 4K reader-sector conventions and
 every physical chip/model combination remain pending. No memory programming is
 claimed for the supplied keyboard-only EM4100/TK4100 readers; see [TWN4](TWN4.md)
 and [reader models](RFID_READER_MODELS.md).
+
+Topaz 96/512 profiles now have an explicit ACR122U/PN532 Jewel/CIU adapter,
+verified user writes and initialized Type 1 NDEF. Independent protocol fixtures
+exercise byte-write acknowledgement dialects, CIU RF framing/parity/CRC and failure
+cleanup. No physical Topaz/reader firmware pairing is certified by those tests.
+See [Topaz/Type 1](TOPAZ_TYPE1.md) for the exact supported profile and mapping bounds.

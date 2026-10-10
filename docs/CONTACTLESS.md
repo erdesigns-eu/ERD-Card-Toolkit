@@ -26,7 +26,8 @@ hardware. Assign both a connected `ICardTransport` and an explicitly matching
 | Addressed ISO 15693 memory | `TIso15693CardReader`, explicit 8/16-bit geometry, single-block security and guarded writes, explicit native bulk reads, supplied-password SLIX2/original ST25DV user-memory sessions; ACR1552U-M/ACM1552U-Y/Z FF FB adapter |
 | Public Type 5 NDEF memory | `TType5NdefCardReader`: initialized E1/E2 CC/TLV mapping, lock preflight and verified length-last updates |
 | Native DESFire files | `TDesfireCardReader`: discovery, ordinary data/value/record reads and verified standard-data writes; explicit EV1/EV2 AES authentication, Plain/MACed/Full messaging and EV2 NonFirst; retained owned backup/value/record transactions, commit/abort, authenticated directories and ordinary application/file management |
-| Additional DESFire security/TMAC/key management, Plus, Type 1 NDEF, other programmable UID families | Separate profiles still pending |
+| Topaz 96/512 and initialized Type 1 NDEF | `TTopazCardReader`, `TType1NdefCardReader`; exact HR/UID, full memory/locks, verified user/NDEF writes via explicit ACR122U/PN532 Jewel/CIU adapter; [scope](TOPAZ_TYPE1.md) |
+| Additional DESFire security/TMAC/key management, Plus, other programmable UID families | Separate profiles still pending |
 
 The Mini model supplies the original memory layout, not a tested Mini/reader
 compatibility claim. This release has synthetic command tests and no physical reader

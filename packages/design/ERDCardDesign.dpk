@@ -35,6 +35,9 @@ requires
   designide;
 
 contains
+  ERD.Card.Contactless.Topaz in '..\..\src\contactless\ERD.Card.Contactless.Topaz.pas',
+  ERD.Card.Contactless.ACR122.Topaz in '..\..\src\contactless\ERD.Card.Contactless.ACR122.Topaz.pas',
+  ERD.Card.Contactless.Type1.Ndef in '..\..\src\contactless\ERD.Card.Contactless.Type1.Ndef.pas',
   ERD.Card.Contactless.Felica in '..\..\src\contactless\ERD.Card.Contactless.Felica.pas',
   ERD.Card.Contactless.ACR122.Felica in '..\..\src\contactless\ERD.Card.Contactless.ACR122.Felica.pas',
   ERD.Card.Contactless.Type3.Ndef in '..\..\src\contactless\ERD.Card.Contactless.Type3.Ndef.pas',

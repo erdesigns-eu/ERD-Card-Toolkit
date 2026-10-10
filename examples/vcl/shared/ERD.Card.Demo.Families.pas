@@ -54,7 +54,9 @@ type
     /// <summary>Authenticated ICODE SLIX2 user-memory and Type 5 demonstration.</summary>
     dfSlix2,
     /// <summary>Authenticated original ST25DV user-memory and Type 5 demonstration.</summary>
-    dfSt25Dv
+    dfSt25Dv,
+    /// <summary>Topaz 96/512 memory and initialized Type 1 NDEF demonstration.</summary>
+    dfTopaz
   );
   /// <summary>One named form input; secrets are decoded to owned buffers, never stored as public arguments.</summary>
   TCardFamilyField = record
@@ -122,6 +124,7 @@ begin
     dfFelica: Result := 'FelicaDemo';
     dfSlix2: Result := 'Slix2Demo';
     dfSt25Dv: Result := 'St25DvDemo';
+    dfTopaz: Result := 'TopazDemo';
     dfType4: Result := 'Type4NdefDemo';
     dfMobib: Result := 'MobibDemo';
     dfEmv: Result := 'EmvDemo';
@@ -1057,6 +1060,63 @@ begin
       Result[5].Fields[1].Name := 'newkey'; Result[5].Fields[1].LabelText := 'New 16-byte key (hex)';
       Result[5].Fields[1].DefaultText := ''; Result[5].Fields[1].Secret := True; Result[5].Fields[1].Choices := '';
 
+    end;
+    dfTopaz:
+    begin
+      SetLength(Result,5);
+      Result[0].Id := 'snapshot'; Result[0].LabelText := 'Read identity, full memory and locks';
+      Result[0].Mutation := False; Result[0].Pcsc := True;
+      SetLength(Result[0].Fields,2);
+      Result[0].Fields[0].Name := 'topazmodel'; Result[0].Fields[0].LabelText := 'Explicit Topaz profile';
+      Result[0].Fields[0].DefaultText := '0'; Result[0].Fields[0].Secret := False; Result[0].Fields[0].Choices := 'Topaz 96 (HR 11 48)|Topaz 512 (HR 12 4C)';
+      Result[0].Fields[1].Name := 'ack'; Result[0].Fields[1].LabelText := 'ACR122 firmware byte-write acknowledgement';
+      Result[0].Fields[1].DefaultText := '0'; Result[0].Fields[1].Secret := False; Result[0].Fields[1].Choices := 'Documented status only|Explicit byte echo';
+      Result[1].Id := 'read'; Result[1].LabelText := 'Read physical byte range';
+      Result[1].Mutation := False; Result[1].Pcsc := True;
+      SetLength(Result[1].Fields,4);
+      Result[1].Fields[0].Name := 'topazmodel'; Result[1].Fields[0].LabelText := 'Explicit Topaz profile';
+      Result[1].Fields[0].DefaultText := '0'; Result[1].Fields[0].Secret := False; Result[1].Fields[0].Choices := 'Topaz 96 (HR 11 48)|Topaz 512 (HR 12 4C)';
+      Result[1].Fields[1].Name := 'ack'; Result[1].Fields[1].LabelText := 'ACR122 firmware byte-write acknowledgement';
+      Result[1].Fields[1].DefaultText := '0'; Result[1].Fields[1].Secret := False; Result[1].Fields[1].Choices := 'Documented status only|Explicit byte echo';
+      Result[1].Fields[2].Name := 'address'; Result[1].Fields[2].LabelText := 'First physical byte (decimal)';
+      Result[1].Fields[2].DefaultText := '12'; Result[1].Fields[2].Secret := False; Result[1].Fields[2].Choices := '';
+      Result[1].Fields[3].Name := 'count'; Result[1].Fields[3].LabelText := 'Byte count';
+      Result[1].Fields[3].DefaultText := '8'; Result[1].Fields[3].Secret := False; Result[1].Fields[3].Choices := '';
+      Result[2].Id := 'write'; Result[2].LabelText := 'Write unlocked user bytes + verify';
+      Result[2].Mutation := True; Result[2].Pcsc := True;
+      SetLength(Result[2].Fields,6);
+      Result[2].Fields[0].Name := 'topazmodel'; Result[2].Fields[0].LabelText := 'Explicit Topaz profile';
+      Result[2].Fields[0].DefaultText := '0'; Result[2].Fields[0].Secret := False; Result[2].Fields[0].Choices := 'Topaz 96 (HR 11 48)|Topaz 512 (HR 12 4C)';
+      Result[2].Fields[1].Name := 'ack'; Result[2].Fields[1].LabelText := 'ACR122 firmware byte-write acknowledgement';
+      Result[2].Fields[1].DefaultText := '0'; Result[2].Fields[1].Secret := False; Result[2].Fields[1].Choices := 'Documented status only|Explicit byte echo';
+      Result[2].Fields[2].Name := 'uid'; Result[2].Fields[2].LabelText := 'Expected seven-byte UID, card wire order (hex)';
+      Result[2].Fields[2].DefaultText := ''; Result[2].Fields[2].Secret := False; Result[2].Fields[2].Choices := '';
+      Result[2].Fields[3].Name := 'before'; Result[2].Fields[3].LabelText := 'Exact complete 120/512-byte memory preimage (hex)';
+      Result[2].Fields[3].DefaultText := ''; Result[2].Fields[3].Secret := False; Result[2].Fields[3].Choices := '';
+      Result[2].Fields[4].Name := 'address'; Result[2].Fields[4].LabelText := 'First user byte (decimal)';
+      Result[2].Fields[4].DefaultText := '22'; Result[2].Fields[4].Secret := False; Result[2].Fields[4].Choices := '';
+      Result[2].Fields[5].Name := 'data'; Result[2].Fields[5].LabelText := 'Nonempty replacement bytes (hex)';
+      Result[2].Fields[5].DefaultText := ''; Result[2].Fields[5].Secret := False; Result[2].Fields[5].Choices := '';
+      Result[3].Id := 'readndef'; Result[3].LabelText := 'Read and parse Type 1 NDEF';
+      Result[3].Mutation := False; Result[3].Pcsc := True;
+      SetLength(Result[3].Fields,2);
+      Result[3].Fields[0].Name := 'topazmodel'; Result[3].Fields[0].LabelText := 'Explicit Topaz profile';
+      Result[3].Fields[0].DefaultText := '0'; Result[3].Fields[0].Secret := False; Result[3].Fields[0].Choices := 'Topaz 96 (HR 11 48)|Topaz 512 (HR 12 4C)';
+      Result[3].Fields[1].Name := 'ack'; Result[3].Fields[1].LabelText := 'ACR122 firmware byte-write acknowledgement';
+      Result[3].Fields[1].DefaultText := '0'; Result[3].Fields[1].Secret := False; Result[3].Fields[1].Choices := 'Documented status only|Explicit byte echo';
+      Result[4].Id := 'writendef'; Result[4].LabelText := 'Replace Type 1 NDEF + verify';
+      Result[4].Mutation := True; Result[4].Pcsc := True;
+      SetLength(Result[4].Fields,5);
+      Result[4].Fields[0].Name := 'topazmodel'; Result[4].Fields[0].LabelText := 'Explicit Topaz profile';
+      Result[4].Fields[0].DefaultText := '0'; Result[4].Fields[0].Secret := False; Result[4].Fields[0].Choices := 'Topaz 96 (HR 11 48)|Topaz 512 (HR 12 4C)';
+      Result[4].Fields[1].Name := 'ack'; Result[4].Fields[1].LabelText := 'ACR122 firmware byte-write acknowledgement';
+      Result[4].Fields[1].DefaultText := '0'; Result[4].Fields[1].Secret := False; Result[4].Fields[1].Choices := 'Documented status only|Explicit byte echo';
+      Result[4].Fields[2].Name := 'uid'; Result[4].Fields[2].LabelText := 'Expected seven-byte UID, card wire order (hex)';
+      Result[4].Fields[2].DefaultText := ''; Result[4].Fields[2].Secret := False; Result[4].Fields[2].Choices := '';
+      Result[4].Fields[3].Name := 'before'; Result[4].Fields[3].LabelText := 'Exact complete 120/512-byte memory preimage (hex)';
+      Result[4].Fields[3].DefaultText := ''; Result[4].Fields[3].Secret := False; Result[4].Fields[3].Choices := '';
+      Result[4].Fields[4].Name := 'ndef'; Result[4].Fields[4].LabelText := 'Complete NDEF message (hex; empty clears existing NDEF)';
+      Result[4].Fields[4].DefaultText := ''; Result[4].Fields[4].Secret := False; Result[4].Fields[4].Choices := '';
     end;
     dfFelica:
     begin

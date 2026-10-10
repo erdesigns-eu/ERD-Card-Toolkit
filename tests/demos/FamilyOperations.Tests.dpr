@@ -806,9 +806,48 @@ begin
   Hardware := nil;
 end;
 
+procedure TestTopazDemo;
+var A:TCardFamilyActions;R:TCardDemoRequest;D:TCardDemoResult;H:THardware;Hardware:ICardFamilyHardware;
+ S:TScript;Transport:ICardTransport;Memory:TBytes;I,N:Integer;Reached,Failed:Boolean;
+begin
+ Memory:=nil;SetLength(Memory,120);Memory[0]:=1;Memory[1]:=2;Memory[2]:=3;Memory[3]:=4;Memory[4]:=5;Memory[5]:=6;Memory[6]:=7;
+ Memory[8]:=$E1;Memory[9]:=$10;Memory[10]:=$0E;Memory[12]:=3;Memory[14]:=$FE;
+ A:=CardFamilyActions(dfTopaz);H:=THardware.Create;Hardware:=H;
+ for I:=0 to High(A) do begin
+  R:=Request(dfTopaz,A[I].Id);Put(R,dfTopaz,'uid','01020304050607');Put(R,dfTopaz,'before',BytesToHex(Memory));
+  Put(R,dfTopaz,'address','22');Put(R,dfTopaz,'data','A1B2C3');Put(R,dfTopaz,'ndef','D101045402656E41');Reached:=False;
+  try CreateCardFamilyOperations(dfTopaz,Hardware).Run(R,D);except on E:EReachedHardware do Reached:=True;end;
+  Check(Reached,'Topaz valid action reaches hardware '+A[I].Id);N:=H.Acquires;
+  Put(R,dfTopaz,'topazmodel','-1');Failed:=False;
+  try CreateCardFamilyOperations(dfTopaz,Hardware).Run(R,D);except on E:EArgumentException do Failed:=True;end;
+  Check(Failed and (H.Acquires=N),'Topaz invalid model before hardware');Put(R,dfTopaz,'topazmodel','0');
+  if A[I].Mutation then begin
+   R.MutationAcknowledged:=False;Failed:=False;
+   try CreateCardFamilyOperations(dfTopaz,Hardware).Run(R,D);except on E:EArgumentException do Failed:=True;end;
+   Check(Failed and (H.Acquires=N),'Topaz acknowledgement before hardware');R.MutationAcknowledged:=True;
+   Put(R,dfTopaz,'before','00');Failed:=False;
+   try CreateCardFamilyOperations(dfTopaz,Hardware).Run(R,D);except on E:EContactlessError do Failed:=True;end;
+   Check(Failed and (H.Acquires=N),'Topaz malformed preimage before hardware');
+  end;
+ end;
+ for I:=0 to 1 do begin
+  S:=TScript.Create;Transport:=S;H:=THardware.Create;Hardware:=H;H.Transport:=Transport;
+  S.Add('FF00000006D43202000B0D','D5339000');S.Add('FF00000004D4320400','D5339000');S.Add('FF00000006D43205000000','D5339000');
+  S.Add('FF00000004D4320100','D5339000');S.Add('FF00000004D4320101','D5339000');S.Add('FF00000004D44A0104','D54B0101000C010203049000');
+  S.Add('FF00000004D4400172','D541001148010203049000');
+  Memory[13]:=8;Memory[14]:=$D1;Memory[15]:=1;Memory[16]:=4;Memory[17]:=$54;Memory[18]:=2;Memory[19]:=$65;Memory[20]:=$6E;Memory[21]:=$41;Memory[22]:=$FE;
+  S.Add('FF00000004D4400100','D541001148'+BytesToHex(Memory)+'9000');S.Add('FF00000004D4320100','D5339000');
+  R:=Request(dfTopaz,'readndef');H.FailRelease:=I=1;Failed:=False;
+  try CreateCardFamilyOperations(dfTopaz,Hardware).Run(R,D);except on E:ECardTransportError do Failed:=True;end;
+  Check(Failed=(I=1),'Topaz demo hardware release outcome');
+  Check((S.Begins=1) and (S.Ends=1) and (H.Releases=1),'Topaz demo exclusive ownership');
+  if I=0 then Check(D.Success and (Length(D.Artifacts)=3) and (Pos('01020304050607',string(D.Text))>0) and (Pos('Text (en): A',string(D.Text))>0),'Topaz parsed NDEF, identity and exported preimages');
+ end;
+end;
+
 begin
   try
-    TestMobibParsedDemo; TestNativeSamDemo; TestMobibRulesDemo; TestRecordAcquisitionDemos; TestNativeHidDemo; TestAdditionalFamilies; TestDocumentAndEmvDemos; TestExtendedSimDemo; TestFelicaFamilyPreflight; TestIsoPasswordFamilyPreflight; TestStorageDemos; TestSimRoutes; TestOffline; TestLegacyProfilePreflight; TestPreflight; TestCounterAndSleRoutes;
+    TestTopazDemo; TestMobibParsedDemo; TestNativeSamDemo; TestMobibRulesDemo; TestRecordAcquisitionDemos; TestNativeHidDemo; TestAdditionalFamilies; TestDocumentAndEmvDemos; TestExtendedSimDemo; TestFelicaFamilyPreflight; TestIsoPasswordFamilyPreflight; TestStorageDemos; TestSimRoutes; TestOffline; TestLegacyProfilePreflight; TestPreflight; TestCounterAndSleRoutes;
     TestTwnRoutes(0,False); TestTwnRoutes(1,False); TestTwnRoutes(2,False); TestTwnRoutes(3,False); TestTwnRoutes(3,True);
     TestMemoryWrite(-1,False,False); TestMemoryWrite(6,False,False);
     TestMemoryWrite(7,False,False); TestMemoryWrite(-1,True,False); TestMemoryWrite(-1,False,True);

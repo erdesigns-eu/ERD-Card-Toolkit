@@ -518,7 +518,7 @@ function TType2PasswordCardReader.ChangeCredentialsVerified(const AModel: TType2
   const ACurrentPassword, ACurrentPack, ANewPassword, ANewPack: TBytes): Boolean;
 var P,K,NewP,NewK,PackPage: TBytes; Succeeded,Dispatched: Boolean; Page: Integer;
 begin
-  Result:=False; Dispatched:=False;
+  Dispatched:=False;
   TType2PasswordCodec.ValidateCredentials(AModel,ACurrentPassword,ACurrentPack);
   TType2PasswordCodec.ValidateCredentials(AModel,ANewPassword,ANewPack); Page:=ConfigurationPage(AModel);
   P:=CopyBytes(ACurrentPassword); K:=CopyBytes(ACurrentPack); NewP:=CopyBytes(ANewPassword); NewK:=CopyBytes(ANewPack);
@@ -544,7 +544,7 @@ function TType2PasswordCardReader.ReadCounter(const AModel: TType2TagModel; cons
   const APassword, AExpectedPack: TBytes): Cardinal;
 var Wire,Data: TBytes; Succeeded: Boolean; Value: Cardinal;
 begin
-  Result:=0; TType2PasswordCodec.ValidateCredentials(AModel,APassword,AExpectedPack);
+  TType2PasswordCodec.ValidateCredentials(AModel,APassword,AExpectedPack);
   if not (AModel in [ttmUltralightEv1_48,ttmUltralightEv1_128,ttmNtag213,ttmNtag215,ttmNtag216]) or
     (ACounter>2) or ((AModel in [ttmNtag213,ttmNtag215,ttmNtag216]) and (ACounter<>2)) then Fail('unsupported counter');
   Wire:=TRawUidCodec.AppendCrcA(TBytes.Create($39,ACounter)); AcquireAndAuthenticate(APassword,AExpectedPack); Succeeded:=False;
