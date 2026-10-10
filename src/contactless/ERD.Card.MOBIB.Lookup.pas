@@ -148,6 +148,9 @@ begin
     (Ord(AContext) > Ord(High(TMobibOperatorContext))) then
     Fail;
   FContext := AContext;
+  { Holder-confirmed on one De Lijn card (2026): tariff 0x000F, EUR 62.00, duration unit 3 value 1. }
+  if AContext = mocDeLijn then
+    AddTariff($000F, 'De Lijn monthly subscription (confirmed on one card)');
   if AContext <> mocStib then
     Exit;
   for I := Low(MobibBrusselsStations) to High(MobibBrusselsStations) do
@@ -207,9 +210,10 @@ begin
         'newer stops and line changes are missing.';
     mocDeLijn:
       Result := Shared + ' De Lijn (Flanders) publishes no stop-code or tariff-code ' +
-        'table for MOBIB; load your own CSV to name stops and products. Publicly known ' +
-        'De Lijn subscriptions include Buzzy Pazz (6-24), Omnipas (25-64) and ' +
-        'Omnipas 65+, but their tariff codes are not published, so none is assigned.';
+        'table for MOBIB; load your own CSV to name stops and products. Tariff 0x000F is ' +
+        'named a monthly subscription because a card holder confirmed it on one card; the ' +
+        'product variant (for example Buzzy Pazz or Omnipas) is not encoded in a known field. ' +
+        'Other De Lijn tariff codes are not published, so none is assigned.';
     mocTec:
       Result := Shared + ' TEC publishes no stop-code or tariff-code table for MOBIB; ' +
         'load your own CSV.';

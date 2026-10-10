@@ -2,7 +2,7 @@ program MobibExtendedTests;
 {$IFDEF FPC}{$MODE DELPHI}{$ELSE}{$APPTYPE CONSOLE}{$ENDIF}
 uses
 {$IFDEF FPC}SysUtils,{$ELSE}System.SysUtils,{$ENDIF}
-  ERD.Card.Contactless.Calypso, ERD.Card.EN1545, ERD.Card.MOBIB.Data,
+  ERD.Card.Bytes, ERD.Card.Contactless.Calypso, ERD.Card.EN1545, ERD.Card.MOBIB.Data,
   ERD.Card.MOBIB.Subscriptions;
 
 { Synthetic fixtures copy the structure of observed MOBIB cards, never personal values. }
@@ -147,7 +147,7 @@ begin
   Check(E.Present and (E.Version = 3), 'Version-three environment');
   Check(E.HasExpiry and (E.Expiry = EncodeDate(2031, 3, 15)), 'Version-three expiry offset');
   Check(E.HasCardNumber and (E.CardNumber = '1234567890123456789') and
-    (E.CardNumberFormatted = '123456 / 789012345678 / 9'), 'Card number 6/12/1');
+    (E.CardNumberFormatted = '123456 / 7890 1234 5678 9'), 'Card number grouped as printed');
   Check(E.HasBirthDate and (E.BirthDate = EncodeDate(1980, 2, 29)), 'BCD birth date');
   Check(E.HasPostalCode and (E.PostalCode = 1000) and E.Personalised, 'Postal code and personalised');
   Check(TEn1545.Find(E.Fields, 'EnvNetworkId', V) and (V.Text = '056001'), 'Network field');
@@ -301,11 +301,95 @@ begin
     'Raw mode decodes nothing');
 end;
 
+{ Real De Lijn MOBIB rows (contracts 2020, special events 2040, contract list 2050), used with the
+  card holder's permission. They contain no name, birth date, postal code or card number; the
+  environment record of that card is deliberately not included. }
+const
+  DeLijnContracts: array [0 .. 7] of string = (
+    '115C01801E783E8004A3710C1C02CA88301200F400000000007C9F2E9F00000000000000000000000000000000000000',
+    '116751801E783F0002CDB38C1C02CA5AF01200F400000000007CEAC64600000000000000000000000000000000000000',
+    '116751801E783F0002CDB38C1C02CA5AF01200F400000000007CEAC64600000000000000000000000000000000000000',
+    '116591801E783E800318C18C1C02CA62B01200F400000000007C59354500000000000000000000000000000000000000',
+    '1163A1801E783E8003632F8C1C02CA69B01200F400000000007C600E3200000000000000000000000000000000000000',
+    '1161C1801E783F0003AD348C1C02CA71701200F400000000007C93869800000000000000000000000000000000000000',
+    '115FD1801E783F0003F5F70C1C02CA78F01200F400000000007C9BE55F00000000000000000000000000000000000000',
+    '115DF1801E783F00043FB10C1C02CA80B01200F400000000007CC660E300000000000000000000000000000000000000');
+  DeLijnSpecialEvents: array [0 .. 3] of string = (
+    '0E9E27CE063410166106A0FAE00137046A80000D0053C4F9C00000000000000000000000000000000000000000000000',
+    '0EA0080A0634101A6106A0FAE00134FD6A80000880540101400000000000000000000000000000000000000000000000',
+    '0EA1C7C60634101E6106A0FE600136608A80000B005438F8C00000000000000000000000000000000000000000000000',
+    '0EA3E7E8063410226106A0FE6001348FAA80000B80547CFD000000000000000000000000000000000000000000000000');
+  DeLijnContractList =
+    '823EF4D393E74D3A3EF4E333EF4F243EF501D3EF510E3EF520738F52F800000000000000000000000000000000000000';
+
+procedure DeLijnVectorTests;
+const
+  StartMonths: array [0 .. 7] of Word = (7, 1, 1, 2, 3, 4, 5, 6);
+  EventDays: array [0 .. 3] of Word = (11, 10, 8, 11);
+  EventMonths: array [0 .. 3] of Word = (5, 6, 7, 8);
+  EventMinutes: array [0 .. 3] of Word = (999, 1029, 995, 1012);
+  EventRoutes: array [0 .. 3] of Word = (2007, 2007, 2035, 2035);
+  EventStations: array [0 .. 3] of Byte = (110, 105, 108, 105);
+var
+  S: TMobibSnapshot;
+  D: TMobibData;
+  Subs: TMobibSubscriptions;
+  R: array of TBytes;
+  I: Integer;
+  E: TMobibEvent;
+begin
+  S := Default (TMobibSnapshot);
+  AddFile(S, 0, $2001, $9000, [Environment(3, False)]);
+  SetLength(R, Length(DeLijnContracts));
+  for I := 0 to High(DeLijnContracts) do
+    R[I] := HexToBytes(DeLijnContracts[I]);
+  AddFile(S, 0, $2020, $9000, R);
+  SetLength(R, Length(DeLijnSpecialEvents));
+  for I := 0 to High(DeLijnSpecialEvents) do
+    R[I] := HexToBytes(DeLijnSpecialEvents[I]);
+  AddFile(S, 0, $2040, $9000, R);
+  AddFile(S, 0, $2050, $9000, [HexToBytes(DeLijnContractList)]);
+  D := TMobibCodec.Decode(S, mlLegacy056001);
+  Subs := TMobibSubscriptionCodec.DecodeSnapshot(D);
+  Check(Length(Subs) = 8, 'De Lijn: eight contracts');
+  for I := 0 to High(Subs) do
+  begin
+    Check(Subs[I].LayoutMatched and (Subs[I].Version = 4) and (Subs[I].Tariff = $000F) and
+      (Subs[I].PriceCents = 6200) and (Subs[I].CounterUse = 0), 'De Lijn contract header ' + IntToStr(I + 1));
+    Check((Subs[I].Kind = mskPeriod) and (Subs[I].DurationUnit = mcdMonths) and
+      (Subs[I].DurationValue = 1), 'De Lijn monthly period pass ' + IntToStr(I + 1));
+    Check(Subs[I].HasStartDate and (Subs[I].StartDate = EncodeDate(2026, StartMonths[I], 12)) and
+      Subs[I].HasEndDate and (Subs[I].EndDate = IncMonth(Subs[I].StartDate, 1)),
+      'De Lijn start and inverted end date ' + IntToStr(I + 1));
+  end;
+  Check((Subs[2].DuplicateOf = 2) and (Subs[1].DuplicateOf = 0) and (Subs[0].DuplicateOf = 0),
+    'De Lijn duplicate record 3 flagged');
+  Check(TMobibSubscriptionCodec.StatusAt(Subs[0], EncodeDate(2026, 7, 20)) = mcsActive,
+    'De Lijn newest contract active in July');
+  Check(TMobibSubscriptionCodec.StatusAt(Subs[1], EncodeDate(2026, 7, 20)) = mcsExpired,
+    'De Lijn January contract expired');
+  Check((Length(D.SpecialEvents) = 4) and (D.UnsupportedEventCount = 0), 'De Lijn special events');
+  for I := 0 to High(D.SpecialEvents) do
+  begin
+    E := D.SpecialEvents[I];
+    Check((E.Version = 3) and (E.LayoutKind = melBitmap) and E.Complete and (E.SourceFileId = $2040),
+      'De Lijn special event layout ' + IntToStr(I + 1));
+    Check((E.Date = EncodeDate(2026, EventMonths[I], EventDays[I])) and (E.Minutes = EventMinutes[I]) and
+      (E.FirstDate = E.Date) and (E.FirstMinutes = E.Minutes), 'De Lijn special event time ' + IntToStr(I + 1));
+    Check(E.HasRoute and (E.RouteNumber = EventRoutes[I]) and (E.Zone = 0) and (E.SubZone = 4) and
+      (E.Station = EventStations[I]) and (E.TransferNumber = 0),
+      'De Lijn special event location ' + IntToStr(I + 1));
+  end;
+  Check(D.ContractList.Present and (D.ContractList.Count = 8) and (Length(D.ContractList.Entries) = 8) and
+    (D.ContractList.Confidence = ecObserved), 'De Lijn contract list candidate split');
+end;
+
 begin
   try
     EnvironmentTests;
     EventTests;
     SnapshotTests;
+    DeLijnVectorTests;
     Writeln('MOBIB extended: ', Checks, ' assertions passed.');
   except
     on E: Exception do

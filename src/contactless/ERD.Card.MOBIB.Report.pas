@@ -400,8 +400,13 @@ begin
       B.Add(Sec, 'overview.envversion', 'Environment version',
         IntToStr(AData.Environment.Version), 'published');
       if AData.Environment.HasExpiry then
-        B.Add(Sec, 'overview.expiry', 'Card expiry', Iso(AData.Environment.Expiry),
-          FieldConfidence(AData.Environment.Fields, 'EnvApplicationValidityEndDate'));
+      begin
+        B.Add(Sec, 'overview.expiry', 'Card expiry (stored, first invalid day)',
+          Iso(AData.Environment.Expiry),
+          FieldConfidence(AData.Environment.Fields, 'EnvApplicationValidityEnd'));
+        B.Add(Sec, 'overview.expiry.printed', 'Printed "valid until"',
+          Iso(AData.Environment.Expiry - 1), 'observed');
+      end;
       if AData.Environment.HasCardNumber then
         B.Add(Sec, 'overview.cardnumber', 'Card number',
           string(AData.Environment.CardNumberFormatted), 'published', True);

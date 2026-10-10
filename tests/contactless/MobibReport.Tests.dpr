@@ -240,9 +240,13 @@ begin
   Check((Pos('1980', J) = 0) and (Pos('123456', J) = 0) and (Pos('"masked":true', J) > 0),
     'No personal value in JSON');
   Check(NodeValue(N, 'overview.expiry') = '2031-03-15', 'Card expiry is not personal');
+  Check(NodeValue(N, 'overview.expiry.printed') = '2031-03-14', 'Printed expiry is one day earlier');
+  Check(Pos('Card expiry (stored, first invalid day): 2031-03-15' + sLineBreak, T) > 0,
+    'Expiry confidence found under the layout field name');
   Check(NodeValue(N, 'overview.type') = 'personal (holder data present)', 'Card type');
   Check(NodeValue(N, 'overview.active') = '1', 'Duplicate not counted as a second active contract');
-  Check(NodeValue(N, 'contract.1.product') = 'unknown (tariff 0x000F)', 'Tariff name not invented');
+  Check(NodeValue(N, 'contract.1.product') = 'De Lijn monthly subscription (confirmed on one card)',
+    'De Lijn context names the holder-confirmed tariff');
   Check(Pos('Kind: period pass [observed]', T) > 0, 'Period pass with confidence');
   Check((NodeValue(N, 'contract.1.start') = '2026-07-12') and
     (NodeValue(N, 'contract.1.end') = '2026-08-12'), 'Validity dates');

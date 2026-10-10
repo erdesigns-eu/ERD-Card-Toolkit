@@ -87,6 +87,9 @@ begin
     Check(L.TransportName(0) = 'unknown (code 0)', 'No STIB mode names for De Lijn');
     Check(Pos('De Lijn', TMobibLookup.ContextNote(mocDeLijn)) > 0, 'De Lijn note');
     Check(Pos('not published', TMobibLookup.ContextNote(mocDeLijn)) > 0, 'Tariff codes stated as unpublished');
+    Check(L.TariffName($000F, '') = 'De Lijn monthly subscription (confirmed on one card)',
+      'Holder-confirmed De Lijn monthly tariff');
+    Check(L.TariffName($0010, '') = 'unknown (tariff 0x0010)', 'Other De Lijn tariffs not invented');
     Check(L.LoadCsv('# caller table'#13#10'kind,a,b'#10'stop,0,2007,2101,"Example, stop",Centrum'#10 +
       'station,0,0,4,110,X,Example station'#10'tariff,0x000F,Example monthly pass'#10#10, 'mine') = 3,
       'Caller CSV rows loaded');

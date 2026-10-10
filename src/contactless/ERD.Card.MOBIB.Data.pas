@@ -151,13 +151,15 @@ type
     Version: Byte;
     /// <summary>True when the application expiry date is present.</summary>
     HasExpiry: Boolean;
-    /// <summary>Application (card) expiry date.</summary>
+    /// <summary>Application (card) expiry date as stored on the card.</summary>
+    /// <remarks>On a De Lijn card the printed "valid until" date was one day earlier, so the stored
+    /// date is treated as the first day the card is no longer valid.</remarks>
     Expiry: TDateTime;
     /// <summary>True when the 19-digit card number is valid BCD and not all zero.</summary>
     HasCardNumber: Boolean;
     /// <summary>Card number digits, including leading zeroes.</summary>
     CardNumber: UnicodeString;
-    /// <summary>Card number grouped as printed: 6 / 12 / 1 digits.</summary>
+    /// <summary>Card number grouped as printed on De Lijn MOBIB cards: 6 digits, then 4 4 4 1, for example 123456 / 7890 1234 5678 9.</summary>
     CardNumberFormatted: UnicodeString;
     /// <summary>True when a valid nonzero BCD birth date is present.</summary>
     HasBirthDate: Boolean;
@@ -503,7 +505,8 @@ begin
       Result.HasCardNumber := True;
       Result.CardNumber := UnicodeString(Digits);
       Result.CardNumberFormatted := UnicodeString(Copy(Digits, 1, 6) + ' / ' +
-        Copy(Digits, 7, 12) + ' / ' + Copy(Digits, 19, 1));
+        Copy(Digits, 7, 4) + ' ' + Copy(Digits, 11, 4) + ' ' + Copy(Digits, 15, 4) + ' ' +
+        Copy(Digits, 19, 1));
     end;
   end;
   if TEn1545.Find(Result.Fields, 'HolderPostalCode', V) and (V.Raw <> 0) then

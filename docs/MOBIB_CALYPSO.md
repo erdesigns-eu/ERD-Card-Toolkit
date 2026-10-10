@@ -104,9 +104,15 @@ The current typed results contain:
 Fields added by the EN1545-based decoder:
 
 - **Environment.** The version selects the layout. The decoder reads the card
-  expiry date, the 19-digit card number (raw and in the printed `6 / 12 / 1`
-  grouping), the birth date and the postal code. A card counts as personal
-  when one of these personal fields is set.
+  expiry date, the 19-digit card number, the birth date and the postal code.
+  A card counts as personal when one of these personal fields is set.
+  - The card number is shown in the grouping printed on De Lijn cards: six
+    digits, then `4 4 4 1` (`123456 / 7890 1234 5678 9`). On the checked card
+    the last digit was a valid Luhn check digit.
+  - On one De Lijn card the printed "valid until" date was **one day before**
+    the stored expiry date. The stored date is therefore treated as the first
+    day the card is no longer valid. The report shows both values, and labels
+    the printed date *observed*.
 - **Events.** Validation events (`2010`) and special events (`2040`) use the
   layout for versions 0–2, or the bitmap layout for version 3 and later. The
   bitmap layout adds passenger count, route number, bus or station location
@@ -247,7 +253,11 @@ On real version-4 contracts, the inverted end date always equalled the stored
 "purchase date" plus the recorded duration. So when an end date is present,
 the "purchase date" works as a **validity start** (`StartDate`), and duration
 unit code `3` maps to **months**. Both facts are marked *observed*: they come
-from card data, not from a published layout. Counter-use code `0` with an end
+from card data, not from a published layout. The holder of the De Lijn card
+behind these observations confirmed that it carries a monthly subscription.
+Whether the stored end date is the last valid day or the first invalid day
+(as for the card expiry) is not yet confirmed. `StatusAt` treats it as the
+last valid day. Counter-use code `0` with an end
 date is reported as a period pass (`mskPeriod`), not as a trip product with
 zero trips.
 
@@ -334,9 +344,11 @@ card does not record which operator sold a contract, so you pass a context to
   12-bit event field can never contain them. Stops and line changes after 2009
   are missing.
 - **De Lijn, TEC, SNCB-NMBS:** none of them publishes a stop-code or
-  tariff-code table for MOBIB, and the library invents none. Public De Lijn
-  subscriptions such as Buzzy Pazz, Omnipas and Omnipas 65+ are mentioned in
-  the context note, but no tariff code is assigned to them.
+  tariff-code table for MOBIB, and the library doesn't invent one. The one
+  exception: in the De Lijn context, tariff `0x000F` is named "De Lijn monthly
+  subscription (confirmed on one card)", because the holder of a De Lijn card
+  confirmed it. The product variant (for example Buzzy Pazz or Omnipas) is not
+  stored in any known field. All other De Lijn tariff codes read `unknown`.
 - **Your own tables:** use `TMobibLookup.LoadCsv` to load stop or tariff
   names, with row kinds `station`, `stop` and `tariff`. Any unknown code reads
   `unknown (code)`.
@@ -523,6 +535,13 @@ No implementation code from these projects has been copied. Only facts such as
 field widths and orders are used. The single exception is the bundled Brussels
 stop data from MOBIB-Extractor, which is permissively licensed data with its licence
 notice included.
+
+`MobibExtended.Tests` also checks, with the holder's permission, eight real
+De Lijn contract rows, four special-event rows and the contract list. Those
+rows contain no name, birth date, postal code or card number, and the card's
+environment record is not included. The tests check monthly start and end
+dates, the duplicate record, version-3 special events and status on a
+supplied date.
 
 `CalypsoReader.Tests` uses exact APDU transcripts to cover application
 selection, FCI and startup decoding, file information, record size from the
