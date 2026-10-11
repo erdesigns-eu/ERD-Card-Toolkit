@@ -180,6 +180,7 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Inspection.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Workflow.Personalization.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Workflow.DESFire.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Workflow.ISO15693.pas"/>

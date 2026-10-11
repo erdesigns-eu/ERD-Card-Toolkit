@@ -37,7 +37,7 @@ out of scope (see [Not supported](#not-supported)).
 
 | Area | Components | What you can do |
 | --- | --- | --- |
-| **Application workflows** | `TSle4404Workflow`, `TSleCounterWorkflow`, `TDesfirePersonalizationWorkflow`, `TSimPhonebookWorkflow`, `TSimSmsWorkflow`, `TSimInspectionWorkflow`, `TContactMemoryWorkflow`, `TDesfireApplicationWorkflow`, `TDesfireProvisionWorkflow`, `TCardBatchWorkflow`, `TIso15693MemoryWorkflow`, `TMifareClassicCopyWorkflow`, `TType2MemoryWorkflow`, `TUidProgrammingWorkflow`, `TClassicCredentialWorkflow`, `TNdefTransferWorkflow`, `TMagStripeCopyWorkflow` | Data/UID/stripe copy, backup/restore/compare, ISO15693 selected-memory restore, contact-memory restore, SLE4404/counterchip reviewed program/erase plans, ordered DESFire creation/content/key/access-policy personalization with checked resume, DESFire application provisioning/migration, SIM/USIM contact/SMS import/restore plans and inspection, batch personalization, explicit credential migration and NDEF transfer; progress/card-request events, verified results and partial-write evidence. See [Workflows](docs/WORKFLOWS.md). |
+| **Application workflows** | `TEidInspectionWorkflow`, `TEmvInspectionWorkflow`, `TMobibInspectionWorkflow`, `TSle4404Workflow`, `TSleCounterWorkflow`, `TDesfirePersonalizationWorkflow`, `TSimPhonebookWorkflow`, `TSimSmsWorkflow`, `TSimInspectionWorkflow`, `TContactMemoryWorkflow`, `TDesfireApplicationWorkflow`, `TDesfireProvisionWorkflow`, `TCardBatchWorkflow`, `TIso15693MemoryWorkflow`, `TMifareClassicCopyWorkflow`, `TType2MemoryWorkflow`, `TUidProgrammingWorkflow`, `TClassicCredentialWorkflow`, `TNdefTransferWorkflow`, `TMagStripeCopyWorkflow` | Data/UID/stripe copy, backup/restore/compare, ISO15693 selected-memory restore, contact-memory restore, SLE4404/counterchip reviewed program/erase plans, ordered DESFire creation/content/key/access-policy personalization with checked resume, DESFire application provisioning/migration, SIM/USIM contact/SMS import/restore plans and inspection, batch personalization, explicit credential migration and NDEF transfer; progress/card-request events, verified results and partial-write evidence. Also includes eID/EMV/MOBIB inspection with retained partial results and privacy-aware text/JSON export. See [Workflows](docs/WORKFLOWS.md) and [Inspection reports](docs/INSPECTION_REPORTS.md). |
 | **PC/SC readers** | `TSmartCardReader`, `TSmartCardMonitor` | List readers, connect (shared/exclusive, T=0/T=1), read the ATR, exchange APDUs through `ICardTransport` and use explicit PC/SC transactions. Event-driven reader hot-plug and card insertion/removal without polling. |
 | **Protocol toolkit** | Codecs (no component) | ISO 7816 APDU encode/decode (short and extended), ATR parsing with TCK validation, BER-TLV decode/encode with configurable limits, hex/byte helpers, a curated ATR hint catalog and EMV tag metadata. |
 | **Belgian eID** | `TBelgianEIDReader` | Read identity, address, JPEG photo, certificates (RAW/DER) and raw signature files from Belpic 1.7/1.8 contact cards. |
@@ -174,12 +174,12 @@ tools\build-packages.cmd dcc32 design
 ```
 
 Then use **Component > Install Packages > Add** and select `ERDCardDesign.bpl`.
-It registers 51 components:
+It registers 54 components:
 
 | Palette page | Components |
 | --- | --- |
 | **ERD Cards** | `TSmartCardMonitor`, `TSmartCardReader`, `TBelgianEIDReader`, `TICAODocumentReader`, `TSimCardReaderWriter`, `TEMVCardReader`, `TGlobalPlatformCardManager`, `TEmvCalculator`, `TMagStripeReaderWriter`, `TMemoryCardReaderWriter`, `TSleCounterCardReaderWriter`, `TSle4404CardReaderWriter` |
-| **ERD Workflows** | `TSle4404Workflow`, `TSleCounterWorkflow`, `TDesfirePersonalizationWorkflow`, `TSimPhonebookWorkflow`, `TSimSmsWorkflow`, `TSimInspectionWorkflow`, `TContactMemoryWorkflow`, `TDesfireApplicationWorkflow`, `TDesfireProvisionWorkflow`, `TCardBatchWorkflow`, `TIso15693MemoryWorkflow`, `TCardMemoryCopyWorkflow`, `TMifareClassicCopyWorkflow`, `TType2MemoryWorkflow`, `TUidProgrammingWorkflow`, `TClassicCredentialWorkflow`, `TNdefTransferWorkflow`, `TMagStripeCopyWorkflow` |
+| **ERD Workflows** | `TEidInspectionWorkflow`, `TEmvInspectionWorkflow`, `TMobibInspectionWorkflow`, `TSle4404Workflow`, `TSleCounterWorkflow`, `TDesfirePersonalizationWorkflow`, `TSimPhonebookWorkflow`, `TSimSmsWorkflow`, `TSimInspectionWorkflow`, `TContactMemoryWorkflow`, `TDesfireApplicationWorkflow`, `TDesfireProvisionWorkflow`, `TCardBatchWorkflow`, `TIso15693MemoryWorkflow`, `TCardMemoryCopyWorkflow`, `TMifareClassicCopyWorkflow`, `TType2MemoryWorkflow`, `TUidProgrammingWorkflow`, `TClassicCredentialWorkflow`, `TNdefTransferWorkflow`, `TMagStripeCopyWorkflow` |
 | **ERD Input** | `THidDeviceMonitor`, `TUsbHidInputMonitor`, `TRfidKeyboardReader`, `TRfidHidReportReader`, `TUsbHidReaderWriter`, `TTwn4CardReaderWriter` |
 | **ERD Contactless** | `TTopazCardReader`, `TType1NdefCardReader`, `TFelicaCardReader`, `TType3NdefCardReader`, `TUltralightCCardReaderWriter`, `TCalypsoCardReader`, `TContactlessCardReader`, `TType2NdefCardReader`, `TType4NdefCardReader`, `TIso15693CardReader`, `TIso15693SecurityManager`, `TType5NdefCardReader`, `TDesfireCardReader`, `TType2PasswordCardReader`, `TRawUidProgrammer` |
 
@@ -303,7 +303,7 @@ needs no hardware. Run them with `--help` to see their arguments.
 
 ### VCL demos
 
-`examples/vcl/CardDemos.groupproj` contains 43 Windows VCL applications. Each owns
+`examples/vcl/CardDemos.groupproj` contains 46 Windows VCL applications. Each owns
 its own form and DFM. Hardware demos have an in-app reader/HID/COM-port picker and
 run card work on a background thread. The offline calculator requires no reader;
 the catalog demo receives reader/card snapshots through native events. Write, PIN and management actions require
@@ -318,6 +318,7 @@ and show card offered/removed notifications without running a card operation.
 | `GlobalPlatformDemo` | Domain/CPLC/registry, authentication, CAP/DAP load, install/delete/status/extradition, key management and token/receipt policies; offline CAP preview, live acknowledged LOAD bytes/blocks, own DFM, native reader/card events and background worker |
 | `Iso15693WorkflowDemo`, `BatchWorkflowDemo` | Selected ISO15693 backup/compare/restore and per-card NDEF text personalization batches |
 | `ClassicWorkflowDemo`, `Type2WorkflowDemo` | Data backup/copy/compare/restore, snapshot files and source/target selection |
+| `EidInspectionDemo`, `EmvInspectionDemo`, `MobibInspectionDemo` | Structured inspection, section/progress outcomes and text/JSON exports with explicit personal/raw policy; each owns its form/DFM and native reader events |
 | `ContactMemoryWorkflowDemo`, `DesfireWorkflowDemo` | SLE/I2C backup/copy/compare/restore; complete ordinary DESFire application backup/migration and explicit application/file provisioning, each with its own form/DFM |
 | `Sle4404WorkflowDemo`, `SleCounterWorkflowDemo`, `DesfirePersonalizationDemo` | Public-memory snapshots, offline one-way plans, explicit erases/carry, checked prefix resume and ordered DESFire creation/content/key/access-policy steps; each owns its form/DFM |
 | `UidWorkflowDemo`, `NdefWorkflowDemo`, `MagStripeWorkflowDemo` | UID, NDEF and stripe capture/copy/template programming through workflow components |
@@ -433,7 +434,7 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 ## Unit reference
 
 <details>
-<summary>All 92 source units</summary>
+<summary>Source unit reference</summary>
 
 | Unit | Purpose |
 | --- | --- |
@@ -445,6 +446,10 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 | `ERD.Card.APDU.Catalog` | 35 instruction labels, 205 historical status explanations and dynamic standard statuses |
 | `ERD.Card.TLV` | Bounded BER-TLV tree decoder/encoder |
 | `ERD.Card.Transport` | `ICardTransport` and `ICardTransaction` contracts |
+| `ERD.Card.Inspection` | Structured inspection lifecycle, section evidence, personal/raw export policy and text/JSON output |
+| `ERD.Card.EID.Inspection` | Belgian contact-eID and explicit ICAO BAC/PACE report workflows |
+| `ERD.Card.EMV.Inspection` | Exact-AID inspection, optional bounded extra records, logs and counters |
+| `ERD.Card.MOBIB.Inspection` | Native plan acquisition, parsed MOBIB/operator report and exact missing/restricted file evidence |
 | `ERD.Card.Workflow` | Memory copy/backup/compare/restore, lifecycle events and write evidence |
 | `ERD.Card.Workflow.Archive` | Bounded selected-memory snapshot format |
 | `ERD.Card.Workflow.Batch` | Prepared per-card templates and retained child outcomes |

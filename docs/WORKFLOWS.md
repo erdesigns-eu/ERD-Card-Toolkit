@@ -6,6 +6,9 @@ no card I/O; the caller supplies configured readers, profiles and credentials.
 
 | Component | Implemented workflows |
 | --- | --- |
+| `TEidInspectionWorkflow` | Belgian identity/address/photo/signatures/certificates or one explicit BAC/PACE ICAO LDS acquisition, structured section evidence and exports |
+| `TEmvInspectionWorkflow` | Explicit AIDs and PDOL values, directory/AFL acquisition, optional extra record rectangle, counters and transaction logs |
+| `TMobibInspectionWorkflow` | Explicit native Calypso read plan, parsed MOBIB report with operator context/confidence, exact gaps and privacy policy |
 | `TMifareClassicCopyWorkflow` | Selected/all ordinary data-block copy, backup, comparison and restore for Mini/1K/4K |
 | `TType2MemoryWorkflow` | Selected/all user-page copy, backup, comparison and restore for supported Ultralight/NTAG models |
 | `TUidProgrammingWorkflow` | Explicit UID programming or copying a source UID using Gen2/CUID, factory FUID, raw Gen1a/Gen1b/unsealed UFUID, Type 2 DirectWrite, Gen3, Gen4, USCUID/GDM or documented partial UID profiles |
@@ -441,3 +444,11 @@ semantics. UID comparison detects accidental swaps; it is not issuer authenticit
 
 The three independent workflow demos and their text grammar are documented in
 [VCL_DEMOS.md](VCL_DEMOS.md#sle-and-desfire-personalization-demos).
+
+## Inspection and report workflows
+
+The three read-only family workflows and common report API are described in
+[INSPECTION_REPORTS.md](INSPECTION_REPORTS.md). Workflow completion is separate
+from report completeness: a finished inspection can include absent or restricted
+sections. Partial data survives later errors; exports omit personal and raw values
+unless explicitly selected.

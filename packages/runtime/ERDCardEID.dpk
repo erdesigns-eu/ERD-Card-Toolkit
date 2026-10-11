@@ -11,6 +11,7 @@ requires
   ERDCardCore;
 
 contains
+  ERD.Card.EID.Inspection in '..\..\src\eid\ERD.Card.EID.Inspection.pas',
   ERD.Card.EID.Access in '..\..\src\eid\ERD.Card.EID.Access.pas',
   ERD.Card.EID.SecureMessaging in '..\..\src\eid\ERD.Card.EID.SecureMessaging.pas',
   ERD.Card.EID.DocumentReader in '..\..\src\eid\ERD.Card.EID.DocumentReader.pas',

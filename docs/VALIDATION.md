@@ -894,3 +894,20 @@ These are compiler/protocol/backend/script results, not Delphi IDE or physical
 card/firmware qualification. A tag's final accepted password may remain active
 until a later RF reset; verified replacement is not cryptographic card authenticity.
 ST RF exclusivity does not lock an external I²C host or guarantee its power supply.
+
+## eID / EMV / MOBIB inspection workflows
+
+The common report engine and three native family adapters add independently owned
+section evidence, authentication/partial-read events, and explicit personal/raw
+text and JSON export policies. Three independent inspection DFM applications,
+package references and 54 registered palette classes are included.
+
+The full FPC/native runner passed, including 38 Python checks and 55 inactive
+palette/RTL streaming assertions. Final focused inspection tests passed 1,097
+assertions with zero heap leaks, covering cancellation, primary/cleanup failure,
+observer isolation, consumed requests, privacy combinations, Unicode, synthetic
+native EMV/eID/MOBIB transcripts and hardware-free demo validation. All 21 common
+Pascal source readers passed on the new sources; distribution checks reported
+60 projects, two groups and 46 DFM forms with zero findings. FPC reports the
+pre-existing TLV constructor visibility warning. No Delphi/VCL build was executed
+in the Linux environment.

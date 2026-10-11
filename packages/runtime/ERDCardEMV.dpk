@@ -11,6 +11,7 @@ requires
   ERDCardCore;
 
 contains
+  ERD.Card.EMV.Inspection in '..\..\src\emv\ERD.Card.EMV.Inspection.pas',
   ERD.Card.EMV.Semantics in '..\..\src\emv\ERD.Card.EMV.Semantics.pas',
   ERD.Card.EMV.Aids in '..\..\src\emv\ERD.Card.EMV.Aids.pas',
   ERD.Card.EMV.LegacyTags in '..\..\src\emv\ERD.Card.EMV.LegacyTags.pas',

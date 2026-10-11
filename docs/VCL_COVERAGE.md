@@ -11,6 +11,9 @@ set.
 
 | Project | Included features |
 | --- | --- |
+| EidInspectionDemo | Own DFM and native reader/card events; Belgian public sections or explicit BAC/MRZ/PACE-CAN LDS, text/JSON export with personal/raw policy |
+| EmvInspectionDemo | Own DFM and reader events; PPSE discovery, exact-AID contact/contactless inspection, explicit PDOL, AFL and bounded extra records, logs/counters, text/JSON |
+| MobibInspectionDemo | Own DFM and reader events; explicit inventory/layout/dialect/operator context, parsed report with confidence and missing-file evidence, text/JSON |
 | ContactMemoryWorkflowDemo | All ordinary SLE/I2C models, complete snapshot export, selected-range copy/compare/restore, explicit PIN/retry/page settings; own form/DFM and reader events |
 | DesfireWorkflowDemo | Complete ordinary application backup/migration, explicit native security and transaction policy, application/file provisioning; own form/DFM and reader events |
 | Iso15693WorkflowDemo | Explicit geometry/address dialect, selected-memory backup/copy/compare/restore, addressed UID checks and target lock preflight |
