@@ -1,5 +1,46 @@
 # Library validation record
 
+## Latest run: Calypso application/plans, EN1545 and extended MOBIB (2026-10-10)
+
+What was added:
+- `TCalypsoCardReader` now decodes application selection (startup
+  information and a dialect recommendation that is never applied), tag `85`
+  file information, an opt-in record size from the card, SFI reads and
+  folder-qualified plans.
+- `ERD.Card.EN1545` decodes fields from tables.
+- The MOBIB decoder covers version-3 environments, version-0–2 and
+  bitmap events, and version-4 contract end dates with monthly durations. It
+  also covers counter fallback, ICC data and a candidate split of the
+  contract list.
+- `ERD.Card.MOBIB.Lookup` adds operator contexts, bundled Brussels stops and
+  CSV tables.
+- `ERD.Card.Calypso.Networks` recommends Intercode, Lisboa Viva, Rav-Kav,
+  OPUS, Venezia and Pisa profiles but never applies one by itself.
+- `ERD.Card.MOBIB.Report` produces text and JSON with confidence labels,
+  and masks personal fields by default.
+- MobibDemo gains operator, personal-field, record-size and read-plan
+  options, plus a JSON export.
+
+New test programs:
+
+| Test program | Assertions |
+| --- | --- |
+| `CalypsoReader.Tests` (exact APDU transcripts) | 373 |
+| `En1545.Tests` | 53 |
+| `MobibExtended.Tests` (includes real De Lijn rows; see below) | 88 |
+| `MobibLookup.Tests` | 31 |
+| `CalypsoNetworks.Tests` | 49 |
+| `MobibReport.Tests` | 88 |
+
+The real De Lijn contract, special-event and contract-list rows are used with
+the card holder's permission. Environment and holder fixtures stay synthetic.
+The family-executor tests cover the new demo options against exact
+transcripts.
+
+Not covered:
+- Folder selection through `3F00` has not been checked on a physical card.
+- The other network profiles are marked `CheckedOnCard = False`.
+
 ## Latest run: Delphi Topaz timer import (2026-10-10)
 
 The supplied RAD Studio 12 Win32 log reports E2003 for GetTickCount64 in the
