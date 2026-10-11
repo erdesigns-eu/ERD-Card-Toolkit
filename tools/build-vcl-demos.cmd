@@ -78,6 +78,8 @@ call :build_demo iso15693workflow Iso15693WorkflowDemo
 if errorlevel 1 exit /b %errorlevel%
 call :build_demo batchworkflow BatchWorkflowDemo
 if errorlevel 1 exit /b %errorlevel%
+call :build_demo simworkflow SimWorkflowDemo
+if errorlevel 1 exit /b %errorlevel%
 call :build_demo contactmemoryworkflow ContactMemoryWorkflowDemo
 if errorlevel 1 exit /b %errorlevel%
 call :build_demo desfireworkflow DesfireWorkflowDemo

@@ -59,6 +59,7 @@ that byte-buffer wiping guarantee. Errors display their class, never backend tex
 | `memorycard/MemoryCardDemo.dproj` | ACS capabilities, all implemented SLE/I2C snapshots/ranges, supplied PIN proof, verified writes with physical I2C page size, supported two-wire PIN replacement, irreversible compare-and-protect |
 | `slecounter/SleCounterDemo.dproj` | Explicit SLE4406/4436/5536/6636/window, public range reads, program/carry/backup modes with expected complete before/after windows, raw certificates; credential-bearing code command validation offline only |
 | `sle4404/Sle4404Demo.dproj` | Known window/layout/retry budgets, reads with optional supplied user code, user-code proof, one-to-zero programming, scratchpad erase and application erase with both supplied codes |
+| `simworkflow/SimWorkflowDemo.dproj` | Contact/SMS snapshot, restore preview and reviewed apply; offline free-slot ADN/EXT/EMAIL/ANR and SMS imports, complete multipart-group assembly/import and structured SIM inspection, with own form/DFM |
 | `simcard/SimCardDemo.dproj` | Classic SIM/UICC-USIM files, records, identities and services; PIN/PUK status, verify/change/unblock, ADN contact writes, PBR/IAP/EXT contact reads, explicit linked-record plans, alpha/EMAIL/ANR/SMS/segment codecs |
 | `mifareclassic/MifareClassicDemo.dproj` | UID, offline layout/trailer inspection, supplied-key block reads and status-only data writes |
 | `topaz/TopazDemo.dproj` | Topaz 96/512 identity, memory/locks, byte-range reads, verified user writes and initialized Type 1 NDEF read/parse/replace/clear |
@@ -590,3 +591,46 @@ separate action. No automatic key rotation, rollback or mutation retries occur.
 Both APIs integrate with the batch factory; the dedicated BatchWorkflowDemo
 continues to demonstrate NDEF personalization. See [WORKFLOWS.md](WORKFLOWS.md)
 for ownership, cancellation, partial results and snapshot contracts.
+
+## SIM workflow demo
+
+`simworkflow/SimWorkflowDemo.dproj` has its own form/DFM, two PC/SC reader
+selectors, native reader/card events and background execution. Select source for
+capture/inspection and target for restore preview/apply. Choose classic SIM or
+UICC/USIM explicitly; USIM requires its full AID in hex. The masked PIN field
+accepts **ASCII digits** (for example `1234`), with an explicit retry threshold.
+It is cleared after submission; PIN bytes are copied to the worker and wiped.
+
+The actual EF field is `root|FIDhex,FIDhex`: `0|7F10,6F3A` for standard classic
+ADN, `0|7F10,6F3C` for classic SMS, `1|6F3C` for USIM SMS, or the actual
+`1|5F3A,ADNFID` discovered from USIM PBR. PBR record is zero for standalone/SMS,
+or the explicit selected PBR record for linked USIM contacts. The separate
+classic EXT1 checkbox explicitly includes standard EXT1 in contact capture,
+including on an empty card; it requires classic standard ADN and EXT1 presence.
+
+Capture places the complete snapshot in the editable snapshot/plan memo and
+prints decoded contacts/fields or SMS and physical capacity. Load a source
+snapshot and run **Preview exact restore** against a target: this reads current
+records and creates a target-bound plan, printing EF/record and complete before
+and after bytes. Review/save the plan, then run **Apply reviewed plan** with an
+explicit acknowledgement. A changed card or stale record rejects the action;
+per-record evidence and the overall outcome remain visible after partial failure.
+
+Offline contact import takes one line per logical contact:
+`name<TAB>number[<TAB>email<TAB>additional number]`. It uses a captured target
+snapshot and generates a free-record allocation plan. Standalone ADN supports
+inline contacts; captured supported linked layouts also allocate EXT/EMAIL/ANR.
+Email/additional numbers require the corresponding PBR files. Actual target
+changes remain a separate reviewed-apply action. No implicit contact overwrite.
+
+SMS import takes complete 176-byte EF.SMS record hex strings separated by `;`.
+Use **Plan multipart SMS import** for one explicit complete group; **Assemble
+explicit SMS group** shows its combined text/binary payload offline. The ordinary
+SMS import action preserves the supplied stored records individually. Free-slot
+allocation preserves status and complete SMSC/TPDU/padding; nothing sends a
+message over a mobile network. Snapshot reports can also be viewed offline.
+
+**Inspect SIM / USIM** shows identity, PIN state, IMSI, provider, declared services
+and UICC applications, with explicit status for unavailable sections. A successful
+inspection may contain refused sections; those remain visible. See
+[WORKFLOWS.md](WORKFLOWS.md) for exact supported layouts and ownership/evidence.

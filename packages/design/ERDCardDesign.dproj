@@ -176,6 +176,8 @@
         <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Report.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Calypso.SAM.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Calypso.pas"/>
+        <DCCReference Include="..\..\src\sim\ERD.Card.SIM.Workflow.pas"/>
+        <DCCReference Include="..\..\src\sim\ERD.Card.SIM.Inspection.pas"/>
         <DCCReference Include="..\..\src\sim\ERD.Card.SIM.Data.pas"/>
         <DCCReference Include="..\..\src\sim\ERD.Card.SIM.Reader.pas"/>
         <DCCReference Include="..\..\src\readers\ERD.Card.Reader.TWN4.pas"/>

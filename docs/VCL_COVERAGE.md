@@ -1,6 +1,6 @@
 # VCL examples: current coverage
 
-There are **thirty-nine separately executable applications** in
+There are **forty separately executable applications** in
 `examples/vcl/CardDemos.groupproj`. Each application has its own `TForm`,
 `.Main.pas`, and `.Main.dfm`. All visual controls are in that application's own
 DFM, including input fields and action controls. Hardware demos include reader
@@ -29,6 +29,7 @@ set.
 | Sle4404Demo | Known layout/counters, supplied-code reads/proof, bit programming, scratchpad and application erases |
 | Twn4Demo | PRS/CDC version/tag, supplied-key Classic, and public Type 2 reads/verified writes |
 | RfidInputDemo | Foreground keyboard, boot/ID/fixed-ASCII reports, ASCII/hex/decimal profiles, and byte conversion |
+| SimWorkflowDemo | Independent DFM; source/target reader events and selectors; complete contacts/SMS snapshots, restore preview/apply, offline free-record imports including supported EXT/EMAIL/ANR layouts, explicit multipart assembly/import and SIM inspection |
 | SimCardDemo | Classic SIM/UICC-USIM, files/records/identities/services, PIN/PUK status, verify/change/unblock, ADN contact writes, PBR/IAP/EXT contact reads, explicit linked record plans, alpha/EMAIL/ANR/SMS/segment codecs |
 | MifareClassicDemo | UID, offline layout/trailers, supplied-key block reads, and status-only data writes |
 | TopazDemo | Topaz 96/512 full memory/locks, byte-range reads and verified writes, initialized parsed Type 1 NDEF replace/clear; own DFM, reader selection and native events |

@@ -85,6 +85,9 @@
     <Projects Include="iso15693workflow\Iso15693WorkflowDemo.dproj">
         <Dependencies/>
     </Projects>
+    <Projects Include="simworkflow\SimWorkflowDemo.dproj">
+        <Dependencies/>
+    </Projects>
     <Projects Include="desfireworkflow\DesfireWorkflowDemo.dproj">
         <Dependencies/>
     </Projects>
@@ -324,16 +327,19 @@
     <Target Name="Type2WorkflowDemo"><MSBuild Projects="type2workflow\Type2WorkflowDemo.dproj"/></Target>
     <Target Name="BatchWorkflowDemo"><MSBuild Projects="batchworkflow\BatchWorkflowDemo.dproj"/></Target>
     <Target Name="Iso15693WorkflowDemo"><MSBuild Projects="iso15693workflow\Iso15693WorkflowDemo.dproj"/></Target>
+    <Target Name="SimWorkflowDemo"><MSBuild Projects="simworkflow\SimWorkflowDemo.dproj"/></Target>
     <Target Name="DesfireWorkflowDemo"><MSBuild Projects="desfireworkflow\DesfireWorkflowDemo.dproj"/></Target>
     <Target Name="ContactMemoryWorkflowDemo"><MSBuild Projects="contactmemoryworkflow\ContactMemoryWorkflowDemo.dproj"/></Target>
     <Target Name="Type2WorkflowDemo:Clean"><MSBuild Projects="type2workflow\Type2WorkflowDemo.dproj" Targets="Clean"/></Target>
     <Target Name="BatchWorkflowDemo:Clean"><MSBuild Projects="batchworkflow\BatchWorkflowDemo.dproj" Targets="Clean"/></Target>
     <Target Name="Iso15693WorkflowDemo:Clean"><MSBuild Projects="iso15693workflow\Iso15693WorkflowDemo.dproj" Targets="Clean"/></Target>
+    <Target Name="SimWorkflowDemo:Clean"><MSBuild Projects="simworkflow\SimWorkflowDemo.dproj" Targets="Clean"/></Target>
     <Target Name="DesfireWorkflowDemo:Clean"><MSBuild Projects="desfireworkflow\DesfireWorkflowDemo.dproj" Targets="Clean"/></Target>
     <Target Name="ContactMemoryWorkflowDemo:Clean"><MSBuild Projects="contactmemoryworkflow\ContactMemoryWorkflowDemo.dproj" Targets="Clean"/></Target>
     <Target Name="Type2WorkflowDemo:Make"><MSBuild Projects="type2workflow\Type2WorkflowDemo.dproj" Targets="Make"/></Target>
     <Target Name="BatchWorkflowDemo:Make"><MSBuild Projects="batchworkflow\BatchWorkflowDemo.dproj" Targets="Make"/></Target>
     <Target Name="Iso15693WorkflowDemo:Make"><MSBuild Projects="iso15693workflow\Iso15693WorkflowDemo.dproj" Targets="Make"/></Target>
+    <Target Name="SimWorkflowDemo:Make"><MSBuild Projects="simworkflow\SimWorkflowDemo.dproj" Targets="Make"/></Target>
     <Target Name="DesfireWorkflowDemo:Make"><MSBuild Projects="desfireworkflow\DesfireWorkflowDemo.dproj" Targets="Make"/></Target>
     <Target Name="ContactMemoryWorkflowDemo:Make"><MSBuild Projects="contactmemoryworkflow\ContactMemoryWorkflowDemo.dproj" Targets="Make"/></Target>
     <Target Name="UidWorkflowDemo"><MSBuild Projects="uidworkflow\UidWorkflowDemo.dproj"/></Target>
@@ -346,13 +352,13 @@
     <Target Name="NdefWorkflowDemo:Clean"><MSBuild Projects="ndefworkflow\NdefWorkflowDemo.dproj" Targets="Clean"/></Target>
     <Target Name="NdefWorkflowDemo:Make"><MSBuild Projects="ndefworkflow\NdefWorkflowDemo.dproj" Targets="Make"/></Target>
     <Target Name="Build">
-        <CallTarget Targets="MagStripeDemo;SmartCardDemo;ReaderToolsDemo;MemoryCardDemo;SleCounterDemo;Sle4404Demo;Twn4Demo;RfidInputDemo;SimCardDemo;MifareClassicDemo;Type2Demo;Type4NdefDemo;EmvDemo;BelgianEidDemo;IcaoDocumentDemo;Iso15693Demo;UidProgrammingDemo;DesfireDemo;MagStripeProfilesDemo;UsbHidDemo;MobibDemo;UltralightCDemo;FelicaDemo;Slix2Demo;St25DvDemo;TopazDemo;EmvCalculatorDemo;EmvSemanticsDemo;GlobalPlatformDemo;CardCatalogDemo;ClassicWorkflowDemo;Type2WorkflowDemo;BatchWorkflowDemo;Iso15693WorkflowDemo;DesfireWorkflowDemo;ContactMemoryWorkflowDemo;UidWorkflowDemo;MagStripeWorkflowDemo;NdefWorkflowDemo"/>
+        <CallTarget Targets="MagStripeDemo;SmartCardDemo;ReaderToolsDemo;MemoryCardDemo;SleCounterDemo;Sle4404Demo;Twn4Demo;RfidInputDemo;SimCardDemo;MifareClassicDemo;Type2Demo;Type4NdefDemo;EmvDemo;BelgianEidDemo;IcaoDocumentDemo;Iso15693Demo;UidProgrammingDemo;DesfireDemo;MagStripeProfilesDemo;UsbHidDemo;MobibDemo;UltralightCDemo;FelicaDemo;Slix2Demo;St25DvDemo;TopazDemo;EmvCalculatorDemo;EmvSemanticsDemo;GlobalPlatformDemo;CardCatalogDemo;ClassicWorkflowDemo;Type2WorkflowDemo;BatchWorkflowDemo;Iso15693WorkflowDemo;SimWorkflowDemo;DesfireWorkflowDemo;ContactMemoryWorkflowDemo;UidWorkflowDemo;MagStripeWorkflowDemo;NdefWorkflowDemo"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="MagStripeDemo:Clean;SmartCardDemo:Clean;ReaderToolsDemo:Clean;MemoryCardDemo:Clean;SleCounterDemo:Clean;Sle4404Demo:Clean;Twn4Demo:Clean;RfidInputDemo:Clean;SimCardDemo:Clean;MifareClassicDemo:Clean;Type2Demo:Clean;Type4NdefDemo:Clean;EmvDemo:Clean;BelgianEidDemo:Clean;IcaoDocumentDemo:Clean;Iso15693Demo:Clean;UidProgrammingDemo:Clean;DesfireDemo:Clean;MagStripeProfilesDemo:Clean;UsbHidDemo:Clean;MobibDemo:Clean;UltralightCDemo:Clean;FelicaDemo:Clean;Slix2Demo:Clean;St25DvDemo:Clean;TopazDemo:Clean;EmvCalculatorDemo:Clean;EmvSemanticsDemo:Clean;GlobalPlatformDemo:Clean;CardCatalogDemo:Clean;ClassicWorkflowDemo:Clean;Type2WorkflowDemo:Clean;BatchWorkflowDemo:Clean;Iso15693WorkflowDemo:Clean;DesfireWorkflowDemo:Clean;ContactMemoryWorkflowDemo:Clean;UidWorkflowDemo:Clean;MagStripeWorkflowDemo:Clean;NdefWorkflowDemo:Clean"/>
+        <CallTarget Targets="MagStripeDemo:Clean;SmartCardDemo:Clean;ReaderToolsDemo:Clean;MemoryCardDemo:Clean;SleCounterDemo:Clean;Sle4404Demo:Clean;Twn4Demo:Clean;RfidInputDemo:Clean;SimCardDemo:Clean;MifareClassicDemo:Clean;Type2Demo:Clean;Type4NdefDemo:Clean;EmvDemo:Clean;BelgianEidDemo:Clean;IcaoDocumentDemo:Clean;Iso15693Demo:Clean;UidProgrammingDemo:Clean;DesfireDemo:Clean;MagStripeProfilesDemo:Clean;UsbHidDemo:Clean;MobibDemo:Clean;UltralightCDemo:Clean;FelicaDemo:Clean;Slix2Demo:Clean;St25DvDemo:Clean;TopazDemo:Clean;EmvCalculatorDemo:Clean;EmvSemanticsDemo:Clean;GlobalPlatformDemo:Clean;CardCatalogDemo:Clean;ClassicWorkflowDemo:Clean;Type2WorkflowDemo:Clean;BatchWorkflowDemo:Clean;Iso15693WorkflowDemo:Clean;SimWorkflowDemo:Clean;DesfireWorkflowDemo:Clean;ContactMemoryWorkflowDemo:Clean;UidWorkflowDemo:Clean;MagStripeWorkflowDemo:Clean;NdefWorkflowDemo:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="MagStripeDemo:Make;SmartCardDemo:Make;ReaderToolsDemo:Make;MemoryCardDemo:Make;SleCounterDemo:Make;Sle4404Demo:Make;Twn4Demo:Make;RfidInputDemo:Make;SimCardDemo:Make;MifareClassicDemo:Make;Type2Demo:Make;Type4NdefDemo:Make;EmvDemo:Make;BelgianEidDemo:Make;IcaoDocumentDemo:Make;Iso15693Demo:Make;UidProgrammingDemo:Make;DesfireDemo:Make;MagStripeProfilesDemo:Make;UsbHidDemo:Make;MobibDemo:Make;UltralightCDemo:Make;FelicaDemo:Make;Slix2Demo:Make;St25DvDemo:Make;TopazDemo:Make;EmvCalculatorDemo:Make;EmvSemanticsDemo:Make;GlobalPlatformDemo:Make;CardCatalogDemo:Make;ClassicWorkflowDemo:Make;Type2WorkflowDemo:Make;BatchWorkflowDemo:Make;Iso15693WorkflowDemo:Make;DesfireWorkflowDemo:Make;ContactMemoryWorkflowDemo:Make;UidWorkflowDemo:Make;MagStripeWorkflowDemo:Make;NdefWorkflowDemo:Make"/>
+        <CallTarget Targets="MagStripeDemo:Make;SmartCardDemo:Make;ReaderToolsDemo:Make;MemoryCardDemo:Make;SleCounterDemo:Make;Sle4404Demo:Make;Twn4Demo:Make;RfidInputDemo:Make;SimCardDemo:Make;MifareClassicDemo:Make;Type2Demo:Make;Type4NdefDemo:Make;EmvDemo:Make;BelgianEidDemo:Make;IcaoDocumentDemo:Make;Iso15693Demo:Make;UidProgrammingDemo:Make;DesfireDemo:Make;MagStripeProfilesDemo:Make;UsbHidDemo:Make;MobibDemo:Make;UltralightCDemo:Make;FelicaDemo:Make;Slix2Demo:Make;St25DvDemo:Make;TopazDemo:Make;EmvCalculatorDemo:Make;EmvSemanticsDemo:Make;GlobalPlatformDemo:Make;CardCatalogDemo:Make;ClassicWorkflowDemo:Make;Type2WorkflowDemo:Make;BatchWorkflowDemo:Make;Iso15693WorkflowDemo:Make;SimWorkflowDemo:Make;DesfireWorkflowDemo:Make;ContactMemoryWorkflowDemo:Make;UidWorkflowDemo:Make;MagStripeWorkflowDemo:Make;NdefWorkflowDemo:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>

@@ -17,6 +17,9 @@ no card I/O; the caller supplies configured readers, profiles and credentials.
 | `TContactMemoryWorkflow` | Complete SLE/I2C backup; selected-range copy, comparison and restore with protection/retry preflight and per-range verification |
 | `TDesfireApplicationWorkflow` | Complete ordinary application backup; compatible standard/backup/value/record copy, comparison and restore with explicit transaction ownership |
 | `TDesfireProvisionWorkflow` | Explicit application key policy/type/count and ordinary-file creation with per-file metadata evidence |
+| `TSimPhonebookWorkflow` | Standalone ADN/standard classic EXT1 or explicit PBR-linked contact backup, compatible-layout restore preview and reviewed apply |
+| `TSimSmsWorkflow` | Complete EF.SMS backup, status-preserving restore preview and reviewed apply; offline free-slot/multipart import planners |
+| `TSimInspectionWorkflow` | Explicit ICCID/PIN state/IMSI/provider/services/EF.DIR inspection with per-section refusal evidence |
 | `TCardMemoryCopyWorkflow` | The reusable memory engine, also usable with application-supplied `ICardWorkflowMemory` backends |
 
 ## Lifecycle and evidence
@@ -141,7 +144,7 @@ child's `CheckPrepared`. It accepts one through 256 unique application identifie
 at most 128 characters each. The application generates those identifiers and the
 family-specific contents; the batch does not invent identities or credentials.
 
-Return an existing memory, NDEF, UID, credential, stripe, contact-memory or DESFire workflow. The batch owns
+Return an existing memory, NDEF, UID, credential, stripe, contact-memory, DESFire or SIM workflow. The batch owns
 and retains the returned component. Factories must retain any caller-owned readers
 until the batch and its children are destroyed. The batch replaces child progress
 and card-presentation callbacks. Its own `OnCardRequired` uses `CurrentIdentifier`
@@ -269,12 +272,86 @@ prepared, ownerless children. Batch preparation remains free of hardware I/O and
 stops on a failed, cancelled or uncertain child. See the mixed-family batch case
 in `tests/workflows/CardFamilyWorkflow.Tests.dpr`.
 
+## SIM/USIM contact and SMS workflows
+
+`TSimPhonebookWorkflow` and `TSimSmsWorkflow` use an explicitly configured
+`ISimWorkflowCard`. `TSimWorkflowCard` owns frozen copies of a native reader's
+profile, AID and PIN retry policy and retains its transport. The original reader
+may be freed. Preparation never connects or authenticates. Use exclusive caller
+ownership of the physical connection between workflow steps; no competing
+operation, reset or card swap during one execution.
+
+The application supplies the real ADN/SMS root/path. A nonzero PBR record captures
+all linear-fixed EFs referenced by that selected USIM PBR record, including IAP,
+EXT, EMAIL and ANR. No USIM ADN FID or application is guessed. Standard classic
+ADN captures EXT1 if existing numbers require it; `PrepareClassicBackup` explicitly
+captures both standard ADN and EXT1 even on an empty phonebook. Both EFs must be
+present. Cyclic/unknown geometries and incomplete/unresolvable contact links fail
+rather than creating partial snapshots.
+
+The workflow has three distinct requests:
+
+1. `PrepareBackup` captures all physical records and ICCID; the codec report shows
+   decoded names/numbers, supported linked fields, SMS status/text and capacity.
+2. `PreparePreview` reads a fresh target and builds an exact-layout restore plan.
+   PBR records must match and remain read-only. EXT/EMAIL/ANR data precedes IAP
+   and ADN links. Every original/replacement byte is visible in the plan.
+3. `PrepareApply` uses a previously reviewed target-bound plan. It checks profile,
+   full AID and ICCID, authenticates at most once when a supplied PIN is needed,
+   then checks ICCID and **every original record again inside one retained native
+   transaction before any UPDATE**. Each original is rechecked immediately before
+   its update, each record is independently read back, and a final complete
+   verification precedes release.
+
+`TSimWorkflowCodec.ImportContacts` allocates standalone inline ADN contacts in
+fully erased free slots. `ImportLinkedContacts` allocates logical names/numbers,
+long-number EXT chains and optional EMAIL/ANR using a complete supported PBR
+layout (or standard classic ADN/EXT1). It supports one ADN/IAP/EXT/EMAIL/ANR
+reference each, type-1 same-index and type-2 IAP bindings, explicit ADN SFI
+back-references, and erased/unreferenced helper records. Ambiguous/unknown
+bindings, insufficient capacity and names/numbers that do not fit reject the
+entire offline request. No existing contact is overwritten or silently shortened.
+ANR is inline up to twenty dial symbols; extended ANR and broader PBR schemas
+remain outside this logical importer. Exact compatible-layout backup/restore
+retains the full raw linked records supported by the snapshot resolver.
+
+`ImportSms` allocates explicit complete 176-byte stored records in free target
+slots without changing status/SMSC/TPDU/padding. `ImportSmsGroup` first validates
+one explicitly supplied complete multipart group through `AssembleSms`, rejecting
+missing, duplicate or mixed segments. There is no inferred grouping of unrelated
+records. Unsupported text remains complete raw bytes in a snapshot/report; text
+decode failure does not discard an otherwise readable SMS record. This stores
+messages on the card and does not transmit SMS through a mobile network.
+
+`ERD-SIM-SNAPSHOT 1` and `ERD-SIM-PLAN 1` archives are canonical bounded ASCII
+containing personal data, actual paths and physical records. Plans include target
+ICCID/profile/AID plus all original and replacement bytes; neither format contains
+a PIN. Snapshot limits are 32 EFs, 255 records per EF and 255 bytes per record.
+Native plans accept at most 8192 unique linear-fixed records. An empty plan causes
+no PIN attempt or write. Unknown budgets are never treated as permission to try.
+
+All writes are non-atomic across records. Cancellation is accepted before the
+retained native plan starts; once started, the bounded plan and its read-back run
+to completion or failure. Earlier verified records survive a later failure, while
+outstanding dispatch remains uncertain. Cleanup failure can retain per-record
+verification while the overall result remains uncertain. No retry, reset or
+rollback is automatic. Contact/SMS workflows and the inspection component can be
+returned as fresh ownerless children by the existing batch factory.
+
+`TSimInspectionWorkflow` acquires ICCID, PIN state, IMSI, SPN, service bits and
+UICC EF.DIR using the supplied profile/AID. Card status refusals are recorded per
+section with the exact SW; transport/malformed-response errors fail the workflow.
+A completed inspection does not claim every section was available. Service bits
+are declarations, not proof that an operation is permitted by card access rules.
+The component never chooses an AID, attempts ADM credentials, registers a phone,
+sends SMS or performs network authentication.
+
 ## Further workflow extensions
 
 These are future workflows, not shipped workflow components yet:
 
 - SLE counter/4404-specific workflows and explicit irreversible chip operations.
-- SIM/USIM contact/SMS import/export and eID/EMV/MOBIB acquisition/report pipelines.
+- Broader SIM PBR schemas, extended ANR allocation and cross-family eID/EMV/MOBIB acquisition/report pipelines.
 
 Existing low-level components already support much of this work. These extensions
 need family-specific workflow contracts; they are not implied by the generic

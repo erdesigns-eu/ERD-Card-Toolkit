@@ -85,6 +85,8 @@ contains
   ERD.Card.MOBIB.Report in '..\..\src\contactless\ERD.Card.MOBIB.Report.pas',
   ERD.Card.Contactless.Calypso.SAM in '..\..\src\contactless\ERD.Card.Contactless.Calypso.SAM.pas',
   ERD.Card.Contactless.Calypso in '..\..\src\contactless\ERD.Card.Contactless.Calypso.pas',
+  ERD.Card.SIM.Workflow in '..\..\src\sim\ERD.Card.SIM.Workflow.pas',
+  ERD.Card.SIM.Inspection in '..\..\src\sim\ERD.Card.SIM.Inspection.pas',
   ERD.Card.SIM.Data in '..\..\src\sim\ERD.Card.SIM.Data.pas',
   ERD.Card.SIM.Reader in '..\..\src\sim\ERD.Card.SIM.Reader.pas',
   ERD.Card.Reader.TWN4 in '..\..\src\readers\ERD.Card.Reader.TWN4.pas',

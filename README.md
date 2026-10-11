@@ -37,7 +37,7 @@ out of scope (see [Not supported](#not-supported)).
 
 | Area | Components | What you can do |
 | --- | --- | --- |
-| **Application workflows** | `TContactMemoryWorkflow`, `TDesfireApplicationWorkflow`, `TDesfireProvisionWorkflow`, `TCardBatchWorkflow`, `TIso15693MemoryWorkflow`, `TMifareClassicCopyWorkflow`, `TType2MemoryWorkflow`, `TUidProgrammingWorkflow`, `TClassicCredentialWorkflow`, `TNdefTransferWorkflow`, `TMagStripeCopyWorkflow` | Data/UID/stripe copy, backup/restore/compare, ISO15693 selected-memory restore, contact-memory restore, DESFire application provisioning/migration, batch personalization, explicit credential migration and NDEF transfer; progress/card-request events, verified results and partial-write evidence. See [Workflows](docs/WORKFLOWS.md). |
+| **Application workflows** | `TSimPhonebookWorkflow`, `TSimSmsWorkflow`, `TSimInspectionWorkflow`, `TContactMemoryWorkflow`, `TDesfireApplicationWorkflow`, `TDesfireProvisionWorkflow`, `TCardBatchWorkflow`, `TIso15693MemoryWorkflow`, `TMifareClassicCopyWorkflow`, `TType2MemoryWorkflow`, `TUidProgrammingWorkflow`, `TClassicCredentialWorkflow`, `TNdefTransferWorkflow`, `TMagStripeCopyWorkflow` | Data/UID/stripe copy, backup/restore/compare, ISO15693 selected-memory restore, contact-memory restore, DESFire application provisioning/migration, SIM/USIM contact/SMS import/restore plans and inspection, batch personalization, explicit credential migration and NDEF transfer; progress/card-request events, verified results and partial-write evidence. See [Workflows](docs/WORKFLOWS.md). |
 | **PC/SC readers** | `TSmartCardReader`, `TSmartCardMonitor` | List readers, connect (shared/exclusive, T=0/T=1), read the ATR, exchange APDUs through `ICardTransport` and use explicit PC/SC transactions. Event-driven reader hot-plug and card insertion/removal without polling. |
 | **Protocol toolkit** | Codecs (no component) | ISO 7816 APDU encode/decode (short and extended), ATR parsing with TCK validation, BER-TLV decode/encode with configurable limits, hex/byte helpers, a curated ATR hint catalog and EMV tag metadata. |
 | **Belgian eID** | `TBelgianEIDReader` | Read identity, address, JPEG photo, certificates (RAW/DER) and raw signature files from Belpic 1.7/1.8 contact cards. |
@@ -102,7 +102,7 @@ These rules apply to every component and are worth knowing before you start:
 | `src/globalplatform` | Native secure channels, registry/CPLC, CAP parsing and card management |
 | `src/contactless` | MIFARE Classic, Type 1/2/3/4/5, FeliCa, NDEF, ISO 15693, DESFire, UID programming, Calypso/MOBIB |
 | `src/memory` | SLE/I²C memory chips, SLE counter chips, SLE4404, ACS capability catalog |
-| `src/sim` | SIM/USIM reader/writer and data codecs |
+| `src/sim` | SIM/USIM reader/writer, codecs, record workflows and inspection |
 | `src/magstripe` | Track codecs, serial port, MSR206/MSR605, MSR206-7HL, MagTek adapters |
 | `src/input` | Native USB-HID, HID monitors, RFID keyboard/HID decoders |
 | `src/readers` | ELATEC TWN4 Simple Protocol and its serial channel |
@@ -110,7 +110,7 @@ These rules apply to every component and are worth knowing before you start:
 | `src/design` | IDE palette registration |
 | `packages/` | `ERDCards.groupproj`: 12 runtime packages and the design-time package |
 | `Delphi Packages/` | Native-format `Core` reference package used for IDE troubleshooting |
-| `examples/` | 19 console examples and 39 VCL demos (`examples/vcl/CardDemos.groupproj`) |
+| `examples/` | 19 console examples and 40 VCL demos (`examples/vcl/CardDemos.groupproj`) |
 | `tests/` | Pascal test programs (Free Pascal/Delphi), native ABI shims and Python tests |
 | `tools/` | Build scripts, test runner, distribution checker, `pascalcheck` static analysis, fixture generators |
 | `docs/` | Per-family guides, installation, validation and planning documents |
@@ -174,12 +174,12 @@ tools\build-packages.cmd dcc32 design
 ```
 
 Then use **Component > Install Packages > Add** and select `ERDCardDesign.bpl`.
-It registers 45 components:
+It registers 48 components:
 
 | Palette page | Components |
 | --- | --- |
 | **ERD Cards** | `TSmartCardMonitor`, `TSmartCardReader`, `TBelgianEIDReader`, `TICAODocumentReader`, `TSimCardReaderWriter`, `TEMVCardReader`, `TGlobalPlatformCardManager`, `TEmvCalculator`, `TMagStripeReaderWriter`, `TMemoryCardReaderWriter`, `TSleCounterCardReaderWriter`, `TSle4404CardReaderWriter` |
-| **ERD Workflows** | `TContactMemoryWorkflow`, `TDesfireApplicationWorkflow`, `TDesfireProvisionWorkflow`, `TCardBatchWorkflow`, `TIso15693MemoryWorkflow`, `TCardMemoryCopyWorkflow`, `TMifareClassicCopyWorkflow`, `TType2MemoryWorkflow`, `TUidProgrammingWorkflow`, `TClassicCredentialWorkflow`, `TNdefTransferWorkflow`, `TMagStripeCopyWorkflow` |
+| **ERD Workflows** | `TSimPhonebookWorkflow`, `TSimSmsWorkflow`, `TSimInspectionWorkflow`, `TContactMemoryWorkflow`, `TDesfireApplicationWorkflow`, `TDesfireProvisionWorkflow`, `TCardBatchWorkflow`, `TIso15693MemoryWorkflow`, `TCardMemoryCopyWorkflow`, `TMifareClassicCopyWorkflow`, `TType2MemoryWorkflow`, `TUidProgrammingWorkflow`, `TClassicCredentialWorkflow`, `TNdefTransferWorkflow`, `TMagStripeCopyWorkflow` |
 | **ERD Input** | `THidDeviceMonitor`, `TUsbHidInputMonitor`, `TRfidKeyboardReader`, `TRfidHidReportReader`, `TUsbHidReaderWriter`, `TTwn4CardReaderWriter` |
 | **ERD Contactless** | `TTopazCardReader`, `TType1NdefCardReader`, `TFelicaCardReader`, `TType3NdefCardReader`, `TUltralightCCardReaderWriter`, `TCalypsoCardReader`, `TContactlessCardReader`, `TType2NdefCardReader`, `TType4NdefCardReader`, `TIso15693CardReader`, `TIso15693SecurityManager`, `TType5NdefCardReader`, `TDesfireCardReader`, `TType2PasswordCardReader`, `TRawUidProgrammer` |
 
@@ -330,6 +330,7 @@ and show card offered/removed notifications without running a card operation.
 | `MemoryCardDemo` | All SLE/I²C models, both ACS dialects, PIN, writes and protection |
 | `SleCounterDemo` | Counter-chip windows, programming and certificates |
 | `Sle4404Demo` | SLE4404 layout, code verification, programming and erases |
+| `SimWorkflowDemo` | Complete contacts/SMS snapshot, exact restore preview, reviewed apply with per-record evidence, free-record contact/SMS imports, EXT/EMAIL/ANR allocation for supported PBR layouts, explicit multipart groups and SIM inspection; own form/DFM and reader events |
 | `SimCardDemo` | SIM/USIM files, identities, services, PIN/PUK, contacts, SMS and linked records |
 | `MifareClassicDemo` | UID, layout/trailers, block reads and writes |
 | `Type2Demo` | Ultralight/NTAG memory, public/protected NDEF, PWD_AUTH/PACK, verified configuration/credentials and counter reads |
@@ -415,8 +416,9 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 - **MOBIB:** no built-in De Lijn/STIB/TEC/NMBS-SNCB rule sets; operator profiles must be
   supplied. Secure reads need a provisioned SAM; software-only key cryptography and
   encrypted sessions are not implemented.
-- **SIM:** no eSIM provisioning, network authentication, SMS sending or automatic
-  record allocation.
+- **SIM:** no eSIM provisioning, network authentication or SMS sending. Logical contact
+  allocation requires the supported explicit PBR/ADN/EXT layouts; broader schemas
+  and extended ANR allocation remain unavailable.
 - **Contact memory:** no AT88SC/CryptoMemory, no ACR39 for counter chips/SLE4404,
   no automatic counter arithmetic or personalisation-code unlocking.
 - **Reader protocols:** generic HID moves reports but doesn't know any vendor card
@@ -523,6 +525,8 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 | `ERD.Card.Memory.Capabilities` | ACS memory capability catalog |
 | `ERD.Card.Memory.Counter` | `TSleCounterCardReaderWriter` |
 | `ERD.Card.Memory.Sle4404` | `TSle4404CardReaderWriter` |
+| `ERD.Card.SIM.Workflow` | Contact/SMS snapshots and archives, restore/import plans, native record evidence and two workflow components |
+| `ERD.Card.SIM.Inspection` | Explicit ICCID/PIN/IMSI/provider/service/application acquisition with per-section availability/status |
 | `ERD.Card.SIM.Data` | SIM/USIM data codecs (files, PIN, ADN, PBR, SMS) |
 | `ERD.Card.SIM.Reader` | `TSimCardReaderWriter` |
 | `ERD.Card.MagStripe.Tracks` | Track codecs and financial parsing |
