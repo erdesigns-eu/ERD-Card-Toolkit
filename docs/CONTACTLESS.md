@@ -27,7 +27,7 @@ hardware. Assign both a connected `ICardTransport` and an explicitly matching
 | Public Type 5 NDEF memory | `TType5NdefCardReader`: initialized E1/E2 CC/TLV mapping, lock preflight and verified length-last updates |
 | Native DESFire files | `TDesfireCardReader`: discovery, ordinary data/value/record reads and verified standard-data writes; explicit EV1/EV2 AES authentication, Plain/MACed/Full messaging and EV2 NonFirst; retained owned backup/value/record transactions, commit/abort, authenticated directories and ordinary application/file management |
 | Topaz 96/512 and initialized Type 1 NDEF | `TTopazCardReader`, `TType1NdefCardReader`; exact HR/UID, full memory/locks, verified user/NDEF writes via explicit ACR122U/PN532 Jewel/CIU adapter; [scope](TOPAZ_TYPE1.md) |
-| MIFARE Plus SL3 | Native supplied-key AES 2K/4K ordinary-block reads and verified writes, sector key replacement with fresh new-key proof, explicit SL0 personalization/direct-SL3 commit with selected key/data proofs, ACR122 ISO14443-4 adapter and protected-memory workflows; see [Plus](MIFARE_PLUS.md) |
+| MIFARE Plus SL3 | Native supplied-key AES 2K/4K ordinary-block reads and verified writes, sector key replacement with fresh new-key proof, explicit SL0 personalization/direct-SL3 commit with selected key/data proofs, raw SL1 authentication and SL1→SL2/SL3 transitions, signed value blocks, ACR122 ISO14443-4/raw adapters and protected-memory workflows; see [Plus](MIFARE_PLUS.md) |
 | DESFire extended management | EV2 AES key sets, explicit configuration subset, verified SDM settings and offline SDM crypto; see [extensions](DESFIRE_EXTENDED.md) |
 | Additional DESFire LRP/TMAC/extended rights and programmable UID families | Separate profiles still pending |
 

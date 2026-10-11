@@ -71,6 +71,33 @@ type
     /// <summary>True only after commit, fresh authentication, all selected proofs and successful release.</summary>
     Sl3Verified: Boolean;
   end;
+  /// <summary>Verified Classic-compatible value-block contents, independent of physical block number.</summary>
+  TMifarePlusValue = record
+    /// <summary>Signed thirty-two-bit stored amount; all redundant copies were checked.</summary>
+    Value: Integer;
+    /// <summary>Stored eight-bit logical value address; all complement/repeated copies were checked.</summary>
+    Address: Byte;
+  end;
+  /// <summary>Pure signed value-block integrity and bounded arithmetic helpers; no native increment/transfer commands.</summary>
+  TMifarePlusValueCodec = class
+  public
+    /// <summary>Decodes exactly sixteen bytes and validates three value copies and four address bytes.</summary>
+    /// <param name="AData">Exact raw ordinary data block.</param>
+    /// <returns>Signed value and retained logical address.</returns>
+    /// <exception cref="EMifarePlusError">Length, value redundancy or address redundancy is invalid.</exception>
+    class function Decode(const AData: TBytes): TMifarePlusValue; static;
+    /// <summary>Encodes a complete little-endian signed value block with complements and repeated address.</summary>
+    /// <param name="AValue">Signed thirty-two-bit value, including negative values.</param>
+    /// <param name="AAddress">Explicit logical value address; not guessed from physical geometry.</param>
+    /// <returns>Independent sixteen-byte block.</returns>
+    class function Encode(const AValue: Integer; const AAddress: Byte): TBytes; static;
+    /// <summary>Adds two signed thirty-two-bit values using a wider intermediate and rejects overflow.</summary>
+    /// <param name="AValue">Explicit acquired amount.</param>
+    /// <param name="ADelta">Signed change, positive or negative.</param>
+    /// <returns>Exact representable signed amount.</returns>
+    /// <exception cref="EMifarePlusError">Result is outside the signed thirty-two-bit range.</exception>
+    class function AddChecked(const AValue, ADelta: Integer): Integer; static;
+  end;
   /// <summary>Pure explicit Plus SL3 geometry, key derivation, IV and MAC codecs.</summary>
   TMifarePlusCodec = class
   public
@@ -156,6 +183,19 @@ type
     /// <param name="AData">Exactly sixteen new data bytes; copied before I/O.</param>
     /// <exception cref="EContactlessWriteUncertain">Write dispatch, MAC, read-back or release cannot be proven complete.</exception>
     procedure WriteBlockVerified(const ABlock: Integer; const AExpected, AData: TBytes);
+    /// <summary>Reads one MAC-verified ordinary block and validates its signed value/address redundancy.</summary>
+    /// <param name="ABlock">Explicit ordinary physical block covered by the configured sector key.</param>
+    /// <returns>Decoded signed value and retained logical address.</returns>
+    function ReadValueBlock(const ABlock: Integer): TMifarePlusValue;
+    /// <summary>Writes a complete ordinary value block against exact expected value/address and verifies read-back.</summary>
+    /// <param name="ABlock">Explicit ordinary physical block covered by the configured sector key.</param>
+    /// <param name="AExpectedValue">Expected prior signed value; all encoded copies are checked.</param>
+    /// <param name="ANewValue">Explicit replacement signed amount.</param>
+    /// <param name="AValueAddress">Expected/preserved logical eight-bit address.</param>
+    /// <remarks>Uses ordinary secure data writes, requiring native write permission. Not native increment/decrement/transfer authority.</remarks>
+    /// <exception cref="EContactlessWriteUncertain">Dispatched ordinary write cannot be verified complete.</exception>
+    procedure WriteValueBlockVerified(const ABlock, AExpectedValue, ANewValue: Integer;
+      const AValueAddress: Byte);
     /// <summary>Replaces one sector AES key with encrypted secure messaging and fresh same-card new-key proof.</summary>
     /// <param name="ATargetKey">Sector key A/B address in the currently authenticated sector.</param>
     /// <param name="ANewKey">Exactly sixteen supplied replacement bytes, frozen before I/O.</param>
@@ -416,6 +456,91 @@ begin
       finally Finish(Ok); end;
     except on E: Exception do begin if FDispatched then raise EContactlessWriteUncertain.Create(E.ClassName); raise; end; end;
   finally TCardCrypto.Clear(Old); TCardCrypto.Clear(NewData); end;
+end;
+
+class function TMifarePlusValueCodec.Decode(const AData: TBytes): TMifarePlusValue;
+var
+  I: Integer;
+  Bits, SignedValue: Int64;
+begin
+  if Length(AData) <> 16 then
+    Invalid;
+  Bits := 0;
+  for I := 0 to 3 do
+  begin
+    if (AData[I] <> AData[I + 8]) or
+      (AData[I + 4] <> (AData[I] xor $FF)) then
+      Invalid;
+    Bits := Bits or (Int64(AData[I]) shl (I * 8));
+  end;
+  if (AData[12] <> AData[14]) or (AData[13] <> AData[15]) or
+    (AData[13] <> (AData[12] xor $FF)) then
+    Invalid;
+  SignedValue := Bits;
+  if Bits > High(Integer) then
+    SignedValue := Bits - Int64(4294967296);
+  Result.Value := Integer(SignedValue);
+  Result.Address := AData[12];
+end;
+
+class function TMifarePlusValueCodec.Encode(const AValue: Integer;
+  const AAddress: Byte): TBytes;
+var
+  Bits: Int64;
+  I: Integer;
+begin
+  Result := nil;
+  SetLength(Result, 16);
+  Bits := Int64(AValue) and Int64($FFFFFFFF);
+  for I := 0 to 3 do
+  begin
+    Result[I] := Byte((Bits shr (I * 8)) and $FF);
+    Result[I + 4] := Result[I] xor $FF;
+    Result[I + 8] := Result[I];
+  end;
+  Result[12] := AAddress;
+  Result[13] := AAddress xor $FF;
+  Result[14] := AAddress;
+  Result[15] := AAddress xor $FF;
+end;
+
+class function TMifarePlusValueCodec.AddChecked(const AValue,
+  ADelta: Integer): Integer;
+var
+  Value: Int64;
+begin
+  Value := Int64(AValue) + Int64(ADelta);
+  if (Value < Low(Integer)) or (Value > High(Integer)) then
+    Invalid;
+  Result := Integer(Value);
+end;
+
+function TMifarePlusCardReaderWriter.ReadValueBlock(const ABlock: Integer): TMifarePlusValue;
+var
+  Data: TBytes;
+begin
+  Data := ReadBlocks(ABlock, 1);
+  try
+    Result := TMifarePlusValueCodec.Decode(Data);
+  finally
+    TCardCrypto.Clear(Data);
+  end;
+end;
+
+procedure TMifarePlusCardReaderWriter.WriteValueBlockVerified(const ABlock,
+  AExpectedValue, ANewValue: Integer; const AValueAddress: Byte);
+var
+  Expected, Data: TBytes;
+begin
+  Expected := TMifarePlusValueCodec.Encode(AExpectedValue, AValueAddress);
+  Data := nil;
+  try
+    Data := TMifarePlusValueCodec.Encode(ANewValue, AValueAddress);
+    WriteBlockVerified(ABlock, Expected, Data);
+  finally
+    TCardCrypto.Clear(Expected);
+    TCardCrypto.Clear(Data);
+  end;
 end;
 
 procedure TMifarePlusCardReaderWriter.RotateSectorKeyVerified(const ATargetKey: Word;

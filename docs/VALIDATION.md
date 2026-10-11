@@ -989,3 +989,29 @@ Fixture reproducibility and distribution checks passed: **62 projects, 2 groups,
 48 DFM forms**, no findings. No demo/package format changes were required. Existing
 unrelated FPC notes/warnings remain unsuppressed. These are synthetic protocol
 results; the exact direct-SL3 commit profile is an explicit caller prerequisite.
+
+## Plus SL1 level management and signed value blocks (2026-10-11)
+
+The focused DESFire/Plus suite passed **149,648 assertions** (32,252 added here)
+with range/overflow checks and zero heap leaks. The independent fixture generator
+now produces **28 literal transcripts**. Added vectors cover raw CRC-A 76/72 SL1
+card authentication, the SL2 switch key, the SL3 switch plus fresh protected data
+proof, a complete no-RATS ACR122 raw chain with register/parameter restoration,
+and signed value-block reads and ordinary secure writes.
+
+Level tests inject every native I/O boundary, CRC/status/nonce bits, partial-bit
+responses, explicit timeouts, acquisition/release failures and UID changes between
+raw and ISO14443-4 sessions. Borrowed switch/proof-key and expected-data mutation
+during raw I/O cannot change frozen inputs. Invalid profiles fail before activation.
+SL2 results are authenticated acknowledgement only; SL3 also proves acquired data.
+
+Value tests cover both signed endpoints, all 256 logical addresses, every bit of
+value/address redundancy, checked arithmetic overflow, preimage refusal, no-op
+writes and every protected write/read-back response bit. These are ordinary secure
+memory writes, not native increment/decrement/restore/transfer commands.
+
+The full FPC/native regression runner and all **21 source checkers** passed.
+Inactive palette/RTL streaming now covers **60 cases** for **59 registered
+components**. Distribution checks report **62 projects, 2 groups, 48 DFM forms**
+and no findings; fixture reproducibility and BOM/CRLF checks pass. No demo files
+changed. Existing unrelated compiler notes/warnings remain unsuppressed.

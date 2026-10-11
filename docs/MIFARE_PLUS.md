@@ -11,6 +11,7 @@ ERD Contactless palette and starts inactive.
 | `WriteBlockVerified` | Fresh authentication, exact sixteen-byte prior-state comparison, one write, protected acknowledgement and read-back proof |
 | `RotateSectorKeyVerified` | Encrypted replacement authorized by the configured sector key, release and fresh same-card target-key authentication |
 | `PersonalizeAndCommitSl3Verified` | Frozen explicit SL0 entries, one commit and fresh selected SL3 key/data proofs |
+| `ReadValueBlock` / `WriteValueBlockVerified` | Signed value/address redundancy; preimage-checked ordinary secure write and read-back |
 | MACed mode | Plain data, command and response MACs |
 | Full mode (default) | AES-CBC data, command and response MACs |
 
@@ -132,10 +133,76 @@ sessions. There is no automatic resume, re-personalization, commit replay or
 rollback of acknowledged steps. Application operators must inspect uncertain state
 before choosing a subsequent operation.
 
+## SL1 authentication and level transitions
+
+`TMifarePlusLevelManager` is a separate inactive palette component for native SL1
+AES authentication and explicit one-way transitions. Supply a maintained
+`CryptoProvider`, required `ExpectedUid` and exclusive `RawReader` configured to
+suppress automatic RATS. `CreateAcr122PlusLevelReader(ConnectedTransport)` supplies
+that raw backend using the existing ACR122 manual-CRC implementation. It sets
+bounded timing and no retries, checks full-byte CRC-A and restores saved framing,
+turns RF off and restores PN532 parameter baseline on release.
+
+| Method | Native key and evidence |
+| --- | --- |
+| `AuthenticateSl1` | $9004; native $76/$72 mutual AES nonce proof, no level mutation |
+| `SwitchSl1ToSl2Acknowledged` | $9002; explicit acknowledgement, authenticated nonce proof and successful release; no independent SL2 sector proof |
+| `SwitchSl1ToSl3Verified` | $9003; authenticated raw transition, then fresh same-UID SL3 AES authentication and encrypted MAC-verified data comparison |
+
+The caller selects a card explicitly known to be SL1 and supplies valid provisioned
+keys; the component does not infer levels or try keys. SL2 is a generation-specific
+option and is not available on every Plus variant. Unsupported native commands
+fail without fallback. The SL3 method requires an independent `Sl3Session`, proof
+sector key number/key, ordinary proof block and exact sixteen-byte expected data.
+Geometry, credentials and proof inputs are validated/frozen before transition I/O.
+The two backends must refer to the same dedicated reader; acquisitions are sequential.
+
+For an ACR122 reader:
+
+```pascal
+Levels.RawReader := CreateAcr122PlusLevelReader(Pcsc.Transport);
+Levels.Sl3Session := CreateAcr122PlusSession(Pcsc.Transport);
+Levels.CryptoProvider := TCardWindowsAesProvider.Create;
+Levels.Model := mpm2K;
+Levels.ExpectedUid := ExpectedCardUid;
+Levels.SwitchSl1ToSl3Verified(SuppliedSwitchKey, $4000,
+  SuppliedSectorKey, 2, KnownBlockData, True);
+```
+
+All keys remain caller-owned and must be cleared after use. Component-owned
+temporary keys/nonces are wiped. `Busy` covers the complete transition and proof;
+use the component on one worker thread. No monitor/thread starts implicitly.
+Dispatch of the second authentication frame may perform the level change. Any
+subsequent response, CRC, nonce, release or fresh SL3 proof failure raises
+`EContactlessWriteUncertain`. The transition is never retried or rolled back.
+`AuthenticateSl1` remains nonmutating and reports ordinary authentication/transport
+errors. Successful SL2 acknowledgement is deliberately distinct from verified SL3.
+
+## Signed value blocks
+
+`TMifarePlusValueCodec` encodes/decodes the Classic-compatible sixteen-byte layout:
+three copies of a signed little-endian 32-bit value, including its complement, and
+four repeated/complemented logical address bytes. All redundancy is validated.
+The logical address is retained and is independent of the physical block number.
+`AddChecked` uses a wider intermediate and rejects signed overflow.
+
+`ReadValueBlock` performs an authenticated ordinary block read before decoding.
+`WriteValueBlockVerified(Block, ExpectedValue, NewValue, LogicalAddress)` constructs
+the complete expected and new blocks, checks the acquired exact preimage and
+verifies read-back. Equal values produce no write. For example, encode an expected
+-42 at logical address 2 and explicitly replace it with 100; negative values and
+both signed endpoints are supported.
+
+These writes require ordinary native block-write permission. They do not implement
+or substitute for native increment/decrement/restore/transfer commands granted by
+different access conditions. Use explicit expected values and preserved logical
+addresses; do not calculate updates from stale cached data.
+
 ## Scope and validation
 
-SL1/SL2 transition protocols, value commands, manufacturer/trailer/configuration
-programming and Plus EV2 LRP negotiation are not implemented by this profile.
+SL2→SL3 transitions, SL2 sector data sessions, native increment/decrement/restore/transfer
+commands, manufacturer/trailer/configuration programming and Plus EV2 LRP
+negotiation are not implemented by these profiles.
 SL0 personalization/commit applies only to an explicitly selected ISO14443-4
 profile whose native commit results directly in SL3. Ordinary-content copying does not copy a card's keys or security state.
 

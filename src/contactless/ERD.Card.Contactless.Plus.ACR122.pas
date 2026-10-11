@@ -12,7 +12,7 @@ uses
 {$ELSE}
   System.SysUtils, System.Classes,
 {$ENDIF}
-  ERD.Card.Transport, ERD.Card.Contactless.Plus;
+  ERD.Card.Transport, ERD.Card.Contactless.Plus, ERD.Card.Contactless.Raw;
 
 /// <summary>Creates an inactive explicit ACR122U/PN532 ISO14443-4 Plus native backend.</summary>
 /// <param name="ATransport">Connected PICC transport with exclusive ICardTransaction support and FF 00 direct transmit.</param>
@@ -23,9 +23,17 @@ uses
 function CreateAcr122PlusSession(const ATransport: ICardTransport;
   const ATimeoutCode: Byte = $0D): IMifarePlusSession;
 
+/// <summary>Creates an inactive ACR122U raw reader for explicit Plus SL1 native authentication/level commands.</summary>
+/// <param name="ATransport">Connected transport with exclusive transaction and FF 00 direct-transmit support.</param>
+/// <param name="ATimeoutCode">Bounded PN532 timeout 01..10 hex, default 0D.</param>
+/// <returns>Owned raw reader configured to suppress RATS and restore CRC/framing on release.</returns>
+/// <remarks>Use with TMifarePlusLevelManager.RawReader; SL3 proof uses CreateAcr122PlusSession separately.</remarks>
+function CreateAcr122PlusLevelReader(const ATransport: ICardTransport;
+  const ATimeoutCode: Byte = $0D): IRawContactlessReader;
+
 implementation
 
-uses ERD.Card.APDU, ERD.Card.Bytes, ERD.Card.Crypto;
+uses ERD.Card.APDU, ERD.Card.Bytes, ERD.Card.Crypto, ERD.Card.Contactless.ACR122;
 
 type
   TAcrSession = class(TInterfacedObject,IMifarePlusSession)
@@ -112,5 +120,11 @@ begin
 end;
 function CreateAcr122PlusSession(const ATransport: ICardTransport; const ATimeoutCode: Byte): IMifarePlusSession;
 begin Result:=TAcrSession.Create(ATransport,ATimeoutCode); end;
+
+function CreateAcr122PlusLevelReader(const ATransport: ICardTransport;
+  const ATimeoutCode: Byte): IRawContactlessReader;
+begin
+  Result := TAcr122RawReader.Create(ATransport, ATimeoutCode, True);
+end;
 
 end.

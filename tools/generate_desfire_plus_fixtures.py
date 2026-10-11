@@ -105,6 +105,50 @@ v=A[7:12]+B[7:12]+bytes(x^y for x,y in zip(A[:5],B[:5]))+b'\x22';m=enc(NEW,Z,v)
 h=bytes.fromhex('31020001');payload=enc(e,le(1)+le(0)+le(1)+le(0)+le(1)+le(0)+TI,DATA)
 p.append((h+mac(m,h[:1]+le(0)+TI+h[1:]),b'\x90'+payload+mac(m,b'\x90'+le(1)+TI+h[1:]+payload)))
 vectors['PlusPersonalize']=p
+# Raw Plus SL1 76/72 uses full-byte Type A frames, independent CRC-A and zero-IV AES.
+def crc_a(data):
+ crc=0x6363
+ for byte in data:
+  crc^=byte
+  for bit in range(8):crc=(crc>>1)^ (0x8408 if crc&1 else 0)
+ return data+le(crc)
+for slot in [0x9004,0x9002,0x9003]:
+ p=[(crc_a(b'\x76'+le(slot)),crc_a(b'\x90'+enc(K,Z,B))),
+    (crc_a(b'\x72'+enc(K,Z,A+B[1:]+B[:1])),crc_a(b'\x90'+enc(K,Z,A[1:]+A[:1])))]
+ vectors['PlusLevel'+hex(slot)[2:].upper()]=p
+ if slot==0x9003:vectors['PlusLevel3Proof']=p+vectors['PlusFullRead']
+# Complete ACR122 no-RATS raw authentication: bounded configuration, saved framing,
+# independent CRC-bearing InCommunicateThru frames and baseline restoration.
+def wrapped(payload,reply):return bytes.fromhex('FF000000')+bytes([len(payload)])+payload,reply+bytes.fromhex('9000')
+p=[]
+for cmd,resp in [('D43202000B0D','D533'),('D4320400','D533'),('D43205000000','D533'),
+ ('D41224','D513'),('D4320100','D533'),('D4320101','D533'),
+ ('D44A0100','D54B01010400080704112233445566'),('D40663026303633D','D507808000'),
+ ('D408630200630300633D00','D509')]:p.append(wrapped(bytes.fromhex(cmd),bytes.fromhex(resp)))
+for cmd,resp in vectors['PlusLevel9004']:
+ p.append(wrapped(bytes.fromhex('D408630200630300633D00'),bytes.fromhex('D509')))
+ p.append(wrapped(b'\xD4\x42'+cmd,b'\xD5\x43\x00'+resp))
+ p.append(wrapped(bytes.fromhex('D406633C'),bytes.fromhex('D50700')))
+for cmd,resp in [('D408630280630380633D00','D509'),('D4320100','D533'),('D41234','D513')]:
+ p.append(wrapped(bytes.fromhex(cmd),bytes.fromhex(resp)))
+vectors['PlusLevelAcr']=p
+# Value-block read/write uses existing SL3 secured ordinary memory commands,
+# including signed values and the stored logical address. No invented Bx commands.
+def valueblock(value,addr):
+ v=le(value&0xffffffff,4);return v+bytes(x^255 for x in v)+v+bytes([addr,addr^255,addr,addr^255])
+for writing in [False,True]:
+ p=[];auth(p,plus=True);rc=wc=0
+ def read_value(value):
+  global rc,wc
+  h=bytes.fromhex('31020001');packet=h+mac(PM,h[:1]+le(rc)+TI+h[1:]);rc+=1
+  payload=enc(PE,(le(rc)+le(wc))*3+TI,value)
+  p.append((packet,b'\x90'+payload+mac(PM,b'\x90'+le(rc)+TI+h[1:]+payload)))
+ read_value(valueblock(-42,2))
+ if writing:
+  cipher=enc(PE,TI+(le(rc)+le(wc))*3,valueblock(100,2));h=bytes.fromhex('A10200')+cipher
+  packet=h+mac(PM,h[:1]+le(wc)+TI+h[1:]);wc+=1
+  p.append((packet,b'\x90'+mac(PM,b'\x90'+le(wc)+TI)));read_value(valueblock(100,2))
+ vectors['PlusValue'+('Write' if writing else 'Read')]=p
 s='''unit DesfirePlus.Vectors;
 {$IFDEF FPC}{$MODE DELPHI}{$ENDIF}
 interface

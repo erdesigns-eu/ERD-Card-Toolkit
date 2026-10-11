@@ -8,6 +8,7 @@ uses
   ERD.Card.Contactless, ERD.Card.Contactless.DESFire, ERD.Card.Contactless.DESFire.EV2,
   ERD.Card.Contactless.DESFire.Extensions, ERD.Card.Contactless.Plus,
   ERD.Card.Contactless.Plus.ACR122, ERD.Card.Contactless.Plus.Workflow,
+  ERD.Card.Contactless.Plus.Levels, ERD.Card.Contactless.Raw,
   ERD.Card.Workflow, ERD.Card.Contactless.Workflow.Password, DesfirePlus.Vectors;
 type
   TFixed = class(TInterfacedObject,ICardAesProvider)
@@ -26,6 +27,18 @@ type
     function BeginSession: TBytes;
     function ExchangeNative(const B: TBytes): TBytes;
     procedure EndSession;
+  end;
+  TLevelRaw = class(TInterfacedObject, IRawContactlessReader)
+  private
+    FWire: TWire;
+    FHold: ICardTransport;
+  public
+    PartialCall, TimeoutCall: Integer;
+    constructor Create(const AWire: TWire);
+    procedure BeginSession;
+    procedure EndSession;
+    function Activate: TBytes;
+    function Exchange(const AFrame: TBytes; const ABitCount: Integer): TRawRfResponse;
   end;
   TKeys = class(TInterfacedObject,IPlusWorkflowKeys)
     Last: TBytes;
@@ -64,6 +77,41 @@ begin
   if (Calls=MutateCall) and (Length(Borrowed)>0) then Borrowed[0]:=Borrowed[0] xor $FF;
   Result:=HexToBytes(Pairs[Calls-1].Response);
   if Calls=CorruptCall then Result[CorruptByte]:=Result[CorruptByte] xor (1 shl CorruptBit);
+end;
+constructor TLevelRaw.Create(const AWire: TWire);
+begin
+  inherited Create;
+  FWire := AWire;
+  FHold := AWire;
+end;
+procedure TLevelRaw.BeginSession;
+begin
+  FWire.BeginTransaction;
+end;
+procedure TLevelRaw.EndSession;
+begin
+  FWire.EndTransaction;
+end;
+function TLevelRaw.Activate: TBytes;
+begin
+  Check(FWire.Active, 'Raw activation requires exclusive ownership');
+  Result := HexToBytes('04112233445566');
+  if FWire.WrongUid or (FWire.Begins=FWire.ChangedUidBegin) then
+    Result[0] := $05;
+end;
+function TLevelRaw.Exchange(const AFrame: TBytes; const ABitCount: Integer): TRawRfResponse;
+begin
+  Check(ABitCount=Length(AFrame)*8, 'Native SL1 authentication uses full-byte CRC framing');
+  Result := Default(TRawRfResponse);
+  Result.Data := FWire.Exchange(AFrame);
+  Result.BitCount := Length(Result.Data)*8;
+  if FWire.Calls=PartialCall then Dec(Result.BitCount);
+  if FWire.Calls=TimeoutCall then
+  begin
+    Result.Data := nil;
+    Result.BitCount := 0;
+    Result.TimedOut := True;
+  end;
 end;
 function TKeys.GetKey(const ABlock: Integer; const AWriting: Boolean; out AKeyNumber: Word): TBytes;
 begin Check(ABlock=2,'Explicit Plus key block'); AKeyNumber:=$4000; Result:=HexToBytes('00000000000000000000000000000000'); Last:=Result; end;
@@ -582,10 +630,302 @@ begin
   end;
 end;
 
+procedure RunPlusLevel(const Kind, Fail, Corrupt, ByteIndex, BitIndex,
+  BeginFail, EndFail, UidChange, Partial, Timeout, Freeze: Integer);
+var
+  Wire: TWire;
+  Sl3: IMifarePlusSession;
+  Raw: TLevelRaw;
+  RawInterface: IRawContactlessReader;
+  Manager: TMifarePlusLevelManager;
+  Key, ProofKey, Expected: TBytes;
+  Failed, Uncertain, ExpectedUncertain: Boolean;
+begin
+  Wire := TWire.Create;
+  Sl3 := Wire;
+  case Kind of
+    0: Wire.Pairs := PlusLevel9004;
+    1: Wire.Pairs := PlusLevel9002;
+    2: Wire.Pairs := PlusLevel3Proof;
+  end;
+  Wire.FailCall := Fail;
+  Wire.CorruptCall := Corrupt;
+  Wire.CorruptByte := ByteIndex;
+  Wire.CorruptBit := BitIndex;
+  Wire.BeginFailure := BeginFail;
+  Wire.EndFailure := EndFail;
+  Wire.ChangedUidBegin := UidChange;
+  Raw := TLevelRaw.Create(Wire);
+  RawInterface := Raw;
+  Raw.PartialCall := Partial;
+  Raw.TimeoutCall := Timeout;
+  Manager := TMifarePlusLevelManager.Create(nil);
+  Key := HexToBytes('00000000000000000000000000000000');
+  ProofKey := CopyBytes(Key);
+  Expected := HexToBytes('000102030405060708090A0B0C0D0E0F');
+  Failed := False;
+  Uncertain := False;
+  try
+    Manager.RawReader := RawInterface;
+    Manager.Sl3Session := Sl3;
+    Manager.CryptoProvider := TFixed.Create;
+    Manager.ExpectedUid := HexToBytes('04112233445566');
+    if Freeze>0 then
+    begin
+      Wire.MutateCall := 1;
+      case Freeze of
+        1: Wire.Borrowed := Key;
+        2: Wire.Borrowed := ProofKey;
+        3: Wire.Borrowed := Expected;
+      end;
+    end;
+    try
+      case Kind of
+        0: Manager.AuthenticateSl1(Key);
+        1: Manager.SwitchSl1ToSl2Acknowledged(Key, True);
+        2: Manager.SwitchSl1ToSl3Verified(Key, $4000, ProofKey, 2, Expected, True);
+      end;
+    except
+      on E: Exception do
+      begin
+        Failed := True;
+        Uncertain := E is EContactlessWriteUncertain;
+      end;
+    end;
+    Check(not Manager.Busy and not Wire.Active, 'Level manager always releases its operation');
+    Check(Wire.Begins=Wire.Ends, 'Raw and ISO14443-4 acquisitions released independently');
+    if (Fail=0) and (Corrupt=0) and (BeginFail=0) and (EndFail=0) and
+      (UidChange=0) and (Partial=0) and (Timeout=0) then
+    begin
+      Check(not Failed, 'Independent 76/72 level transcript succeeds');
+      Check(Wire.Calls=Length(Wire.Pairs), 'Transition and fresh SL3 proof complete');
+      Check(Wire.Begins=1+Ord(Kind=2), 'No hidden level/authentication retries');
+    end
+    else
+    begin
+      Check(Failed, 'Every injected level failure is visible');
+      ExpectedUncertain := (Kind<>0) and (Wire.Calls>=2);
+      Check(Uncertain=ExpectedUncertain, 'Level dispatch uncertainty retained across release/proof');
+    end;
+  finally
+    Manager.Free;
+    TCardCrypto.Clear(Key);
+    TCardCrypto.Clear(ProofKey);
+    TCardCrypto.Clear(Expected);
+  end;
+end;
+
+procedure TestPlusLevels;
+var
+  Kind, I, J, K, N: Integer;
+  Pairs: TExtendedPairs;
+  Wire: TWire;
+  Hold: ICardTransport;
+  Manager: TMifarePlusLevelManager;
+  Raw: IRawContactlessReader;
+  Key: TBytes;
+  Failed: Boolean;
+begin
+  for Kind := 0 to 2 do
+  begin
+    case Kind of
+      0: Pairs := PlusLevel9004;
+      1: Pairs := PlusLevel9002;
+      2: Pairs := PlusLevel3Proof;
+    end;
+    RunPlusLevel(Kind,0,0,0,0,0,0,0,0,0,0);
+    for I := 1 to 3 do
+      if (Kind=2) or (I=1) then
+        RunPlusLevel(Kind,0,0,0,0,0,0,0,0,0,I);
+    for I := 1 to Length(Pairs) do
+      RunPlusLevel(Kind,I,0,0,0,0,0,0,0,0,0);
+    for I := 1 to 2 do
+    begin
+      for J := 0 to 151 do
+        RunPlusLevel(Kind,0,I,J div 8,J mod 8,0,0,0,0,0,0);
+      RunPlusLevel(Kind,0,0,0,0,0,0,0,I,0,0);
+      RunPlusLevel(Kind,0,0,0,0,0,0,0,0,I,0);
+    end;
+    N := 1+Ord(Kind=2);
+    for I := 1 to N do
+    begin
+      RunPlusLevel(Kind,0,0,0,0,I,0,0,0,0,0);
+      RunPlusLevel(Kind,0,0,0,0,0,I,0,0,0,0);
+      RunPlusLevel(Kind,0,0,0,0,0,0,I,0,0,0);
+    end;
+    if Kind=2 then
+      for J := 0 to 199 do
+        RunPlusLevel(2,0,Length(Pairs),J div 8,J mod 8,0,0,0,0,0,0);
+  end;
+  // The actual raw ACR122 factory must suppress RATS, verify CRC and restore saved registers.
+  Wire := TWire.Create;
+  Hold := Wire;
+  Wire.Pairs := PlusLevelAcr;
+  Manager := TMifarePlusLevelManager.Create(nil);
+  try
+    Raw := CreateAcr122PlusLevelReader(Hold);
+    Check(Wire.Calls=0, 'Level-reader factory remains inactive');
+    Manager.RawReader := Raw;
+    Manager.CryptoProvider := TFixed.Create;
+    Manager.ExpectedUid := HexToBytes('04112233445566');
+    Manager.AuthenticateSl1(HexToBytes('00000000000000000000000000000000'));
+    Check(Wire.Calls=Length(Wire.Pairs), 'Complete ACR122 no-RATS 76/72 CRC transcript');
+    Check(not Wire.Active and (Wire.Begins=Wire.Ends), 'ACR122 baseline restored and released');
+  finally
+    Manager.Free;
+    Raw := nil;
+  end;
+  for K := 0 to 5 do
+  begin
+    Wire := TWire.Create;
+    Hold := Wire;
+    Manager := TMifarePlusLevelManager.Create(nil);
+    Key := HexToBytes('00000000000000000000000000000000');
+    try
+      Manager.RawReader := TLevelRaw.Create(Wire);
+      Manager.Sl3Session := Wire;
+      Manager.CryptoProvider := TFixed.Create;
+      Manager.ExpectedUid := HexToBytes('04112233445566');
+      if K=0 then Manager.ExpectedUid := nil;
+      if K=1 then Manager.RawReader := nil;
+      if K=2 then Manager.CryptoProvider := nil;
+      if K=3 then SetLength(Key,15);
+      if K=5 then Manager.Sl3Session := nil;
+      Failed := False;
+      try
+        if K<4 then Manager.AuthenticateSl1(Key)
+        else Manager.SwitchSl1ToSl3Verified(Key,$4000,Key,2,
+          HexToBytes('000102030405060708090A0B0C0D0E0F'),K<>4);
+      except on E: EMifarePlusError do Failed := True; end;
+      Check(Failed and (Wire.Calls=0) and (Wire.Begins=0), 'Invalid level profile fails before activation');
+      Check(not Manager.Busy, 'Invalid level profile clears busy state');
+    finally
+      Manager.Free;
+      TCardCrypto.Clear(Key);
+    end;
+  end;
+end;
+
+procedure RunPlusValue(const Writing: Boolean; const Fail, Corrupt,
+  ByteIndex, BitIndex: Integer; const WrongExpected, NoOp: Boolean);
+var
+  Wire: TWire;
+  Session: IMifarePlusSession;
+  Reader: TMifarePlusCardReaderWriter;
+  Value: TMifarePlusValue;
+  Failed, Uncertain: Boolean;
+begin
+  Wire := TWire.Create;
+  Session := Wire;
+  if Writing and not NoOp and not WrongExpected then Wire.Pairs := PlusValueWrite
+  else Wire.Pairs := PlusValueRead;
+  Wire.FailCall := Fail;
+  Wire.CorruptCall := Corrupt;
+  Wire.CorruptByte := ByteIndex;
+  Wire.CorruptBit := BitIndex;
+  Reader := TMifarePlusCardReaderWriter.Create(nil);
+  Failed := False;
+  Uncertain := False;
+  try
+    Reader.Session := Session;
+    Reader.CryptoProvider := TFixed.Create;
+    Reader.Key := HexToBytes('00000000000000000000000000000000');
+    Reader.KeyNumber := $4000;
+    try
+      if Writing then
+      begin
+        if WrongExpected then Reader.WriteValueBlockVerified(2,-41,100,2)
+        else if NoOp then Reader.WriteValueBlockVerified(2,-42,-42,2)
+        else Reader.WriteValueBlockVerified(2,-42,100,2);
+      end
+      else
+      begin
+        Value := Reader.ReadValueBlock(2);
+        Check((Value.Value=-42) and (Value.Address=2), 'MAC-verified signed value decoded');
+      end;
+    except
+      on E: Exception do
+      begin
+        Failed := True;
+        Uncertain := E is EContactlessWriteUncertain;
+      end;
+    end;
+    Check(not Reader.Busy and not Wire.Active and (Wire.Begins=Wire.Ends), 'Value session released');
+    if (Fail=0) and (Corrupt=0) and not WrongExpected then
+    begin
+      Check(not Failed, 'Independent signed value read/write transcript');
+      Check(Wire.Calls=Length(Wire.Pairs), 'Exact value write/read-back chain');
+      if NoOp then Check(Wire.Writes=0, 'Equal values do not dispatch a write');
+    end
+    else
+    begin
+      Check(Failed, 'Value failure/preimage refusal observable');
+      Check(Uncertain=(Writing and (Wire.Calls>=4)), 'Value mutation uncertainty begins at native write');
+      if WrongExpected then Check(Wire.Writes=0,'Wrong value preimage never written');
+    end;
+  finally
+    Reader.Free;
+  end;
+end;
+
+procedure TestPlusValues;
+const
+  Values: array[0..4] of Integer = (-2147483647-1, -1, 0, 1, 2147483647);
+var
+  I, J, Address: Integer;
+  Block, Changed: TBytes;
+  Value: TMifarePlusValue;
+  Failed, Writing: Boolean;
+  Pairs: TExtendedPairs;
+begin
+  Check(BytesToHex(TMifarePlusValueCodec.Encode(-42,2))=
+    'D6FFFFFF29000000D6FFFFFF02FD02FD','Independent negative value-block vector');
+  for Address := 0 to 255 do
+    for I := 0 to High(Values) do
+    begin
+      Block := TMifarePlusValueCodec.Encode(Values[I],Byte(Address));
+      Value := TMifarePlusValueCodec.Decode(Block);
+      Check((Value.Value=Values[I]) and (Value.Address=Address),'Signed endpoint and all logical addresses round-trip');
+    end;
+  for I := 0 to High(Values) do
+  begin
+    Block := TMifarePlusValueCodec.Encode(Values[I],2);
+    for J := 0 to 127 do
+    begin
+      Changed := CopyBytes(Block);
+      Changed[J div 8] := Changed[J div 8] xor (1 shl (J mod 8));
+      Failed := False;
+      try Value := TMifarePlusValueCodec.Decode(Changed);
+      except on E: EMifarePlusError do Failed := True; end;
+      Check(Failed,'Every value/address redundancy bit checked');
+    end;
+    for J := 0 to High(Values) do
+    begin
+      Failed := False;
+      try Address := TMifarePlusValueCodec.AddChecked(Values[I],Values[J]);
+      except on E: EMifarePlusError do Failed := True; end;
+      if (Int64(Values[I])+Values[J]<Low(Integer)) or (Int64(Values[I])+Values[J]>High(Integer)) then
+        Check(Failed,'Signed addition overflow refused')
+      else Check(not Failed and (Int64(Address)=Int64(Values[I])+Values[J]),'Exact signed value addition');
+    end;
+  end;
+  for Writing := False to True do
+  begin
+    if Writing then Pairs := PlusValueWrite else Pairs := PlusValueRead;
+    RunPlusValue(Writing,0,0,0,0,False,False);
+    for I := 1 to Length(Pairs) do RunPlusValue(Writing,I,0,0,0,False,False);
+    for I := 3 to Length(Pairs) do
+      for J := 0 to Length(HexToBytes(Pairs[I-1].Response))*8-1 do
+        RunPlusValue(Writing,0,I,J div 8,J mod 8,False,False);
+  end;
+  RunPlusValue(True,0,0,0,0,True,False);
+  RunPlusValue(True,0,0,0,0,False,True);
+end;
+
 begin
   try
 {$IFDEF MSWINDOWS} Base:=TCardWindowsAesProvider.Create; {$ELSE} Base:=TCardOpenSslAesProvider.Create; {$ENDIF}
-    TestCodecs; TestDf; TestPlus; TestPlusWorkflow; TestAcr; TestPlus4K; TestFrozenInputs; TestPlusManagement;
+    TestCodecs; TestDf; TestPlus; TestPlusWorkflow; TestAcr; TestPlus4K; TestFrozenInputs; TestPlusManagement; TestPlusLevels; TestPlusValues;
     Writeln('PASS: ',Checks,' DESFire extension/Plus assertions.');
   except on E: Exception do begin Writeln(E.ClassName,': ',E.Message); ExitCode:=1; end; end;
 end.

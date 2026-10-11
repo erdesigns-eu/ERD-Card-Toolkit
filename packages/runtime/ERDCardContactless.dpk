@@ -13,6 +13,7 @@ requires
 contains
   ERD.Card.Contactless.DESFire.Extensions in '..\..\src\contactless\ERD.Card.Contactless.DESFire.Extensions.pas',
   ERD.Card.Contactless.Plus in '..\..\src\contactless\ERD.Card.Contactless.Plus.pas',
+  ERD.Card.Contactless.Plus.Levels in '..\..\src\contactless\ERD.Card.Contactless.Plus.Levels.pas',
   ERD.Card.Contactless.Plus.ACR122 in '..\..\src\contactless\ERD.Card.Contactless.Plus.ACR122.pas',
   ERD.Card.Contactless.Plus.Workflow in '..\..\src\contactless\ERD.Card.Contactless.Plus.Workflow.pas',
   ERD.Card.Contactless.Workflow.Ndef.Protected in '..\..\src\contactless\ERD.Card.Contactless.Workflow.Ndef.Protected.pas',

@@ -486,3 +486,18 @@ and ordinary memory archives contain no keys.
 See [MIFARE_PLUS.md](MIFARE_PLUS.md) for the direct-SL3 commit profile and
 acknowledgement-versus-verification contract. These calls do not add automatic
 resume or batch serialization of secret plans.
+
+
+## Plus SL1 transitions and value-block operations
+
+`TMifarePlusLevelManager` supplies native SL1 mutual authentication, an acknowledged
+SL1→SL2 pipeline and an SL1→SL3 pipeline with fresh same-card protected data proof.
+Assign an explicit no-RATS raw backend and, for SL3 proof, a separate ISO14443-4
+backend for the same reader. Transition dispatch uncertainty is retained across
+both acquisitions. These worker-callable operations require supplied keys and
+explicit one-way-change acknowledgement; they do not infer levels or replay.
+
+`ReadValueBlock` and `WriteValueBlockVerified` add integrity-checked signed ordinary
+value-block access to the Plus component. They retain logical addresses and check
+exact prior content; native increment/decrement/transfer permissions are separate.
+See [MIFARE_PLUS.md](MIFARE_PLUS.md) for exact API and evidence contracts.
