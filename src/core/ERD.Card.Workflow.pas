@@ -18,6 +18,10 @@ type
   /// <summary>Invalid workflow configuration or incompatible snapshot.</summary>
   ECardWorkflowError = class(Exception)
   end;
+  /// <summary>Backend evidence that the requested data mutation was never dispatched.</summary>
+  /// <remarks>Only raise when no memory programming was sent; authentication may still affect card state.</remarks>
+  ECardWorkflowWriteRefused = class(ECardWorkflowError)
+  end;
   /// <summary>Observable operation phase; completion is separate from uncertain mutation.</summary>
   TCardWorkflowState = (
     /// <summary>No operation has run.</summary>
@@ -538,7 +542,14 @@ begin
     if CancelRequested then Exit;
     FResults[I].State := cwusUncertain;
     MutationPending(True);
-    FTarget.WriteUnit(FResults[I].Address, CopyBytes(FResults[I].Data));
+    try
+      FTarget.WriteUnit(FResults[I].Address, CopyBytes(FResults[I].Data));
+    except
+      on E: ECardWorkflowWriteRefused do
+      begin
+        FResults[I].State := cwusPending; MutationPending(False); raise;
+      end;
+    end;
     Progress(cwsVerifying, I, Length(FResults));
     CheckIdentity(FTarget, Uid);
     if not BytesEqual(FTarget.ReadUnit(FResults[I].Address), FResults[I].Data) then

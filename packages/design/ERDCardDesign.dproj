@@ -123,6 +123,8 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Workflow.Security.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Workflow.Password.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Inspection.pas"/>
         <DCCReference Include="..\..\src\emv\ERD.Card.EMV.Inspection.pas"/>
         <DCCReference Include="..\..\src\eid\ERD.Card.EID.Inspection.pas"/>

@@ -197,10 +197,10 @@ Linux core tests and XML well-formedness do not substitute for Delphi or Help In
 
 ## Application workflows
 
-Twenty-one palette components implement Classic/Type 2/ISO15693 memory copy,
+Twenty-three palette components implement Classic/Type 2/ISO15693 memory copy,
 backup/compare/restore, programmable UID, Classic credentials, Type 1-5 NDEF,
 magstripe, contact-memory, DESFire application migration/provisioning and batch
-personalization, SIM contact/SMS planning and inspection. Sixteen independent workflow demos have their own forms/DFMs.
+personalization, SIM contact/SMS planning and inspection. Eighteen independent workflow demos have their own forms/DFMs.
 
 Contact-memory workflows cover ordinary SLE/I2C data with explicit PIN retry
 budgets and protection preflight. DESFire supports complete ordinary application
@@ -211,7 +211,8 @@ comparison, explicit programming/erase plans and checked resume, plus ordered
 DESFire creation/content/key/access-policy personalization are implemented.
 eID/EMV/MOBIB structured inspection and privacy-aware report pipelines are implemented;
 see [INSPECTION_REPORTS.md](INSPECTION_REPORTS.md). Supplied-password Type 2/ISO15693
-memory workflows and reviewed credential/protection plans are the next extensions.
+memory workflows and reviewed credential/protection plans are implemented; see
+[PROTECTED_WORKFLOWS.md](PROTECTED_WORKFLOWS.md).
 SIM/USIM now includes complete record snapshots, reviewed restore/apply, free-slot
 ADN/EXT/EMAIL/ANR and SMS import plans, explicit multipart groups and inspection.
 See [WORKFLOWS.md](WORKFLOWS.md) for exact contracts and evidence.

@@ -911,3 +911,26 @@ Pascal source readers passed on the new sources; distribution checks reported
 60 projects, two groups and 46 DFM forms with zero findings. FPC reports the
 pre-existing TLV constructor visibility warning. No Delphi/VCL build was executed
 in the Linux environment.
+
+## Protected memory and reviewed security workflow extension
+
+The focused `ProtectedWorkflow.Tests` program passes 8,462 assertions with zero
+heap leaks. It exercises every password-capable Type 2 model, both ISO password
+profiles, backup/archive restore, copy/compare, static/dynamic locks, mirror
+refusal, cancellation, wrong passwords, pre-authentication UID/geometry changes,
+known pre-dispatch refusals, post-dispatch loss/read-back mismatch and credential
+cleanup. Security changes exercise Type 2 password/PACK and AUTH0/PROT/AUTHLIM,
+SLIX2 password/protection and ST25DV password/area policy with fresh RF proof.
+Injected demo transports throw on every hardware operation: validation and
+credential previews pass without I/O or secret exports. Native ACR122/ACR1552
+transport fixtures also exercise in-demo configuration capture, same-card UID
+guards, exact configuration artifacts and password-free ISO public reads.
+
+The complete FPC/native runner passed before this final capture action; the final
+focused suite covers the added path with zero leaks. The regression run includes
+38 Python tests and 57 inactive component registration/streaming checks.
+
+All 21 selected-source checkers pass. Distribution readers report 62 projects,
+two groups and 48 DFM forms without findings; registration includes 56 palette
+components. These are Linux FPC/RTL/static checks; they do not establish Delphi
+IDE rendering, Windows ABI or physical-reader/card behavior.

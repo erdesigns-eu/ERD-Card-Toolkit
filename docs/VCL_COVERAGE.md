@@ -1,6 +1,6 @@
 # VCL examples: current coverage
 
-There are **forty-three separately executable applications** in
+There are **forty-eight separately executable applications** in
 `examples/vcl/CardDemos.groupproj`. Each application has its own `TForm`,
 `.Main.pas`, and `.Main.dfm`. All visual controls are in that application's own
 DFM, including input fields and action controls. Hardware demos include reader
@@ -11,6 +11,8 @@ set.
 
 | Project | Included features |
 | --- | --- |
+| ProtectedType2WorkflowDemo | Own DFM, source/target selectors and events; PWD_AUTH/PACK backup/copy/compare/restore, secret-free password/policy previews and native verified apply |
+| ProtectedIso15693WorkflowDemo | Own DFM, source/target selectors and events; SLIX2/ST25DV supplied-password memory workflows and native credential/protection plans/apply |
 | EidInspectionDemo | Own DFM and native reader/card events; Belgian public sections or explicit BAC/MRZ/PACE-CAN LDS, text/JSON export with personal/raw policy |
 | EmvInspectionDemo | Own DFM and reader events; PPSE discovery, exact-AID contact/contactless inspection, explicit PDOL, AFL and bounded extra records, logs/counters, text/JSON |
 | MobibInspectionDemo | Own DFM and reader events; explicit inventory/layout/dialect/operator context, parsed report with confidence and missing-file evidence, text/JSON |

@@ -96,6 +96,10 @@ call :build_demo emvinspection EmvInspectionDemo
 if errorlevel 1 exit /b %errorlevel%
 call :build_demo mobibinspection MobibInspectionDemo
 if errorlevel 1 exit /b %errorlevel%
+call :build_demo protectedtype2workflow ProtectedType2WorkflowDemo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo protectediso15693workflow ProtectedIso15693WorkflowDemo
+if errorlevel 1 exit /b %errorlevel%
 exit /b %errorlevel%
 :build_demo
 rem Use the same resource generation and configuration as the IDE projects.

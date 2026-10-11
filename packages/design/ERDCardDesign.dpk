@@ -35,6 +35,8 @@ requires
   designide;
 
 contains
+  ERD.Card.Contactless.Workflow.Security in '..\..\src\contactless\ERD.Card.Contactless.Workflow.Security.pas',
+  ERD.Card.Contactless.Workflow.Password in '..\..\src\contactless\ERD.Card.Contactless.Workflow.Password.pas',
   ERD.Card.MOBIB.Inspection in '..\..\src\contactless\ERD.Card.MOBIB.Inspection.pas',
   ERD.Card.EMV.Inspection in '..\..\src\emv\ERD.Card.EMV.Inspection.pas',
   ERD.Card.EID.Inspection in '..\..\src\eid\ERD.Card.EID.Inspection.pas',

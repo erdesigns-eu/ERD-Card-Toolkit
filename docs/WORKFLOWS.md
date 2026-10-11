@@ -6,6 +6,8 @@ no card I/O; the caller supplies configured readers, profiles and credentials.
 
 | Component | Implemented workflows |
 | --- | --- |
+| `TProtectedMemoryWorkflow` | Supplied-password Type 2/SLIX2/original ST25DV selected-memory backup/copy/compare/restore with pre-authentication identity guards and credential cleanup |
+| `TCardSecurityWorkflow` | Offline secret-free credential/policy review; exact same-card verified Type 2/SLIX2/ST25DV native change with fresh RF proof |
 | `TEidInspectionWorkflow` | Belgian identity/address/photo/signatures/certificates or one explicit BAC/PACE ICAO LDS acquisition, structured section evidence and exports |
 | `TEmvInspectionWorkflow` | Explicit AIDs and PDOL values, directory/AFL acquisition, optional extra record rectangle, counters and transaction logs |
 | `TMobibInspectionWorkflow` | Explicit native Calypso read plan, parsed MOBIB report with operator context/confidence, exact gaps and privacy policy |
@@ -452,3 +454,10 @@ The three read-only family workflows and common report API are described in
 from report completeness: a finished inspection can include absent or restricted
 sections. Partial data survives later errors; exports omit personal and raw values
 unless explicitly selected.
+
+## Protected memory and security plans
+
+See [PROTECTED_WORKFLOWS.md](PROTECTED_WORKFLOWS.md) for native profiles, credential
+ownership, exact preimage requirements, independent DFM demos and partial-write
+evidence. These workflows extend compatible memory snapshots without implicitly
+copying credentials or access policies.
