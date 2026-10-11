@@ -13,7 +13,7 @@ uses
   System.SysUtils, System.Classes,
 {$ENDIF}
   ERD.Card.Bytes, ERD.Card.Workflow, ERD.Card.Contactless.Raw,
-  ERD.Card.Contactless.Type2, ERD.Card.Contactless.ISO15693;
+  ERD.Card.Contactless.Type2, ERD.Card.Contactless.ISO15693, ERD.Card.Crypto.DES;
 
 type
   /// <summary>Reviewed single-operation plan without any current or replacement credentials.</summary>
@@ -150,16 +150,40 @@ function CreateSt25ProtectionOperation(const ASession: IIso15693Session;
   const AArea, APasswordNumber, AProtectionCode: Byte;
   const AExternalPowerStable: Boolean = False): ICardSecurityOperation;
 
+/// <summary>Prepares Ultralight C key replacement with same-UID fresh 3DES authentication proof.</summary>
+/// <param name="AReader">Inactive exclusive raw reader.</param>
+/// <param name="AProvider">Explicit maintained DES/CSPRNG provider.</param>
+/// <param name="AExpectedUid">Exact intended seven-byte UID.</param>
+/// <param name="ACurrentKey">Sixteen supplied K1/K2 bytes in cryptographic order.</param>
+/// <param name="ANewKey">Sixteen replacement bytes, never included in the plan.</param>
+/// <returns>Single-use owned operation compatible with TCardSecurityWorkflow.</returns>
+function CreateUltralightCKeyOperation(const AReader: IRawContactlessReader;
+  const AProvider: ICardDesProvider; const AExpectedUid, ACurrentKey, ANewKey: TBytes): ICardSecurityOperation;
+
+/// <summary>Prepares exact-preimage Ultralight C AUTH0/AUTH1 changes preserving unrelated bytes.</summary>
+/// <param name="AReader">Inactive exclusive raw reader.</param>
+/// <param name="AProvider">Explicit DES/CSPRNG provider.</param>
+/// <param name="AExpectedUid">Exact intended seven-byte UID.</param>
+/// <param name="AExpectedPages">Eight actual pages 42/43 bytes; no keys.</param>
+/// <param name="AKey">Sixteen supplied current cryptographic-order bytes.</param>
+/// <param name="AFirstProtectedPage">AUTH0 3..48; 48 disables protection.</param>
+/// <param name="AProtectReads">True protects both directions; false writes only.</param>
+/// <returns>Owned before/after plan; live locks/preimage checked before dispatch.</returns>
+function CreateUltralightCProtectionOperation(const AReader: IRawContactlessReader;
+  const AProvider: ICardDesProvider; const AExpectedUid, AExpectedPages, AKey: TBytes;
+  const AFirstProtectedPage: Byte; const AProtectReads: Boolean): ICardSecurityOperation;
+
 implementation
 
 uses ERD.Card.Crypto, ERD.Card.Contactless, ERD.Card.Contactless.Type2.Password,
-  ERD.Card.Contactless.Workflow.Password;
+  ERD.Card.Contactless.Workflow.Password, ERD.Card.Contactless.UltralightC;
 
 type
   TOperation = class(TInterfacedObject, ICardSecurityOperation)
   private
     Review: TCardSecurityPlan;
     Type2: TType2PasswordCardReader;
+    Ultralight: TUltralightCCardReaderWriter;
     Iso: TIso15693SecurityManager;
     Model: TType2TagModel;
     Profile: TIso15693PasswordProfile;
@@ -184,6 +208,7 @@ destructor TOperation.Destroy;
 begin
   ClearCredentials;
   Type2.Free;
+  Ultralight.Free;
   Iso.Free;
   inherited Destroy;
 end;
@@ -195,7 +220,7 @@ end;
 
 procedure TOperation.Validate;
 begin
-  if Cleared or ((Type2 = nil) and (Iso = nil)) then raise ECardWorkflowError.Create('Prepare a fresh native security operation.');
+  if Cleared or ((Type2 = nil) and (Iso = nil) and (Ultralight = nil)) then raise ECardWorkflowError.Create('Prepare a fresh native security operation.');
 end;
 
 procedure TOperation.ClearCredentials;
@@ -208,7 +233,12 @@ procedure TOperation.ApplyVerified;
 begin
   Validate;
   try
-    if Type2 <> nil then
+    if Ultralight <> nil then
+    begin
+      if CredentialChange then Ultralight.ChangeKeyVerified(Password, NewPassword)
+      else Ultralight.ConfigureAuthenticationVerified(Auth0, ProtectReads, Review.Before, Password);
+    end
+    else if Type2 <> nil then
     begin
       if CredentialChange then Type2.ChangeCredentialsVerified(Model, Password, Pack, NewPassword, NewPack)
       else Type2.ConfigureAuthenticationVerified(Model, Auth0, ProtectReads, Limit, Review.Before, Password, Pack);
@@ -358,6 +388,49 @@ begin
   O.Password := CopyBytes(AConfigurationPassword); O.Area := AArea; O.PasswordNumber := APasswordNumber;
   O.ProtectionCode := AProtectionCode; O.PowerStable := AExternalPowerStable;
   O.Review.Identifier := AArea; O.Review.Operation := 'Update one ST25DV RF area access policy';
+end;
+
+function CreateUltralightCKeyOperation(const AReader: IRawContactlessReader;
+  const AProvider: ICardDesProvider; const AExpectedUid, ACurrentKey, ANewKey: TBytes): ICardSecurityOperation;
+var
+  O: TOperation;
+begin
+  if (AProvider = nil) or (Length(AExpectedUid) <> 7) or
+    (Length(ACurrentKey) <> 16) or (Length(ANewKey) <> 16) then
+    raise ECardWorkflowError.Create('Explicit Ultralight C identity, provider and keys required.');
+  O := TOperation.Create;
+  Result := O;
+  O.Ultralight := TUltralightCCardReaderWriter.Create(nil);
+  O.Ultralight.Reader := CreateType2WorkflowIdentityGuard(AReader, AExpectedUid);
+  O.Ultralight.CryptoProvider := AProvider;
+  O.Password := CopyBytes(ACurrentKey);
+  O.NewPassword := CopyBytes(ANewKey);
+  O.CredentialChange := True;
+  O.Review.Family := 'ULTRALIGHT-C';
+  O.Review.Operation := 'Replace supplied 3DES key with fresh RF proof';
+  O.Review.Uid := CopyBytes(AExpectedUid);
+end;
+
+function CreateUltralightCProtectionOperation(const AReader: IRawContactlessReader;
+  const AProvider: ICardDesProvider; const AExpectedUid, AExpectedPages, AKey: TBytes;
+  const AFirstProtectedPage: Byte; const AProtectReads: Boolean): ICardSecurityOperation;
+var
+  O: TOperation;
+begin
+  if (AFirstProtectedPage < 3) or (AFirstProtectedPage > 48) or (Length(AExpectedPages) <> 8) then
+    raise ECardWorkflowError.Create('Exact Ultralight C configuration and AUTH0 required.');
+  Result := CreateUltralightCKeyOperation(AReader, AProvider, AExpectedUid, AKey, AKey);
+  O := Result as TOperation;
+  TCardCrypto.Clear(O.NewPassword);
+  O.CredentialChange := False;
+  O.Auth0 := AFirstProtectedPage;
+  O.ProtectReads := AProtectReads;
+  O.Review.Before := CopyBytes(AExpectedPages);
+  O.Review.After := CopyBytes(AExpectedPages);
+  O.Review.After[0] := AFirstProtectedPage;
+  O.Review.After[4] := O.Review.After[4] and $FE;
+  if not AProtectReads then O.Review.After[4] := O.Review.After[4] or 1;
+  O.Review.Operation := 'Update Ultralight C AUTH0/AUTH1';
 end;
 
 function TCardSecurityWorkflow.GetPlan: TCardSecurityPlan;

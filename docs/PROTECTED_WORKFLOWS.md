@@ -150,3 +150,11 @@ password attempt. Both acquisitions guard the same UID across selections.
 
 No known or default passwords are prefilled. Replace geometry/profile/options
 explicitly when changing card family.
+
+## Native workflow adapters
+
+See [CARD_WORKFLOW_ADAPTERS.md](CARD_WORKFLOW_ADAPTERS.md) for Ultralight C
+user-memory/security operations, protected Type 2/Type 5 NDEF transfer and TWN4
+Classic/Type 2 memory adapters. Type 5 proprietary CC access code two is permitted
+only with an explicitly authenticated session profile; the flag does not perform
+authentication, and read-only code three still prohibits writes.

@@ -15,6 +15,7 @@ uses
   System.Classes,
 {$ENDIF}
   ERD.Card.EID.Inspection, ERD.Card.EMV.Inspection, ERD.Card.MOBIB.Inspection,
+  ERD.Card.Contactless.Workflow.Ndef.Protected,
   ERD.Card.Contactless.Workflow.Password, ERD.Card.Contactless.Workflow.Security,
   ERD.Card.GlobalPlatform, ERD.Card.EMV.Calculator, ERD.Card.PCSC.Monitor, ERD.Card.HID.Monitor, ERD.Card.SIM.Reader, ERD.Card.SIM.Workflow, ERD.Card.SIM.Inspection,
   ERD.Card.Reader.TWN4, ERD.Card.RFID.Input, ERD.Card.RFID.HID, ERD.Card.HID,
@@ -41,7 +42,7 @@ begin
     TBelgianEIDReader, TICAODocumentReader, TSimCardReaderWriter,
     TEmvCalculator, TEMVCardReader, TMagStripeReaderWriter, TMemoryCardReaderWriter,
     TSleCounterCardReaderWriter, TSle4404CardReaderWriter]);
-  RegisterComponents('ERD Workflows', [TProtectedMemoryWorkflow, TCardSecurityWorkflow, TEidInspectionWorkflow, TEmvInspectionWorkflow, TMobibInspectionWorkflow, TSle4404Workflow, TSleCounterWorkflow, TDesfirePersonalizationWorkflow, TSimPhonebookWorkflow, TSimSmsWorkflow, TSimInspectionWorkflow, TContactMemoryWorkflow, TDesfireApplicationWorkflow,
+  RegisterComponents('ERD Workflows', [TProtectedNdefWorkflow, TProtectedMemoryWorkflow, TCardSecurityWorkflow, TEidInspectionWorkflow, TEmvInspectionWorkflow, TMobibInspectionWorkflow, TSle4404Workflow, TSleCounterWorkflow, TDesfirePersonalizationWorkflow, TSimPhonebookWorkflow, TSimSmsWorkflow, TSimInspectionWorkflow, TContactMemoryWorkflow, TDesfireApplicationWorkflow,
     TDesfireProvisionWorkflow, TCardBatchWorkflow, TIso15693MemoryWorkflow, TCardMemoryCopyWorkflow, TMifareClassicCopyWorkflow,
     TType2MemoryWorkflow, TUidProgrammingWorkflow, TClassicCredentialWorkflow,
     TNdefTransferWorkflow, TMagStripeCopyWorkflow]);

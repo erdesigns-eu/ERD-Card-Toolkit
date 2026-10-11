@@ -78,6 +78,10 @@ type
     /// <exception cref="EContactlessWriteUncertain">Any failure after write dispatch, including ACK/read-back/release.</exception>
     function WriteUserPageVerified(const APage: Integer;
       const AData, AKey: TBytes): TBytes;
+    /// <summary>Authenticates once and conservatively rejects any static or dynamic user-memory lock.</summary>
+    /// <param name="AKey">Sixteen supplied cryptographic-order key bytes, copied and wiped.</param>
+    /// <remarks>Reads lock/configuration evidence only; counter and key/configuration lock bits are preserved.</remarks>
+    procedure CheckUserMemoryWritable(const AKey: TBytes);
     /// <summary>Authenticates and reads only pages 40..43, returning owned configuration and lock evidence.</summary>
     /// <param name="AKey">Exactly 16 supplied bytes in cryptographic order.</param>
     /// <returns>Configuration after successful session release; key pages are never read.</returns>
@@ -448,6 +452,32 @@ begin
   if not BytesEqual(Uid, FSelectedUid) then
     Invalid;
   Authenticate(Key);
+end;
+
+procedure TUltralightCCardReaderWriter.CheckUserMemoryWritable(const AKey: TBytes);
+var
+  Key, Locks, Wire: TBytes;
+  Config: TUltralightCConfiguration;
+  Success: Boolean;
+begin
+  if Length(AKey) <> 16 then Invalid;
+  Key := CopyBytes(AKey);
+  try
+    Acquire(Key);
+    Success := False;
+    try
+      Wire := TRawUidCodec.AppendCrcA(HexToBytes('3002'));
+      Locks := TRawUidCodec.DecodeCrcA(FReader.Exchange(Wire, Length(Wire) * 8), 16);
+      if ((Locks[2] and $F0) <> 0) or (Locks[3] <> 0) then Invalid;
+      Config := Configuration;
+      if (Config.RawPages[0] <> 0) or ((Config.RawPages[1] and $0F) <> 0) then Invalid;
+      Success := True;
+    finally
+      Release(Success);
+    end;
+  finally
+    TCardCrypto.Clear(Key);
+  end;
 end;
 
 function TUltralightCCardReaderWriter.ReadConfiguration(const AKey: TBytes)

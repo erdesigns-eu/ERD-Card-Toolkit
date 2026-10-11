@@ -97,8 +97,8 @@ are not compatibility requirements.
    verification, protected directories and basic AES application/ordinary-file create/delete.
    AES management also reads free memory/key versions and changes key policy/file
    access; rotation proves the new key through fresh authentication/version reads.
-   See [native DESFire](DESFIRE.md). D40/3DES, LRP, TMAC receipts, key sets/extended
-   configuration, originality and physical validation remain pending.
+   See [native DESFire](DESFIRE.md). D40/EV1 DES/2K3DES/3K3DES are implemented.
+   LRP, TMAC receipts, key sets/extended configuration and originality remain pending.
    **TMemoryCardReaderWriter** implements the eight SLE4432/4442/5532/5542 and
    SLE4418/4428/5518/5528 models plus I2C 1–1024-kilobit geometries through explicit
    ACR38 CCID/ACR39 profiles. It reads snapshots/retry/protection state, verifies
@@ -148,8 +148,7 @@ documentation. Use the same complete scope for upcoming batches:
    and native MagTek capture,
    then YL160/MSR DLL bindings with verified SDK headers and buffer lengths.
    Physical/firmware coverage and status-versus-read-back evidence stay explicit.
-3. **DESFire expansion and additional chip families:** D40 and EV1 DES/2K3DES/3K3DES security,
-   EV2 key sets, LRP, TMAC receipts and extended configuration/SDM/rights, followed by
+3. **DESFire expansion and additional chip families:** D40 and EV1 DES/2K3DES/3K3DES security are implemented. Remaining extensions include EV2 key sets, LRP, TMAC receipts and extended configuration/SDM/rights, followed by
    originality and physical card profiles. Owned ordinary transactions and basic create/delete
    management and verified AES key/policy/access administration are implemented. EV1/EV2 AES secure
    file access and EV2 NonFirst through maintained providers are implemented. Then Plus profiles,
@@ -197,7 +196,7 @@ Linux core tests and XML well-formedness do not substitute for Delphi or Help In
 
 ## Application workflows
 
-Twenty-three palette components implement Classic/Type 2/ISO15693 memory copy,
+Twenty-four palette components implement Classic/Type 2/ISO15693 memory copy,
 backup/compare/restore, programmable UID, Classic credentials, Type 1-5 NDEF,
 magstripe, contact-memory, DESFire application migration/provisioning and batch
 personalization, SIM contact/SMS planning and inspection. Eighteen independent workflow demos have their own forms/DFMs.
@@ -216,3 +215,8 @@ memory workflows and reviewed credential/protection plans are implemented; see
 SIM/USIM now includes complete record snapshots, reviewed restore/apply, free-slot
 ADN/EXT/EMAIL/ANR and SMS import plans, explicit multipart groups and inspection.
 See [WORKFLOWS.md](WORKFLOWS.md) for exact contracts and evidence.
+
+Ultralight C user-memory and reviewed security workflows, protected Type 2/Type 5
+NDEF transfer, and TWN4 Classic/Type 2 memory workflow adapters are implemented;
+see [CARD_WORKFLOW_ADAPTERS.md](CARD_WORKFLOW_ADAPTERS.md). New work focuses on
+components. Demo redesign is deferred until the component set is ready.

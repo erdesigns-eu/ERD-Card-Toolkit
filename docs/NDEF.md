@@ -225,3 +225,11 @@ were consulted for interoperability facts, not bundled or copied into the librar
   in the [contactless guide](CONTACTLESS.md).
 
 NTAG210/212 layouts and mirror/configuration rules are documented in [NTAG210_212.md](NTAG210_212.md).
+
+## Native workflow adapters
+
+See [CARD_WORKFLOW_ADAPTERS.md](CARD_WORKFLOW_ADAPTERS.md) for Ultralight C
+user-memory/security operations, protected Type 2/Type 5 NDEF transfer and TWN4
+Classic/Type 2 memory adapters. Type 5 proprietary CC access code two is permitted
+only with an explicitly authenticated session profile; the flag does not perform
+authentication, and read-only code three still prohibits writes.

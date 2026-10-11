@@ -934,3 +934,28 @@ All 21 selected-source checkers pass. Distribution readers report 62 projects,
 two groups and 48 DFM forms without findings; registration includes 56 palette
 components. These are Linux FPC/RTL/static checks; they do not establish Delphi
 IDE rendering, Windows ABI or physical-reader/card behavior.
+
+## Ultralight C, protected NDEF and TWN4 workflow adapters
+
+The complete FPC/native regression runner passed after integration, including
+38 Python tests, all 21 source checkers and 58 inactive registration/RTL streaming
+assertions. The final focused `CardAdapterWorkflow.Tests` suite passes 5,092
+assertions with range/overflow checking and zero heap leaks.
+
+It uses real OpenSSL 3DES and random nonces for Ultralight C authentication,
+user-memory restore, key rotation and AUTH0/AUTH1 changes. Type 2 and Type 5 NDEF
+fixtures cover native password access, length-last writes, logical transfer,
+comparison/no-op/clear/cancellation, identity and lock refusals, lost writes,
+read-back mismatch and credential cleanup. Proprietary Type 5 access requires an
+explicit profile, reserved access codes and read-only writes are refused, and
+SLIX2 counter overlap stops before length invalidation. Unknown post-dispatch
+backend errors remain uncertain. TWN4 transcripts cover Type 2 and Classic 1K/4K
+restores/comparisons, literal high-block/sector encoding, frozen reader lifetime,
+wrong-family/UID checks before login, lost write responses and balanced close.
+
+The final boundary tests were rerun separately after the full regression pass.
+Distribution checks cover 62 projects, two groups and 48 DFM forms with zero
+findings. Registration includes 57 palette components. No demo files changed in
+this increment. These Linux/static tests do not substitute for the Delphi compiler
+or physical reader/card validation; the pre-existing TLV constructor visibility
+warning remains outside this change.
