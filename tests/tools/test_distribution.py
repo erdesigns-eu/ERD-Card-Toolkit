@@ -144,6 +144,20 @@ class DistributionTests(unittest.TestCase):
             registration.write_text("RegisterComponents('Cards', [TBase, TChild]);")
             self.assertTrue(any('unregistered component TGrandChild' in e for e in distribution.check_registration(root)))
 
+    def test_abstract_palette_base_is_not_installed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'src/design').mkdir(parents=True)
+            (root / 'src/Components.pas').write_text(
+                'TBase = class abstract(TComponent) end; '
+                'TChild = class(TBase) end; TGrandChild = class(TChild) end;')
+            registration = root / 'src/design/ERD.Card.Design.Register.pas'
+            registration.write_text("RegisterComponents('Cards', [TChild, TGrandChild]);")
+            self.assertEqual(distribution.check_registration(root), [])
+            registration.write_text("RegisterComponents('Cards', [TBase, TChild, TGrandChild]);")
+            self.assertTrue(any('unknown component TBase' in e
+                                for e in distribution.check_registration(root)))
+
     def test_palette_missing_unknown_and_duplicate(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

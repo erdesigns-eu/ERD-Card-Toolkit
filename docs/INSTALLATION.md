@@ -143,3 +143,9 @@ IDE crash is resolved. If it persists, compare building the user's native `Core`
 reference and the shipped `ERDCardCore` project, and compare IDE versus command-line
 MSBuild output. An IDE-only failure and an emitted compiler error require different
 follow-up diagnosis; keep the first actual error from the build output.
+
+The **ERD Workflows** page adds seven inactive components for application workflows.
+`ERDCardCore` owns the workflow contracts/archive, `ERDCardContactless` owns chip
+workflows, and `ERDCardMagStripe` owns stripe workflows and now requires
+`ERDCardCore`. The standalone design package includes these units itself.
+See [WORKFLOWS.md](WORKFLOWS.md).

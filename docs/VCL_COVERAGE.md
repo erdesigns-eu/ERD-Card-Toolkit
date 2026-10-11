@@ -1,6 +1,6 @@
 # VCL examples: current coverage
 
-There are **thirty separately executable applications** in
+There are **thirty-five separately executable applications** in
 `examples/vcl/CardDemos.groupproj`. Each application has its own `TForm`,
 `.Main.pas`, and `.Main.dfm`. All visual controls are in that application's own
 DFM, including input fields and action controls. Hardware demos include reader
@@ -11,6 +11,8 @@ set.
 
 | Project | Included features |
 | --- | --- |
+| ClassicWorkflowDemo / Type2WorkflowDemo | Ordinary data/user-page backup, copy, compare, restore and bounded snapshot files |
+| UidWorkflowDemo / NdefWorkflowDemo / MagStripeWorkflowDemo | Workflow capture/copy/template actions with explicit profiles; exact API/demo coverage in [WORKFLOWS.md](WORKFLOWS.md) |
 | MagStripeDemo | Tracks and MSR206-7HL reads/verified writes |
 | SmartCardDemo | Existing combined PC/SC, eID, EMV, contactless, memory, and RFID pages |
 | GlobalPlatformDemo | CPLC/tagged or legacy registry, explicit native authentication, CAP/DAP load/install/delete/status/extradition, key management and RSA/AES token/receipt policies, background execution and native reader/card events |

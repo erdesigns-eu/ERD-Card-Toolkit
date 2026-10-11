@@ -12,7 +12,7 @@ uses
 {$ELSE}
   System.SysUtils, System.Classes,
 {$ENDIF}
-  ERD.Card.Transport, ERD.Card.Contactless.Type2, ERD.Card.Contactless.UID;
+  ERD.Card.Transport, ERD.Card.Contactless.Classic.Access, ERD.Card.Contactless.Type2, ERD.Card.Contactless.UID;
 
 type
   /// <summary>Invalid contactless configuration, data or requested operation; messages contain no keys.</summary>
@@ -262,6 +262,20 @@ type
     procedure WriteClassicDataBlock(const AModel: TMifareClassicModel;
       const ABlock: Integer; const AKeyType: TMifareClassicKeyType;
       const AKey, AData: TBytes; const ASlot: Byte = 0);
+    /// <summary>Writes one explicit sector trailer and verifies access bytes and both supplied new keys.</summary>
+    /// <param name="AModel">Explicit Classic geometry.</param>
+    /// <param name="ABlock">Sector trailer address only.</param>
+    /// <param name="AKeyType">Current authentication key type.</param>
+    /// <param name="AKey">Six-byte current credential.</param>
+    /// <param name="ANewTrailer">Sixteen bytes including supplied new A/B keys and valid access bits.</param>
+    /// <param name="ASlot">Volatile reader key slot.</param>
+    /// <remarks>One write only. Any failure after dispatch is uncertain. Key A is verified by
+    /// fresh authentication; Key B by fresh authentication or readable bytes, according to the
+    /// new trailer access condition. Masked key bytes are never copied from a trailer read.
+    /// This operation may permanently restrict later writes; no automatic recovery or rollback.</remarks>
+    procedure WriteClassicSectorTrailer(const AModel: TMifareClassicModel;
+      const ABlock: Integer; const AKeyType: TMifareClassicKeyType;
+      const AKey, ANewTrailer: TBytes; const ASlot: Byte = 0);
     /// <summary>Reads one four-byte page within an explicit Ultralight/NTAG layout.</summary>
     /// <param name="AModel">Caller-identified supported memory layout.</param>
     /// <param name="APage">Physical page in the layout; non-user regions may be read when the card permits.</param>
@@ -883,6 +897,60 @@ begin
         raise EContactlessWriteUncertain.Create(E.ClassName);
       raise;
     end;
+  end;
+end;
+
+procedure TContactlessCardReader.WriteClassicSectorTrailer(const AModel: TMifareClassicModel;
+  const ABlock: Integer; const AKeyType: TMifareClassicKeyType;
+  const AKey, ANewTrailer: TBytes; const ASlot: Byte);
+var
+  Transaction: ICardTransaction;
+  Succeeded, Dispatched: Boolean;
+  Wire, Verified, KeyA, KeyB: TBytes;
+  Conditions: TClassicAccessConditions;
+  I: Integer;
+begin
+  ValidateBlock(AModel, ABlock, AKeyType, AKey);
+  if not TMifareClassicLayout.IsTrailer(AModel, ABlock) then Fail('trailer address');
+  if Length(ANewTrailer) <> 16 then Fail('trailer size');
+  Conditions := TClassicAccessCodec.Decode(Copy(ANewTrailer, 6, 3));
+  KeyA := Copy(ANewTrailer, 0, 6);
+  KeyB := Copy(ANewTrailer, 10, 6);
+  Transaction := nil;
+  Succeeded := False;
+  Dispatched := False;
+  try
+    try
+      Transaction := BeginOperation;
+      try
+        Authenticate(Byte(ABlock), AKeyType, AKey, ASlot);
+        Wire := FProfile.WriteBlockCommand(Byte(ABlock), ANewTrailer);
+        Dispatched := True;
+        Send(Wire, 0);
+        Authenticate(Byte(ABlock), mckA, KeyA, ASlot);
+        Verified := Send(FProfile.ReadBlockCommand(Byte(ABlock)), 16);
+        if not BytesEqual(Copy(Verified, 6, 4), Copy(ANewTrailer, 6, 4)) then
+          Fail('trailer access verification');
+        if TClassicAccessCodec.KeyBReadable(Conditions[3]) then
+        begin
+          if not BytesEqual(Copy(Verified, 10, 6), KeyB) then Fail('trailer key B verification');
+        end
+        else Authenticate(Byte(ABlock), mckB, KeyB, ASlot);
+        Succeeded := True;
+      finally
+        EndOperation(Transaction, Succeeded);
+      end;
+    except
+      on E: Exception do
+      begin
+        if Dispatched then raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    for I := 0 to High(Wire) do Wire[I] := 0;
+    for I := 0 to High(KeyA) do KeyA[I] := 0;
+    for I := 0 to High(KeyB) do KeyB[I] := 0;
   end;
 end;
 

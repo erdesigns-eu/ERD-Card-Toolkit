@@ -194,3 +194,12 @@ Each milestone includes documented declarations, tests for successful and failin
 behavior, the existing Pascal readers on an explicit source selection, and a Delphi
 build for the supported targets. Hardware features require real adapter/card tests.
 Linux core tests and XML well-formedness do not substitute for Delphi or Help Insight.
+
+## Application workflows
+
+The first workflow layer is implemented: Classic/Type 2 memory copy, backup,
+comparison and restore; programmable UID copy/programming; explicit Classic
+credential migration; Type 1-5 NDEF transfer; and verified or explicitly
+status-only magstripe workflows. Seven palette components and five independent
+DFM demos are included. See [WORKFLOWS.md](WORKFLOWS.md) for contracts, results
+and the remaining family-specific workflow extensions.

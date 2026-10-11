@@ -35,6 +35,14 @@ requires
   designide;
 
 contains
+  ERD.Card.Workflow in '..\..\src\core\ERD.Card.Workflow.pas',
+  ERD.Card.Workflow.Archive in '..\..\src\core\ERD.Card.Workflow.Archive.pas',
+  ERD.Card.Contactless.Classic.Access in '..\..\src\contactless\ERD.Card.Contactless.Classic.Access.pas',
+  ERD.Card.Contactless.Workflow in '..\..\src\contactless\ERD.Card.Contactless.Workflow.pas',
+  ERD.Card.Contactless.Workflow.UID in '..\..\src\contactless\ERD.Card.Contactless.Workflow.UID.pas',
+  ERD.Card.Contactless.Workflow.Ndef in '..\..\src\contactless\ERD.Card.Contactless.Workflow.Ndef.pas',
+  ERD.Card.Contactless.Workflow.Credentials in '..\..\src\contactless\ERD.Card.Contactless.Workflow.Credentials.pas',
+  ERD.Card.MagStripe.Workflow in '..\..\src\magstripe\ERD.Card.MagStripe.Workflow.pas',
   ERD.Card.GlobalPlatform.Management in '..\..\src\globalplatform\ERD.Card.GlobalPlatform.Management.pas',
   ERD.Card.Crypto.RSA in '..\..\src\core\ERD.Card.Crypto.RSA.pas',
   ERD.Card.EMV.Semantics in '..\..\src\emv\ERD.Card.EMV.Semantics.pas',

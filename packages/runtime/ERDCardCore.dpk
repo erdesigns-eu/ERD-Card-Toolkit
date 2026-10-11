@@ -10,6 +10,8 @@ requires
   rtl;
 
 contains
+  ERD.Card.Workflow in '..\..\src\core\ERD.Card.Workflow.pas',
+  ERD.Card.Workflow.Archive in '..\..\src\core\ERD.Card.Workflow.Archive.pas',
   ERD.Card.Crypto.RSA in '..\..\src\core\ERD.Card.Crypto.RSA.pas',
   ERD.Card.APDU.Catalog in '..\..\src\core\ERD.Card.APDU.Catalog.pas',
   ERD.Card.ATR.Legacy in '..\..\src\core\ERD.Card.ATR.Legacy.pas',

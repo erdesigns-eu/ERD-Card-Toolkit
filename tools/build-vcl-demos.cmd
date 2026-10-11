@@ -64,6 +64,16 @@ call :build_demo st25dv St25DvDemo
 if errorlevel 1 exit /b %errorlevel%
 call :build_demo topaz TopazDemo
 if errorlevel 1 exit /b %errorlevel%
+call :build_demo classicworkflow ClassicWorkflowDemo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo type2workflow Type2WorkflowDemo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo uidworkflow UidWorkflowDemo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo magstripeworkflow MagStripeWorkflowDemo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo ndefworkflow NdefWorkflowDemo
+if errorlevel 1 exit /b %errorlevel%
 exit /b %errorlevel%
 :build_demo
 rem Use the same resource generation and configuration as the IDE projects.

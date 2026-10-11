@@ -11,6 +11,11 @@ requires
   ERDCardCore;
 
 contains
+  ERD.Card.Contactless.Classic.Access in '..\..\src\contactless\ERD.Card.Contactless.Classic.Access.pas',
+  ERD.Card.Contactless.Workflow in '..\..\src\contactless\ERD.Card.Contactless.Workflow.pas',
+  ERD.Card.Contactless.Workflow.UID in '..\..\src\contactless\ERD.Card.Contactless.Workflow.UID.pas',
+  ERD.Card.Contactless.Workflow.Ndef in '..\..\src\contactless\ERD.Card.Contactless.Workflow.Ndef.pas',
+  ERD.Card.Contactless.Workflow.Credentials in '..\..\src\contactless\ERD.Card.Contactless.Workflow.Credentials.pas',
   ERD.Card.Contactless.Topaz in '..\..\src\contactless\ERD.Card.Contactless.Topaz.pas',
   ERD.Card.Contactless.ACR122.Topaz in '..\..\src\contactless\ERD.Card.Contactless.ACR122.Topaz.pas',
   ERD.Card.Contactless.Type1.Ndef in '..\..\src\contactless\ERD.Card.Contactless.Type1.Ndef.pas',

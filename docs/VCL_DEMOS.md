@@ -513,3 +513,10 @@ both accept caller CSV mappings through `TMobibLookup.LoadCsv`, and share the ri
 `TMobibReport` output already used by the component library. Folder/SFI addresses,
 application selection and file headers are preserved in the archive. See the
 archive section of [MOBIB_CALYPSO.md](MOBIB_CALYPSO.md) for formats and bounds.
+
+## Application workflow demos
+
+The five independent workflow demos each own their DFM controls and source/target
+selectors. They use the same nonvisual worker lifecycle as the family demos.
+See [WORKFLOWS.md](WORKFLOWS.md) for operations, snapshots, evidence and the exact
+profiles shown in each demo. For one device capture first, swap, then restore.

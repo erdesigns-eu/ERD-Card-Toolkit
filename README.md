@@ -37,6 +37,7 @@ out of scope (see [Not supported](#not-supported)).
 
 | Area | Components | What you can do |
 | --- | --- | --- |
+| **Application workflows** | `TMifareClassicCopyWorkflow`, `TType2MemoryWorkflow`, `TUidProgrammingWorkflow`, `TClassicCredentialWorkflow`, `TNdefTransferWorkflow`, `TMagStripeCopyWorkflow` | Data/UID/stripe copy, backup/restore/compare, explicit credential migration and NDEF transfer; progress/card-request events, verified results and partial-write evidence. See [Workflows](docs/WORKFLOWS.md). |
 | **PC/SC readers** | `TSmartCardReader`, `TSmartCardMonitor` | List readers, connect (shared/exclusive, T=0/T=1), read the ATR, exchange APDUs through `ICardTransport` and use explicit PC/SC transactions. Event-driven reader hot-plug and card insertion/removal without polling. |
 | **Protocol toolkit** | Codecs (no component) | ISO 7816 APDU encode/decode (short and extended), ATR parsing with TCK validation, BER-TLV decode/encode with configurable limits, hex/byte helpers, a curated ATR hint catalog and EMV tag metadata. |
 | **Belgian eID** | `TBelgianEIDReader` | Read identity, address, JPEG photo, certificates (RAW/DER) and raw signature files from Belpic 1.7/1.8 contact cards. |
@@ -45,7 +46,7 @@ out of scope (see [Not supported](#not-supported)).
 | **EMV semantic tools** | `TEmvSemanticCodec` | Offline AIP, AUC, TVR, IAC, CVM List/Results and terminal-capability decoding with explicit EMV Book 3/4 4.3/4.4, XDA/biometric meanings, unsigned thresholds and preserved reserved/proprietary values. |
 | **Offline EMV calculations** | `TEmvCalculator` | UDK Option A/B, common/ATC/Mastercard/Visa-script/EMV-2000-tree keys, DES parity and DES/AES KCV, ISO 9797 Retail MAC, ARQC/TC/AAC generation and verification, ARPC methods 1/2 and verification, AES-128 CMAC, script MAC/encryption and PIN-block formatting. Explicit Visa 10/18/22, Mastercard 16/17/20/21 and Interac 133 calculation profiles; no card commands or payment processing. |
 | **GlobalPlatform / JavaCard** | `TGlobalPlatformCardManager` | Explicit domain selection, CPLC, tagged/legacy registry; SCP02 i=15 and SCP03 AES-128 S8/S16 (random or verified pseudo-random challenge), command protection and SCP03 response protection. Structurally checked CAP loading, applet installation, explicit deletion/status, LOAD progress, DEK-protected key provision/replacement, RSA/AES issuer tokens, DAP blocks and verified DES/AES receipts. Native Delphi protocol code; no GlobalPlatform DLL. |
-| **MIFARE Classic** | `TContactlessCardReader` | Classic Mini/1K/4K layouts. Read blocks with a supplied key A/B and write data blocks; block 0 and sector trailers are refused. |
+| **MIFARE Classic** | `TContactlessCardReader` | Classic Mini/1K/4K layouts. Read blocks with supplied key A/B, write data blocks, and explicitly migrate sector keys/access bits with fresh-key verification. Ordinary data writes still exclude block 0 and trailers. |
 | **Ultralight / NTAG (Type 2)** | `TContactlessCardReader`, `TType2PasswordCardReader` | Ultralight, Ultralight EV1 (48/128), NTAG210/212/213/215/216 page reads, user-memory snapshots and user-page writes. PWD_AUTH/PACK access, verified AUTH0/PROT/AUTHLIM configuration and password/PACK replacement, supported counter reads, and protected NDEF through an ACR122U adapter. |
 | **Ultralight C** | `TUltralightCCardReaderWriter` | Supplied-key 2K3DES mutual authentication, exact user-page reads, a 144-byte user-memory snapshot and verified four-byte user-page writes through raw RF (ACR122U adapter). Read authentication configuration; verified AUTH0/AUTH1 updates and key replacement with same-UID fresh RF authentication. Manufacturer, OTP, lock and counter writes remain excluded. |
 | **NDEF** | `TType1NdefCardReader`, `TType2NdefCardReader`, `TType3NdefCardReader`, `TType4NdefCardReader`, `TType5NdefCardReader` | Complete NDEF message codec with chunk reassembly, plus Text, URI, MIME, external and Smart Poster record helpers. Read, replace and clear public NDEF messages on Topaz Type 1 (mapping 1.0), Type 2, Type 3 (mapping 1.0), Type 4 (mapping 1.0/2.0) and Type 5 tags, with read-back verification. Type 2 also supports NDEF within supplied-password sessions. |
@@ -109,7 +110,7 @@ These rules apply to every component and are worth knowing before you start:
 | `src/design` | IDE palette registration |
 | `packages/` | `ERDCards.groupproj`: 12 runtime packages and the design-time package |
 | `Delphi Packages/` | Native-format `Core` reference package used for IDE troubleshooting |
-| `examples/` | 19 console examples and 30 VCL demos (`examples/vcl/CardDemos.groupproj`) |
+| `examples/` | 19 console examples and 35 VCL demos (`examples/vcl/CardDemos.groupproj`) |
 | `tests/` | Pascal test programs (Free Pascal/Delphi), native ABI shims and Python tests |
 | `tools/` | Build scripts, test runner, distribution checker, `pascalcheck` static analysis, fixture generators |
 | `docs/` | Per-family guides, installation, validation and planning documents |
@@ -173,11 +174,12 @@ tools\build-packages.cmd dcc32 design
 ```
 
 Then use **Component > Install Packages > Add** and select `ERDCardDesign.bpl`.
-It registers 33 components:
+It registers 40 components:
 
 | Palette page | Components |
 | --- | --- |
 | **ERD Cards** | `TSmartCardMonitor`, `TSmartCardReader`, `TBelgianEIDReader`, `TICAODocumentReader`, `TSimCardReaderWriter`, `TEMVCardReader`, `TGlobalPlatformCardManager`, `TEmvCalculator`, `TMagStripeReaderWriter`, `TMemoryCardReaderWriter`, `TSleCounterCardReaderWriter`, `TSle4404CardReaderWriter` |
+| **ERD Workflows** | `TCardMemoryCopyWorkflow`, `TMifareClassicCopyWorkflow`, `TType2MemoryWorkflow`, `TUidProgrammingWorkflow`, `TClassicCredentialWorkflow`, `TNdefTransferWorkflow`, `TMagStripeCopyWorkflow` |
 | **ERD Input** | `THidDeviceMonitor`, `TUsbHidInputMonitor`, `TRfidKeyboardReader`, `TRfidHidReportReader`, `TUsbHidReaderWriter`, `TTwn4CardReaderWriter` |
 | **ERD Contactless** | `TTopazCardReader`, `TType1NdefCardReader`, `TFelicaCardReader`, `TType3NdefCardReader`, `TUltralightCCardReaderWriter`, `TCalypsoCardReader`, `TContactlessCardReader`, `TType2NdefCardReader`, `TType4NdefCardReader`, `TIso15693CardReader`, `TIso15693SecurityManager`, `TType5NdefCardReader`, `TDesfireCardReader`, `TType2PasswordCardReader`, `TRawUidProgrammer` |
 
@@ -314,6 +316,8 @@ and show card offered/removed notifications without running a card operation.
 | `MagStripeDemo` | Track checks, swipes and verified MSR206-7HL writes |
 | `MagStripeProfilesDemo` | Track codecs, MagTek keyboard/HID, MSR206/MSR605 reads and status-only programming |
 | `GlobalPlatformDemo` | Domain/CPLC/registry, authentication, CAP/DAP load, install/delete/status/extradition, key management and token/receipt policies; offline CAP preview, live acknowledged LOAD bytes/blocks, own DFM, native reader/card events and background worker |
+| `ClassicWorkflowDemo`, `Type2WorkflowDemo` | Data backup/copy/compare/restore, snapshot files and source/target selection |
+| `UidWorkflowDemo`, `NdefWorkflowDemo`, `MagStripeWorkflowDemo` | UID, NDEF and stripe capture/copy/template programming through workflow components |
 | `EmvSemanticsDemo` | Offline AIP/AUC/TVR/IAC/CVM List/Results and 9F33/9F40 terminal-capability explanation with explicit EMV version |
 | `EmvCalculatorDemo` | All offline EMV calculations, explicit CVN transaction fields and cryptogram verification |
 | `CardCatalogDemo` | Browse/filter ATR, EMV tag/path, APDU instruction/status and AID inventories; native reader/card events and offered ATR lookup |

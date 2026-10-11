@@ -392,9 +392,12 @@ def check_registration(root):
     if not path.is_file():
         return ['palette registration source missing']
     ancestry = {}
+    abstract_names = set()
     for unit in (root / 'src').rglob('*.pas'):
-        for name, base in re.findall(r'\b(T\w+)\s*=\s*class\((T\w+)\)', unit.read_text(), re.I):
+        for name, abstract, base in re.findall(r'\b(T\w+)\s*=\s*class\s*(abstract\s*)?\((T\w+)\)', unit.read_text(), re.I):
             ancestry[name] = base.casefold()
+            if abstract:
+                abstract_names.add(name)
     expected = set()
     known = {'tcomponent'}
     while True:
@@ -403,6 +406,7 @@ def check_registration(root):
             break
         expected.update(discovered)
         known.update(name.casefold() for name in discovered)
+    expected -= abstract_names
     declared = []
     for names in re.findall(r"RegisterComponents\('[^']+',\s*\[([^]]+)\]\)", path.read_text(), re.S):
         declared.extend(re.findall(r'\bT\w+\b', names))

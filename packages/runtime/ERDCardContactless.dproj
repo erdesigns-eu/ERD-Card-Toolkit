@@ -180,6 +180,11 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Classic.Access.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Workflow.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Workflow.UID.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Workflow.Ndef.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Workflow.Credentials.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Topaz.pas"/>
     <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.ACR122.Topaz.pas"/>
     <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Type1.Ndef.pas"/>
