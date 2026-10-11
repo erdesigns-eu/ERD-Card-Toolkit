@@ -33,6 +33,8 @@ uses
   ERD.Card.Contactless, ERD.Card.Contactless.Workflow,
   ERD.Card.Contactless.Workflow.UID, ERD.Card.Contactless.Workflow.Ndef,
   ERD.Card.Contactless.Workflow.Credentials, ERD.Card.Contactless.Classic.Access,
+  ERD.Card.Contactless.Workflow.ISO15693, ERD.Card.Contactless.ISO15693,
+  ERD.Card.Workflow.Batch,
   ERD.Card.Contactless.UID, ERD.Card.Contactless.UID.Profiles,
   ERD.Card.Contactless.Raw, ERD.Card.Contactless.ACR122,
   ERD.Card.Contactless.Type2, ERD.Card.Contactless.Type2.Ndef, ERD.Card.Contactless.Type4.Ndef,
@@ -58,6 +60,15 @@ type
   TNativeReaders = class(TInterfacedObject, ICardWorkflowDemoReaders)
     function CreateTransport(const AName: UnicodeString): ICardTransport;
   end;
+  TBatchTemplates = class(TInterfacedObject, ICardBatchFactory)
+    Readers: ICardWorkflowDemoReaders;
+    Model: TType2TagModel;
+    Rows: TStringList;
+    Components: TList;
+    constructor Create;
+    destructor Destroy; override;
+    function CreateWorkflow(const AIdentifier: string): TCardWorkflow;
+  end;
   TOperations = class(TInterfacedObject, ICardDemoOperations, ICardDemoRequestValidator)
     Log: string;
     Readers: ICardWorkflowDemoReaders;
@@ -71,6 +82,8 @@ type
     procedure Ndef(const R: TCardDemoRequest; const Source, Target: TContactlessCardReader;
       var D: TCardDemoResult);
     procedure Stripe(const R: TCardDemoRequest; var D: TCardDemoResult);
+    procedure IsoMemory(const R: TCardDemoRequest; var D: TCardDemoResult);
+    procedure Batch(const R: TCardDemoRequest; var D: TCardDemoResult);
     procedure Finish(const AFlow: TCardWorkflow; var D: TCardDemoResult);
   end;
 
@@ -118,11 +131,14 @@ begin
   if not Result then Exit;
   Result := (ARequest.FamilyName = 'ClassicWorkflowDemo') or
     (ARequest.FamilyName = 'Type2WorkflowDemo') or (ARequest.FamilyName = 'UidWorkflowDemo') or
-    (ARequest.FamilyName = 'MagStripeWorkflowDemo') or (ARequest.FamilyName = 'NdefWorkflowDemo');
+    (ARequest.FamilyName = 'MagStripeWorkflowDemo') or (ARequest.FamilyName = 'NdefWorkflowDemo') or
+    (ARequest.FamilyName = 'Iso15693WorkflowDemo') or (ARequest.FamilyName = 'BatchWorkflowDemo');
   if not Result then Exit;
+  if (ARequest.FamilyName = 'BatchWorkflowDemo') and (ARequest.FamilyAction <> 3) then Result := False;
   if (ARequest.FamilyAction = 4) and (ARequest.FamilyName <> 'ClassicWorkflowDemo') then Result := False;
   if ARequest.FamilyAction in [0 .. 2] then Result := Result and (ARequest.ReaderName <> '');
-  if ARequest.FamilyAction <> 0 then Result := Result and (ARequest.Arguments[0] <> '');
+  if (ARequest.FamilyAction <> 0) and (ARequest.FamilyName <> 'BatchWorkflowDemo') then
+    Result := Result and (ARequest.Arguments[0] <> '');
   if ARequest.FamilyAction in [1, 2] then Result := Result and (ARequest.ReaderName <> ARequest.Arguments[0]);
   if ARequest.FamilyAction in [1, 3, 4] then Result := Result and ARequest.MutationAcknowledged;
   if (ARequest.FamilyAction = 2) and ((ARequest.FamilyName = 'UidWorkflowDemo') or
@@ -137,7 +153,9 @@ begin
       if ARequest.FamilyAction = 4 then Result := Result and (Length(ARequest.Credentials[2]) = 6);
       if ARequest.FamilyAction <> 0 then Result := Result and (Length(ARequest.Credentials[1]) = 6);
     end
-    else if ARequest.FamilyName = 'Type2WorkflowDemo' then Result := Model in [0 .. 7]
+    else if (ARequest.FamilyName = 'Type2WorkflowDemo') or
+      (ARequest.FamilyName = 'BatchWorkflowDemo') then Result := Model in [0 .. 7]
+    else if ARequest.FamilyName = 'Iso15693WorkflowDemo' then Result := Model in [0 .. 1]
     else if ARequest.FamilyName = 'NdefWorkflowDemo' then Result := Model in [0 .. 8]
     else if ARequest.FamilyName = 'MagStripeWorkflowDemo' then
       Result := (Model in [0 .. 6]) and (ARequest.Coercivity in [mscLow, mscHigh])
@@ -365,12 +383,125 @@ begin
   finally Flow.Free; Source.Free; Target.Free; Lines.Free; end;
 end;
 
+constructor TBatchTemplates.Create;
+begin inherited; Rows := TStringList.Create; Components := TList.Create; end;
+
+destructor TBatchTemplates.Destroy;
+var I: Integer;
+begin
+  for I := Components.Count - 1 downto 0 do TObject(Components[I]).Free;
+  Components.Free; Rows.Free; inherited;
+end;
+
+function TBatchTemplates.CreateWorkflow(const AIdentifier: string): TCardWorkflow;
+var Fields: TStringList; I: Integer; Transport: ICardTransport;
+  Reader: TContactlessCardReader; Ndef: TType2NdefCardReader;
+  Flow: TNdefTransferWorkflow; Message: TNdefMessage;
+begin
+  Result := nil; Fields := TStringList.Create;
+  try
+    Fields.StrictDelimiter := True; Fields.Delimiter := '|';
+    for I := 0 to Rows.Count - 1 do
+    begin
+      Fields.DelimitedText := Rows[I];
+      if Fields[0] <> AIdentifier then Continue;
+      Message := TNdefCodec.Decode(HexToBytes(Fields[2]));
+      Transport := Readers.CreateTransport(UnicodeString(Fields[1]));
+      Reader := TContactlessCardReader.Create(nil); Components.Add(Reader);
+      Reader.Transport := Transport; Reader.Profile := TPcscStorageProfile.Create;
+      Ndef := TType2NdefCardReader.Create(nil); Components.Add(Ndef);
+      Ndef.Transport := Reader.Transport; Ndef.Profile := TPcscStorageProfile.Create;
+      Flow := TNdefTransferWorkflow.Create(nil);
+      try Flow.PrepareWrite(TNdefWorkflowAdapters.Type2(Ndef, Model), Message);
+      except Flow.Free; raise; end;
+      Result := Flow; Exit;
+    end;
+    raise ECardWorkflowError.Create('Batch template not found.');
+  finally Fields.Free; end;
+end;
+
+procedure TOperations.Batch(const R: TCardDemoRequest; var D: TCardDemoResult);
+var Templates: TBatchTemplates; Factory: ICardBatchFactory;
+  Flow: TCardBatchWorkflow; Fields, UsedReaders: TStringList;
+  Ids: TCardBatchIdentifiers; I: Integer; Results: TCardBatchResults;
+begin
+  Templates := TBatchTemplates.Create; Factory := Templates;
+  Flow := TCardBatchWorkflow.Create(nil); Fields := TStringList.Create; UsedReaders := TStringList.Create;
+  try
+    Templates.Readers := Readers; Templates.Model := TType2TagModel(StrToInt(string(R.Arguments[1])));
+    Templates.Rows.Text := string(R.Arguments[2]);
+    if (Templates.Rows.Count < 1) or (Templates.Rows.Count > 256) then
+      raise ECardWorkflowError.Create('Provide one through 256 batch rows.');
+    SetLength(Ids, Templates.Rows.Count);
+    Fields.StrictDelimiter := True; Fields.Delimiter := '|';
+    UsedReaders.CaseSensitive := True;
+    for I := 0 to Templates.Rows.Count - 1 do
+    begin
+      Fields.DelimitedText := Templates.Rows[I];
+      if (Fields.Count <> 3) or (Fields[1] = '') or (Fields[2] = '') then
+        raise ECardWorkflowError.Create('Each row needs identifier|reader|NDEF hex.');
+      if UsedReaders.IndexOf(Fields[1]) >= 0 then
+        raise ECardWorkflowError.Create('This demo requires a distinct reader and presented card per row.');
+      UsedReaders.Add(Fields[1]); Ids[I] := Fields[0];
+      TNdefCodec.Decode(HexToBytes(Fields[2]));
+    end;
+    Flow.Prepare(Ids, Factory); Flow.OnProgress := Progress;
+    Finish(Flow, D); Results := Flow.Results;
+    for I := 0 to High(Results) do
+      D.Text := D.Text + UnicodeString(Results[I].Identifier + ': attempted=' + BoolToStr(Results[I].Attempted, True) +
+        ', ' + CardWorkflowStateName(Results[I].State) + ' ' + Results[I].ErrorClass + #13#10);
+  finally Flow.Free; Fields.Free; UsedReaders.Free; Factory := nil; end;
+end;
+
+procedure TOperations.IsoMemory(const R: TCardDemoRequest; var D: TCardDemoResult);
+var Flow: TIso15693MemoryWorkflow; Source, Target: ICardWorkflowMemory;
+  Session: IIso15693Session; Adapter: TIso15693WorkflowMemory;
+  Addresses: TCardWorkflowAddresses; Snapshot: TCardWorkflowSnapshot;
+  Config: TStringList; Values: array [0 .. 4] of Integer; I: Integer;
+begin
+  Config := TStringList.Create; Flow := TIso15693MemoryWorkflow.Create(nil);
+  try
+    Config.StrictDelimiter := True; Config.Delimiter := '|'; Config.DelimitedText := string(R.Arguments[3]);
+    if Config.Count <> 5 then raise ECardWorkflowError.Create('Provide ISO geometry, selection and response format.');
+    for I := 0 to 4 do
+      if not TryStrToInt(Config[I], Values[I]) then raise ECardWorkflowError.Create('Invalid ISO numeric configuration.');
+    if not (Values[4] in [0 .. 1]) then raise ECardWorkflowError.Create('Invalid ISO response format.');
+    if R.FamilyAction = 3 then Snapshot := TCardWorkflowArchive.Decode(string(R.Arguments[2]));
+    if R.FamilyAction in [0 .. 2] then
+    begin
+      Session := TAcr1552Iso15693Session.Create(Readers.CreateTransport(R.ReaderName),
+        TIso15693AddressMode(StrToInt(string(R.Arguments[1]))), TIso15693ResponseFormat(Values[4]));
+      Adapter := TIso15693WorkflowMemory.Create(Session, Values[0], Values[1]); Source := Adapter;
+      Addresses := Adapter.Addresses(Values[2], Values[3], False);
+    end;
+    if R.FamilyAction <> 0 then
+    begin
+      Session := TAcr1552Iso15693Session.Create(Readers.CreateTransport(R.Arguments[0]),
+        TIso15693AddressMode(StrToInt(string(R.Arguments[1]))), TIso15693ResponseFormat(Values[4]));
+      Adapter := TIso15693WorkflowMemory.Create(Session, Values[0], Values[1]); Target := Adapter;
+      Adapter.Addresses(Values[2], Values[3], True);
+    end;
+    case R.FamilyAction of
+      0: Flow.PrepareBackup(Source, Addresses);
+      1, 2: Flow.PrepareCopy(Source, Target, Addresses, R.FamilyAction = 2);
+      3: Flow.PrepareRestore(Snapshot, Target);
+    end;
+    Flow.OnProgress := Progress; Finish(Flow, D);
+    for I := 0 to High(Flow.Results) do
+      D.Text := D.Text + UnicodeString('Block ' + IntToStr(Flow.Results[I].Address) + ': ' +
+        CardWorkflowUnitStateName(Flow.Results[I].State) + #13#10);
+    if D.Success then Artifact(D, 'iso15693.erdsnapshot', TCardWorkflowArchive.Encode(Flow.Snapshot));
+  finally Flow.Free; Config.Free; end;
+end;
+
 procedure TOperations.Run(const ARequest: TCardDemoRequest; var AResult: TCardDemoResult);
 var S, T: TContactlessCardReader; Error: UnicodeString;
 begin
   if not TryValidateRequest(ARequest, Error) then raise ECardWorkflowError.Create(string(Error));
   Log := ''; AResult := Default(TCardDemoResult); AResult.Operation := cdoFamily;
   if ARequest.FamilyName = 'MagStripeWorkflowDemo' then begin Stripe(ARequest, AResult); Exit; end;
+  if ARequest.FamilyName = 'Iso15693WorkflowDemo' then begin IsoMemory(ARequest, AResult); Exit; end;
+  if ARequest.FamilyName = 'BatchWorkflowDemo' then begin Batch(ARequest, AResult); Exit; end;
   S := nil; T := nil;
   try
     if ARequest.FamilyAction in [0 .. 2] then

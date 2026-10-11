@@ -520,3 +520,25 @@ The five independent workflow demos each own their DFM controls and source/targe
 selectors. They use the same nonvisual worker lifecycle as the family demos.
 See [WORKFLOWS.md](WORKFLOWS.md) for operations, snapshots, evidence and the exact
 profiles shown in each demo. For one device capture first, swap, then restore.
+
+## ISO15693 and batch workflow demos
+
+`iso15693workflow/Iso15693WorkflowDemo.dproj` has its own editable form and DFM.
+Choose source/target readers from its device list, ordinary/extended address mode,
+native-flags/payload-only responses, physical block count, bytes per block and
+`first block,count` selection (at most 4096 blocks). The backend is ACS ACR1552
+FF-FB. Use capture then restore for one-reader swaps, or copy/compare across two
+readers. The workflow checks every differing target block's lock status before
+writing; blocks zero and one cannot be restored or copied into the target.
+
+`batchworkflow/BatchWorkflowDemo.dproj` has its own editable form and DFM.
+Choose a Type2 model and a reader, supply an application identifier and NDEF text,
+then Add card template. Repeat for each distinct reader with its card presented.
+The editable list uses `identifier|reader|NDEF hex`. Acknowledge the writes and
+execute once. All requests are prepared before I/O; the output lists each card's
+outcome and identifies unattempted items after a failure. The demo rejects repeated
+reader names; the underlying batch component supports application-managed
+single-reader swaps through `OnCardRequired` and `CurrentIdentifier`.
+
+Both use the existing nonvisual worker and native PC/SC inventory/presence events.
+See [the workflow lifecycle and exact evidence](WORKFLOWS.md).

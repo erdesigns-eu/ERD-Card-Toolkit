@@ -12,6 +12,8 @@ no card I/O; the caller supplies configured readers, profiles and credentials.
 | `TClassicCredentialWorkflow` | Explicit multi-sector key/access-bit migration with supplied current/new credentials and fresh authentication verification |
 | `TNdefTransferWorkflow` | Read-only acquisition, logical NDEF copy across mapping families, template writing and explicit clearing; native Type 1/2/3/4/5 adapters |
 | `TMagStripeCopyWorkflow` | Read-only stripe acquisition, selected-track copy and template programming; same-card verified writing or explicit device-status-only programming |
+| `TCardBatchWorkflow` | Application-defined per-card personalization templates across existing workflow families, prepared before I/O, with per-card outcomes and retained child evidence |
+| `TIso15693MemoryWorkflow` | Selected-block backup, comparison, copy and restore with exact geometry, addressed UID checks and full target lock preflight |
 | `TCardMemoryCopyWorkflow` | The reusable memory engine, also usable with application-supplied `ICardWorkflowMemory` backends |
 
 ## Lifecycle and evidence
@@ -127,17 +129,80 @@ and presence use native events. Serial devices are discovered inside the stripe
 demo. Workers do not touch VCL controls; phase logs are displayed on completion.
 Templates are raw, potentially personal data; save/export is explicit.
 
+## Batch personalization
+
+`TCardBatchWorkflow.Prepare(Identifiers, Factory)` builds all requests before card
+I/O. `ICardBatchFactory.CreateWorkflow(Identifier)` must return a fresh, prepared
+workflow with `Owner=nil`, without touching hardware. Preparation also calls each
+child's `CheckPrepared`. It accepts one through 256 unique application identifiers,
+at most 128 characters each. The application generates those identifiers and the
+family-specific contents; the batch does not invent identities or credentials.
+
+Return an existing memory, NDEF, UID, credential or stripe workflow. The batch owns
+and retains the returned component. Factories must retain any caller-owned readers
+until the batch and its children are destroyed. The batch replaces child progress
+and card-presentation callbacks. Its own `OnCardRequired` uses `CurrentIdentifier`
+and `CurrentIndex`, so an application can ask for the correct card or perform a
+single-reader swap on the worker thread. Preventing presentation of the same
+physical card is an application responsibility. A UID alone does not prove that
+cards are distinct.
+
+Each child executes once. Any failure, cancellation, uncertain write or pending
+active-UID verification stops the batch; later items remain unattempted. `Results`
+contains identifier, attempted flag, outcome and sanitized error class. `Child(I)`
+is a borrowed component exposing detailed family-specific evidence, including
+per-block partial results. Do not execute, reconfigure or destroy it yourself.
+Prepare a new explicit batch after inspecting interrupted results; there is no
+implicit retry or continuation. Cancellation from a progress callback reaches the
+active child, which finishes verification of an already dispatched write first.
+
+`BatchWorkflowDemo` has its own DFM and reader selector. Add a card identifier and
+NDEF text for each selected reader. The staged rows hold identifier, reader name
+and NDEF hex, making the templates editable. This concrete demo keeps one card
+presented in a distinct reader for each row, avoiding worker-thread modal prompts.
+The API's card-request callback supports single-reader applications. All templates
+are validated before acquisition. Existing Type2 NDEF public-write, lock, mirror
+and capacity restrictions apply; the batch does not format blank tags.
+
+## ISO15693 selected-memory workflows
+
+Create `TIso15693WorkflowMemory(Session, BlockCount, BlockSize)` for each source or
+target and pass it to `TIso15693MemoryWorkflow`. Geometry is explicit, constructor
+and `Addresses` perform no I/O, and layout names include both physical block count
+and byte width. Source and destination must have exactly matching geometry; this
+does not imply matching vendor application semantics.
+
+The first `ReadUid` pins the observed identity. Every acquired addressed session
+checks that UID and geometry, including the session that dispatches the write.
+The optional `ICardWorkflowWritePreflight` contract lets the memory engine check
+live security status for **all differing target blocks before the first write**.
+Locked or unsupported protection fails the request without earlier block writes.
+Comparison can still inspect readable locked blocks. Writes recheck protection,
+send once, read back within the retained session and verify again in the workflow.
+A release failure after dispatch remains uncertain.
+
+`Addresses(FirstBlock, Count, Writing)` selects at most 4096 contiguous blocks.
+Process larger chips in explicit windows. Reads can include blocks zero and one;
+writes exclude them because they can hold Type5 capability metadata. UID, AFI,
+DSFID, passwords, protection bits and vendor configuration are separate operations.
+Supplied `TIso15693PasswordSession` wrappers can provide authenticated access;
+their chip-specific restrictions remain in force. Backups never fill unreadable
+blocks with zeros.
+
+`Iso15693WorkflowDemo` has its own DFM, source/target reader selectors, physical
+geometry fields, selected block range, address dialect and response format. It
+uses the existing ACR1552 FF-FB session. Other applications can supply their own
+`IIso15693Session`. Capture and restore support a card swap on one reader; direct
+copy/compare in the demo uses separate readers.
+
 ## Further workflow extensions
 
 These are future workflows, not shipped workflow components yet:
 
-- Batch personalization from field templates, with a per-card ledger and an
-  application-provided unique identifier generator.
 - DESFire application/file provisioning and migration with explicit keys, file
   types, rights and transaction boundaries.
 - SLE/I2C contact-memory backup/restore, incorporating PIN retry budgets, protection
   maps and chip-specific irreversible operations.
-- ISO 15693 user-memory backup/restore with addressed UID checks and lock maps.
 - SIM/USIM contact/SMS import/export and eID/EMV/MOBIB acquisition/report pipelines.
 
 Existing low-level components already support much of this work. These extensions

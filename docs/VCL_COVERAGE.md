@@ -11,6 +11,8 @@ set.
 
 | Project | Included features |
 | --- | --- |
+| Iso15693WorkflowDemo | Explicit geometry/address dialect, selected-memory backup/copy/compare/restore, addressed UID checks and target lock preflight |
+| BatchWorkflowDemo | Per-reader editable NDEF text personalization templates and per-card outcomes; one presented card per distinct reader |
 | ClassicWorkflowDemo / Type2WorkflowDemo | Ordinary data/user-page backup, copy, compare, restore and bounded snapshot files |
 | UidWorkflowDemo / NdefWorkflowDemo / MagStripeWorkflowDemo | Workflow capture/copy/template actions with explicit profiles; exact API/demo coverage in [WORKFLOWS.md](WORKFLOWS.md) |
 | MagStripeDemo | Tracks and MSR206-7HL reads/verified writes |

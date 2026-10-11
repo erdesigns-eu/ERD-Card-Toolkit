@@ -11,6 +11,7 @@ requires
   ERDCardCore;
 
 contains
+  ERD.Card.Contactless.Workflow.ISO15693 in '..\..\src\contactless\ERD.Card.Contactless.Workflow.ISO15693.pas',
   ERD.Card.Contactless.Classic.Access in '..\..\src\contactless\ERD.Card.Contactless.Classic.Access.pas',
   ERD.Card.Contactless.Workflow in '..\..\src\contactless\ERD.Card.Contactless.Workflow.pas',
   ERD.Card.Contactless.Workflow.UID in '..\..\src\contactless\ERD.Card.Contactless.Workflow.UID.pas',

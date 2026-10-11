@@ -203,3 +203,13 @@ credential migration; Type 1-5 NDEF transfer; and verified or explicitly
 status-only magstripe workflows. Seven palette components and five independent
 DFM demos are included. See [WORKFLOWS.md](WORKFLOWS.md) for contracts, results
 and the remaining family-specific workflow extensions.
+
+### Application workflow additions
+
+The workflow layer now includes `TCardBatchWorkflow` for prepared per-card
+personalization across existing workflow families, and `TIso15693MemoryWorkflow`
+with explicit geometry, addressed identity checks, selected memory windows and
+complete target lock preflight. Both ship with independent VCL forms/DFMs.
+DESFire provisioning/migration, guarded contact-memory restore and SIM/USIM
+import/export pipelines remain future workflow components. See
+[WORKFLOWS.md](WORKFLOWS.md) for the shipped contracts and demo coverage.

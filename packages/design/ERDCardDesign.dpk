@@ -35,6 +35,8 @@ requires
   designide;
 
 contains
+  ERD.Card.Contactless.Workflow.ISO15693 in '..\..\src\contactless\ERD.Card.Contactless.Workflow.ISO15693.pas',
+  ERD.Card.Workflow.Batch in '..\..\src\core\ERD.Card.Workflow.Batch.pas',
   ERD.Card.Workflow in '..\..\src\core\ERD.Card.Workflow.pas',
   ERD.Card.Workflow.Archive in '..\..\src\core\ERD.Card.Workflow.Archive.pas',
   ERD.Card.Contactless.Classic.Access in '..\..\src\contactless\ERD.Card.Contactless.Classic.Access.pas',

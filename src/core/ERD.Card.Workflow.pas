@@ -101,6 +101,8 @@ type
     /// <remarks>Invalid prepared configuration and reentrancy raise before execution. Calling
     /// Execute again on a finished request is refused; prepare a new request explicitly.</remarks>
     function Execute: TCardWorkflowState;
+    /// <summary>Checks the single-use prepared request without events or card I/O.</summary>
+    procedure CheckPrepared;
     /// <summary>Requests a stop before the next step; callable from same-thread events.</summary>
     procedure Cancel;
     /// <summary>True during execution and completion callbacks.</summary>
@@ -182,6 +184,13 @@ type
     /// <param name="AAddress">Previously validated data address.</param>
     /// <param name="AData">Exact unit bytes; never modified.</param>
     procedure WriteUnit(const AAddress: Integer; const AData: TBytes);
+  end;
+  /// <summary>Optional target protection checks performed for all differing units before writing.</summary>
+  ICardWorkflowWritePreflight = interface
+    ['{EA0D3A17-17EA-423B-8155-6DC2A9457405}']
+    /// <summary>Checks live write permission without mutating the card.</summary>
+    /// <param name="AAddress">Previously validated differing target unit.</param>
+    procedure CheckWritable(const AAddress: Integer);
   end;
   /// <summary>Reusable backup, restore, compare and verified data-copy workflow.</summary>
   /// <remarks>Reads all source units and all target originals before the first write. Default
@@ -318,6 +327,12 @@ end;
 procedure TCardWorkflow.MutationPending(const AValue: Boolean);
 begin
   FUncertain := AValue;
+end;
+
+procedure TCardWorkflow.CheckPrepared;
+begin
+  RequireIdle;
+  ValidatePrepared;
 end;
 
 function TCardWorkflow.Execute: TCardWorkflowState;
@@ -467,12 +482,14 @@ end;
 
 procedure TCardMemoryCopyWorkflow.DoExecute;
 var I: Integer; Uid, Data: TBytes; Acquired: TCardWorkflowUnits;
+  Preflight: ICardWorkflowWritePreflight;
 begin
   FConsumed := True;
   if FSource <> nil then
   begin
     if not RequestCard(cwrSource) then begin Cancel; Exit; end;
     Progress(cwsReading, 0, Length(FAddresses));
+    if CancelRequested then Exit;
     Uid := FSource.ReadUid;
     if (Length(Uid) < 1) or (Length(Uid) > 64) then
       raise ECardWorkflowError.Create('Invalid source identity.');
@@ -506,7 +523,9 @@ begin
     Data := FTarget.ReadUnit(FResults[I].Address);
     if Length(Data) <> FTarget.UnitSize then
       raise ECardWorkflowError.Create('Incomplete target unit.');
-    if BytesEqual(Data, FResults[I].Data) then FResults[I].State := cwusUnchanged;
+    if BytesEqual(Data, FResults[I].Data) then FResults[I].State := cwusUnchanged
+    else if not FCompareOnly and Supports(FTarget, ICardWorkflowWritePreflight, Preflight) then
+      Preflight.CheckWritable(FResults[I].Address);
     Progress(cwsChecking, I + 1, Length(FResults));
   end;
   if FCompareOnly or CancelRequested then Exit;

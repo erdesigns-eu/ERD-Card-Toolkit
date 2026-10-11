@@ -11,15 +11,47 @@ uses
 {$ELSE}
   System.SysUtils, System.Classes,
 {$ENDIF}
+  ERD.Card.Workflow.Batch, ERD.Card.Contactless.Workflow.ISO15693,
+  ERD.Card.Contactless.ISO15693,
   ERD.Card.Bytes, ERD.Card.Transport, ERD.Card.Workflow, ERD.Card.Workflow.Archive,
   ERD.Card.Contactless, ERD.Card.Contactless.Workflow, ERD.Card.Contactless.Workflow.UID,
   ERD.Card.Contactless.Workflow.Ndef, ERD.Card.Contactless.Classic.Access,
   ERD.Card.Contactless.Workflow.Credentials, ERD.Card.Demo.Job, ERD.Card.Demo.Workflows,
   ERD.Card.Contactless.Raw, ERD.Card.Contactless.UID,
-  ERD.Card.Contactless.Type2, ERD.Card.Ndef, ERD.Card.Ndef.Records,
+  ERD.Card.Contactless.Type2.Ndef, ERD.Card.Contactless.Type2, ERD.Card.Ndef, ERD.Card.Ndef.Records,
   ERD.Card.MagStripe, ERD.Card.MagStripe.Tracks, ERD.Card.MagStripe.Workflow;
 
 type
+  TType2Card = class(TInterfacedObject, ICardTransport, ICardTransaction)
+    Pages: array [0 .. 44] of TBytes;
+    Exchanges, Writes, Begins, Ends: Integer;
+    FailWrite: Boolean;
+    constructor Create;
+    function Exchange(const ACommand: TBytes): TBytes;
+    procedure BeginTransaction;
+    procedure EndTransaction;
+  end;
+  TIsoSession = class(TInterfacedObject, IIso15693Session)
+    Info: TIso15693SystemInfo;
+    Blocks: array [0 .. 7] of TBytes;
+    Locked: Integer;
+    Begins, Ends, Writes: Integer;
+    WrongReadBack, FailEnd: Boolean;
+    constructor Create;
+    function BeginSession: TIso15693SystemInfo;
+    procedure EndSession;
+    function ReadBlock(const ABlock: Integer): TBytes;
+    function SecurityStatus(const ABlock: Integer): Byte;
+    procedure WriteBlock(const ABlock: Integer; const AData: TBytes);
+  end;
+  TBatchFactory = class(TInterfacedObject, ICardBatchFactory)
+    Target: ICardWorkflowMemory;
+    Snapshot: TCardWorkflowSnapshot;
+    Created: Integer;
+    FailPrepareAt, UnpreparedAt: Integer;
+    Targets: array of ICardWorkflowMemory;
+    function CreateWorkflow(const AIdentifier: string): TCardWorkflow;
+  end;
   TMemory = class(TInterfacedObject, ICardWorkflowMemory)
     Identity: TBytes;
     Blocks: array [0 .. 3] of TBytes;
@@ -512,9 +544,232 @@ begin
   finally Flow.Free; Reader.Free; Transport := nil; end;
 end;
 
+constructor TType2Card.Create;
+var I: Integer;
+begin
+  inherited;
+  for I := 0 to High(Pages) do Pages[I] := HexToBytes('00000000');
+  Pages[3] := HexToBytes('E1101200'); Pages[4] := HexToBytes('0300FE00');
+  Pages[41] := HexToBytes('000000FF');
+end;
+function TType2Card.Exchange(const ACommand: TBytes): TBytes;
+begin
+  Inc(Exchanges);
+  case ACommand[1] of
+    $B0: Result := CopyBytes(Pages[ACommand[3]]);
+    $D6: begin Inc(Writes); Pages[ACommand[3]] := Copy(ACommand, 5, 4); Result := nil;
+      if FailWrite then raise ECardTransportError.Create('write'); end;
+  else raise ECardTransportError.Create('command'); end;
+  SetLength(Result, Length(Result) + 2);
+  Result[High(Result) - 1] := $90; Result[High(Result)] := 0;
+end;
+procedure TType2Card.BeginTransaction;
+begin Inc(Begins); end;
+procedure TType2Card.EndTransaction;
+begin Inc(Ends); end;
+
+procedure BatchDemoTests;
+var Readers: TReaders; Factory: ICardWorkflowDemoReaders; Source, Target: TType2Card;
+  Operations: ICardDemoOperations; Validator: ICardDemoRequestValidator;
+  Request: TCardDemoRequest; Result: TCardDemoResult; Error: UnicodeString;
+  Reader: TType2NdefCardReader; Raised: Boolean; Before: Integer;
+begin
+  Readers := TReaders.Create; Factory := Readers;
+  Source := TType2Card.Create; Target := TType2Card.Create;
+  Readers.Source := Source; Readers.Target := Target;
+  Operations := CreateCardWorkflowDemoOperations(Factory);
+  Supports(Operations, ICardDemoRequestValidator, Validator);
+  Request := Default(TCardDemoRequest); Request.Operation := cdoFamily;
+  Request.FamilyName := 'BatchWorkflowDemo'; Request.FamilyAction := 3;
+  SetLength(Request.Arguments, 4); SetLength(Request.Credentials, 3);
+  Request.Arguments[1] := '3'; Request.MutationAcknowledged := True;
+  Request.Arguments[2] := 'one|source|D101055402656E4869' + #13#10 + 'two|target|D101055402656E486F';
+  Check(Validator.TryValidateRequest(Request, Error), 'Batch demo metadata without a global target');
+  Operations.Run(Request, Result);
+  Check(Result.Success and (Source.Writes > 0) and (Target.Writes > 0), 'Batch demo personalizes both presented cards');
+  Reader := TType2NdefCardReader.Create(nil);
+  try
+    Reader.Transport := Readers.Source; Reader.Profile := TPcscStorageProfile.Create;
+    Check(BytesEqual(Reader.ReadMessage(ttmNtag213).MessageBytes, HexToBytes('D101055402656E4869')), 'Batch demo first distinct template');
+    Reader.Transport := Readers.Target;
+    Check(BytesEqual(Reader.ReadMessage(ttmNtag213).MessageBytes, HexToBytes('D101055402656E486F')), 'Batch demo second distinct template');
+  finally Reader.Free; end;
+  Check((Source.Begins = Source.Ends) and (Target.Begins = Target.Ends), 'Batch demo transactions released');
+  Before := Readers.Factories; Request.Arguments[2] := 'one|source|D101055402656E4869' + #13#10 + 'two|source|D101055402656E486F';
+  Raised := False;
+  try Operations.Run(Request, Result); except on E: ECardWorkflowError do Raised := True; end;
+  Check(Raised and (Readers.Factories = Before), 'Batch demo refuses repeated readers before acquisition');
+  Request.Arguments[2] := 'one|source|D101055402656E4869' + #13#10 + 'two|target|00'; Raised := False;
+  try Operations.Run(Request, Result); except on E: ENdefError do Raised := True; end;
+  Check(Raised and (Readers.Factories = Before), 'Batch demo validates every message before reader creation');
+  Request.FamilyName := 'Iso15693WorkflowDemo'; Request.FamilyAction := 0;
+  Request.ReaderName := 'source'; Request.Arguments[1] := '0'; Request.Arguments[3] := 'invalid'; Raised := False;
+  try Operations.Run(Request, Result); except on E: ECardWorkflowError do Raised := True; end;
+  Check(Raised and (Readers.Factories = Before), 'ISO demo malformed geometry has no reader creation');
+end;
+
+constructor TIsoSession.Create;
+var I: Integer;
+begin
+  inherited;
+  Info.Uid := HexToBytes('E004010203040506');
+  Info.BlockCount := 8; Info.BlockSize := 4; Locked := -1;
+  for I := 0 to High(Blocks) do Blocks[I] := HexToBytes('00000000');
+end;
+
+function TIsoSession.BeginSession: TIso15693SystemInfo;
+begin Inc(Begins); Result := Info; Result.Uid := CopyBytes(Info.Uid); end;
+procedure TIsoSession.EndSession;
+begin Inc(Ends); if FailEnd then raise Exception.Create('release'); end;
+function TIsoSession.ReadBlock(const ABlock: Integer): TBytes;
+begin
+  Result := CopyBytes(Blocks[ABlock]);
+  if WrongReadBack and (Writes > 0) then Result[0] := Result[0] xor 1;
+end;
+function TIsoSession.SecurityStatus(const ABlock: Integer): Byte;
+begin if ABlock = Locked then Result := 1 else Result := 0; end;
+procedure TIsoSession.WriteBlock(const ABlock: Integer; const AData: TBytes);
+begin Inc(Writes); Blocks[ABlock] := CopyBytes(AData); end;
+
+function TBatchFactory.CreateWorkflow(const AIdentifier: string): TCardWorkflow;
+var Flow: TCardMemoryCopyWorkflow;
+begin
+  Inc(Created);
+  if Created = FailPrepareAt then raise ECardWorkflowError.Create('template');
+  Flow := TCardMemoryCopyWorkflow.Create(nil);
+  try
+    if Created <> UnpreparedAt then
+      if Length(Targets) >= Created then Flow.PrepareRestore(Snapshot, Targets[Created - 1])
+      else Flow.PrepareRestore(Snapshot, Target);
+  except Flow.Free; raise; end;
+  Result := Flow;
+end;
+
+procedure IsoWorkflowTests;
+var Session: TIsoSession; S: IIso15693Session; Memory: TIso15693WorkflowMemory;
+  Backend: ICardWorkflowMemory; Flow: TIso15693MemoryWorkflow;
+  Snapshot: TCardWorkflowSnapshot; A: TCardWorkflowAddresses; Raised: Boolean;
+begin
+  Session := TIsoSession.Create; S := Session;
+  Memory := TIso15693WorkflowMemory.Create(S, 8, 4); Backend := Memory;
+  Flow := TIso15693MemoryWorkflow.Create(nil);
+  try
+    A := Memory.Addresses(2, 3);
+    Check((Session.Begins = 0) and (Length(A) = 3), 'ISO preparation has no I/O');
+    Flow.PrepareBackup(Backend, A);
+    Check(Flow.Execute = cwsCompleted, 'ISO complete selected backup');
+    Snapshot := Flow.Snapshot;
+    Check((Snapshot.Layout = 'ISO15693-8x4') and (Length(Snapshot.Units) = 3), 'ISO exact layout');
+    Snapshot.Units[0].Data := HexToBytes('01020304');
+    Snapshot.Units[2].Data := HexToBytes('AABBCCDD');
+    Session.Locked := 4;
+    Flow.PrepareRestore(Snapshot, Backend);
+    Check(Flow.Execute = cwsFailed, 'ISO locked later block rejected during complete preflight');
+    Check(Session.Writes = 0, 'No earlier write before later lock failure');
+    Flow.PrepareRestore(Snapshot, Backend, True);
+    Check(Flow.Execute = cwsCompleted, 'ISO comparison can inspect locked blocks');
+    Check(Session.Writes = 0, 'ISO compare never writes');
+    Session.Locked := -1; Flow.PrepareRestore(Snapshot, Backend);
+    Check(Flow.Execute = cwsCompleted, 'ISO restore verified');
+    Check((Session.Writes = 2) and (Flow.Results[1].State = cwusUnchanged), 'ISO skip equal block');
+    Check(Session.Begins = Session.Ends, 'ISO session ownership balanced');
+    Snapshot.Units[0].Data := HexToBytes('09080706');
+    Session.WrongReadBack := True; Flow.PrepareRestore(Snapshot, Backend);
+    Check(Flow.Execute = cwsUncertain, 'ISO readback mismatch uncertain');
+    Check((Session.Writes = 3) and (Flow.Results[0].State = cwusUncertain), 'ISO no write replay');
+    Session.WrongReadBack := False;
+    Session.Info.Uid[7] := $AA; Flow.PrepareRestore(Snapshot, Backend);
+    Check(Flow.Execute = cwsFailed, 'ISO pinned UID detects replacement');
+    Session.Info.Uid[7] := $06; Session.Info.BlockSize := 8;
+    Flow.PrepareBackup(Backend, A);
+    Check(Flow.Execute = cwsFailed, 'ISO geometry replacement rejected');
+    Session.Info.BlockSize := 4;
+    Raised := False;
+    try Memory.ValidateUnit(1, True); except on E: ECardWorkflowError do Raised := True; end;
+    Check(Raised, 'ISO metadata block writes rejected without I/O');
+    Raised := False;
+    try Memory.Addresses(2, 4097); except on E: ECardWorkflowError do Raised := True; end;
+    Check(Raised, 'ISO selected window bounded');
+    Session.FailEnd := True; Flow.PrepareRestore(Snapshot, Backend);
+    Check(Flow.Execute = cwsFailed, 'ISO acquisition release failure before mutation');
+    Raised := False;
+    try Memory.WriteUnit(2, HexToBytes('01020304'));
+    except on E: EContactlessWriteUncertain do Raised := True; end;
+    Check(Raised and (Session.Writes = 4), 'ISO release failure after dispatch remains uncertain');
+    Check(Session.Begins = Session.Ends, 'ISO errors release every acquired session');
+  finally Flow.Free; Backend := nil; S := nil; end;
+end;
+
+procedure BatchTests;
+var Factory: TBatchFactory; F: ICardBatchFactory; M: TMemory;
+  Backend: ICardWorkflowMemory; Batch: TCardBatchWorkflow;
+  Ids: TCardBatchIdentifiers; R: TCardBatchResults; Raised: Boolean;
+  Observer: TObserver; M2, M3: TMemory;
+begin
+  M := TMemory.Create; Backend := M;
+  Factory := TBatchFactory.Create; F := Factory;
+  Factory.Target := Backend; Factory.Snapshot.Layout := M.Layout;
+  Factory.Snapshot.Uid := HexToBytes('01');
+  SetLength(Factory.Snapshot.Units, 1);
+  Factory.Snapshot.Units[0].Address := 0;
+  Factory.Snapshot.Units[0].Data := HexToBytes('A1B2C3D4');
+  SetLength(Ids, 3); Ids[0] := 'card-001'; Ids[1] := 'card-002'; Ids[2] := 'card-003';
+  Batch := TCardBatchWorkflow.Create(nil); Observer := TObserver.Create;
+  try
+    Factory.FailPrepareAt := 2; Raised := False;
+    try Batch.Prepare(Ids, F); except on E: ECardWorkflowError do Raised := True; end;
+    Check(Raised and (M.Reads = 0) and (M.Writes = 0), 'Batch all templates prepared before hardware');
+    Factory.FailPrepareAt := 0; Factory.Created := 0; Factory.UnpreparedAt := 2;
+    Raised := False;
+    try Batch.Prepare(Ids, F); except on E: ECardWorkflowError do Raised := True; end;
+    Check(Raised and (M.Reads = 0), 'Unprepared later child rejected before any hardware');
+    Factory.UnpreparedAt := 0; Batch.Prepare(Ids, F);
+    Ids[0] := 'changed';
+    Check((Batch.CurrentIdentifier = '') and (Batch.CurrentIndex = -1), 'Batch no active card before execution');
+    Check(Batch.Execute = cwsCompleted, 'Batch complete');
+    R := Batch.Results;
+    Check((Length(R) = 3) and (R[0].Identifier = 'card-001') and R[2].Attempted, 'Batch owned identifiers and per-card outcomes');
+    R[0].Identifier := 'external'; Check(Batch.Results[0].Identifier = 'card-001', 'Batch result independent');
+    Check(TCardMemoryCopyWorkflow(Batch.Child(0)).Results[0].State = cwusVerified, 'Batch retained detailed child evidence');
+    Raised := False; try Batch.Execute; except on E: ECardWorkflowError do Raised := True; end;
+    Check(Raised, 'Batch cannot replay consumed requests');
+    Ids[0] := 'first'; Ids[1] := 'second'; Ids[2] := 'third';
+    M.Blocks[0] := HexToBytes('00000000'); M.FailWriteAt := M.Writes + 1;
+    Batch.Prepare(Ids, F);
+    Check(Batch.Execute = cwsUncertain, 'Batch preserves uncertain child outcome');
+    R := Batch.Results;
+    Check(R[0].Attempted and (R[0].State = cwsUncertain) and not R[1].Attempted and
+      (R[1].State = cwsIdle), 'Batch stops before subsequent cards after uncertainty');
+    M.FailWriteAt := 0; M.Blocks[0] := HexToBytes('00000000');
+    Batch.Prepare(Ids, F);
+    Observer.CancelEnabled := True; Observer.CancelPhase := cwsWriting; Observer.CancelAfter := 0;
+    Batch.OnProgress := Observer.Progress;
+    Check(Batch.Execute = cwsCancelled, 'Batch cancellation reaches child before dispatch');
+    Check(not Batch.Results[1].Attempted, 'Cancelled batch stops next card');
+    Observer.CancelPhase := cwsVerifying;
+    Batch.Prepare(Ids, F);
+    Check(Batch.Execute = cwsCancelled, 'Batch cancellation after write awaits verification');
+    Check(TCardMemoryCopyWorkflow(Batch.Child(0)).Results[0].State = cwusVerified,
+      'Verified child write retained after batch cancellation');
+    Batch.OnProgress := nil;
+    M.Blocks[0] := HexToBytes('00000000'); M2 := TMemory.Create; M3 := TMemory.Create;
+    SetLength(Factory.Targets, 3); Factory.Targets[0] := Backend;
+    Factory.Targets[1] := M2; Factory.Targets[2] := M3;
+    Factory.Created := 0; M2.FailWriteAt := 1;
+    Batch.Prepare(Ids, F);
+    Check(Batch.Execute = cwsUncertain, 'Later batch write uncertain');
+    R := Batch.Results;
+    Check((R[0].State = cwsCompleted) and (R[1].State = cwsUncertain) and
+      not R[2].Attempted and (M3.Writes = 0), 'Batch retains earlier success and untouched later card');
+    Ids[1] := Ids[0]; Raised := False;
+    try Batch.Prepare(Ids, F); except on E: ECardWorkflowError do Raised := True; end;
+    Check(Raised, 'Duplicate batch identifiers rejected');
+  finally Observer.Free; Batch.Free; F := nil; Backend := nil; end;
+end;
+
 begin
   try
-    MemoryTests; NdefTests; StripeTests; ClassicTests; CredentialTests; DemoTests;
+    BatchTests; BatchDemoTests; IsoWorkflowTests; MemoryTests; NdefTests; StripeTests; ClassicTests; CredentialTests; DemoTests;
     Writeln('PASS: ', Checks, ' workflow/uncertainty/access-bit assertions.');
   except on E: Exception do begin Writeln(E.ClassName, ': ', E.Message); ExitCode := 1; end; end;
 end.
