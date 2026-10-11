@@ -14,6 +14,10 @@ if errorlevel 1 exit /b %errorlevel%
 set "CARD_BUILD=dist\core\%CARD_COMPILER%"
 if not exist "%CARD_BUILD%" mkdir "%CARD_BUILD%"
 if errorlevel 1 exit /b %errorlevel%
+%CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\crypto;src\pcsc;src\eid;src\emv;src\contactless;src\magstripe;src\memory;src\input;examples\vcl\shared" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\workflows\CardFamilyWorkflow.Tests.dpr
+if errorlevel 1 exit /b %errorlevel%
+"%CARD_BUILD%\CardFamilyWorkflow.Tests.exe"
+if errorlevel 1 exit /b %errorlevel%
 %CARD_COMPILER% -B -Q --doc -$R+ -$Q+ -U"src\core;src\crypto;src\pcsc;src\eid;src\emv;src\contactless;src\magstripe;src\memory;src\input;examples\vcl\shared" -N0"%CARD_BUILD%" -E"%CARD_BUILD%" tests\workflows\CardWorkflow.Tests.dpr
 if errorlevel 1 exit /b %errorlevel%
 "%CARD_BUILD%\CardWorkflow.Tests.exe"

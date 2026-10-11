@@ -180,6 +180,7 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="..\..\src\memory\ERD.Card.Memory.Workflow.pas"/>
         <DCCReference Include="rtl.dcp"/>
         <DCCReference Include="ERDCardCore.dcp"/>
         <DCCReference Include="..\..\src\memory\ERD.Card.Memory.Sle4404.pas" />

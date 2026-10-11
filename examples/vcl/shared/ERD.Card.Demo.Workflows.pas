@@ -21,6 +21,10 @@ type
 /// <returns>Inactive executor; workers own readers and workflows for one request only.</returns>
 function CreateCardWorkflowDemoOperations(const AReaders: ICardWorkflowDemoReaders = nil): ICardDemoOperations;
 
+/// <summary>Creates an inactive native PC/SC transport factory for independent workflow demos.</summary>
+/// <returns>Retained factory; connections open only at exchange/transaction acquisition.</returns>
+function CreateNativeCardWorkflowDemoReaders: ICardWorkflowDemoReaders;
+
 implementation
 
 uses
@@ -519,6 +523,9 @@ begin
     else Memory(ARequest, S, T, AResult);
   finally S.Free; T.Free; end;
 end;
+
+function CreateNativeCardWorkflowDemoReaders: ICardWorkflowDemoReaders;
+begin Result := TNativeReaders.Create; end;
 
 function CreateCardWorkflowDemoOperations(const AReaders: ICardWorkflowDemoReaders): ICardDemoOperations;
 var Operations: TOperations;

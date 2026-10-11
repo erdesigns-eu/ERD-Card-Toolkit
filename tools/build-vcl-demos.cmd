@@ -78,6 +78,10 @@ call :build_demo iso15693workflow Iso15693WorkflowDemo
 if errorlevel 1 exit /b %errorlevel%
 call :build_demo batchworkflow BatchWorkflowDemo
 if errorlevel 1 exit /b %errorlevel%
+call :build_demo contactmemoryworkflow ContactMemoryWorkflowDemo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo desfireworkflow DesfireWorkflowDemo
+if errorlevel 1 exit /b %errorlevel%
 exit /b %errorlevel%
 :build_demo
 rem Use the same resource generation and configuration as the IDE projects.

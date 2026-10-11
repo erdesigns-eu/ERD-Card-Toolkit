@@ -14,6 +14,9 @@ no card I/O; the caller supplies configured readers, profiles and credentials.
 | `TMagStripeCopyWorkflow` | Read-only stripe acquisition, selected-track copy and template programming; same-card verified writing or explicit device-status-only programming |
 | `TCardBatchWorkflow` | Application-defined per-card personalization templates across existing workflow families, prepared before I/O, with per-card outcomes and retained child evidence |
 | `TIso15693MemoryWorkflow` | Selected-block backup, comparison, copy and restore with exact geometry, addressed UID checks and full target lock preflight |
+| `TContactMemoryWorkflow` | Complete SLE/I2C backup; selected-range copy, comparison and restore with protection/retry preflight and per-range verification |
+| `TDesfireApplicationWorkflow` | Complete ordinary application backup; compatible standard/backup/value/record copy, comparison and restore with explicit transaction ownership |
+| `TDesfireProvisionWorkflow` | Explicit application key policy/type/count and ordinary-file creation with per-file metadata evidence |
 | `TCardMemoryCopyWorkflow` | The reusable memory engine, also usable with application-supplied `ICardWorkflowMemory` backends |
 
 ## Lifecycle and evidence
@@ -138,7 +141,7 @@ child's `CheckPrepared`. It accepts one through 256 unique application identifie
 at most 128 characters each. The application generates those identifiers and the
 family-specific contents; the batch does not invent identities or credentials.
 
-Return an existing memory, NDEF, UID, credential or stripe workflow. The batch owns
+Return an existing memory, NDEF, UID, credential, stripe, contact-memory or DESFire workflow. The batch owns
 and retains the returned component. Factories must retain any caller-owned readers
 until the batch and its children are destroyed. The batch replaces child progress
 and card-presentation callbacks. Its own `OnCardRequired` uses `CurrentIdentifier`
@@ -195,14 +198,82 @@ uses the existing ACR1552 FF-FB session. Other applications can supply their own
 `IIso15693Session`. Capture and restore support a card swap on one reader; direct
 copy/compare in the demo uses separate readers.
 
+## Contact-memory workflows
+
+`TContactMemoryWorkflow` supports the eight ordinary SLE models and eleven I2C
+geometries supported by `TMemoryCardReaderWriter`. `PrepareBackup` captures the
+complete chip (up to 128 KiB), public protection map and available retry counter
+without PIN authentication. `PrepareCopy` and `PrepareRestore` select an explicit
+byte range; `ACompare=True` reads and compares without writing.
+
+Preparation performs no hardware I/O. Before the first write, both complete
+snapshots are read, every differing protected byte is rejected, and the target
+PIN retry budget is checked. Unchanged protected bytes remain untouched. Only
+differing runs are written, bounded by native chunks and physical I2C page size.
+Each run is verified by the native writer and independently read back by the
+workflow. A later failure retains earlier verified byte ranges. Authentication
+rejection before data dispatch is a failed action; an uncertain dispatched write
+is retained as uncertain and is never retried automatically.
+
+`TContactMemoryWorkflowArchive` encodes complete data, model and diagnostic
+protection/retry information in `ERD-CONTACT-MEMORY 1`. It contains no PIN and does
+not apply archived protection bits or retry counters. `TContactMemoryWorkflowCard`
+retains a caller-owned reader, which must outlive the workflow; configuration
+changes are refused. These memory chips have no reliable UID. The application
+must keep exclusive ownership of the presented physical card throughout an
+operation. Counter chips and SLE4404 use separate APIs and are not accepted here.
+
+## DESFire application workflows
+
+`TDesfireApplicationWorkflow.PrepareBackup` reads every ordinary file in an
+explicit application: standard/backup bytes, signed values, and complete linear
+or cyclic records. Records are stored newest first. `TDesfireWorkflowArchive`
+encodes the AID, manufacturing UID, native file settings and complete data as
+`ERD-DESFIRE 1`; authentication keys are never serialized. Aggregate transfer and
+journal budgets remain bounded. Unknown/special file types are rejected.
+
+Copy/restore requires a pre-existing target application with compatible file
+types, communication modes, key rights, sizes, record capacity and value policy.
+All target file data and write rights are checked before the first mutation.
+Standard files are immediate verified writes. Backup/value/record changes share
+one retained transaction, with originals checked again inside that transaction.
+Values use explicit credit/debit deltas; records are appended oldest first to
+preserve snapshot order. Completion requires a successful commit, native
+read-back evidence and matching card identity. This is not atomic across
+immediate standard files and transactional files; earlier standard-file evidence
+is preserved after a later failure.
+
+The caller must explicitly choose `dsaFreshTransaction` (attest no pending
+transaction) or `dsaDiscardPending` (allow a deliberate initial abort).
+Cancellation before commit explicitly aborts staged changes; errors never trigger
+automatic retries, destructive rollback or implicit recovery. A lost commit
+response remains uncertain. Use the native session API for explicit recovery.
+`TDesfireWorkflowCard` owns a frozen copy of reader configuration/keys and retains
+its transport/provider interfaces; the source configuration object may be freed.
+Public and native authenticated profiles use the same configured backend contract.
+
+`TDesfireProvisionWorkflow.Prepare` takes separate explicit PICC/application
+security contexts, new AID, key policy/count/type and ordinary file definitions.
+Every definition is validated before I/O. Application creation is followed by
+key-policy verification, then each file is created once with native metadata
+verification. `ApplicationCreated` and per-file results retain partial progress;
+a later failure never deletes the new application or repeats creation. The card
+initializes its native default keys; supplied application credentials must match
+those keys. Key rotation remains an explicit native administration operation.
+For personalization, provision the layout and then restore a separately prepared
+snapshot using the appropriate credentials. Provisioning evidence covers metadata;
+restoration supplies and verifies file payloads.
+
+Both family workflows can be returned by an `ICardBatchFactory` as freshly
+prepared, ownerless children. Batch preparation remains free of hardware I/O and
+stops on a failed, cancelled or uncertain child. See the mixed-family batch case
+in `tests/workflows/CardFamilyWorkflow.Tests.dpr`.
+
 ## Further workflow extensions
 
 These are future workflows, not shipped workflow components yet:
 
-- DESFire application/file provisioning and migration with explicit keys, file
-  types, rights and transaction boundaries.
-- SLE/I2C contact-memory backup/restore, incorporating PIN retry budgets, protection
-  maps and chip-specific irreversible operations.
+- SLE counter/4404-specific workflows and explicit irreversible chip operations.
 - SIM/USIM contact/SMS import/export and eID/EMV/MOBIB acquisition/report pipelines.
 
 Existing low-level components already support much of this work. These extensions

@@ -29,7 +29,8 @@ uses
   ERD.Card.Contactless.Raw, ERD.Card.Workflow, ERD.Card.Contactless.Workflow,
   ERD.Card.Contactless.Workflow.UID, ERD.Card.Contactless.Workflow.Credentials,
   ERD.Card.Contactless.Workflow.Ndef, ERD.Card.MagStripe.Workflow,
-  ERD.Card.Workflow.Batch, ERD.Card.Contactless.Workflow.ISO15693;
+  ERD.Card.Workflow.Batch, ERD.Card.Contactless.Workflow.ISO15693,
+  ERD.Card.Memory.Workflow, ERD.Card.Contactless.Workflow.DESFire;
 
 procedure Register;
 begin
@@ -37,7 +38,8 @@ begin
     TBelgianEIDReader, TICAODocumentReader, TSimCardReaderWriter,
     TEmvCalculator, TEMVCardReader, TMagStripeReaderWriter, TMemoryCardReaderWriter,
     TSleCounterCardReaderWriter, TSle4404CardReaderWriter]);
-  RegisterComponents('ERD Workflows', [TCardBatchWorkflow, TIso15693MemoryWorkflow, TCardMemoryCopyWorkflow, TMifareClassicCopyWorkflow,
+  RegisterComponents('ERD Workflows', [TContactMemoryWorkflow, TDesfireApplicationWorkflow,
+    TDesfireProvisionWorkflow, TCardBatchWorkflow, TIso15693MemoryWorkflow, TCardMemoryCopyWorkflow, TMifareClassicCopyWorkflow,
     TType2MemoryWorkflow, TUidProgrammingWorkflow, TClassicCredentialWorkflow,
     TNdefTransferWorkflow, TMagStripeCopyWorkflow]);
   RegisterComponents('ERD Input', [THidDeviceMonitor, TUsbHidInputMonitor,

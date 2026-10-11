@@ -1,6 +1,6 @@
 # VCL examples: current coverage
 
-There are **thirty-five separately executable applications** in
+There are **thirty-nine separately executable applications** in
 `examples/vcl/CardDemos.groupproj`. Each application has its own `TForm`,
 `.Main.pas`, and `.Main.dfm`. All visual controls are in that application's own
 DFM, including input fields and action controls. Hardware demos include reader
@@ -11,6 +11,8 @@ set.
 
 | Project | Included features |
 | --- | --- |
+| ContactMemoryWorkflowDemo | All ordinary SLE/I2C models, complete snapshot export, selected-range copy/compare/restore, explicit PIN/retry/page settings; own form/DFM and reader events |
+| DesfireWorkflowDemo | Complete ordinary application backup/migration, explicit native security and transaction policy, application/file provisioning; own form/DFM and reader events |
 | Iso15693WorkflowDemo | Explicit geometry/address dialect, selected-memory backup/copy/compare/restore, addressed UID checks and target lock preflight |
 | BatchWorkflowDemo | Per-reader editable NDEF text personalization templates and per-card outcomes; one presented card per distinct reader |
 | ClassicWorkflowDemo / Type2WorkflowDemo | Ordinary data/user-page backup, copy, compare, restore and bounded snapshot files |

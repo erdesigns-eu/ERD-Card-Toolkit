@@ -197,19 +197,15 @@ Linux core tests and XML well-formedness do not substitute for Delphi or Help In
 
 ## Application workflows
 
-The first workflow layer is implemented: Classic/Type 2 memory copy, backup,
-comparison and restore; programmable UID copy/programming; explicit Classic
-credential migration; Type 1-5 NDEF transfer; and verified or explicitly
-status-only magstripe workflows. Seven palette components and five independent
-DFM demos are included. See [WORKFLOWS.md](WORKFLOWS.md) for contracts, results
-and the remaining family-specific workflow extensions.
+Twelve palette components implement Classic/Type 2/ISO15693 memory copy,
+backup/compare/restore, programmable UID, Classic credentials, Type 1-5 NDEF,
+magstripe, contact-memory, DESFire application migration/provisioning and batch
+personalization. Nine independent workflow demos have their own forms/DFMs.
 
-### Application workflow additions
-
-The workflow layer now includes `TCardBatchWorkflow` for prepared per-card
-personalization across existing workflow families, and `TIso15693MemoryWorkflow`
-with explicit geometry, addressed identity checks, selected memory windows and
-complete target lock preflight. Both ship with independent VCL forms/DFMs.
-DESFire provisioning/migration, guarded contact-memory restore and SIM/USIM
-import/export pipelines remain future workflow components. See
-[WORKFLOWS.md](WORKFLOWS.md) for the shipped contracts and demo coverage.
+Contact-memory workflows cover ordinary SLE/I2C data with explicit PIN retry
+budgets and protection preflight. DESFire supports complete ordinary application
+snapshots and standard/backup/value/record migration, with explicit transaction
+ownership and application/file provisioning. Both can be prepared as batch
+children through the existing factory contract. SLE counter/4404-specific
+workflows and SIM/USIM import/export pipelines remain extensions.
+See [WORKFLOWS.md](WORKFLOWS.md) for exact contracts and evidence.

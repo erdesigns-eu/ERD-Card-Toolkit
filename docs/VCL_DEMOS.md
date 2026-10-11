@@ -47,6 +47,8 @@ that byte-buffer wiping guarantee. Errors display their class, never backend tex
 
 | Project | Actual actions |
 | --- | --- |
+| `contactmemoryworkflow/ContactMemoryWorkflowDemo.dproj` | Ordinary SLE/I2C complete backup and selected-range copy/compare/restore, explicit protection/retry preflight and verified per-range results |
+| `desfireworkflow/DesfireWorkflowDemo.dproj` | Complete ordinary application backup/copy/compare/restore and explicit application/file provisioning with per-file results |
 | `globalplatform/GlobalPlatformDemo.dproj` | Native reader/card events, explicit SCP02/SCP03 authentication, CPLC/registry and CAP/DAP load/install/delete/status/extradition, key management and RSA/AES token/receipt policies; snapshotted background worker |
 | `emvsemantics/EmvSemanticsDemo.dproj` | Offline AIP/AUC/TVR/IAC/CVM List with explicit Book 3 4.3/4.4; no reader required |
 | `emvcalculator/EmvCalculatorDemo.dproj` | All offline key/MAC/AC/ARPC/script/PIN calculations; explicit CVN transaction inputs and verification |
@@ -542,3 +544,49 @@ single-reader swaps through `OnCardRequired` and `CurrentIdentifier`.
 
 Both use the existing nonvisual worker and native PC/SC inventory/presence events.
 See [the workflow lifecycle and exact evidence](WORKFLOWS.md).
+
+## Contact-memory and DESFire workflow demos
+
+Each new project has its own editable form and DFM, two reader dropdowns,
+native reader/card events and background execution. Capture/restore supports
+swapping cards on one reader; direct copy/compare uses separate presented cards.
+Snapshots contain card data, so choose an appropriate export location.
+
+ContactMemoryWorkflowDemo selects an explicit ordinary SLE/I2C model and ACS
+dialect. Physical I2C page bytes are entered separately; the range field is
+`address,count,minimumRemainingPinAttempts` in decimal (for example `0,256,1`).
+The masked PIN field is hexadecimal and is used only for copy/restore. Capture
+exports the complete chip regardless of the range field. Load that snapshot
+before restore; protection and retry fields are diagnostic and are not written.
+
+DesfireWorkflowDemo selects public, EV2 AES, EV1 AES, EV1 2K3DES/3K3DES or D40
+DES/2K3DES and an explicit fresh/discard-pending transaction policy. Its decimal
+settings field is `sourceAid,targetAid,keyNumber,minimumCommunication,transferLimit,maxFrameData`
+(for example `1,1,0,0,65536,48`). Communication is 0=Plain, 1=MACed, 2=Full (enum ordinals, not wire bytes).
+Source/PICC and target/application keys are masked hexadecimal inputs. The demo
+uses the same key index/profile on both contexts; application code may configure
+each backend independently. Snapshot capture/load/export supports backup,
+copy, compare and restore into compatible existing layouts.
+
+For provisioning, the selected target reader receives both PICC and application
+contexts. Paste a definition template into the snapshot/template field:
+
+```text
+ERD-DESFIRE-PROVISION 1
+15|1|2
+0|0|0|14|14|14|0|32|0|0|0|0|0|0
+```
+
+The second line is decimal `keySettings|keyCount|keyType` (0=DES/2K3DES,
+1=3K3DES, 2=AES). Each subsequent line is decimal
+`fileNumber|fileType|communication|readKey|writeKey|readWriteKey|changeKey|fileBytes|lowerLimit|upperLimit|initialValue|limitedEnabled|recordBytes|maxRecords`.
+File types are 0=standard, 1=backup, 2=value, 3=linear records, 4=cyclic records;
+limitedEnabled is 0/1. The example creates an AES application with one key and
+a 32-byte plain standard file with free data access. Target AID comes from the
+settings field. Supply the existing PICC key and the new application's initial
+key explicitly. Creation reports metadata evidence; payload restoration is a
+separate action. No automatic key rotation, rollback or mutation retries occur.
+
+Both APIs integrate with the batch factory; the dedicated BatchWorkflowDemo
+continues to demonstrate NDEF personalization. See [WORKFLOWS.md](WORKFLOWS.md)
+for ownership, cancellation, partial results and snapshot contracts.
