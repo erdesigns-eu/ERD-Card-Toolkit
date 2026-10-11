@@ -79,7 +79,7 @@ begin
   if (Length(AText) < 2) or (Length(AText) > 512) or Odd(Length(AText)) then
     raise ECardWorkflowError.Create('Invalid archive hex width.');
   for I := 1 to Length(AText) do
-    if notCharInSet(AText[I], ['0' .. '9', 'A' .. 'F', 'a' .. 'f']) then
+    if not CharInSet(AText[I], ['0' .. '9', 'A' .. 'F', 'a' .. 'f']) then
       raise ECardWorkflowError.Create('Invalid archive hex.');
   Result := HexToBytes(AText);
 end;
