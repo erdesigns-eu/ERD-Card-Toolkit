@@ -89,6 +89,42 @@ type
     ActSnapshotPlanLabel: TLabel;
     /// <summary>Choose listed files, listed files after application select, or the bounded MOBIB inventory plan.</summary>
     ActSnapshotPlanBox: TComboBox;
+    /// <summary>Optional sourced catalog mappings label.</summary>
+    ActSnapshotCatalogLabel: TLabel;
+    /// <summary>Caller CSV tariff and stop mappings for the selected operator context.</summary>
+    ActSnapshotCatalogMemo: TMemo;
+    /// <summary>Independent offline snapshot analysis page.</summary>
+    ActOfflineTab: TTabSheet;
+    /// <summary>Offline inputs owned by this DFM.</summary>
+    ActOfflineInputs: TScrollBox;
+    /// <summary>Versioned snapshot input label.</summary>
+    ActOfflineArchiveLabel: TLabel;
+    /// <summary>Imported snapshot text; no reader connection is needed.</summary>
+    ActOfflineArchiveMemo: TMemo;
+    /// <summary>Loads a saved snapshot through this demo own dialog.</summary>
+    ActOfflineLoadButton: TButton;
+    /// <summary>Explicit offline layout label.</summary>
+    ActOfflineLayoutLabel: TLabel;
+    /// <summary>Explicit raw or legacy network decoding.</summary>
+    ActOfflineLayoutBox: TComboBox;
+    /// <summary>Offline raw-record display label.</summary>
+    ActOfflineRawLabel: TLabel;
+    /// <summary>Readable summary or raw records.</summary>
+    ActOfflineRawBox: TComboBox;
+    /// <summary>Offline sourced mappings label.</summary>
+    ActOfflineCatalogLabel: TLabel;
+    /// <summary>Optional product/provider, route and stop mappings.</summary>
+    ActOfflineCatalogMemo: TMemo;
+    /// <summary>Select a saved MOBIB snapshot; importing does not authenticate a card.</summary>
+    ImportDialog: TOpenDialog;
+    /// <summary>Explicit offline operator context label.</summary>
+    ActOfflineOperatorLabel: TLabel;
+    /// <summary>Operator chosen by the user; never inferred from the network.</summary>
+    ActOfflineOperatorBox: TComboBox;
+    /// <summary>Offline personal-field display label.</summary>
+    ActOfflinePersonalLabel: TLabel;
+    /// <summary>Masked by default, matching the live report.</summary>
+    ActOfflinePersonalBox: TComboBox;
     /// <summary>Read explicit Calypso logical file page.</summary>
     ActFileTab: TTabSheet;
     /// <summary>Read explicit Calypso logical file inputs.</summary>
@@ -261,6 +297,9 @@ type
     /// <param name="Sender">This form’s own capture memo.</param>
     /// <param name="Key">Character consumed by the capture adapter.</param>
     procedure CaptureKey(Sender: TObject; var Key: Char);
+    /// <summary>Loads a bounded UTF-8 offline snapshot into the editable memo without opening a card.</summary>
+    /// <param name="Sender">Load button; ignored.</param>
+    procedure LoadSnapshotClick(Sender: TObject);
   private
     FFamily: TCardDemoFamily;
     FActions: TCardFamilyActions;
@@ -325,7 +364,7 @@ begin
   case ActionPages.ActivePageIndex of
     0:
     begin
-      SetLength(FInputs,10);
+      SetLength(FInputs,11);
       FInputs[0] := ActSnapshotDialectBox;
       FInputs[1] := ActSnapshotLeEdit;
       FInputs[2] := ActSnapshotLimitEdit;
@@ -336,6 +375,7 @@ begin
       FInputs[7] := ActSnapshotPersonalBox;
       FInputs[8] := ActSnapshotRecordsizeBox;
       FInputs[9] := ActSnapshotPlanBox;
+      FInputs[10] := ActSnapshotCatalogMemo;
     end;
     1:
     begin
@@ -382,6 +422,16 @@ begin
       FInputs[16] := ActRulesRequiretripsBox;
       FInputs[17] := ActRulesTripsEdit;
     end;
+    4:
+    begin
+      SetLength(FInputs,6);
+      FInputs[0] := ActOfflineArchiveMemo;
+      FInputs[1] := ActOfflineLayoutBox;
+      FInputs[2] := ActOfflineRawBox;
+      FInputs[3] := ActOfflineCatalogMemo;
+      FInputs[4] := ActOfflineOperatorBox;
+      FInputs[5] := ActOfflinePersonalBox;
+    end;
   else Exit; end;
   AcknowledgeCheck.Enabled := FActions[ActionPages.ActivePageIndex].Mutation;
 end;
@@ -407,6 +457,7 @@ begin
         Result.Arguments[I] := IntToStr(TComboBox(FInputs[I]).ItemIndex)
       else if FActions[ActionPages.ActivePageIndex].Fields[I].Secret then
         Result.Credentials[I] := HexToBytes(TEdit(FInputs[I]).Text)
+      else if FInputs[I] is TMemo then Result.Arguments[I] := TMemo(FInputs[I]).Text
       else Result.Arguments[I] := TEdit(FInputs[I]).Text;
   except
     for I := 0 to High(Result.Credentials) do TCardCrypto.Clear(Result.Credentials[I]);
@@ -562,6 +613,19 @@ begin
   FPreviousAddress := SelectedAddress;
   try FReaderEvents.Start; EventStatusLabel.Caption := 'Watching reader and card events.';
   except on E: Exception do EventStatusLabel.Caption := 'Reader events could not start: '+E.ClassName+'. Use Refresh devices to retry.'; end;
+end;
+
+procedure TMobibDemoForm.LoadSnapshotClick(Sender: TObject);
+var Stream: TFileStream;
+begin
+  if FBusy or not ImportDialog.Execute then Exit;
+  Stream := nil;
+  try
+    Stream := TFileStream.Create(ImportDialog.FileName,fmOpenRead or fmShareDenyWrite);
+    if Stream.Size > 262144 then raise EArgumentException.Create('Snapshot exceeds demo input bound.');
+    ActOfflineArchiveMemo.Lines.LoadFromStream(Stream,TEncoding.UTF8);
+  except on E: Exception do OutputMemo.Text := 'Snapshot import failed: '+E.ClassName+'.'; end;
+  Stream.Free;
 end;
 
 procedure TMobibDemoForm.FormShow(Sender: TObject);

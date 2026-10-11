@@ -22,6 +22,7 @@ contains
   ERD.Card.EN1545 in '..\..\src\contactless\ERD.Card.EN1545.pas',
   ERD.Card.MOBIB.Rules in '..\..\src\contactless\ERD.Card.MOBIB.Rules.pas',
   ERD.Card.MOBIB.Subscriptions in '..\..\src\contactless\ERD.Card.MOBIB.Subscriptions.pas',
+  ERD.Card.MOBIB.Archive in '..\..\src\contactless\ERD.Card.MOBIB.Archive.pas',
   ERD.Card.MOBIB.Data in '..\..\src\contactless\ERD.Card.MOBIB.Data.pas',
   ERD.Card.MOBIB.Brussels in '..\..\src\contactless\ERD.Card.MOBIB.Brussels.pas',
   ERD.Card.MOBIB.Lookup in '..\..\src\contactless\ERD.Card.MOBIB.Lookup.pas',

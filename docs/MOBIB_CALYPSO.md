@@ -568,3 +568,79 @@ validation, exact profile matches, all contract-duration codes, zone subsets,
 missing versus zero counters, and errors that dominate missing data. The VCL
 executor is tested with an injected hardware boundary; the offline rules page
 provably opens no reader.
+
+## Offline snapshot analysis and demo CSV inputs
+
+The snapshot action now exports **`snapshot.mobib`** alongside individual record
+files and `mobib-report.json`. Select that artifact and save it using the demo's
+export button. The fifth **Analyse saved MOBIB snapshot** DFM page loads or accepts
+that snapshot text. It has its own layout, raw-record, operator-context and personal
+field selectors. No reader selection or card connection is required.
+
+Both the live snapshot page and offline page accept optional caller CSV mappings
+using the existing `TMobibLookup.LoadCsv` format described above. They are applied
+only to that request, in the explicitly selected operator context. Invalid live
+CSV is rejected before acquiring a reader. The context is an application/user
+choice; it is never inferred from country/network or purchase price. A rejected
+import cannot change a later request's dictionary because each request owns a
+fresh lookup. The richer `TMobibReport` tree, confidence labels and JSON export are
+used by both paths, including the existing De Lijn holder-confirmed tariff note.
+
+`TMobibArchive.Encode` / `Decode` from `ERD.Card.MOBIB.Archive` are nonvisual APIs
+that retain ticketing selection bytes, application SELECT response/status, folder
+and logical/SFI addresses, selection response bytes/status, last-record status,
+truncation, original record numbers and bytes. Application and proprietary-file
+metadata are reconstructed from the captured FCI/header bytes. Both revision-two
+and revision-three file header layouts are retained. Files with the same LID in
+different folders remain distinct; equivalent ticketing-folder aliases and duplicate
+SFI/record addresses are rejected. Unknown file addresses remain available as raw
+data without an invented interpretation.
+
+Version-two format (ASCII text, empty byte arrays represented by a dash):
+
+```text
+MOBIB-RECORDS 2
+T -
+A 0000 -
+F 0000 2001 0 0 9000 6A83 0 0 - -
+R 2001 1 00082B0008000000000000000000000000000000000000000000000000
+F 0000 2002 0 0 6A82 0000 0 0 - -
+```
+
+`T` holds ticketing selection bytes. `A` holds hexadecimal application SELECT
+status and response bytes. `F` holds folder, LID, addressing-mode flag (0 LID / 1
+SFI), decimal SFI, SELECT status, last READ status, truncation flag, revision-two
+header flag, 23-byte proprietary header (or dash), and selection bytes. `R` holds
+the current file's LID (zero is permitted for SFI files), decimal record number and
+bytes. Each `R` belongs to its immediately preceding `F`. Flags are 0/1. The sample
+is synthetic. Legacy version-one T/F/R archives are accepted as well; they contain
+no application, folder or SFI metadata.
+
+Bounds are 64 files, 255 records per file, 256 record bytes, 4096 selection/FCI
+bytes and 16 MiB ASCII input. The demo limits pasted/loaded text to 262144
+characters/bytes. Individual old `.bin` files can be assembled in this format only
+when their explicit file/record identifiers and selection outcomes are known; they
+are not automatically identified as a complete snapshot.
+
+Offline output is explicitly marked as imported data; it performs no card
+communication or authentication. The archive preserves supplied evidence, not an
+independent authenticity proof. It is a data interchange format, not APDU recording
+or replay. Complete binary exports and `.mobib` archives may contain personal card
+data even while the text/JSON report is masked, matching the existing raw-export
+behavior. Personal-field controls govern report display, not the original bytes.
+
+```pascal
+Raw := TMobibArchive.Decode(SavedText);
+Decoded := TMobibCodec.Decode(Raw, mlLegacy056001);
+Contracts := TMobibSubscriptionCodec.DecodeSnapshot(Decoded);
+Lookup := TMobibLookup.Create(mocDeLijn); // explicit caller context
+try
+  Lookup.LoadCsv(MyCsv, 'My verified table v1');
+  Options := TMobibReport.DefaultOptions;
+  Options.Context := mocDeLijn;
+  Nodes := TMobibReport.Build(Decoded, Contracts, Lookup, Options);
+  DisplayText := TMobibReport.ToText(Nodes);
+finally
+  Lookup.Free;
+end;
+```

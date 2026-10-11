@@ -19,7 +19,7 @@ uses
 {$ENDIF}
   ERD.Card.Contactless, ERD.Card.HID, ERD.Card.Bytes, ERD.Card.Transport, ERD.Card.Demo.Job, ERD.Card.SIM.Data, ERD.Card.Demo.Families,
   ERD.Card.Demo.FamilyOperations, ERD.Card.Reader.TWN4, ERD.Card.RFID.Input,
-  ERD.Card.Memory, ERD.Card.Demo.Operations;
+  ERD.Card.Memory, ERD.Card.Demo.Operations, ERD.Card.MOBIB.Archive, ERD.Card.MOBIB.Data;
 
 type
   EReachedHardware = class(Exception);
@@ -769,10 +769,25 @@ begin
   Check(Pos('2 records acquired, 1 zero-filled',string(D.Text)) > 0,'Empty file records counted');
   Check(Pos('Holder (2002): not present',string(D.Text)) > 0,'Missing file explained');
   Check((Pos(BytesToHex(Contract),string(D.Text)) > 0) = (RawMode = 1),'Raw hexadecimal display follows selector');
-  Check((Length(D.Artifacts) = 5) and BytesEqual(D.Artifacts[1].Data,Contract),'All bytes exported in either display mode');
+  Check((Length(D.Artifacts) = 6) and BytesEqual(D.Artifacts[1].Data,Contract),'All bytes exported in either display mode');
   Check((D.Artifacts[4].Name = 'mobib-report.json') and (Length(D.Artifacts[4].Data) > 40) and
     BytesEqual(Copy(D.Artifacts[4].Data,0,9),HexToBytes('7B22666F726D617422')),'JSON report exported');
   Check((S.Position = Length(S.Steps)) and (S.Begins = 1) and (S.Ends = 1),'No validation replay or extra transaction');
+  R := Request(dfMobib,'offline'); R.ReaderName := ''; Put(R,dfMobib,'layout','1');
+  Put(R,dfMobib,'archive',string(TEncoding.UTF8.GetString(D.Artifacts[5].Data)));
+  Put(R,dfMobib,'operator','2'); Put(R,dfMobib,'catalog','tariff,0x000F,Example subscription');
+  CreateCardFamilyOperations(dfMobib,Hardware).Run(R,D);
+  Check(D.Success and (H.Acquires = 1) and (H.Releases = 1),'Offline analysis must not acquire hardware');
+  Check(Pos('Example subscription',string(D.Text)) > 0,'Offline custom tariff catalog applied');
+  Check(Pos('De Lijn',string(D.Text)) > 0,'Explicit offline context applied');
+  Check(Pos('OFFLINE ANALYSIS',string(D.Text)) > 0,'Offline import distinguished from authenticated read');
+  Check((Length(D.Artifacts) = 6) and BytesEqual(D.Artifacts[1].Data,Contract),'Offline export retains bytes');
+  Put(R,dfMobib,'archive','invalid');
+  try CreateCardFamilyOperations(dfMobib,Hardware).Run(R,D); Check(False,'Invalid offline archive accepted');
+  except on E: EMobibArchiveError do Check((H.Acquires = 1) and (H.Releases = 1),'Invalid archive opened hardware'); end;
+  R := Request(dfMobib,'snapshot'); Put(R,dfMobib,'catalog','invalid');
+  try CreateCardFamilyOperations(dfMobib,Hardware).Run(R,D); Check(False,'Invalid live catalog accepted');
+  except on E: EMobibDecodeError do Check((H.Acquires = 1) and (H.Releases = 1),'Invalid catalog opened hardware'); end;
  end;
 end;
 
@@ -793,7 +808,7 @@ begin
  Check(D.Success and (S.Position = 11) and (S.Begins = 1) and (S.Ends = 1),'Parsed MOBIB demo executes complete file plan');
  Check((Pos('Data profile: MOBIB 056/001 (matched)',string(D.Text)) > 0) and
    (Pos('Country: Belgium (056)',string(D.Text)) > 0) and (Pos('Network: 001',string(D.Text)) > 0),'Parsed MOBIB demo displays network and match state');
- Check((Length(D.Artifacts) = 2) and (D.Artifacts[0].Name = 'file-2001-record-1.bin') and
+ Check((Length(D.Artifacts) = 3) and (D.Artifacts[0].Name = 'file-2001-record-1.bin') and
    (D.Artifacts[1].Name = 'mobib-report.json'),'Parsed view retains original export');
  S := TScript.Create; T := S; H := THardware.Create; Hardware := H; H.Transport := T;
  S.Add('00A4040008315449432E49434100','6A82'); S.Add('94A4000002200000','9000');
@@ -808,7 +823,7 @@ begin
    (Pos('Operator context: De Lijn',string(D.Text)) > 0) and
    (Pos('Record 1: 0C'+StringOfChar('5',94),string(D.Text)) > 0) and
    (Pos('Environment (2001): linear, SFI 07, 1 records of 48 bytes',string(D.Text)) > 0),'MOBIB plan options displayed');
- Check((Length(D.Artifacts) = 3) and (D.Artifacts[2].Name = 'mobib-report.json'),'MOBIB plan exports');
+ Check((Length(D.Artifacts) = 4) and (D.Artifacts[2].Name = 'mobib-report.json'),'MOBIB plan exports');
 end;
 
 procedure TestAdditionalFamilies;

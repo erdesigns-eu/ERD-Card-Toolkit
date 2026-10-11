@@ -1368,12 +1368,12 @@ begin
     end;
     dfMobib:
     begin
-      SetLength(Result,4);
+      SetLength(Result,5);
       Result[0].Id := 'snapshot'; Result[0].LabelText := 'Read public MOBIB files and records';
       Result[0].Pcsc := True; Result[0].Mutation := False;
       Result[1].Id := 'file'; Result[1].LabelText := 'Read explicit Calypso logical file';
       Result[1].Pcsc := True; Result[1].Mutation := False;
-      SetLength(Result[0].Fields,10); SetLength(Result[1].Fields,4);
+      SetLength(Result[0].Fields,11); SetLength(Result[1].Fields,4);
       Result[0].Fields[0].Name := 'dialect'; Result[0].Fields[0].LabelText := 'Explicit Calypso dialect';
       Result[0].Fields[0].DefaultText := ''; Result[0].Fields[0].Secret := False; Result[0].Fields[0].Choices := 'Legacy CLA 94 / LFI 00|Revision 3 CLA 00 / path 09';
       Result[0].Fields[1].Name := 'le'; Result[0].Fields[1].LabelText := 'Initial expected record bytes';
@@ -1402,6 +1402,8 @@ begin
       Result[0].Fields[8].DefaultText := '0'; Result[0].Fields[8].Secret := False; Result[0].Fields[8].Choices := 'Use initial expected bytes|Use size reported by card';
       Result[0].Fields[9].Name := 'plan'; Result[0].Fields[9].LabelText := 'Read plan';
       Result[0].Fields[9].DefaultText := '0'; Result[0].Fields[9].Secret := False; Result[0].Fields[9].Choices := 'Files listed|Files listed after selecting application 1TIC.ICA|MOBIB inventory plan after selecting application 1TIC.ICA';
+      Result[0].Fields[10].Name := 'catalog'; Result[0].Fields[10].LabelText := 'Optional caller CSV mappings (tariff, station, stop)';
+      Result[0].Fields[10].DefaultText := ''; Result[0].Fields[10].Secret := False; Result[0].Fields[10].Choices := '';
       Result[2].Id := 'samfile'; Result[2].LabelText := 'Authenticated Calypso file via provisioned SAM';
       Result[2].Pcsc := True; Result[2].Mutation := False;
       SetLength(Result[2].Fields,11);
@@ -1466,6 +1468,21 @@ begin
       Result[3].Fields[16].DefaultText := ''; Result[3].Fields[16].Secret := False; Result[3].Fields[16].Choices := 'Yes|No';
       Result[3].Fields[17].Name := 'trips'; Result[3].Fields[17].LabelText := 'Acquired associated trip counter; blank = unknown';
       Result[3].Fields[17].DefaultText := ''; Result[3].Fields[17].Secret := False; Result[3].Fields[17].Choices := '';
+      Result[4].Id := 'offline'; Result[4].LabelText := 'Analyse saved MOBIB snapshot';
+      Result[4].Pcsc := False; Result[4].Mutation := False;
+      SetLength(Result[4].Fields,6);
+      Result[4].Fields[0].Name := 'archive'; Result[4].Fields[0].LabelText := 'MOBIB-RECORDS snapshot text';
+      Result[4].Fields[0].DefaultText := ''; Result[4].Fields[0].Secret := False; Result[4].Fields[0].Choices := '';
+      Result[4].Fields[1].Name := 'layout'; Result[4].Fields[1].LabelText := 'Explicit offline layout';
+      Result[4].Fields[1].DefaultText := '1'; Result[4].Fields[1].Secret := False; Result[4].Fields[1].Choices := 'Raw bytes only|Legacy MOBIB 056/001';
+      Result[4].Fields[2].Name := 'raw'; Result[4].Fields[2].LabelText := 'Raw record display';
+      Result[4].Fields[2].DefaultText := '0'; Result[4].Fields[2].Secret := False; Result[4].Fields[2].Choices := 'Summary only|Summary and raw records';
+      Result[4].Fields[3].Name := 'catalog'; Result[4].Fields[3].LabelText := 'Optional caller CSV mappings (tariff, station, stop)';
+      Result[4].Fields[3].DefaultText := ''; Result[4].Fields[3].Secret := False; Result[4].Fields[3].Choices := '';
+      Result[4].Fields[4].Name := 'operator'; Result[4].Fields[4].LabelText := 'Explicit operator context';
+      Result[4].Fields[4].DefaultText := '0'; Result[4].Fields[4].Secret := False; Result[4].Fields[4].Choices := 'Unspecified|STIB-MIVB|De Lijn|TEC|SNCB-NMBS';
+      Result[4].Fields[5].Name := 'personal'; Result[4].Fields[5].LabelText := 'Personal fields';
+      Result[4].Fields[5].DefaultText := '0'; Result[4].Fields[5].Secret := False; Result[4].Fields[5].Choices := 'Masked|Shown';
     end;
     dfEmv:
     begin

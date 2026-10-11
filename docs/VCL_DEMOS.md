@@ -504,3 +504,12 @@ identifies the missing field. Reader discovery works independently of those fiel
 Card components still validate typed values and credentials before communication.
 The executor opens its connection at the first real I/O boundary and runs each
 action once; successful validation does not raise a control-flow exception.
+
+MobibDemo also includes a fifth independent DFM page for offline `.mobib` snapshot
+analysis. Snapshot reads export a complete `snapshot.mobib` archive alongside
+records and the report JSON. The offline page has its own load dialog, layout,
+raw-record, operator-context and personal-field selectors. Live and offline pages
+both accept caller CSV mappings through `TMobibLookup.LoadCsv`, and share the richer
+`TMobibReport` output already used by the component library. Folder/SFI addresses,
+application selection and file headers are preserved in the archive. See the
+archive section of [MOBIB_CALYPSO.md](MOBIB_CALYPSO.md) for formats and bounds.

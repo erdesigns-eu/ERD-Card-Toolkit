@@ -68,7 +68,7 @@ uses
 {$ELSE}
   System.SysUtils, System.Classes,
 {$ENDIF}
-  ERD.Card.MOBIB.Rules, ERD.Card.Contactless.Calypso.SAM, ERD.Card.MOBIB.Subscriptions, ERD.Card.MOBIB.Data, ERD.Card.MOBIB.Lookup, ERD.Card.MOBIB.Report, ERD.Card.Contactless.Calypso, ERD.Card.EMV.Data, ERD.Card.EMV.Reader, ERD.Card.EID.Data, ERD.Card.EID.Reader,
+  ERD.Card.MOBIB.Rules, ERD.Card.Contactless.Calypso.SAM, ERD.Card.MOBIB.Subscriptions, ERD.Card.MOBIB.Data, ERD.Card.MOBIB.Lookup, ERD.Card.MOBIB.Report, ERD.Card.MOBIB.Archive, ERD.Card.Contactless.Calypso, ERD.Card.EMV.Data, ERD.Card.EMV.Reader, ERD.Card.EID.Data, ERD.Card.EID.Reader,
   ERD.Card.EID.DocumentReader, ERD.Card.EID.ICAO, ERD.Card.Crypto.EAC, ERD.Card.Crypto.EAC.OpenSSL,
   ERD.Card.EID.Access, ERD.Card.Bytes, ERD.Card.APDU.Catalog, ERD.Card.APDU, ERD.Card.ATR, ERD.Card.ATR.Catalog,
   ERD.Card.TLV, ERD.Card.EMV.Tags, ERD.Card.Ndef, ERD.Card.Ndef.Records,
@@ -167,22 +167,22 @@ begin
 end;
 
 function DescribeMobib(const Data: TMobibData; const Subscriptions: TMobibSubscriptions;
-  const Context: TMobibOperatorContext; const ShowPersonal: Boolean): string;
+  const Context: TMobibOperatorContext; const ShowPersonal: Boolean; const Lookup: TMobibLookup = nil): string;
 var Options: TMobibReportOptions;
 begin
   Options := TMobibReport.DefaultOptions; Options.Context := Context; Options.ShowPersonal := ShowPersonal;
   Options.HasNow := True; Options.Now := Now;
-  Result := TMobibReport.ToText(TMobibReport.Build(Data, Subscriptions, nil, Options)) +
+  Result := TMobibReport.ToText(TMobibReport.Build(Data, Subscriptions, Lookup, Options)) +
     sLineBreak + 'ACQUIRED FILES' + sLineBreak;
 end;
 
 function MobibReportJson(const Data: TMobibData; const Subscriptions: TMobibSubscriptions;
-  const Context: TMobibOperatorContext; const ShowPersonal: Boolean): TBytes;
+  const Context: TMobibOperatorContext; const ShowPersonal: Boolean; const Lookup: TMobibLookup = nil): TBytes;
 var Options: TMobibReportOptions; Json: string; I: Integer;
 begin
   Options := TMobibReport.DefaultOptions; Options.Context := Context; Options.ShowPersonal := ShowPersonal;
   Options.HasNow := True; Options.Now := Now;
-  Json := TMobibReport.ToJson(TMobibReport.Build(Data, Subscriptions, nil, Options));
+  Json := TMobibReport.ToJson(TMobibReport.Build(Data, Subscriptions, Lookup, Options));
   Result := nil; SetLength(Result, Length(Json));
   for I := 1 to Length(Json) do Result[I-1] := Byte(Ord(Json[I]));
 end;
@@ -505,6 +505,7 @@ var Hid: TUsbHidReaderWriter; HidHardware: ICardFamilyHidHardware; Devices: THid
   SamCla: Byte;
   SamTransport: ICardTransport; SamProvider: ICalypsoSecureSessionProvider;
   Subscriptions: TMobibSubscriptions;
+  MobibLookup: TMobibLookup;
   ShowMobibRaw, ShowMobibPersonal: Boolean; MobibContext: TMobibOperatorContext; MobibPlan: TCalypsoFileRefs; MobibJson: TBytes;
   CalypsoIds: array of Word; ChosenMobibLayout: TMobibLayout; ParsedMobib: TMobibData; Calypso: TCalypsoCardReader; Mobib: TMobibSnapshot; TransitFile: TCalypsoFile;
   Emv: TEMVCardReader; Belgian: TBelgianEIDReader; Icao: TICAODocumentReader;
@@ -716,7 +717,35 @@ begin
       end;
       dfMobib:
       begin
-        if A.Id = 'rules' then begin
+        if A.Id = 'offline' then begin
+          Mobib := TMobibArchive.Decode(Text(R,A,'archive'));
+          ChosenMobibLayout := TMobibLayout(Number(R,A,'layout',0,1));
+          ParsedMobib := TMobibCodec.Decode(Mobib,ChosenMobibLayout);
+          Subscriptions := TMobibSubscriptionCodec.DecodeSnapshot(ParsedMobib);
+          MobibContext := TMobibOperatorContext(Number(R,A,'operator',0,4));
+          ShowMobibPersonal := Number(R,A,'personal',0,1) = 1;
+          ShowMobibRaw := (ChosenMobibLayout = mlRaw) or (Number(R,A,'raw',0,1) = 1);
+          MobibLookup := TMobibLookup.Create(MobibContext);
+          try
+            MobibLookup.LoadCsv(string(Text(R,A,'catalog')),'Application-supplied offline CSV');
+            Output := 'OFFLINE ANALYSIS - imported data; no card authentication performed.'+sLineBreak+
+              DescribeMobib(ParsedMobib,Subscriptions,MobibContext,ShowMobibPersonal,MobibLookup);
+            MobibJson := MobibReportJson(ParsedMobib,Subscriptions,MobibContext,ShowMobibPersonal,MobibLookup);
+          finally MobibLookup.Free; end;
+          Artifact(D,'ticketing-select.bin',Mobib.TicketingSelection);
+          for I := 0 to High(Mobib.Files) do begin
+            TransitFile := Mobib.Files[I]; Output := Output+MobibFileSummary(TransitFile)+sLineBreak;
+            Artifact(D,MobibArtifactName(TransitFile)+'-select.bin',TransitFile.SelectionData);
+            for J := 0 to High(TransitFile.Records) do begin
+              if ShowMobibRaw and not ShowMobibPersonal and TMobibReport.IsPersonalFile(TransitFile) then
+                Output := Output+'  Record '+IntToStr(TransitFile.Records[J].Number)+': '+TMobibReport.MaskText+sLineBreak
+              else if ShowMobibRaw then Output := Output+'  Record '+IntToStr(TransitFile.Records[J].Number)+': '+BytesToHex(TransitFile.Records[J].Data)+sLineBreak;
+              Artifact(D,MobibArtifactName(TransitFile)+'-record-'+IntToStr(TransitFile.Records[J].Number)+'.bin',TransitFile.Records[J].Data);
+            end;
+          end;
+          Artifact(D,'mobib-report.json',MobibJson);
+          Artifact(D,'snapshot.mobib',TEncoding.UTF8.GetBytes(TMobibArchive.Encode(Mobib)));
+        end else if A.Id = 'rules' then begin
           Rule := Default(TMobibProductRule); Evidence := Default(TMobibRuleEvidence);
           Rule.OperatorId := string(Text(R,A,'operator')); Rule.Source := string(Text(R,A,'source'));
           Rule.CountryCode := 56; Rule.NetworkCode := 1; Rule.MaxVersion := 4;
@@ -757,9 +786,14 @@ begin
           if Assessment.HasEnd then Output := Output+'Exclusive end: '+FormatDateTime('yyyy-mm-dd hh:nn:ss',Assessment.EndTime)+sLineBreak;
           for Reason := Low(TMobibRuleReason) to High(TMobibRuleReason) do if Reason in Assessment.Reasons then Output := Output+RuleReasonName(Reason)+sLineBreak;
         end else begin
-        ShowMobibRaw := True; ShowMobibPersonal := True; MobibJson := nil;
+        ShowMobibRaw := True; ShowMobibPersonal := True; MobibJson := nil; MobibLookup := nil;
         Calypso := TCalypsoCardReader.Create(nil);
         try
+          if A.Id = 'snapshot' then begin
+            MobibContext := TMobibOperatorContext(Number(R,A,'operator',0,4));
+            MobibLookup := TMobibLookup.Create(MobibContext);
+            MobibLookup.LoadCsv(string(Text(R,A,'catalog')),'Application-supplied live CSV');
+          end;
           Calypso.Transport := T; Calypso.Dialect := TCalypsoDialect(Number(R,A,'dialect',0,1));
           Calypso.RecordBytes := Number(R,A,'le',1,256); N := Number(R,A,'limit',1,255);
           if A.Id = 'samfile' then begin
@@ -799,8 +833,8 @@ begin
             finally Lines.Free; end;
             Mobib := ParsedMobib.Raw; Artifact(D,'ticketing-select.bin',Mobib.TicketingSelection);
             Subscriptions := TMobibSubscriptionCodec.DecodeSnapshot(ParsedMobib);
-            Output := DescribeMobib(ParsedMobib, Subscriptions, MobibContext, ShowMobibPersonal);
-            MobibJson := MobibReportJson(ParsedMobib, Subscriptions, MobibContext, ShowMobibPersonal);
+            Output := DescribeMobib(ParsedMobib, Subscriptions, MobibContext, ShowMobibPersonal, MobibLookup);
+            MobibJson := MobibReportJson(ParsedMobib, Subscriptions, MobibContext, ShowMobibPersonal, MobibLookup);
           end else if (A.Id = 'file') or (A.Id = 'samfile') then begin
             Id := Bytes(R,A,'fid'); if (Length(Id) <> 2) or ((Id[0] = 0) and (Id[1] = 0)) then Fail;
             SetLength(Mobib.Files,1); Mobib.Files[0] := Calypso.ReadFile((Word(Id[0]) shl 8) or Id[1],N);
@@ -818,7 +852,8 @@ begin
             end;
           end;
           Artifact(D,'mobib-report.json',MobibJson);
-        finally Calypso.Free; end;
+          if A.Id = 'snapshot' then Artifact(D,'snapshot.mobib',TEncoding.UTF8.GetBytes(TMobibArchive.Encode(Mobib)));
+        finally MobibLookup.Free; Calypso.Free; end;
         end;
       end;
       dfEmv:

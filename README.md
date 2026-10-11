@@ -337,7 +337,7 @@ and show card offered/removed notifications without running a card operation.
 | `UidProgrammingDemo` | All programmable-UID profiles |
 | `DesfireDemo` | Public/AES/DES/3DES reads, writes and transactions; native application/file create-delete with explicit application key type/count; AES/DES/3DES key/access-policy mutations |
 | `EmvDemo` | PSE/PPSE, PDOL, GPO/AFL records, extra record scan, GET DATA, logs and exports |
-| `MobibDemo` | Readable Calypso/MOBIB holder, contract, validation and file summaries; optional raw records, complete exports, SAM authentication and rule assessment |
+| `MobibDemo` | Readable Calypso/MOBIB holder, contract, validation and file summaries; optional raw records, complete snapshot export/offline analysis, caller CSV catalogs, SAM authentication and rule assessment |
 | `BelgianEidDemo` | Identity, address, photo, certificates and signatures with export |
 | `IcaoDocumentDemo` | BAC/PACE, DG1/DG2/COM/SOD, JPEG preview and JPEG 2000 export |
 
@@ -506,6 +506,7 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 | `ERD.Card.MOBIB.Brussels` | Bundled STIB-MIVB stop tables (MOBIB Extractor data) |
 | `ERD.Card.Calypso.Networks` | `TCalypsoNetworks` registry: recommends Intercode, Lisboa Viva, Rav-Kav, OPUS, Venezia, Pisa or MOBIB profiles and applies the one you choose |
 | `ERD.Card.MOBIB.Report` | `TMobibReport`: structured MOBIB result tree with confidence labels, text and JSON output; personal fields masked unless explicitly shown |
+| `ERD.Card.MOBIB.Archive` | Complete bounded offline snapshot interchange, including Calypso application/header and folder/SFI metadata |
 | `ERD.Card.Memory` | `TMemoryCardReaderWriter` and memory codec |
 | `ERD.Card.Memory.Capabilities` | ACS memory capability catalog |
 | `ERD.Card.Memory.Counter` | `TSleCounterCardReaderWriter` |

@@ -202,6 +202,7 @@
         <DCCReference Include="..\..\src\contactless\ERD.Card.EN1545.pas" />
         <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Rules.pas" />
         <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Subscriptions.pas" />
+        <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Archive.pas" />
         <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Data.pas" />
         <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Brussels.pas" />
         <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Lookup.pas" />
