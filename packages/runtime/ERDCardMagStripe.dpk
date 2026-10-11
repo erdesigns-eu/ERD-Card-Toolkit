@@ -7,9 +7,11 @@
 {$RUNONLY}
 
 requires
-  rtl;
+  rtl,
+  ERDCardCore;
 
 contains
+  ERD.Card.MagStripe.Workflow in '..\..\src\magstripe\ERD.Card.MagStripe.Workflow.pas',
   ERD.Card.MagStripe.MSR2067HL in '..\..\src\magstripe\ERD.Card.MagStripe.MSR2067HL.pas',
   ERD.Card.MagStripe.Serial in '..\..\src\magstripe\ERD.Card.MagStripe.Serial.pas',
   ERD.Card.MagStripe.MSR206 in '..\..\src\magstripe\ERD.Card.MagStripe.MSR206.pas',

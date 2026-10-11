@@ -83,6 +83,16 @@ type
   /// <summary>Explicit caller-ordered linked record writes; shared assignment is not an owned copy.</summary>
   TSimRecordChanges = array of TSimRecordChange;
 
+  /// <summary>Per-record UPDATE evidence retained even when later records or cleanup fail.</summary>
+  TSimRecordWriteEvidence = record
+    /// <summary>True before the record UPDATE is dispatched; never cleared by a lost reply.</summary>
+    Dispatched: Boolean;
+    /// <summary>True after complete independent read-back matched this record.</summary>
+    Verified: Boolean;
+  end;
+  /// <summary>Evidence in the exact order of an explicit record plan.</summary>
+  TSimRecordWriteResults = array of TSimRecordWriteEvidence;
+
   /// <summary>Credential command receipt; status acceptance does not prove a fresh-session new PIN.</summary>
   TSimCredentialReceipt = record
     /// <summary>True only after the card accepted the CHANGE/UNBLOCK command and transaction cleanup succeeded.</summary>

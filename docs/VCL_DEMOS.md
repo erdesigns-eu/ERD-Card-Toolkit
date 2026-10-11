@@ -47,6 +47,11 @@ that byte-buffer wiping guarantee. Errors display their class, never backend tex
 
 | Project | Actual actions |
 | --- | --- |
+| `sle4404workflow/Sle4404WorkflowDemo.dproj` | Public SLE4404 snapshots, offline one-way plan generation/comparison, explicit program/scratchpad/application erase plans and checked prefix resume |
+| `slecounterworkflow/SleCounterWorkflowDemo.dproj` | Complete declared counter windows, offline one-way plans, explicit carry/backup transitions and checked prefix resume |
+| `desfirepersonalization/DesfirePersonalizationDemo.dproj` | Ordered application/file creation, content population, supplied-key rotation and access/policy profiles with checked resume |
+| `contactmemoryworkflow/ContactMemoryWorkflowDemo.dproj` | Ordinary SLE/I2C complete backup and selected-range copy/compare/restore, explicit protection/retry preflight and verified per-range results |
+| `desfireworkflow/DesfireWorkflowDemo.dproj` | Complete ordinary application backup/copy/compare/restore and explicit application/file provisioning with per-file results |
 | `globalplatform/GlobalPlatformDemo.dproj` | Native reader/card events, explicit SCP02/SCP03 authentication, CPLC/registry and CAP/DAP load/install/delete/status/extradition, key management and RSA/AES token/receipt policies; snapshotted background worker |
 | `emvsemantics/EmvSemanticsDemo.dproj` | Offline AIP/AUC/TVR/IAC/CVM List with explicit Book 3 4.3/4.4; no reader required |
 | `emvcalculator/EmvCalculatorDemo.dproj` | All offline key/MAC/AC/ARPC/script/PIN calculations; explicit CVN transaction inputs and verification |
@@ -57,6 +62,7 @@ that byte-buffer wiping guarantee. Errors display their class, never backend tex
 | `memorycard/MemoryCardDemo.dproj` | ACS capabilities, all implemented SLE/I2C snapshots/ranges, supplied PIN proof, verified writes with physical I2C page size, supported two-wire PIN replacement, irreversible compare-and-protect |
 | `slecounter/SleCounterDemo.dproj` | Explicit SLE4406/4436/5536/6636/window, public range reads, program/carry/backup modes with expected complete before/after windows, raw certificates; credential-bearing code command validation offline only |
 | `sle4404/Sle4404Demo.dproj` | Known window/layout/retry budgets, reads with optional supplied user code, user-code proof, one-to-zero programming, scratchpad erase and application erase with both supplied codes |
+| `simworkflow/SimWorkflowDemo.dproj` | Contact/SMS snapshot, restore preview and reviewed apply; offline free-slot ADN/EXT/EMAIL/ANR and SMS imports, complete multipart-group assembly/import and structured SIM inspection, with own form/DFM |
 | `simcard/SimCardDemo.dproj` | Classic SIM/UICC-USIM files, records, identities and services; PIN/PUK status, verify/change/unblock, ADN contact writes, PBR/IAP/EXT contact reads, explicit linked-record plans, alpha/EMAIL/ANR/SMS/segment codecs |
 | `mifareclassic/MifareClassicDemo.dproj` | UID, offline layout/trailer inspection, supplied-key block reads and status-only data writes |
 | `topaz/TopazDemo.dproj` | Topaz 96/512 identity, memory/locks, byte-range reads, verified user writes and initialized Type 1 NDEF read/parse/replace/clear |
@@ -513,3 +519,214 @@ both accept caller CSV mappings through `TMobibLookup.LoadCsv`, and share the ri
 `TMobibReport` output already used by the component library. Folder/SFI addresses,
 application selection and file headers are preserved in the archive. See the
 archive section of [MOBIB_CALYPSO.md](MOBIB_CALYPSO.md) for formats and bounds.
+
+## Application workflow demos
+
+The five independent workflow demos each own their DFM controls and source/target
+selectors. They use the same nonvisual worker lifecycle as the family demos.
+See [WORKFLOWS.md](WORKFLOWS.md) for operations, snapshots, evidence and the exact
+profiles shown in each demo. For one device capture first, swap, then restore.
+
+## ISO15693 and batch workflow demos
+
+`iso15693workflow/Iso15693WorkflowDemo.dproj` has its own editable form and DFM.
+Choose source/target readers from its device list, ordinary/extended address mode,
+native-flags/payload-only responses, physical block count, bytes per block and
+`first block,count` selection (at most 4096 blocks). The backend is ACS ACR1552
+FF-FB. Use capture then restore for one-reader swaps, or copy/compare across two
+readers. The workflow checks every differing target block's lock status before
+writing; blocks zero and one cannot be restored or copied into the target.
+
+`batchworkflow/BatchWorkflowDemo.dproj` has its own editable form and DFM.
+Choose a Type2 model and a reader, supply an application identifier and NDEF text,
+then Add card template. Repeat for each distinct reader with its card presented.
+The editable list uses `identifier|reader|NDEF hex`. Acknowledge the writes and
+execute once. All requests are prepared before I/O; the output lists each card's
+outcome and identifies unattempted items after a failure. The demo rejects repeated
+reader names; the underlying batch component supports application-managed
+single-reader swaps through `OnCardRequired` and `CurrentIdentifier`.
+
+Both use the existing nonvisual worker and native PC/SC inventory/presence events.
+See [the workflow lifecycle and exact evidence](WORKFLOWS.md).
+
+## Contact-memory and DESFire workflow demos
+
+Each new project has its own editable form and DFM, two reader dropdowns,
+native reader/card events and background execution. Capture/restore supports
+swapping cards on one reader; direct copy/compare uses separate presented cards.
+Snapshots contain card data, so choose an appropriate export location.
+
+ContactMemoryWorkflowDemo selects an explicit ordinary SLE/I2C model and ACS
+dialect. Physical I2C page bytes are entered separately; the range field is
+`address,count,minimumRemainingPinAttempts` in decimal (for example `0,256,1`).
+The masked PIN field is hexadecimal and is used only for copy/restore. Capture
+exports the complete chip regardless of the range field. Load that snapshot
+before restore; protection and retry fields are diagnostic and are not written.
+
+DesfireWorkflowDemo selects public, EV2 AES, EV1 AES, EV1 2K3DES/3K3DES or D40
+DES/2K3DES and an explicit fresh/discard-pending transaction policy. Its decimal
+settings field is `sourceAid,targetAid,keyNumber,minimumCommunication,transferLimit,maxFrameData`
+(for example `1,1,0,0,65536,48`). Communication is 0=Plain, 1=MACed, 2=Full (enum ordinals, not wire bytes).
+Source/PICC and target/application keys are masked hexadecimal inputs. The demo
+uses the same key index/profile on both contexts; application code may configure
+each backend independently. Snapshot capture/load/export supports backup,
+copy, compare and restore into compatible existing layouts.
+
+For provisioning, the selected target reader receives both PICC and application
+contexts. Paste a definition template into the snapshot/template field:
+
+```text
+ERD-DESFIRE-PROVISION 1
+15|1|2
+0|0|0|14|14|14|0|32|0|0|0|0|0|0
+```
+
+The second line is decimal `keySettings|keyCount|keyType` (0=DES/2K3DES,
+1=3K3DES, 2=AES). Each subsequent line is decimal
+`fileNumber|fileType|communication|readKey|writeKey|readWriteKey|changeKey|fileBytes|lowerLimit|upperLimit|initialValue|limitedEnabled|recordBytes|maxRecords`.
+File types are 0=standard, 1=backup, 2=value, 3=linear records, 4=cyclic records;
+limitedEnabled is 0/1. The example creates an AES application with one key and
+a 32-byte plain standard file with free data access. Target AID comes from the
+settings field. Supply the existing PICC key and the new application's initial
+key explicitly. Creation reports metadata evidence; payload restoration is a
+separate action. No automatic key rotation, rollback or mutation retries occur.
+
+Both APIs integrate with the batch factory; the dedicated BatchWorkflowDemo
+continues to demonstrate NDEF personalization. See [WORKFLOWS.md](WORKFLOWS.md)
+for ownership, cancellation, partial results and snapshot contracts.
+
+## SIM workflow demo
+
+`simworkflow/SimWorkflowDemo.dproj` has its own form/DFM, two PC/SC reader
+selectors, native reader/card events and background execution. Select source for
+capture/inspection and target for restore preview/apply. Choose classic SIM or
+UICC/USIM explicitly; USIM requires its full AID in hex. The masked PIN field
+accepts **ASCII digits** (for example `1234`), with an explicit retry threshold.
+It is cleared after submission; PIN bytes are copied to the worker and wiped.
+
+The actual EF field is `root|FIDhex,FIDhex`: `0|7F10,6F3A` for standard classic
+ADN, `0|7F10,6F3C` for classic SMS, `1|6F3C` for USIM SMS, or the actual
+`1|5F3A,ADNFID` discovered from USIM PBR. PBR record is zero for standalone/SMS,
+or the explicit selected PBR record for linked USIM contacts. The separate
+classic EXT1 checkbox explicitly includes standard EXT1 in contact capture,
+including on an empty card; it requires classic standard ADN and EXT1 presence.
+
+Capture places the complete snapshot in the editable snapshot/plan memo and
+prints decoded contacts/fields or SMS and physical capacity. Load a source
+snapshot and run **Preview exact restore** against a target: this reads current
+records and creates a target-bound plan, printing EF/record and complete before
+and after bytes. Review/save the plan, then run **Apply reviewed plan** with an
+explicit acknowledgement. A changed card or stale record rejects the action;
+per-record evidence and the overall outcome remain visible after partial failure.
+
+Offline contact import takes one line per logical contact:
+`name<TAB>number[<TAB>email<TAB>additional number]`. It uses a captured target
+snapshot and generates a free-record allocation plan. Standalone ADN supports
+inline contacts; captured supported linked layouts also allocate EXT/EMAIL/ANR.
+Email/additional numbers require the corresponding PBR files. Actual target
+changes remain a separate reviewed-apply action. No implicit contact overwrite.
+
+SMS import takes complete 176-byte EF.SMS record hex strings separated by `;`.
+Use **Plan multipart SMS import** for one explicit complete group; **Assemble
+explicit SMS group** shows its combined text/binary payload offline. The ordinary
+SMS import action preserves the supplied stored records individually. Free-slot
+allocation preserves status and complete SMSC/TPDU/padding; nothing sends a
+message over a mobile network. Snapshot reports can also be viewed offline.
+
+**Inspect SIM / USIM** shows identity, PIN state, IMSI, provider, declared services
+and UICC applications, with explicit status for unavailable sections. A successful
+inspection may contain refused sections; those remain visible. See
+[WORKFLOWS.md](WORKFLOWS.md) for exact supported layouts and ownership/evidence.
+
+
+## SLE and DESFire personalization demos
+
+All three projects have independent `TForm` classes and editable DFMs. Select a
+reader in the demo itself. Native events update inventory/presence; card operations
+run on a worker. Explicit apply/profile actions require acknowledgement.
+
+**SleCounterWorkflowDemo:** choose SLE4406/4436/5536/6636 and enter
+`readableBytes|completedPrefix` (default `16|0`). Capture exports a complete public
+window. To generate a one-way plan offline, keep that snapshot in the memo and
+enter the complete desired window in the desired-image edit next to the file
+buttons. Generated plans replace the memo; equal images report no programming
+required. Preview checks current state without writing; Apply executes once.
+
+**Sle4404WorkflowDemo:** explicitly enter the following decimal configuration:
+
+```text
+windowStart|windowBytes|readableBytes|userCounterAddress|userCounterMask|memoryCounterAddress|scratchAddress|scratchBytes|applicationAddress|applicationBytes|minimumUserAttempts|minimumMemoryAttempts|completedPrefix
+```
+
+Minus-one addresses and zero area lengths mean unconfigured. Defaults select a
+public data window, with code/erase fields unconfigured; they are not a detected
+chip layout. Configure relevant code counters/erase areas from actual documentation.
+Two masked edits accept optional two-byte user code and four-byte memory code in
+card order. Capture/preview never present them. One-way planner operation matches
+the counter demo; explicit erases must be deliberately supplied in the plan.
+
+The strict exported plan grammar uses CRLF and no secrets:
+
+```text
+ERD-SLE-PLAN 1
+action|physicalAddress|count|mode|completeBeforeHex|completeAfterHex
+```
+
+Action ordinals: 0 program, 1 scratchpad erase, 2 application erase, 3 counter byte.
+Mode ordinals: 0 program, 1 carry, 2 backup, 3 carry+backup. SLE4404 requires mode 0;
+counter count is one and carry images include all known effects. A matching
+completed-prefix image is required before resume; snapshots are not counter rollback.
+
+**DesfirePersonalizationDemo:** choose an explicit security dialect. Enter a masked
+semicolon-separated list of hex keys; profile rows refer to zero-based indexes.
+Index -1 means an empty credential (public access or no different-key old material).
+The separate optional path edit loads a complete `ERD-DESFIRE 1` content snapshot;
+it is bounded to three MiB. Configuration is:
+
+```text
+expectedNativeUidHex|completedPrefix|transferBytes|frameBytes|minimumCommunication
+```
+
+Use Acquire UID first; enter its seven-byte manufacturing UID in the configuration.
+Defaults do not authorize an arbitrary card. All numbers below are decimal:
+
+```text
+ERD-DESFIRE-PERSONALIZE 1
+aid|action|currentAuthKeyNumber|currentKeyIndex|actionParameters...
+```
+
+| Action | Parameters after currentKeyIndex |
+| --- | --- |
+| 0 Provision | keyPolicy, keyCount, keyType, appAuthNumber, appKeyIndex, definitions |
+| 1 Content | 0=fresh exclusive activation or 1=explicitly discard pending transaction |
+| 2 AES rotation | targetKeyNumber, newVersion, oldVersion, newKeyIndex, oldKeyIndex |
+| 3 DES/3DES rotation | targetKeyNumber, newVersion, oldVersion, newKeyIndex, oldKeyIndex |
+| 4 File access | fileNumber, communication, readKey, writeKey, readWriteKey, changeKey |
+| 5 Key policy | keyPolicy |
+
+Parameters use `|`, not commas. Provision keyType is 0 DES/2K3DES, 1 3K3DES, 2 AES.
+Definitions are `-` for no files or semicolon-separated ordinary definitions;
+each definition has 14 comma-separated decimal fields:
+`file,type,communication,read,write,readWrite,change,fileBytes,lower,upper,initialValue,limitedCredit,recordBytes,maxRecords`.
+Communication is 0 Plain, 1 MACed, 2 Full; rights use 0–13 keys, 14 free, 15 denied.
+Append optional `|V|finalAuthKeyNumber|finalKeyIndex` to a row to supply its final
+credential context for prefix verification after later key/access changes.
+
+For example, on a previously configured one-key AES application 1, with supplied
+current key at index 0 and desired new key at index 1, the following rotates key
+zero, updates file zero and leaves policy 15. Substitute the actual card profile;
+it does not create the existing application/file:
+
+```text
+ERD-DESFIRE-PERSONALIZE 1
+1|2|0|0|0|1|0|1|-1
+1|4|0|1|0|2|0|0|0|0
+1|5|0|1|15
+```
+
+Later rows explicitly use the new key. Execute uses the configured prefix count;
+Verify entire prefix only freshly checks all rows without management writes.
+Review per-step results and retained child evidence after a partial failure. No
+automatic key guessing, rollback or retry is performed; keep the same card under
+exclusive connection ownership. Templates exclude key material; masked UI fields
+are cleared after worker submission.

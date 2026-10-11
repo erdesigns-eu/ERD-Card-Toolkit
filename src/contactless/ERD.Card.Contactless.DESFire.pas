@@ -376,6 +376,9 @@ type
   /// <summary>Pure strict codecs for wrapped ordinary DESFire native commands and settings.</summary>
   TDesfireCodec = class
   public
+    /// <summary>Validates an ordinary file-creation definition without acquiring or mutating a card.</summary>
+    /// <param name="ADefinition">Explicit supported file geometry, rights and initial value.</param>
+    class procedure ValidateDefinition(const ADefinition: TDesfireFileDefinition); static;
     /// <summary>Builds short native wrapping 90/INS/00/00 with trailing Le=00.</summary>
     /// <param name="AInstruction">Native command or AF continuation.</param>
     /// <param name="AData">Zero through 255 independent command data bytes.</param>
@@ -1915,6 +1918,12 @@ begin
   Result[2] := (D.ReadWriteKey shl 4) or D.ChangeKey;
   Result[3] := (D.ReadKey shl 4) or D.WriteKey;
   Result := Joined(Result, Tail);
+end;
+
+class procedure TDesfireCodec.ValidateDefinition(const ADefinition: TDesfireFileDefinition);
+var Command: Byte;
+begin
+  DefinitionHeader(ADefinition, Command);
 end;
 
 function TDesfireCardReader.Metadata(const AInstruction: Byte;

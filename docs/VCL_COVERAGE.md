@@ -1,6 +1,6 @@
 # VCL examples: current coverage
 
-There are **thirty separately executable applications** in
+There are **forty-three separately executable applications** in
 `examples/vcl/CardDemos.groupproj`. Each application has its own `TForm`,
 `.Main.pas`, and `.Main.dfm`. All visual controls are in that application's own
 DFM, including input fields and action controls. Hardware demos include reader
@@ -11,6 +11,12 @@ set.
 
 | Project | Included features |
 | --- | --- |
+| ContactMemoryWorkflowDemo | All ordinary SLE/I2C models, complete snapshot export, selected-range copy/compare/restore, explicit PIN/retry/page settings; own form/DFM and reader events |
+| DesfireWorkflowDemo | Complete ordinary application backup/migration, explicit native security and transaction policy, application/file provisioning; own form/DFM and reader events |
+| Iso15693WorkflowDemo | Explicit geometry/address dialect, selected-memory backup/copy/compare/restore, addressed UID checks and target lock preflight |
+| BatchWorkflowDemo | Per-reader editable NDEF text personalization templates and per-card outcomes; one presented card per distinct reader |
+| ClassicWorkflowDemo / Type2WorkflowDemo | Ordinary data/user-page backup, copy, compare, restore and bounded snapshot files |
+| UidWorkflowDemo / NdefWorkflowDemo / MagStripeWorkflowDemo | Workflow capture/copy/template actions with explicit profiles; exact API/demo coverage in [WORKFLOWS.md](WORKFLOWS.md) |
 | MagStripeDemo | Tracks and MSR206-7HL reads/verified writes |
 | SmartCardDemo | Existing combined PC/SC, eID, EMV, contactless, memory, and RFID pages |
 | GlobalPlatformDemo | CPLC/tagged or legacy registry, explicit native authentication, CAP/DAP load/install/delete/status/extradition, key management and RSA/AES token/receipt policies, background execution and native reader/card events |
@@ -23,6 +29,7 @@ set.
 | Sle4404Demo | Known layout/counters, supplied-code reads/proof, bit programming, scratchpad and application erases |
 | Twn4Demo | PRS/CDC version/tag, supplied-key Classic, and public Type 2 reads/verified writes |
 | RfidInputDemo | Foreground keyboard, boot/ID/fixed-ASCII reports, ASCII/hex/decimal profiles, and byte conversion |
+| SimWorkflowDemo | Independent DFM; source/target reader events and selectors; complete contacts/SMS snapshots, restore preview/apply, offline free-record imports including supported EXT/EMAIL/ANR layouts, explicit multipart assembly/import and SIM inspection |
 | SimCardDemo | Classic SIM/UICC-USIM, files/records/identities/services, PIN/PUK status, verify/change/unblock, ADN contact writes, PBR/IAP/EXT contact reads, explicit linked record plans, alpha/EMAIL/ANR/SMS/segment codecs |
 | MifareClassicDemo | UID, offline layout/trailers, supplied-key block reads, and status-only data writes |
 | TopazDemo | Topaz 96/512 full memory/locks, byte-range reads and verified writes, initialized parsed Type 1 NDEF replace/clear; own DFM, reader selection and native events |
@@ -94,3 +101,11 @@ not perform passive eID or certificate trust validation.
 The projects share the repaired BOM/CRLF and MSBuild conventions. Reproducible
 build and validation commands are in [VCL_DEMOS.md](VCL_DEMOS.md) and
 [VALIDATION.md](VALIDATION.md).
+
+
+SLE4404WorkflowDemo and SleCounterWorkflowDemo independently cover public-memory
+snapshots, offline comparison/program planning, live preview, explicit plan apply
+and checked prefix resume. DesfirePersonalizationDemo covers ordered native
+creation/content/key/access-policy profiles and checked resume. All three own
+forms and DFMs with in-app reader selection, native reader/card event observation
+and background execution. Their shared module is nonvisual only.

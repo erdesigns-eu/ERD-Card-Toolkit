@@ -123,6 +123,20 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Workflow.Personalization.pas"/>
+        <DCCReference Include="..\..\src\memory\ERD.Card.Memory.Workflow.Sle.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Workflow.DESFire.pas"/>
+        <DCCReference Include="..\..\src\memory\ERD.Card.Memory.Workflow.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Workflow.ISO15693.pas"/>
+        <DCCReference Include="..\..\src\core\ERD.Card.Workflow.Batch.pas"/>
+        <DCCReference Include="..\..\src\core\ERD.Card.Workflow.pas"/>
+        <DCCReference Include="..\..\src\core\ERD.Card.Workflow.Archive.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Classic.Access.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Workflow.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Workflow.UID.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Workflow.Ndef.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Workflow.Credentials.pas"/>
+        <DCCReference Include="..\..\src\magstripe\ERD.Card.MagStripe.Workflow.pas"/>
         <DCCReference Include="rtl.dcp"/>
         <DCCReference Include="vcl.dcp"/>
         <DCCReference Include="designide.dcp"/>
@@ -164,6 +178,8 @@
         <DCCReference Include="..\..\src\contactless\ERD.Card.MOBIB.Report.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Calypso.SAM.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Calypso.pas"/>
+        <DCCReference Include="..\..\src\sim\ERD.Card.SIM.Workflow.pas"/>
+        <DCCReference Include="..\..\src\sim\ERD.Card.SIM.Inspection.pas"/>
         <DCCReference Include="..\..\src\sim\ERD.Card.SIM.Data.pas"/>
         <DCCReference Include="..\..\src\sim\ERD.Card.SIM.Reader.pas"/>
         <DCCReference Include="..\..\src\readers\ERD.Card.Reader.TWN4.pas"/>

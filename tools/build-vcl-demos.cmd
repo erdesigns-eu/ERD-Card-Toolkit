@@ -64,6 +64,32 @@ call :build_demo st25dv St25DvDemo
 if errorlevel 1 exit /b %errorlevel%
 call :build_demo topaz TopazDemo
 if errorlevel 1 exit /b %errorlevel%
+call :build_demo classicworkflow ClassicWorkflowDemo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo type2workflow Type2WorkflowDemo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo uidworkflow UidWorkflowDemo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo magstripeworkflow MagStripeWorkflowDemo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo ndefworkflow NdefWorkflowDemo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo iso15693workflow Iso15693WorkflowDemo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo batchworkflow BatchWorkflowDemo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo simworkflow SimWorkflowDemo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo contactmemoryworkflow ContactMemoryWorkflowDemo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo desfireworkflow DesfireWorkflowDemo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo sle4404workflow Sle4404WorkflowDemo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo slecounterworkflow SleCounterWorkflowDemo
+if errorlevel 1 exit /b %errorlevel%
+call :build_demo desfirepersonalization DesfirePersonalizationDemo
+if errorlevel 1 exit /b %errorlevel%
 exit /b %errorlevel%
 :build_demo
 rem Use the same resource generation and configuration as the IDE projects.

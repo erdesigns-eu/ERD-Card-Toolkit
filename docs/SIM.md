@@ -23,7 +23,7 @@ transports APDUs; the SIM determines the rights.
   `WritePhonebookContact` and `DeletePhonebookContact`; GSM/UCS-2 names and
   TBCD numbers.
 - USIM PBR decoder with explicit A8/A9/AA templates, file role/FID/SFI and IAP
-  positions; linked writes are still not managed automatically.
+  positions; snapshot/plan workflows add allocation for explicitly supported layouts.
 - Read linked USIM contacts with `ReadLinkedUsimContact`: explicit ADN FID/PBR
   record, IAP positions, raw linked fields and validated EXT number chains in
   one transaction.
@@ -106,18 +106,42 @@ startup.
 
 This is not a telephony stack: no network registration, phone modem, SMS
 sending, GSM/AKA authentication, Ki readout, eSIM download/provisioning or SIM
-Toolkit. ADM authentication, automatic record allocation for USIM contacts,
+Toolkit. ADM authentication, broader USIM PBR allocation schemas,
 automatic SMS message grouping, national language tables and additional
 phonebook files are next steps. Cyclic-record writes are absent; absolute cyclic
 reads are available. Binary offsets are limited to 32767; complete transparent
 files to 32768 bytes. Records are limited to 255 bytes/255 records. Larger
 profiles are refused, not truncated.
 
-Practical next extensions: first automatic link/record allocation, then
-automatic record allocation/phonebook file profiles where a concrete protocol is
-available. Other card families--the remaining VCL demos, native USB-HID sources,
+Practical next extensions include broader PBR schemas and extended ANR allocation
+where an explicit compatible layout is available. Other card families--the remaining VCL demos, native USB-HID sources,
 MIFARE Plus or CryptoMemory--each require their own reader/protocol profile;
 payments remain out of scope.
+
+## Application workflows
+
+`TSimPhonebookWorkflow`, `TSimSmsWorkflow`, `TSimInspectionWorkflow` and
+`TSimWorkflowCodec` add complete snapshots, readable reports, reviewed
+restore/apply plans and offline free-slot imports. Standard classic ADN/EXT1 and
+selected PBR-linked USIM EFs retain all physical records. The logical importer
+supports supported type-1/type-2 EMAIL/ANR bindings and allocated EXT chains for
+long primary numbers, with explicit SFI/IAP links and complete capacity checks.
+Unknown/ambiguous schemas are refused before any write. SMS records preserve
+all status/body bytes; explicitly supplied complete multipart groups can be
+validated and allocated together.
+
+`TSimCardReaderWriter.WriteRecordPlan` adds bounded general linear-fixed plan
+execution with target ICCID and all original records checked inside one exclusive
+transaction, one optional PIN authentication, independent per-record verification
+and retained evidence after later failure or cleanup uncertainty. Existing
+`WriteLinkedPhonebookRecords` remains the smaller explicit low-level USIM API.
+Both are non-atomic and never replay writes. The workflow separates snapshot,
+preview and apply, and accepts cancellation before the retained plan starts.
+
+The new `SimWorkflowDemo` has its own DFM, source/target reader selectors,
+masked ASCII PIN, snapshot/plan editing, import fields and native reader events.
+See [WORKFLOWS.md](WORKFLOWS.md#simusim-contact-and-sms-workflows) and
+[VCL_DEMOS.md](VCL_DEMOS.md#sim-workflow-demo).
 
 ## Validation and sources
 
@@ -129,7 +153,9 @@ cross-check; the Pascal implementation was written independently.
 74,402 SIM/USIM assertions have been run under FPC with range/overflow/heap
 checks: literal APDUs/codecs, PIN budgets, buffers, every write I/O boundary,
 complete read-back bits, chunking and cleanup uncertainty. The separate family
-executor also covers literal SIM read paths and preflight tests.
+executor also covers literal SIM read paths and preflight tests. Another 4,833
+workflow/planner assertions cover linked allocation, archives, offline demos,
+inspection, complete multipart imports and every native record-plan I/O boundary.
 **Delphi/Windows and physical SIMs have not been tested yet.** Source validation
 scripts do not replace those tests.
 

@@ -14,7 +14,7 @@ uses
 {$ELSE}
   System.Classes,
 {$ENDIF}
-  ERD.Card.GlobalPlatform, ERD.Card.EMV.Calculator, ERD.Card.PCSC.Monitor, ERD.Card.HID.Monitor, ERD.Card.SIM.Reader,
+  ERD.Card.GlobalPlatform, ERD.Card.EMV.Calculator, ERD.Card.PCSC.Monitor, ERD.Card.HID.Monitor, ERD.Card.SIM.Reader, ERD.Card.SIM.Workflow, ERD.Card.SIM.Inspection,
   ERD.Card.Reader.TWN4, ERD.Card.RFID.Input, ERD.Card.RFID.HID, ERD.Card.HID,
   DesignIntf, ERD.Card.Memory, ERD.Card.Memory.Counter, ERD.Card.Memory.Sle4404,
   ERD.Card.PCSC.Reader, ERD.Card.EID.Reader,
@@ -26,7 +26,12 @@ uses
   ERD.Card.Contactless.Type4.Ndef, ERD.Card.Contactless.Type5.Ndef,
   ERD.Card.Contactless.ISO15693, ERD.Card.Contactless.DESFire,
   ERD.Card.Contactless.UltralightC, ERD.Card.Contactless.Type2.Password,
-  ERD.Card.Contactless.Raw;
+  ERD.Card.Contactless.Raw, ERD.Card.Workflow, ERD.Card.Contactless.Workflow,
+  ERD.Card.Contactless.Workflow.UID, ERD.Card.Contactless.Workflow.Credentials,
+  ERD.Card.Contactless.Workflow.Ndef, ERD.Card.MagStripe.Workflow,
+  ERD.Card.Workflow.Batch, ERD.Card.Contactless.Workflow.ISO15693,
+  ERD.Card.Memory.Workflow, ERD.Card.Memory.Workflow.Sle,
+  ERD.Card.Contactless.Workflow.Personalization, ERD.Card.Contactless.Workflow.DESFire;
 
 procedure Register;
 begin
@@ -34,6 +39,10 @@ begin
     TBelgianEIDReader, TICAODocumentReader, TSimCardReaderWriter,
     TEmvCalculator, TEMVCardReader, TMagStripeReaderWriter, TMemoryCardReaderWriter,
     TSleCounterCardReaderWriter, TSle4404CardReaderWriter]);
+  RegisterComponents('ERD Workflows', [TSle4404Workflow, TSleCounterWorkflow, TDesfirePersonalizationWorkflow, TSimPhonebookWorkflow, TSimSmsWorkflow, TSimInspectionWorkflow, TContactMemoryWorkflow, TDesfireApplicationWorkflow,
+    TDesfireProvisionWorkflow, TCardBatchWorkflow, TIso15693MemoryWorkflow, TCardMemoryCopyWorkflow, TMifareClassicCopyWorkflow,
+    TType2MemoryWorkflow, TUidProgrammingWorkflow, TClassicCredentialWorkflow,
+    TNdefTransferWorkflow, TMagStripeCopyWorkflow]);
   RegisterComponents('ERD Input', [THidDeviceMonitor, TUsbHidInputMonitor,
     TRfidKeyboardReader, TRfidHidReportReader, TUsbHidReaderWriter,
     TTwn4CardReaderWriter]);

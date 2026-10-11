@@ -194,3 +194,22 @@ Each milestone includes documented declarations, tests for successful and failin
 behavior, the existing Pascal readers on an explicit source selection, and a Delphi
 build for the supported targets. Hardware features require real adapter/card tests.
 Linux core tests and XML well-formedness do not substitute for Delphi or Help Insight.
+
+## Application workflows
+
+Eighteen palette components implement Classic/Type 2/ISO15693 memory copy,
+backup/compare/restore, programmable UID, Classic credentials, Type 1-5 NDEF,
+magstripe, contact-memory, DESFire application migration/provisioning and batch
+personalization, SIM contact/SMS planning and inspection. Thirteen independent workflow demos have their own forms/DFMs.
+
+Contact-memory workflows cover ordinary SLE/I2C data with explicit PIN retry
+budgets and protection preflight. DESFire supports complete ordinary application
+snapshots and standard/backup/value/record migration, with explicit transaction
+ownership and application/file provisioning. Both can be prepared as batch
+children through the existing factory contract. SLE4404/counterchip snapshot,
+comparison, explicit programming/erase plans and checked resume, plus ordered
+DESFire creation/content/key/access-policy personalization are implemented.
+Cross-family eID/EMV/MOBIB report pipelines remain extensions.
+SIM/USIM now includes complete record snapshots, reviewed restore/apply, free-slot
+ADN/EXT/EMAIL/ANR and SMS import plans, explicit multipart groups and inspection.
+See [WORKFLOWS.md](WORKFLOWS.md) for exact contracts and evidence.
