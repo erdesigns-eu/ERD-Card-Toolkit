@@ -11,6 +11,7 @@ requires
   ERDCardCore;
 
 contains
+  ERD.Card.Contactless.Workflow.Personalization in '..\..\src\contactless\ERD.Card.Contactless.Workflow.Personalization.pas',
   ERD.Card.Contactless.Workflow.DESFire in '..\..\src\contactless\ERD.Card.Contactless.Workflow.DESFire.pas',
   ERD.Card.Contactless.Workflow.ISO15693 in '..\..\src\contactless\ERD.Card.Contactless.Workflow.ISO15693.pas',
   ERD.Card.Contactless.Classic.Access in '..\..\src\contactless\ERD.Card.Contactless.Classic.Access.pas',

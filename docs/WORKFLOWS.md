@@ -14,6 +14,9 @@ no card I/O; the caller supplies configured readers, profiles and credentials.
 | `TMagStripeCopyWorkflow` | Read-only stripe acquisition, selected-track copy and template programming; same-card verified writing or explicit device-status-only programming |
 | `TCardBatchWorkflow` | Application-defined per-card personalization templates across existing workflow families, prepared before I/O, with per-card outcomes and retained child evidence |
 | `TIso15693MemoryWorkflow` | Selected-block backup, comparison, copy and restore with exact geometry, addressed UID checks and full target lock preflight |
+| `TSle4404Workflow` | Public selected-window snapshot, offline comparison/one-way program planner, explicit scratchpad/application erase plans, checked prefix resume |
+| `TSleCounterWorkflow` | Full declared counter window snapshot, one-way program planner, explicit carry/backup before/after plans, checked prefix resume |
+| `TDesfirePersonalizationWorkflow` | Ordered application/file creation, complete ordinary content population, AES/DES/3DES key rotation and rights/policy steps, with checked prefix resume |
 | `TContactMemoryWorkflow` | Complete SLE/I2C backup; selected-range copy, comparison and restore with protection/retry preflight and per-range verification |
 | `TDesfireApplicationWorkflow` | Complete ordinary application backup; compatible standard/backup/value/record copy, comparison and restore with explicit transaction ownership |
 | `TDesfireProvisionWorkflow` | Explicit application key policy/type/count and ordinary-file creation with per-file metadata evidence |
@@ -357,3 +360,84 @@ Existing low-level components already support much of this work. These extension
 need family-specific workflow contracts; they are not implied by the generic
 memory interface. Payment processing and APDU recording/replay remain outside this
 work.
+
+
+## SLE4404 and counterchip plan workflows
+
+`TSle4404Workflow` and `TSleCounterWorkflow` use frozen owning native adapters:
+`TSle4404WorkflowCard` and `TSleCounterWorkflowCard`. The original reader can be
+freed after adapter construction. ACR38x CCID is the supported reader dialect;
+actual chip model, readable window, code-counter locations and erase-area geometry
+are supplied explicitly. The application exclusively owns the physical connection
+and keeps the same card present; these chips do not expose a general trustworthy UID.
+
+`PrepareBackup` acquires the complete selected public window without presenting a
+code. SLE4404 windows exclude code storage and configured error counters; counter
+snapshots cover the complete declared readable window. `TSleWorkflowArchive`
+exports strict `ERD-SLE-SNAPSHOT 1` and `ERD-SLE-PLAN 1` text, excluding secrets.
+`TSleWorkflowPlanner.Compare` returns differing physical addresses. `ProgramPlan`
+constructs a chained plan for explicit SLE4404 programming or plain counter-byte
+programming, rejecting every zero-to-one transition before card access. It returns
+an empty selection when equal; no execution is needed then. Erase/carry/backup
+plans are supplied explicitly with complete before/after images.
+
+Each reviewed `TSleWorkflowStep` has an action, physical address, count, mode and
+full selected-window before/after images. `Prepare(Card, Steps, True)` reads/checks
+without code attempts or writes. Execution checks all structural constraints
+before I/O, checks the original image, then rechecks current bytes before each
+native mutation. Native retry budgets and expected-state checks remain active.
+Each native mutation is sent once and independently read back by both layers.
+`Results` retain pending, unchanged, verified and uncertain steps. Authentication
+failure can consume code attempts even when no public data write occurs.
+
+`ACompletedPrefix` explicitly skips a prefix only after a fresh read equals its
+final planned image; this proves current public data, not prior authentication or
+an issuer certificate. A mismatch stops before writes. Equal programming/erase
+images skip unnecessary operations; explicit counter carry operations are never
+silently skipped. A snapshot cannot restore irreversible counters/protection or
+recover hidden credentials. Application erase presents both supplied codes once,
+consumes a non-restorable memory-counter bit and requires a previously non-erased
+application region. Neither erase nor carry is an automatic rollback strategy.
+
+## Ordered DESFire personalization
+
+`TDesfirePersonalizationWorkflow.Prepare(Steps, ExpectedNativeUid, CompletedPrefix)`
+accepts 1–256 explicit ordered steps and a previously acquired seven-byte native
+manufacturing UID. Each step retains its own immutable `IDesfireWorkflowCard`
+credential context. Supply the correct credential for that point in the profile:
+rotating a key does not silently update later reader configurations.
+
+The actions are provisioning an absent application with ordinary file definitions,
+populating compatible complete standard/backup/value/record files, rotating an
+existing AES or same-type DES/2K3DES/3K3DES key, changing ordinary file access/mode,
+and changing native key policy. Provision/content reuse the established native
+workflows; `LastChild` exposes detailed partial application/file/content evidence.
+Each request result records attempted/revalidated flags, its terminal state and
+failure class. A failed or cancelled content child can retain earlier verified
+writes; inspect `LastChild`, which remains available until the next child or
+preparation/destruction. Creation leaves native initial keys until an explicit
+subsequent rotation step.
+All structural child validation precedes hardware access. Live permissions for a
+future application are checked when it exists; this is not a global atomic operation.
+
+Native key/access/policy mutations verify their exact result. Key rotation requires
+fresh mutual authentication with the replacement, not just its public version.
+`CreateDesfirePersonalizationKeyProof` freezes a supplied authenticated reader
+configured with the replacement key; public profiles are refused. Keys are copied
+and local workflow key buffers are wiped on completion/destruction. Retained
+native contexts keep their own credentials until released; no key bytes appear in
+reports, snapshots or plan templates. A native post-dispatch or final release
+failure is uncertain; the profile stops without retries or automatic deletion.
+
+Checked resume re-acquires and verifies **every** requested completed prefix step
+before dispatching any remaining mutation. It checks application key type/count,
+ordinary file geometry and the planned completed access/policy state, complete
+content bytes, and replacement-key possession/version. Optional `VerificationCard`
+provides a final authorized context after key/access changes. A prefix that cannot
+be observed with supplied credentials is refused. Duplicate rotations of a key,
+repeated policy/access overwrites and repeated content population for the same
+application are refused because they destroy independently checkable prefix
+semantics. UID comparison detects accidental swaps; it is not issuer authenticity.
+
+The three independent workflow demos and their text grammar are documented in
+[VCL_DEMOS.md](VCL_DEMOS.md#sle-and-desfire-personalization-demos).

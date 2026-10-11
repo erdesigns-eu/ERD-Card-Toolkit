@@ -35,6 +35,8 @@ requires
   designide;
 
 contains
+  ERD.Card.Contactless.Workflow.Personalization in '..\..\src\contactless\ERD.Card.Contactless.Workflow.Personalization.pas',
+  ERD.Card.Memory.Workflow.Sle in '..\..\src\memory\ERD.Card.Memory.Workflow.Sle.pas',
   ERD.Card.Contactless.Workflow.DESFire in '..\..\src\contactless\ERD.Card.Contactless.Workflow.DESFire.pas',
   ERD.Card.Memory.Workflow in '..\..\src\memory\ERD.Card.Memory.Workflow.pas',
   ERD.Card.Contactless.Workflow.ISO15693 in '..\..\src\contactless\ERD.Card.Contactless.Workflow.ISO15693.pas',

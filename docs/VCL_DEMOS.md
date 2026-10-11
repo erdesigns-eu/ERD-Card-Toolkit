@@ -47,6 +47,9 @@ that byte-buffer wiping guarantee. Errors display their class, never backend tex
 
 | Project | Actual actions |
 | --- | --- |
+| `sle4404workflow/Sle4404WorkflowDemo.dproj` | Public SLE4404 snapshots, offline one-way plan generation/comparison, explicit program/scratchpad/application erase plans and checked prefix resume |
+| `slecounterworkflow/SleCounterWorkflowDemo.dproj` | Complete declared counter windows, offline one-way plans, explicit carry/backup transitions and checked prefix resume |
+| `desfirepersonalization/DesfirePersonalizationDemo.dproj` | Ordered application/file creation, content population, supplied-key rotation and access/policy profiles with checked resume |
 | `contactmemoryworkflow/ContactMemoryWorkflowDemo.dproj` | Ordinary SLE/I2C complete backup and selected-range copy/compare/restore, explicit protection/retry preflight and verified per-range results |
 | `desfireworkflow/DesfireWorkflowDemo.dproj` | Complete ordinary application backup/copy/compare/restore and explicit application/file provisioning with per-file results |
 | `globalplatform/GlobalPlatformDemo.dproj` | Native reader/card events, explicit SCP02/SCP03 authentication, CPLC/registry and CAP/DAP load/install/delete/status/extradition, key management and RSA/AES token/receipt policies; snapshotted background worker |
@@ -634,3 +637,96 @@ message over a mobile network. Snapshot reports can also be viewed offline.
 and UICC applications, with explicit status for unavailable sections. A successful
 inspection may contain refused sections; those remain visible. See
 [WORKFLOWS.md](WORKFLOWS.md) for exact supported layouts and ownership/evidence.
+
+
+## SLE and DESFire personalization demos
+
+All three projects have independent `TForm` classes and editable DFMs. Select a
+reader in the demo itself. Native events update inventory/presence; card operations
+run on a worker. Explicit apply/profile actions require acknowledgement.
+
+**SleCounterWorkflowDemo:** choose SLE4406/4436/5536/6636 and enter
+`readableBytes|completedPrefix` (default `16|0`). Capture exports a complete public
+window. To generate a one-way plan offline, keep that snapshot in the memo and
+enter the complete desired window in the desired-image edit next to the file
+buttons. Generated plans replace the memo; equal images report no programming
+required. Preview checks current state without writing; Apply executes once.
+
+**Sle4404WorkflowDemo:** explicitly enter the following decimal configuration:
+
+```text
+windowStart|windowBytes|readableBytes|userCounterAddress|userCounterMask|memoryCounterAddress|scratchAddress|scratchBytes|applicationAddress|applicationBytes|minimumUserAttempts|minimumMemoryAttempts|completedPrefix
+```
+
+Minus-one addresses and zero area lengths mean unconfigured. Defaults select a
+public data window, with code/erase fields unconfigured; they are not a detected
+chip layout. Configure relevant code counters/erase areas from actual documentation.
+Two masked edits accept optional two-byte user code and four-byte memory code in
+card order. Capture/preview never present them. One-way planner operation matches
+the counter demo; explicit erases must be deliberately supplied in the plan.
+
+The strict exported plan grammar uses CRLF and no secrets:
+
+```text
+ERD-SLE-PLAN 1
+action|physicalAddress|count|mode|completeBeforeHex|completeAfterHex
+```
+
+Action ordinals: 0 program, 1 scratchpad erase, 2 application erase, 3 counter byte.
+Mode ordinals: 0 program, 1 carry, 2 backup, 3 carry+backup. SLE4404 requires mode 0;
+counter count is one and carry images include all known effects. A matching
+completed-prefix image is required before resume; snapshots are not counter rollback.
+
+**DesfirePersonalizationDemo:** choose an explicit security dialect. Enter a masked
+semicolon-separated list of hex keys; profile rows refer to zero-based indexes.
+Index -1 means an empty credential (public access or no different-key old material).
+The separate optional path edit loads a complete `ERD-DESFIRE 1` content snapshot;
+it is bounded to three MiB. Configuration is:
+
+```text
+expectedNativeUidHex|completedPrefix|transferBytes|frameBytes|minimumCommunication
+```
+
+Use Acquire UID first; enter its seven-byte manufacturing UID in the configuration.
+Defaults do not authorize an arbitrary card. All numbers below are decimal:
+
+```text
+ERD-DESFIRE-PERSONALIZE 1
+aid|action|currentAuthKeyNumber|currentKeyIndex|actionParameters...
+```
+
+| Action | Parameters after currentKeyIndex |
+| --- | --- |
+| 0 Provision | keyPolicy, keyCount, keyType, appAuthNumber, appKeyIndex, definitions |
+| 1 Content | 0=fresh exclusive activation or 1=explicitly discard pending transaction |
+| 2 AES rotation | targetKeyNumber, newVersion, oldVersion, newKeyIndex, oldKeyIndex |
+| 3 DES/3DES rotation | targetKeyNumber, newVersion, oldVersion, newKeyIndex, oldKeyIndex |
+| 4 File access | fileNumber, communication, readKey, writeKey, readWriteKey, changeKey |
+| 5 Key policy | keyPolicy |
+
+Parameters use `|`, not commas. Provision keyType is 0 DES/2K3DES, 1 3K3DES, 2 AES.
+Definitions are `-` for no files or semicolon-separated ordinary definitions;
+each definition has 14 comma-separated decimal fields:
+`file,type,communication,read,write,readWrite,change,fileBytes,lower,upper,initialValue,limitedCredit,recordBytes,maxRecords`.
+Communication is 0 Plain, 1 MACed, 2 Full; rights use 0–13 keys, 14 free, 15 denied.
+Append optional `|V|finalAuthKeyNumber|finalKeyIndex` to a row to supply its final
+credential context for prefix verification after later key/access changes.
+
+For example, on a previously configured one-key AES application 1, with supplied
+current key at index 0 and desired new key at index 1, the following rotates key
+zero, updates file zero and leaves policy 15. Substitute the actual card profile;
+it does not create the existing application/file:
+
+```text
+ERD-DESFIRE-PERSONALIZE 1
+1|2|0|0|0|1|0|1|-1
+1|4|0|1|0|2|0|0|0|0
+1|5|0|1|15
+```
+
+Later rows explicitly use the new key. Execute uses the configured prefix count;
+Verify entire prefix only freshly checks all rows without management writes.
+Review per-step results and retained child evidence after a partial failure. No
+automatic key guessing, rollback or retry is performed; keep the same card under
+exclusive connection ownership. Templates exclude key material; masked UI fields
+are cleared after worker submission.

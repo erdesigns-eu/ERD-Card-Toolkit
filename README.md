@@ -37,7 +37,7 @@ out of scope (see [Not supported](#not-supported)).
 
 | Area | Components | What you can do |
 | --- | --- | --- |
-| **Application workflows** | `TSimPhonebookWorkflow`, `TSimSmsWorkflow`, `TSimInspectionWorkflow`, `TContactMemoryWorkflow`, `TDesfireApplicationWorkflow`, `TDesfireProvisionWorkflow`, `TCardBatchWorkflow`, `TIso15693MemoryWorkflow`, `TMifareClassicCopyWorkflow`, `TType2MemoryWorkflow`, `TUidProgrammingWorkflow`, `TClassicCredentialWorkflow`, `TNdefTransferWorkflow`, `TMagStripeCopyWorkflow` | Data/UID/stripe copy, backup/restore/compare, ISO15693 selected-memory restore, contact-memory restore, DESFire application provisioning/migration, SIM/USIM contact/SMS import/restore plans and inspection, batch personalization, explicit credential migration and NDEF transfer; progress/card-request events, verified results and partial-write evidence. See [Workflows](docs/WORKFLOWS.md). |
+| **Application workflows** | `TSle4404Workflow`, `TSleCounterWorkflow`, `TDesfirePersonalizationWorkflow`, `TSimPhonebookWorkflow`, `TSimSmsWorkflow`, `TSimInspectionWorkflow`, `TContactMemoryWorkflow`, `TDesfireApplicationWorkflow`, `TDesfireProvisionWorkflow`, `TCardBatchWorkflow`, `TIso15693MemoryWorkflow`, `TMifareClassicCopyWorkflow`, `TType2MemoryWorkflow`, `TUidProgrammingWorkflow`, `TClassicCredentialWorkflow`, `TNdefTransferWorkflow`, `TMagStripeCopyWorkflow` | Data/UID/stripe copy, backup/restore/compare, ISO15693 selected-memory restore, contact-memory restore, SLE4404/counterchip reviewed program/erase plans, ordered DESFire creation/content/key/access-policy personalization with checked resume, DESFire application provisioning/migration, SIM/USIM contact/SMS import/restore plans and inspection, batch personalization, explicit credential migration and NDEF transfer; progress/card-request events, verified results and partial-write evidence. See [Workflows](docs/WORKFLOWS.md). |
 | **PC/SC readers** | `TSmartCardReader`, `TSmartCardMonitor` | List readers, connect (shared/exclusive, T=0/T=1), read the ATR, exchange APDUs through `ICardTransport` and use explicit PC/SC transactions. Event-driven reader hot-plug and card insertion/removal without polling. |
 | **Protocol toolkit** | Codecs (no component) | ISO 7816 APDU encode/decode (short and extended), ATR parsing with TCK validation, BER-TLV decode/encode with configurable limits, hex/byte helpers, a curated ATR hint catalog and EMV tag metadata. |
 | **Belgian eID** | `TBelgianEIDReader` | Read identity, address, JPEG photo, certificates (RAW/DER) and raw signature files from Belpic 1.7/1.8 contact cards. |
@@ -174,12 +174,12 @@ tools\build-packages.cmd dcc32 design
 ```
 
 Then use **Component > Install Packages > Add** and select `ERDCardDesign.bpl`.
-It registers 48 components:
+It registers 51 components:
 
 | Palette page | Components |
 | --- | --- |
 | **ERD Cards** | `TSmartCardMonitor`, `TSmartCardReader`, `TBelgianEIDReader`, `TICAODocumentReader`, `TSimCardReaderWriter`, `TEMVCardReader`, `TGlobalPlatformCardManager`, `TEmvCalculator`, `TMagStripeReaderWriter`, `TMemoryCardReaderWriter`, `TSleCounterCardReaderWriter`, `TSle4404CardReaderWriter` |
-| **ERD Workflows** | `TSimPhonebookWorkflow`, `TSimSmsWorkflow`, `TSimInspectionWorkflow`, `TContactMemoryWorkflow`, `TDesfireApplicationWorkflow`, `TDesfireProvisionWorkflow`, `TCardBatchWorkflow`, `TIso15693MemoryWorkflow`, `TCardMemoryCopyWorkflow`, `TMifareClassicCopyWorkflow`, `TType2MemoryWorkflow`, `TUidProgrammingWorkflow`, `TClassicCredentialWorkflow`, `TNdefTransferWorkflow`, `TMagStripeCopyWorkflow` |
+| **ERD Workflows** | `TSle4404Workflow`, `TSleCounterWorkflow`, `TDesfirePersonalizationWorkflow`, `TSimPhonebookWorkflow`, `TSimSmsWorkflow`, `TSimInspectionWorkflow`, `TContactMemoryWorkflow`, `TDesfireApplicationWorkflow`, `TDesfireProvisionWorkflow`, `TCardBatchWorkflow`, `TIso15693MemoryWorkflow`, `TCardMemoryCopyWorkflow`, `TMifareClassicCopyWorkflow`, `TType2MemoryWorkflow`, `TUidProgrammingWorkflow`, `TClassicCredentialWorkflow`, `TNdefTransferWorkflow`, `TMagStripeCopyWorkflow` |
 | **ERD Input** | `THidDeviceMonitor`, `TUsbHidInputMonitor`, `TRfidKeyboardReader`, `TRfidHidReportReader`, `TUsbHidReaderWriter`, `TTwn4CardReaderWriter` |
 | **ERD Contactless** | `TTopazCardReader`, `TType1NdefCardReader`, `TFelicaCardReader`, `TType3NdefCardReader`, `TUltralightCCardReaderWriter`, `TCalypsoCardReader`, `TContactlessCardReader`, `TType2NdefCardReader`, `TType4NdefCardReader`, `TIso15693CardReader`, `TIso15693SecurityManager`, `TType5NdefCardReader`, `TDesfireCardReader`, `TType2PasswordCardReader`, `TRawUidProgrammer` |
 
@@ -303,7 +303,7 @@ needs no hardware. Run them with `--help` to see their arguments.
 
 ### VCL demos
 
-`examples/vcl/CardDemos.groupproj` contains 30 Windows VCL applications. Each owns
+`examples/vcl/CardDemos.groupproj` contains 43 Windows VCL applications. Each owns
 its own form and DFM. Hardware demos have an in-app reader/HID/COM-port picker and
 run card work on a background thread. The offline calculator requires no reader;
 the catalog demo receives reader/card snapshots through native events. Write, PIN and management actions require
@@ -319,6 +319,7 @@ and show card offered/removed notifications without running a card operation.
 | `Iso15693WorkflowDemo`, `BatchWorkflowDemo` | Selected ISO15693 backup/compare/restore and per-card NDEF text personalization batches |
 | `ClassicWorkflowDemo`, `Type2WorkflowDemo` | Data backup/copy/compare/restore, snapshot files and source/target selection |
 | `ContactMemoryWorkflowDemo`, `DesfireWorkflowDemo` | SLE/I2C backup/copy/compare/restore; complete ordinary DESFire application backup/migration and explicit application/file provisioning, each with its own form/DFM |
+| `Sle4404WorkflowDemo`, `SleCounterWorkflowDemo`, `DesfirePersonalizationDemo` | Public-memory snapshots, offline one-way plans, explicit erases/carry, checked prefix resume and ordered DESFire creation/content/key/access-policy steps; each owns its form/DFM |
 | `UidWorkflowDemo`, `NdefWorkflowDemo`, `MagStripeWorkflowDemo` | UID, NDEF and stripe capture/copy/template programming through workflow components |
 | `EmvSemanticsDemo` | Offline AIP/AUC/TVR/IAC/CVM List/Results and 9F33/9F40 terminal-capability explanation with explicit EMV version |
 | `EmvCalculatorDemo` | All offline EMV calculations, explicit CVN transaction fields and cryptogram verification |
@@ -525,6 +526,8 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 | `ERD.Card.Memory.Capabilities` | ACS memory capability catalog |
 | `ERD.Card.Memory.Counter` | `TSleCounterCardReaderWriter` |
 | `ERD.Card.Memory.Sle4404` | `TSle4404CardReaderWriter` |
+| `ERD.Card.Memory.Workflow.Sle` | SLE4404/counter snapshots, comparison, offline one-way plans, strict secret-free archives, explicit checked plan execution and resume |
+| `ERD.Card.Contactless.Workflow.Personalization` | Ordered DESFire provision/content/AES-DES key/access-policy steps, fresh key proof and checked completed-prefix resume |
 | `ERD.Card.SIM.Workflow` | Contact/SMS snapshots and archives, restore/import plans, native record evidence and two workflow components |
 | `ERD.Card.SIM.Inspection` | Explicit ICCID/PIN/IMSI/provider/service/application acquisition with per-section availability/status |
 | `ERD.Card.SIM.Data` | SIM/USIM data codecs (files, PIN, ADN, PBR, SMS) |

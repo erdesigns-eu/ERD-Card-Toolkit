@@ -1,6 +1,6 @@
 # VCL examples: current coverage
 
-There are **forty separately executable applications** in
+There are **forty-three separately executable applications** in
 `examples/vcl/CardDemos.groupproj`. Each application has its own `TForm`,
 `.Main.pas`, and `.Main.dfm`. All visual controls are in that application's own
 DFM, including input fields and action controls. Hardware demos include reader
@@ -101,3 +101,11 @@ not perform passive eID or certificate trust validation.
 The projects share the repaired BOM/CRLF and MSBuild conventions. Reproducible
 build and validation commands are in [VCL_DEMOS.md](VCL_DEMOS.md) and
 [VALIDATION.md](VALIDATION.md).
+
+
+SLE4404WorkflowDemo and SleCounterWorkflowDemo independently cover public-memory
+snapshots, offline comparison/program planning, live preview, explicit plan apply
+and checked prefix resume. DesfirePersonalizationDemo covers ordered native
+creation/content/key/access-policy profiles and checked resume. All three own
+forms and DFMs with in-app reader selection, native reader/card event observation
+and background execution. Their shared module is nonvisual only.
