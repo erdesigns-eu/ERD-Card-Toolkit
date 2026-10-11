@@ -227,7 +227,7 @@ begin
       raise EArgumentException.Create('Choose an action and explicit profile.');
     if Length(SnapshotMemo.Text) > 3 * 1024 * 1024 then
       raise EArgumentException.Create('Snapshot/template exceeds three MiB.');
-    
+
     Request.Operation := cdoFamily;
     Request.FamilyName := 'ClassicWorkflowDemo';
     Request.FamilyAction := ActionBox.ItemIndex;
