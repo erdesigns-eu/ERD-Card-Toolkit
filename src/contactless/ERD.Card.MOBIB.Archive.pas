@@ -45,7 +45,7 @@ begin
   Result := nil; if Text = '-' then Exit;
   if (Length(Text) = 0) or (Length(Text) > MaxBytes*2) or Odd(Length(Text)) then Fail;
   for I := 1 to Length(Text) do
-    if not (Text[I] in ['0'..'9','A'..'F','a'..'f']) then Fail;
+    if not CharInSet(Text[I], ['0'..'9','A'..'F','a'..'f']) then Fail;
   Result := HexToBytes(Text);
 end;
 
@@ -103,7 +103,7 @@ var Lines, Fields: TStringList; I, J, N, RecordNumber, Current, FirstFileLine: I
   var K: Integer;
   begin
     if Length(Text) = 0 then Fail;
-    for K := 1 to Length(Text) do if not (Text[K] in ['0'..'9']) then Fail;
+    for K := 1 to Length(Text) do if not CharInSet(Text[K], ['0'..'9']) then Fail;
     if not TryStrToInt(Text,Result) then Fail;
   end;
 begin

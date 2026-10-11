@@ -41,7 +41,7 @@ begin
     (Length(ASnapshot.Units) < 1) or (Length(ASnapshot.Units) > 4096) then
     raise ECardWorkflowError.Create('Invalid archive geometry.');
   for I := 1 to Length(ASnapshot.Layout) do
-    if not (ASnapshot.Layout[I] in ['A' .. 'Z', 'a' .. 'z', '0' .. '9', '-', '_', '.']) then
+    if not CharInSet(ASnapshot.Layout[I], ['A' .. 'Z', 'a' .. 'z', '0' .. '9', '-', '_', '.']) then
       raise ECardWorkflowError.Create('Invalid layout identifier.');
   Width := Length(ASnapshot.Units[0].Data);
   if (Width < 1) or (Width > 256) then raise ECardWorkflowError.Create('Invalid unit width.');
@@ -79,7 +79,7 @@ begin
   if (Length(AText) < 2) or (Length(AText) > 512) or Odd(Length(AText)) then
     raise ECardWorkflowError.Create('Invalid archive hex width.');
   for I := 1 to Length(AText) do
-    if not(AText[I] in ['0' .. '9', 'A' .. 'F', 'a' .. 'f']) then
+    if notCharInSet(AText[I], ['0' .. '9', 'A' .. 'F', 'a' .. 'f']) then
       raise ECardWorkflowError.Create('Invalid archive hex.');
   Result := HexToBytes(AText);
 end;
