@@ -19,7 +19,7 @@ uses
 {$ENDIF}
   ERD.Card.Contactless, ERD.Card.HID, ERD.Card.Bytes, ERD.Card.Transport, ERD.Card.Demo.Job, ERD.Card.SIM.Data, ERD.Card.Demo.Families,
   ERD.Card.Demo.FamilyOperations, ERD.Card.Reader.TWN4, ERD.Card.RFID.Input,
-  ERD.Card.Memory, ERD.Card.Demo.Operations;
+  ERD.Card.Memory, ERD.Card.Demo.Operations, ERD.Card.MOBIB.Archive;
 
 type
   EReachedHardware = class(Exception);
@@ -765,8 +765,19 @@ begin
   Check(Pos('2 records acquired, 1 zero-filled',string(D.Text)) > 0,'Empty file records counted');
   Check(Pos('Holder (2002): not present',string(D.Text)) > 0,'Missing file explained');
   Check((Pos(BytesToHex(Contract),string(D.Text)) > 0) = (RawMode = 1),'Raw hexadecimal display follows selector');
-  Check((Length(D.Artifacts) = 4) and BytesEqual(D.Artifacts[1].Data,Contract),'All bytes exported in either display mode');
+  Check((Length(D.Artifacts) = 5) and BytesEqual(D.Artifacts[1].Data,Contract),'All bytes exported in either display mode');
   Check((S.Position = Length(S.Steps)) and (S.Begins = 1) and (S.Ends = 1),'No validation replay or extra transaction');
+  R := Request(dfMobib,'offline'); R.ReaderName := ''; Put(R,dfMobib,'layout','1');
+  Put(R,dfMobib,'archive',string(TEncoding.UTF8.GetString(D.Artifacts[4].Data)));
+  Put(R,dfMobib,'catalog','P|56|1|0|4|000F|Example provider|Example subscription|Synthetic fixture');
+  CreateCardFamilyOperations(dfMobib,Hardware).Run(R,D);
+  Check(D.Success and (H.Acquires = 1) and (H.Releases = 1),'Offline analysis must not acquire hardware');
+  Check(Pos('Product provider: Example provider',string(D.Text)) > 0,'Offline custom catalog applied');
+  Check(Pos('OFFLINE ANALYSIS',string(D.Text)) > 0,'Offline import distinguished from authenticated read');
+  Check((Length(D.Artifacts) = 5) and BytesEqual(D.Artifacts[1].Data,Contract),'Offline export retains bytes');
+  Put(R,dfMobib,'archive','invalid');
+  try CreateCardFamilyOperations(dfMobib,Hardware).Run(R,D); Check(False,'Invalid offline archive accepted');
+  except on E: EMobibArchiveError do Check((H.Acquires = 1) and (H.Releases = 1),'Invalid archive opened hardware'); end;
  end;
 end;
 
@@ -787,7 +798,7 @@ begin
  Check(D.Success and (S.Position = 11) and (S.Begins = 1) and (S.Ends = 1),'Parsed MOBIB demo executes complete file plan');
  Check((Pos('Data profile: MOBIB 056/001 (matched)',string(D.Text)) > 0) and
    (Pos('Country: Belgium (056)',string(D.Text)) > 0) and (Pos('Network: 001',string(D.Text)) > 0),'Parsed MOBIB demo displays network and match state');
- Check((Length(D.Artifacts) = 1) and (D.Artifacts[0].Name = 'file-2001-record-1.bin'),'Parsed view retains original export');
+ Check((Length(D.Artifacts) = 2) and (D.Artifacts[0].Name = 'file-2001-record-1.bin'),'Parsed view retains original export');
 end;
 
 procedure TestAdditionalFamilies;

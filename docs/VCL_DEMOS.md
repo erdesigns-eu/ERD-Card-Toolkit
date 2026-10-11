@@ -504,3 +504,12 @@ identifies the missing field. Reader discovery works independently of those fiel
 Card components still validate typed values and credentials before communication.
 The executor opens its connection at the first real I/O boundary and runs each
 action once; successful validation does not raise a control-flow exception.
+
+MobibDemo also includes a fifth independent DFM page for offline `.mobib` snapshot
+analysis. Snapshot reads offer a complete `snapshot.mobib` export; select it in
+the artifact dropdown and save it, then load it in the offline page. Live and
+offline pages both accept optional sourced P/L/R catalog mappings. The summary
+shows historical Brussels metro/premetro stop names, known or custom product and
+provider names, mapping sources and exact contract versions/tariffs. A product
+provider is kept separate from the unidentified card issuer. See the catalog and
+archive sections of [MOBIB_CALYPSO.md](MOBIB_CALYPSO.md) for formats and bounds.

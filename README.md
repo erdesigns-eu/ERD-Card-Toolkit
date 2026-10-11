@@ -337,7 +337,7 @@ and show card offered/removed notifications without running a card operation.
 | `UidProgrammingDemo` | All programmable-UID profiles |
 | `DesfireDemo` | Public/AES/DES/3DES reads, writes and transactions; native application/file create-delete with explicit application key type/count; AES/DES/3DES key/access-policy mutations |
 | `EmvDemo` | PSE/PPSE, PDOL, GPO/AFL records, extra record scan, GET DATA, logs and exports |
-| `MobibDemo` | Readable Calypso/MOBIB holder, contract, validation and file summaries; optional raw records, complete exports, SAM authentication and rule assessment |
+| `MobibDemo` | Holder/contract/history summaries, sourced provider/product and historical stop catalogs, complete snapshot export/offline analysis, SAM authentication and rule assessment |
 | `BelgianEidDemo` | Identity, address, photo, certificates and signatures with export |
 | `IcaoDocumentDemo` | BAC/PACE, DG1/DG2/COM/SOD, JPEG preview and JPEG 2000 export |
 
@@ -501,6 +501,9 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 | `ERD.Card.MOBIB.Data` | MOBIB holder/event/contract/counter codec |
 | `ERD.Card.MOBIB.Subscriptions` | MOBIB subscription (contract version) codec |
 | `ERD.Card.MOBIB.Rules` | `TMobibRuleEngine` activation/validity/zone rules |
+| `ERD.Card.MOBIB.Catalog` | Sourced product/provider and event location/route mappings |
+| `ERD.Card.MOBIB.Archive` | Lossless bounded offline snapshot interchange |
+| `ERD.Card.MOBIB.Presentation` | Reusable nonvisual holder/contract/history summaries |
 | `ERD.Card.Memory` | `TMemoryCardReaderWriter` and memory codec |
 | `ERD.Card.Memory.Capabilities` | ACS memory capability catalog |
 | `ERD.Card.Memory.Counter` | `TSleCounterCardReaderWriter` |

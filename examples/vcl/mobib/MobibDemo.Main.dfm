@@ -285,6 +285,24 @@ object MobibDemoForm: TMobibDemoForm
             'Summary only'
             'Summary and raw records')
         end
+        object ActSnapshotCatalogLabel: TLabel
+          Left = 16
+          Top = 386
+          Width = 740
+          Height = 17
+          Caption = 'Optional sourced P/L/R mappings (pipe-separated, one per line)'
+        end
+        object ActSnapshotCatalogMemo: TMemo
+          Left = 16
+          Top = 408
+          Width = 940
+          Height = 120
+          Anchors = [akLeft, akTop, akRight]
+          ScrollBars = ssBoth
+          WordWrap = False
+          MaxLength = 262144
+          TabOrder = 6
+        end
       end
     end
     object ActFileTab: TTabSheet
@@ -935,6 +953,109 @@ object MobibDemoForm: TMobibDemoForm
         end
       end
     end
+    object ActOfflineTab: TTabSheet
+      Caption = 'Analyse saved MOBIB snapshot'
+      ImageIndex = 4
+      object ActOfflineInputs: TScrollBox
+        Left = 0
+        Top = 0
+        Width = 1064
+        Height = 404
+        Align = alClient
+        TabOrder = 0
+        object ActOfflineArchiveLabel: TLabel
+          Left = 16
+          Top = 16
+          Width = 740
+          Height = 17
+          Caption = 'MOBIB-RECORDS 1 snapshot text (paste or load snapshot.mobib)'
+        end
+        object ActOfflineArchiveMemo: TMemo
+          Left = 16
+          Top = 42
+          Width = 940
+          Height = 160
+          Anchors = [akLeft, akTop, akRight]
+          ScrollBars = ssBoth
+          WordWrap = False
+          MaxLength = 262144
+          TabOrder = 0
+        end
+        object ActOfflineLoadButton: TButton
+          Left = 16
+          Top = 212
+          Width = 160
+          Height = 30
+          Caption = 'Load snapshot...'
+          TabOrder = 1
+          OnClick = LoadSnapshotClick
+        end
+        object ActOfflineLayoutLabel: TLabel
+          Left = 16
+          Top = 254
+          Width = 740
+          Height = 17
+          Caption = 'Explicit offline layout'
+        end
+        object ActOfflineLayoutBox: TComboBox
+          Left = 16
+          Top = 276
+          Width = 940
+          Height = 25
+          Style = csDropDownList
+          ItemIndex = 1
+          Text = 'Legacy MOBIB 056/001'
+          TabOrder = 2
+          Items.Strings = (
+            'Raw bytes only'
+            'Legacy MOBIB 056/001')
+        end
+        object ActOfflineRawLabel: TLabel
+          Left = 16
+          Top = 318
+          Width = 740
+          Height = 17
+          Caption = 'Raw record display'
+        end
+        object ActOfflineRawBox: TComboBox
+          Left = 16
+          Top = 340
+          Width = 940
+          Height = 25
+          Style = csDropDownList
+          ItemIndex = 0
+          Text = 'Summary only'
+          TabOrder = 3
+          Items.Strings = (
+            'Summary only'
+            'Summary and raw records')
+        end
+        object ActOfflineCatalogLabel: TLabel
+          Left = 16
+          Top = 386
+          Width = 740
+          Height = 17
+          Caption = 'Optional sourced P/L/R mappings (pipe-separated, one per line)'
+        end
+        object ActOfflineCatalogMemo: TMemo
+          Left = 16
+          Top = 408
+          Width = 940
+          Height = 120
+          Anchors = [akLeft, akTop, akRight]
+          ScrollBars = ssBoth
+          WordWrap = False
+          MaxLength = 262144
+          TabOrder = 4
+        end
+      end
+    end
+  end
+  object ImportDialog: TOpenDialog
+    Filter = 'MOBIB snapshots (*.mobib)|*.mobib|All files (*.*)|*.*'
+    Options = [ofFileMustExist, ofPathMustExist]
+    Left = 96
+    Top = 112
   end
   object ExportDialog: TSaveDialog
     Options = [ofOverwritePrompt, ofPathMustExist]

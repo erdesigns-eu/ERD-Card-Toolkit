@@ -210,6 +210,102 @@ an operator profile supplies their meaning. A purchase date does not by itself
 establish activation or expiry; the offline rule page accepts the evidence and
 operator rules needed to assess those separately.
 
+## Product/provider and journey catalogs
+
+`TMobibCatalog` from `ERD.Card.MOBIB.Catalog` resolves exact country/network,
+contract-version and tariff keys. The built-in dictionary contains the four
+published products listed above. Their provider remains unspecified where the
+product is shared or the source does not identify a provider. A network ID does
+not identify the card issuer. Tariff `000F` has no built-in provider/product name.
+
+Applications can call `RegisterProduct` and `RegisterJourneyLabel`, or import
+pipe-separated mappings with `LoadMappings`. Every custom entry requires a source
+reference. Duplicate journey keys and overlapping product-version ranges are
+rejected. Imports are atomic: any invalid line rolls back all entries from that
+import. Values are bounded; numeric fields are decimal except the four-digit
+hexadecimal tariff. Names/source fields cannot contain pipes or line breaks.
+
+Formats (one mapping per line):
+
+```text
+P|country|network|min-version|max-version|tariff-hex|provider|product|source
+L|country|network|transport-mode|location-decimal|stop-name|source
+R|country|network|15|route-decimal|route-name|source
+```
+
+For example, this is **synthetic application configuration**, not a real tariff
+identification or an included operator rule:
+
+```text
+P|56|1|0|4|000F|Example provider|Example subscription|Synthetic example v1
+L|56|1|15|123|Example bus stop|Synthetic example v1
+R|56|1|15|7|Example bus route|Synthetic example v1
+```
+
+The built-in historical Brussels table contains 69 location identifiers,
+matched separately to metro (0) and premetro (7). Unknown stops keep their raw
+IDs. Bus/tram names and routes require application-supplied mappings; bus route
+numbers remain readable without a name. Historical names do not establish current
+service, the operator that issued a card, or the contract used for a validation.
+The identifiers/names are factual pairs from the MOBIB Extractor historical table,
+exposed by [Cardpeek's Brussels metro data](https://github.com/L1L1/cardpeek/blob/master/dot_cardpeek_dir/scripts/etc/brussels-metro.lua).
+The originating extractor is credited to Gildas Avoine, Tania Martin and
+Jean-Pierre Szikora (UCLouvain); the original layout is also referenced below.
+
+`TMobibPresentation.Summary(DecodedData, Catalog)` is a reusable, nonvisual API.
+It formats purchase amounts, civil dates/times, source references, provider and
+product names, layout versions, tariff IDs, counters and stop/route labels. Passing
+nil uses the built-in catalog. A label does not supply activation/expiry rules;
+`TMobibRuleEngine` remains the explicit policy API for those assessments.
+
+## Offline snapshot analysis
+
+Snapshot reads export **`snapshot.mobib`** alongside individual binary artifacts.
+Select that artifact and save it with the demo's existing export button. The new
+**Analyse saved MOBIB snapshot** DFM page loads or accepts that text, with its own
+layout/raw selectors and optional custom catalog memo. No reader selection,
+card connection or credential is required. The live snapshot page has the same
+catalog input; mappings are validated before card acquisition.
+
+`TMobibArchive.Encode` / `Decode` from `ERD.Card.MOBIB.Archive` preserve directory
+selection bytes, file IDs, selection response bytes/statuses, last-record statuses,
+truncation flags, record numbers and all record bytes. Empty/protected files remain
+present. Offline analysis is marked as imported data and performs no card
+authentication. The format is an offline data interchange, not APDU recording or
+replay, and contains no reader commands or credentials.
+
+```text
+MOBIB-RECORDS 1
+T -
+F 2001 9000 6A83 0 -
+R 2001 1 00082B0008000000000000000000000000000000000000000000000000
+F 2002 6A82 0000 0 -
+```
+
+`T` stores ticketing selection bytes. `F` stores hexadecimal FID, SELECT status,
+last READ status, a 0/1 truncation flag and selection bytes. Subsequent `R` lines
+store the same FID, decimal record number and bytes. A dash represents an empty
+byte array. Only unique nonzero FIDs/record numbers are accepted, with at most
+64 files, 255 records per file, 256 bytes per record, 4096 selection bytes and
+16 MiB ASCII input. Unknown file IDs are preserved without invented interpretation.
+The demo limits pasted/loaded text to 262144 characters/bytes. The example above
+is synthetic; archived status words are preserved evidence, not independently
+verified authenticity. Pre-existing `.bin` files are not automatically identified
+as a whole snapshot; their explicit file/record identifiers and captured statuses
+can be assembled in this documented format.
+
+```pascal
+Raw := TMobibArchive.Decode(SavedText);
+Decoded := TMobibCodec.Decode(Raw, mlLegacy056001);
+Catalog := TMobibCatalog.Create;
+try
+  Catalog.LoadMappings(MySourcedMappings);
+  DisplayText := TMobibPresentation.Summary(Decoded, Catalog);
+finally
+  Catalog.Free;
+end;
+```
+
 ## Native operator rules: activation, validity, and zones
 
 `ERD.Card.MOBIB.Rules` contains `TMobibRuleEngine`. This is executable, offline
