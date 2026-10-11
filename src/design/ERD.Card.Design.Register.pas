@@ -15,6 +15,7 @@ uses
   System.Classes,
 {$ENDIF}
   ERD.Card.EID.Inspection, ERD.Card.EMV.Inspection, ERD.Card.MOBIB.Inspection,
+  ERD.Card.Contactless.Plus,
   ERD.Card.Contactless.Workflow.Ndef.Protected,
   ERD.Card.Contactless.Workflow.Password, ERD.Card.Contactless.Workflow.Security,
   ERD.Card.GlobalPlatform, ERD.Card.EMV.Calculator, ERD.Card.PCSC.Monitor, ERD.Card.HID.Monitor, ERD.Card.SIM.Reader, ERD.Card.SIM.Workflow, ERD.Card.SIM.Inspection,
@@ -49,7 +50,7 @@ begin
   RegisterComponents('ERD Input', [THidDeviceMonitor, TUsbHidInputMonitor,
     TRfidKeyboardReader, TRfidHidReportReader, TUsbHidReaderWriter,
     TTwn4CardReaderWriter]);
-  RegisterComponents('ERD Contactless', [TTopazCardReader, TType1NdefCardReader,
+  RegisterComponents('ERD Contactless', [TMifarePlusCardReaderWriter, TTopazCardReader, TType1NdefCardReader,
     TFelicaCardReader, TType3NdefCardReader, TUltralightCCardReaderWriter,
     TCalypsoCardReader, TContactlessCardReader, TType2NdefCardReader,
     TType4NdefCardReader, TIso15693CardReader, TIso15693SecurityManager,

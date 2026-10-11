@@ -468,3 +468,7 @@ copying credentials or access policies.
 [Ultralight C, protected NDEF and TWN4 adapters](CARD_WORKFLOW_ADAPTERS.md)
 extend the existing nonvisual workflow engines. This increment adds no demos;
 the existing VCL projects remain unchanged.
+
+## MIFARE Plus SL3 ordinary memory
+
+`CreatePlusWorkflowMemory` provides an owned `ICardWorkflowMemory` backend for `TProtectedMemoryWorkflow` backup, copy, compare and restore. Supply an `IMifarePlusSession`, AES/CSPRNG provider, explicit 2K/4K model and `IPlusWorkflowKeys`. Keys are requested per sector/direction and never serialized into archives. Full secure messaging, expected-UID checks, preimage checks and read-back verification apply. Block zero and trailers are excluded; this copies ordinary content rather than card keys/security state. See [MIFARE_PLUS.md](MIFARE_PLUS.md).

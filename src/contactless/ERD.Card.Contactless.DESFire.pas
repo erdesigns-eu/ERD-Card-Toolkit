@@ -15,7 +15,7 @@ uses
   ERD.Card.Transport, ERD.Card.Crypto, ERD.Card.Contactless,
   ERD.Card.Contactless.DESFire.EV2, ERD.Card.Contactless.DESFire.EV1,
   ERD.Card.Crypto.DES, ERD.Card.Contactless.DESFire.DES,
-  ERD.Card.Contactless.Raw;
+  ERD.Card.Contactless.Raw, ERD.Card.Contactless.DESFire.Extensions;
 
 const
   /// <summary>Hard bound for an individual acquired/plain DESFire transfer; wire fields remain 24-bit.</summary>
@@ -190,13 +190,13 @@ type
     MaxRecords: Integer;
   end;
 
-  /// <summary>Owned strict ordinary GetKeySettings result; no inferred extended key-set configuration.</summary>
+  /// <summary>Owned strict GetKeySettings result; optional native key-set extension is retained exactly.</summary>
   TDesfireApplicationSettings = record
     /// <summary>Acquired first key-settings byte, including management policy flags.</summary>
     KeySettings: Byte;
     /// <summary>Acquired second byte: key type, ISO-ID flag and key count.</summary>
     KeyConfiguration: Byte;
-    /// <summary>Independent complete two-byte response.</summary>
+    /// <summary>Independent complete native response, including explicit key-set settings when present.</summary>
     RawBytes: TBytes;
   end;
 
@@ -373,6 +373,69 @@ type
       const ANewKey, AOldKey: TBytes);
   end;
 
+  /// <summary>Optional EV2 AES key-set, configuration and EV3 SDM management; existing interface layouts are unchanged.</summary>
+  /// <remarks>Requires an explicit EV2 AES management session for mutations. No secret key defaults;
+  /// initialization/finalization/configuration establish authenticated acknowledgement, not independent read-back.</remarks>
+  IDesfireExtendedManagement = interface(IDesfireManagement)
+    ['{FA7364B1-1965-4F1F-9A5D-730AB0040AE7}']
+    /// <summary>Creates an AES application with explicit multiple-key-set geometry and verifies exact key settings.</summary>
+    /// <param name="AAid">Nonzero 24-bit target AID; current session must select PICC.</param>
+    /// <param name="ASettings">Explicit application key policy.</param>
+    /// <param name="AKeyCount">One through fourteen keys per set.</param>
+    /// <param name="ASetCount">Two through sixteen native key sets.</param>
+    /// <param name="ASetVersion">Initial active-set version.</param>
+    /// <param name="ARollKey">Explicit roll selector zero through seven, within key count.</param>
+    /// <remarks>Fresh selection verifies settings then restores PICC authentication; failure after creation is uncertain.</remarks>
+    procedure CreateApplicationWithKeySets(const AAid: Cardinal;
+      const ASettings, AKeyCount, ASetCount, ASetVersion, ARollKey: Byte);
+    /// <summary>Reads one supplied inactive-set key version; version alone does not prove possession.</summary>
+    /// <param name="ASet">Exact native set, zero for current or one through fifteen for configured inactive sets.</param>
+    /// <param name="AKeyNumber">Existing key zero through thirteen.</param>
+    /// <returns>Authenticated acquired version byte.</returns>
+    function ReadKeySetKeyVersion(const ASet, AKeyNumber: Byte): Byte;
+    /// <summary>Reads the complete native key-set version list without inferring undocumented state flags.</summary>
+    /// <returns>Independent native version-list bytes.</returns>
+    function ReadKeySetVersionList: TBytes;
+    /// <summary>Initializes an explicit inactive AES set with authenticated acknowledgement.</summary>
+    /// <param name="ASet">Configured inactive set one through fifteen.</param>
+    procedure InitializeAesKeySet(const ASet: Byte);
+    /// <summary>Replaces an inactive AES key and verifies its acquired version; possession is proven after rolling.</summary>
+    /// <param name="ASet">Configured inactive set one through fifteen.</param>
+    /// <param name="AKeyNumber">Explicit existing key zero through thirteen.</param>
+    /// <param name="ANewVersion">Replacement version byte.</param>
+    /// <param name="ANewKey">Exactly sixteen replacement secret bytes.</param>
+    /// <param name="AOldKey">Exactly sixteen supplied stored secret bytes.</param>
+    procedure ChangeInactiveAesKey(const ASet, AKeyNumber, ANewVersion: Byte;
+      const ANewKey, AOldKey: TBytes);
+    /// <summary>Finalizes a configured inactive key set with authenticated acknowledgement.</summary>
+    /// <param name="ASet">Explicit inactive set one through fifteen.</param>
+    /// <param name="AVersion">Explicit final set version.</param>
+    procedure FinalizeKeySet(const ASet, AVersion: Byte);
+    /// <summary>Rolls an inactive set once and proves a supplied key by fresh active-set authentication/version.</summary>
+    /// <param name="ASet">Configured finalized inactive set one through fifteen.</param>
+    /// <param name="AVerifyKeyNumber">Key in the resulting active set used for fresh proof.</param>
+    /// <param name="AVerifyVersion">Expected resulting key version.</param>
+    /// <param name="AVerifyKey">Exactly sixteen supplied resulting active key bytes.</param>
+    /// <remarks>Card lifecycle/finalization rules remain enforced by native status; no roll or authentication retry.</remarks>
+    procedure RollKeySetVerified(const ASet, AVerifyKeyNumber, AVerifyVersion: Byte;
+      const AVerifyKey: TBytes);
+    /// <summary>Applies an explicit supported SetConfiguration option with encrypted command and protected acknowledgement.</summary>
+    /// <param name="AOption">PICC 00, ATS 02, SAK 03, secure-messaging 04 or value-file 09.</param>
+    /// <param name="AData">Exact validated option bytes, independently copied before dispatch.</param>
+    /// <remarks>No general GetConfiguration command exists; this API does not claim independent read-back.</remarks>
+    procedure SetConfigurationAcknowledged(const AOption: Byte; const AData: TBytes);
+    /// <summary>Reads complete standard-data settings with optional EV3 AES SDM fields.</summary>
+    /// <param name="AFile">Explicit native standard-data file zero through thirty-one.</param>
+    /// <returns>Independent validated settings, preserving conditional mirror fields.</returns>
+    function ReadSdmSettings(const AFile: Byte): TDesfireSdmSettings;
+    /// <summary>Changes standard-data SDM/ordinary access configuration against an exact acquired preimage and verifies every setting.</summary>
+    /// <param name="AFile">Existing standard-data file zero through thirty-one.</param>
+    /// <param name="AExpected">Exact previously acquired complete settings bytes.</param>
+    /// <param name="ADesired">Explicit settings with unchanged file geometry; no file data is written.</param>
+    procedure ChangeSdmSettingsVerified(const AFile: Byte; const AExpected: TBytes;
+      const ADesired: TDesfireSdmSettings);
+  end;
+
   /// <summary>Pure strict codecs for wrapped ordinary DESFire native commands and settings.</summary>
   TDesfireCodec = class
   public
@@ -544,6 +607,10 @@ type
     /// <param name="AAid">Explicit native AID, zero for PICC administration.</param>
     /// <returns>Owned management view with all ordinary session read/create/delete operations.</returns>
     function OpenManagementSession(const AAid: Cardinal): IDesfireManagement;
+    /// <summary>Opens explicit EV2 AES key-set/configuration/EV3 SDM management, independent of component lifetime.</summary>
+    /// <param name="AAid">Explicit 24-bit context; zero selects PICC.</param>
+    /// <returns>Retained exclusive management session; callers must Close.</returns>
+    function OpenExtendedManagementSession(const AAid: Cardinal): IDesfireExtendedManagement;
     /// <summary>Opens retained native management with an optional explicit application key-type creation API.</summary>
     /// <param name="AAid">Zero for PICC application management, nonzero for ordinary file management.</param>
     /// <returns>Owned session; close explicitly. Authentication uses this component's selected profile.</returns>
@@ -595,7 +662,7 @@ type
   end;
 
   TDesfireSession = class(TInterfacedObject, IDesfireSession,
-    IDesfireManagement, IDesfireApplicationManagement, IDesfireDesManagement)
+    IDesfireManagement, IDesfireApplicationManagement, IDesfireDesManagement, IDesfireExtendedManagement)
   private
     FEngine: TDesfireCardReader;
     FAid: Cardinal;
@@ -622,6 +689,9 @@ type
       const ACommand: Byte);
     procedure ClearJournal;
     function JournalBytes: Integer;
+    procedure RequireEv2Management;
+    procedure RequireKeySet(const ASet, AKeyNumber: Byte);
+    function KeySetVersion(const ASet, AKeyNumber: Byte): Byte;
     procedure RequireAesManagement;
     procedure RequireNativeManagement;
     function KeyVersion(const AKeyNumber: Byte): Byte;
@@ -665,6 +735,20 @@ type
       const ANewKey, AOldKey: TBytes);
     procedure ChangeAesKey(const AKeyNumber, ANewVersion: Byte;
       const ANewKey, AOldKey: TBytes);
+    procedure CreateApplicationWithKeySets(const AAid: Cardinal;
+      const ASettings, AKeyCount, ASetCount, ASetVersion, ARollKey: Byte);
+    function ReadKeySetKeyVersion(const ASet, AKeyNumber: Byte): Byte;
+    function ReadKeySetVersionList: TBytes;
+    procedure InitializeAesKeySet(const ASet: Byte);
+    procedure ChangeInactiveAesKey(const ASet, AKeyNumber, ANewVersion: Byte;
+      const ANewKey, AOldKey: TBytes);
+    procedure FinalizeKeySet(const ASet, AVersion: Byte);
+    procedure RollKeySetVerified(const ASet, AVerifyKeyNumber, AVerifyVersion: Byte;
+      const AVerifyKey: TBytes);
+    procedure SetConfigurationAcknowledged(const AOption: Byte; const AData: TBytes);
+    function ReadSdmSettings(const AFile: Byte): TDesfireSdmSettings;
+    procedure ChangeSdmSettingsVerified(const AFile: Byte; const AExpected: TBytes;
+      const ADesired: TDesfireSdmSettings);
     function GetOutcome: TDesfireSessionOutcome;
     function GetVerificationSucceeded: Boolean;
     function GetPendingChanges: Boolean;
@@ -2157,11 +2241,8 @@ var
   Wire: TBytes;
 begin
   Result := Default (TDesfireApplicationSettings);
-  Wire := FEngine.Metadata($45, nil, 2, False);
-  if (Length(Wire) <> 2) or ((Wire[1] and $10) <> 0) or
-    ((Wire[1] and $C0) = $C0) or ((Wire[1] and $F) < 1) or
-    ((Wire[1] and $F) > 14) then
-    InvalidDesfire;
+  Wire := FEngine.Metadata($45, nil, 7, False);
+  TDesfireExtensionCodec.ValidateApplicationSettings(Wire);
   Result.KeySettings := Wire[0];
   Result.KeyConfiguration := Wire[1];
   Result.RawBytes := CopyBytes(Wire);
@@ -3077,6 +3158,331 @@ begin
   if (FAccess <> dsaManage) or not FEngine.FAuthenticated or
     (Length(FEngine.FRekey) > 0) then
     InvalidDesfire;
+end;
+
+function TDesfireCardReader.OpenExtendedManagementSession(const AAid: Cardinal): IDesfireExtendedManagement;
+var Session: IDesfireSession;
+begin
+  if FSecurity <> dfsEv2Aes then InvalidDesfire;
+  Session := OpenSession(AAid,dsaManage);
+  if not Supports(Session,IDesfireExtendedManagement,Result) then InvalidDesfire;
+end;
+
+procedure TDesfireSession.RequireEv2Management;
+begin
+  RequireAesManagement;
+  if FEngine.FSecurity <> dfsEv2Aes then InvalidDesfire;
+end;
+procedure TDesfireSession.RequireKeySet(const ASet, AKeyNumber: Byte);
+var S: TDesfireApplicationSettings;
+begin
+  RequireEv2Management;
+  if FAid = 0 then InvalidDesfire;
+  S := AppSettings;
+  if (Length(S.RawBytes) <> 7) or (ASet > 15) or (ASet >= S.RawBytes[4]) or
+    (AKeyNumber >= (S.KeyConfiguration and 15)) or ((S.KeyConfiguration and $C0) <> $80) then InvalidDesfire;
+end;
+function TDesfireSession.KeySetVersion(const ASet, AKeyNumber: Byte): Byte;
+var H,B: TBytes;
+begin
+  if ASet = 0 then begin Result := KeyVersion(AKeyNumber); Exit; end;
+  SetLength(H,2); H[0] := AKeyNumber or $40; H[1] := ASet;
+  B := FEngine.Metadata($64,H,1,False); if Length(B) <> 1 then InvalidDesfire;
+  Result := B[0];
+end;
+function TDesfireSession.ReadKeySetKeyVersion(const ASet, AKeyNumber: Byte): Byte;
+var
+  Before: Integer;
+begin
+  Before := Enter;
+  try
+    try
+      RequireKeySet(ASet,AKeyNumber);
+      Result := KeySetVersion(ASet,AKeyNumber);
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    FInCall := False;
+  end;
+end;
+
+function TDesfireSession.ReadKeySetVersionList: TBytes;
+var
+  Before: Integer;
+begin
+  Before := Enter;
+  try
+    try
+      RequireKeySet(0,0);
+      Result := FEngine.Metadata($64,HexToBytes('4080'),17,False);
+      if Length(Result) = 0 then InvalidDesfire;
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    FInCall := False;
+  end;
+end;
+
+procedure TDesfireSession.InitializeAesKeySet(const ASet: Byte);
+var
+  Before: Integer;
+  H,B: TBytes;
+begin
+  Before := Enter;
+  try
+    try
+      RequireKeySet(ASet,0);
+      if (ASet = 0) or (FEngine.FSessionKeyNumber <> 0) then InvalidDesfire;
+      SetLength(H,2); H[0] := ASet; H[1] := 2;
+      B := FEngine.Send($56,H,nil,dfcMac,0,True);
+      if Length(B) <> 0 then InvalidDesfire;
+      FEngine.FWriteAttempt := False;
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    FInCall := False;
+  end;
+end;
+
+procedure TDesfireSession.FinalizeKeySet(const ASet, AVersion: Byte);
+var
+  Before: Integer;
+  H,B: TBytes;
+begin
+  Before := Enter;
+  try
+    try
+      RequireKeySet(ASet,0);
+      if (ASet = 0) or (FEngine.FSessionKeyNumber <> 0) then InvalidDesfire;
+      SetLength(H,2); H[0] := ASet; H[1] := AVersion;
+      B := FEngine.Send($57,H,nil,dfcMac,0,True);
+      if Length(B) <> 0 then InvalidDesfire;
+      FEngine.FWriteAttempt := False;
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    FInCall := False;
+  end;
+end;
+
+procedure TDesfireSession.ChangeInactiveAesKey(const ASet, AKeyNumber, ANewVersion: Byte;
+  const ANewKey, AOldKey: TBytes);
+var
+  Before: Integer;
+  H,Body,B,NewKey,OldKey,Crc: TBytes; I: Integer;
+begin
+  Before := Enter;
+  try
+    try
+      if (ASet = 0) or (Length(ANewKey) <> 16) or (Length(AOldKey) <> 16) then InvalidDesfire;
+      NewKey := CopyBytes(ANewKey); OldKey := CopyBytes(AOldKey);
+      RequireKeySet(ASet,AKeyNumber);
+      if FEngine.FSessionKeyNumber <> 0 then InvalidDesfire;
+      SetLength(H,2); H[0] := ASet; H[1] := AKeyNumber;
+      SetLength(Body,17); for I := 0 to 15 do Body[I] := NewKey[I] xor OldKey[I]; Body[16] := ANewVersion;
+      Crc := TDesfireEv1Codec.Crc32(NewKey); Body := Joined(Body,Crc);
+      B := FEngine.Send($C6,H,Body,dfcFull,0,True);
+      if Length(B) <> 0 then InvalidDesfire;
+      if KeySetVersion(ASet,AKeyNumber) <> ANewVersion then InvalidDesfire;
+      FEngine.FWriteAttempt := False;
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    TCardCrypto.Clear(NewKey); TCardCrypto.Clear(OldKey); TCardCrypto.Clear(Body); TCardCrypto.Clear(Crc);
+    FInCall := False;
+  end;
+end;
+
+procedure TDesfireSession.RollKeySetVerified(const ASet, AVerifyKeyNumber, AVerifyVersion: Byte;
+  const AVerifyKey: TBytes);
+var
+  Before: Integer;
+  Key,H,Packet,B,V: TBytes; S: TDesfireApplicationSettings;
+begin
+  Before := Enter;
+  try
+    try
+      if (ASet = 0) or (Length(AVerifyKey) <> 16) then InvalidDesfire;
+      Key := CopyBytes(AVerifyKey);
+      RequireKeySet(ASet,AVerifyKeyNumber);
+      S := AppSettings;
+      if FEngine.FSessionKeyNumber <> (S.RawBytes[6] and 7) then InvalidDesfire;
+      H := OneByte(ASet);
+      Packet := TDesfireEv2Codec.EncodeCommand(FEngine.FProvider,FEngine.FKeys,FEngine.FTi,
+        FEngine.FCounter,$55,H,nil,dfcMac);
+      B := FEngine.Exchange($55,Packet,8,True); Inc(FEngine.FCounter);
+      if Length(B) <> 0 then V := TDesfireEv2Codec.DecodeResponse(FEngine.FProvider,
+        FEngine.FKeys,FEngine.FTi,FEngine.FCounter,B,dfcMac,0);
+      if Length(V) <> 0 then InvalidDesfire;
+      FEngine.FAuthenticated := False; FEngine.FKeyNumber := AVerifyKeyNumber;
+      TCardCrypto.Clear(FEngine.FKey); FEngine.FKey := CopyBytes(Key);
+      FEngine.Authenticate(False);
+      if KeyVersion(AVerifyKeyNumber) <> AVerifyVersion then InvalidDesfire;
+      FEngine.FWriteAttempt := False;
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    TCardCrypto.Clear(Key); TCardCrypto.Clear(Packet);
+    FInCall := False;
+  end;
+end;
+
+procedure TDesfireSession.CreateApplicationWithKeySets(const AAid: Cardinal;
+  const ASettings, AKeyCount, ASetCount, ASetVersion, ARollKey: Byte);
+var
+  Before: Integer;
+  H,B,Expected: TBytes; S: TDesfireApplicationSettings; Ids: TDesfireApplicationIds; I: Integer;
+begin
+  Before := Enter;
+  try
+    try
+      H := TDesfireExtensionCodec.ApplicationHeader(AAid,ASettings,AKeyCount,ASetCount,ASetVersion,ARollKey);
+      RequireEv2Management; if FAid <> 0 then InvalidDesfire; RequireManagement;
+      Ids := TDesfireCodec.ApplicationIds(FEngine.Metadata($6A,nil,3072,False));
+      for I := 0 to High(Ids) do if Ids[I] = AAid then InvalidDesfire;
+      B := FEngine.Metadata($CA,H,0,True);
+      if Length(B) <> 0 then InvalidDesfire;
+      FEngine.FAuthenticated := False;
+      B := FEngine.Exchange($5A,TDesfireCodec.ApplicationBytes(AAid),0,False);
+      if Length(B) <> 0 then InvalidDesfire;
+      S := AppSettings; Expected := Copy(H,3,7);
+      if not BytesEqual(S.RawBytes,Expected) then InvalidDesfire;
+      B := FEngine.Exchange($5A,TDesfireCodec.ApplicationBytes(0),0,False);
+      if Length(B) <> 0 then InvalidDesfire;
+      FEngine.Authenticate(False); FEngine.FWriteAttempt := False;
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    FInCall := False;
+  end;
+end;
+
+procedure TDesfireSession.SetConfigurationAcknowledged(const AOption: Byte; const AData: TBytes);
+var
+  Before: Integer;
+  Data,B: TBytes;
+begin
+  Before := Enter;
+  try
+    try
+      TDesfireExtensionCodec.ValidateConfiguration(AOption,AData);
+      RequireEv2Management;
+      if (FEngine.FSessionKeyNumber <> 0) or ((AOption <> 9) and (FAid <> 0)) or
+        ((AOption = 9) and (FAid = 0)) then InvalidDesfire;
+      Data := CopyBytes(AData);
+      B := FEngine.Send($5C,OneByte(AOption),Data,dfcFull,0,True);
+      if Length(B) <> 0 then InvalidDesfire;
+      FEngine.FWriteAttempt := False;
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    TCardCrypto.Clear(Data);
+    FInCall := False;
+  end;
+end;
+
+function TDesfireSession.ReadSdmSettings(const AFile: Byte): TDesfireSdmSettings;
+var
+  Before: Integer;
+  B: TBytes;
+begin
+  Before := Enter;
+  try
+    try
+      if (FAid = 0) or (AFile > 31) then InvalidDesfire;
+      B := FEngine.Metadata($F5,OneByte(AFile),40,False);
+      Result := TDesfireExtensionCodec.DecodeSdmSettings(B);
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    FInCall := False;
+  end;
+end;
+
+procedure TDesfireSession.ChangeSdmSettingsVerified(const AFile: Byte; const AExpected: TBytes;
+  const ADesired: TDesfireSdmSettings);
+var
+  Before: Integer;
+  B,Expected,Body,After: TBytes; Original: TDesfireSdmSettings; S: TDesfireApplicationSettings; I,K: Integer;
+begin
+  Before := Enter;
+  try
+    try
+      Expected := TDesfireExtensionCodec.EncodeSdmSettings(ADesired);
+      Original := TDesfireExtensionCodec.DecodeSdmSettings(AExpected);
+      RequireEv2Management; if (FAid = 0) or (AFile > 31) then InvalidDesfire;
+      S := AppSettings; K := S.KeyConfiguration and 15;
+      for I := 0 to 3 do if (((ADesired.AccessRights shr (I*4)) and 15) < 14) and
+        (((ADesired.AccessRights shr (I*4)) and 15) >= K) then InvalidDesfire;
+      if (ADesired.FileOption and $40) <> 0 then begin
+        for I := 0 to 3 do if I <> 1 then
+          if (((ADesired.SdmAccessRights shr (I*4)) and 15) < 14) and
+            (((ADesired.SdmAccessRights shr (I*4)) and 15) >= K) then InvalidDesfire;
+      end;
+      if (ADesired.FileBytes <> Original.FileBytes) or not Granted(Byte(Original.AccessRights and 15)) then InvalidDesfire;
+      B := FEngine.Metadata($F5,OneByte(AFile),40,False);
+      if not BytesEqual(B,Original.RawBytes) then InvalidDesfire;
+      if BytesEqual(B,Expected) then Exit;
+      Body := Copy(Expected,1,3); Body := Joined(Body,Copy(Expected,7,Length(Expected)-7));
+      B := FEngine.Send($5F,OneByte(AFile),Body,dfcFull,0,True);
+      After := FEngine.Metadata($F5,OneByte(AFile),40,False);
+      if not BytesEqual(After,Expected) then InvalidDesfire;
+      FEngine.FWriteAttempt := False;
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    FInCall := False;
+  end;
 end;
 
 procedure TDesfireSession.RequireAesManagement;

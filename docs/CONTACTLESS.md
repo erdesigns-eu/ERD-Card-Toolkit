@@ -27,7 +27,9 @@ hardware. Assign both a connected `ICardTransport` and an explicitly matching
 | Public Type 5 NDEF memory | `TType5NdefCardReader`: initialized E1/E2 CC/TLV mapping, lock preflight and verified length-last updates |
 | Native DESFire files | `TDesfireCardReader`: discovery, ordinary data/value/record reads and verified standard-data writes; explicit EV1/EV2 AES authentication, Plain/MACed/Full messaging and EV2 NonFirst; retained owned backup/value/record transactions, commit/abort, authenticated directories and ordinary application/file management |
 | Topaz 96/512 and initialized Type 1 NDEF | `TTopazCardReader`, `TType1NdefCardReader`; exact HR/UID, full memory/locks, verified user/NDEF writes via explicit ACR122U/PN532 Jewel/CIU adapter; [scope](TOPAZ_TYPE1.md) |
-| Additional DESFire security/TMAC/key management, Plus, other programmable UID families | Separate profiles still pending |
+| MIFARE Plus SL3 | Native supplied-key AES 2K/4K ordinary-block reads and verified writes, ACR122 ISO14443-4 adapter and protected-memory workflows; see [Plus](MIFARE_PLUS.md) |
+| DESFire extended management | EV2 AES key sets, explicit configuration subset, verified SDM settings and offline SDM crypto; see [extensions](DESFIRE_EXTENDED.md) |
+| Additional DESFire LRP/TMAC/extended rights and programmable UID families | Separate profiles still pending |
 
 The Mini model supplies the original memory layout, not a tested Mini/reader
 compatibility claim. This release has synthetic command tests and no physical reader
@@ -213,7 +215,7 @@ including already formatted public DESFire NDEF files. Native DESFire access is 
 separate [component and EV1/EV2 AES profiles](DESFIRE.md), with maintained crypto backends.
 Further families include other Type 2
 security variants, additional ISO 15693 authentication/provisioning dialects, further programmable UID profiles and native
-DESFire LRP, TMAC receipts, EV2 key sets and extended configuration/rights.
+DESFire LRP, TMAC receipts and multi-access rights. EV2 key sets, the documented configuration subset and SDM settings are available through the optional extended interface.
 Basic EV1/EV2 AES and explicit DES/3DES key policy, rotation and ordinary-file access administration are
 implemented; see [DESFire](DESFIRE.md).
 Owned ordinary transactions and basic create/delete management are implemented; see [DESFIRE.md](DESFIRE.md).

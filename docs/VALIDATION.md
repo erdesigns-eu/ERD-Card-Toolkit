@@ -959,3 +959,9 @@ findings. Registration includes 57 palette components. No demo files changed in
 this increment. These Linux/static tests do not substitute for the Delphi compiler
 or physical reader/card validation; the pre-existing TLV constructor visibility
 warning remains outside this change.
+
+## DESFire key sets, configuration/SDM and native MIFARE Plus (2026-10-11)
+
+The full `tools/run_core_tests.py` regression run passed. The new suite passed **48,029 assertions** with range/overflow checks and no heap leaks. Seventeen independently generated literal transcripts cover native Plus MACed/Full authentication, reads, writes, 4K high sectors, the ACR122 ISO14443-4 chain and DESFire key-set/configuration/SDM management. Failure injection covers every transcript I/O boundary and protected response bits, UID/preimage refusal, frozen input buffers and cleanup uncertainty. Published NXP AN12196 SDM PICC, session-key, MAC and encrypted-file vectors also pass. Plus backup/compare/restore exercises the existing protected-memory engine.
+
+The reproducible generator is `tools/generate_desfire_plus_fixtures.py --check`. All 21 source checkers passed. Palette registration covers **58 components** and inactive registration/streaming covers **59 cases**. Distribution validation reports **62 projects, 2 groups and 48 DFM files**, with no findings. No demo files were changed in this increment. These results establish synthetic protocol/ABI behavior, not physical device certification. Existing unrelated compiler notes/warnings have not been suppressed.
