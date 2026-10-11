@@ -472,3 +472,17 @@ the existing VCL projects remain unchanged.
 ## MIFARE Plus SL3 ordinary memory
 
 `CreatePlusWorkflowMemory` provides an owned `ICardWorkflowMemory` backend for `TProtectedMemoryWorkflow` backup, copy, compare and restore. Supply an `IMifarePlusSession`, AES/CSPRNG provider, explicit 2K/4K model and `IPlusWorkflowKeys`. Keys are requested per sector/direction and never serialized into archives. Full secure messaging, expected-UID checks, preimage checks and read-back verification apply. Block zero and trailers are excluded; this copies ordinary content rather than card keys/security state. See [MIFARE_PLUS.md](MIFARE_PLUS.md).
+
+
+## Plus personalization and credential replacement
+
+Alongside the protected-memory adapter, `TMifarePlusCardReaderWriter` exposes
+`RotateSectorKeyVerified` and `PersonalizeAndCommitSl3Verified` as complete native
+pipelines for application workers. They freeze caller inputs before I/O, retain
+identity across fresh sessions, require explicit mutation acknowledgement and
+report post-dispatch uncertainty. Personalization returns credential-free counts
+only after all selected key/data proofs. The supplied personalization entries contain caller-owned secrets; returned evidence
+and ordinary memory archives contain no keys.
+See [MIFARE_PLUS.md](MIFARE_PLUS.md) for the direct-SL3 commit profile and
+acknowledgement-versus-verification contract. These calls do not add automatic
+resume or batch serialization of secret plans.

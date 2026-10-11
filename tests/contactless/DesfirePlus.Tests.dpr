@@ -19,6 +19,7 @@ type
     Pairs: TExtendedPairs; Borrowed: TBytes; MutateCall: Integer;
     Calls,Begins,Ends,Writes,FailCall,CorruptCall,CorruptByte,CorruptBit: Integer;
     Active,EndFails,WrongUid: Boolean;
+    BeginFailure, EndFailure, ChangedUidBegin: Integer;
     function Exchange(const B: TBytes): TBytes;
     procedure BeginTransaction;
     procedure EndTransaction;
@@ -40,11 +41,16 @@ begin Result:=Base.DecryptCbc(K,V,D); end;
 function TFixed.RandomBytes(const N: Integer): TBytes;
 begin Check(N=16,'Bounded fresh nonce request'); Result:=HexToBytes('B04D0787C93EE0CC8CACC8E86F16C6FE'); end;
 procedure TWire.BeginTransaction;
-begin Check(not Active,'Exclusive acquisition'); Active:=True; Inc(Begins); end;
+begin
+  Check(not Active,'Exclusive acquisition');
+  if Begins + 1 = BeginFailure then
+    raise ECardTransportError.Create('Synthetic acquisition lost');
+  Active:=True; Inc(Begins);
+end;
 procedure TWire.EndTransaction;
-begin Check(Active,'Owned release'); Active:=False; Inc(Ends); if EndFails then raise ECardTransportError.Create('Synthetic release lost'); end;
+begin Check(Active,'Owned release'); Active:=False; Inc(Ends); if EndFails or (Ends=EndFailure) then raise ECardTransportError.Create('Synthetic release lost'); end;
 function TWire.BeginSession: TBytes;
-begin BeginTransaction; Result:=HexToBytes('04112233445566'); if WrongUid then Result[0]:=$05; end;
+begin BeginTransaction; Result:=HexToBytes('04112233445566'); if WrongUid or (Begins=ChangedUidBegin) then Result[0]:=$05; end;
 procedure TWire.EndSession;
 begin EndTransaction; end;
 function TWire.ExchangeNative(const B: TBytes): TBytes;
@@ -358,10 +364,228 @@ begin
     else Check(not Failed and (Sector=Expected),'Plus exact 4K sector mapping');
   end;
 end;
+function PersonalizationEntries: TMifarePlusPersonalizationEntries;
+var
+  I: Integer;
+begin
+  Result := nil;
+  SetLength(Result, 5);
+  Result[0].Address := $9000;
+  Result[1].Address := $9001;
+  Result[2].Address := $9003;
+  for I := 0 to 2 do
+    Result[I].Data := HexToBytes('00000000000000000000000000000000');
+  Result[3].Address := $4000;
+  Result[3].Data := HexToBytes('112233445566778899AABBCCDDEEFF00');
+  Result[4].Address := 2;
+  Result[4].Data := HexToBytes('101112131415161718191A1B1C1D1E1F');
+end;
+
+procedure RunPlusManagement(const Personalize: Boolean; const Target: Word;
+  const Fail, Corrupt, ByteIndex, BitIndex, BeginFail, EndFail, UidChange: Integer;
+  const Freeze: Boolean);
+var
+  Wire: TWire;
+  Session: IMifarePlusSession;
+  Reader: TMifarePlusCardReaderWriter;
+  Entries: TMifarePlusPersonalizationEntries;
+  Evidence: TMifarePlusPersonalizationResult;
+  NewKey, OriginalKey: TBytes;
+  Failed, Uncertain, ExpectedUncertain: Boolean;
+  I: Integer;
+begin
+  Wire := TWire.Create;
+  Session := Wire;
+  if Personalize then
+    Wire.Pairs := PlusPersonalize
+  else
+    case Target of
+      $4000: Wire.Pairs := PlusRotate4000;
+      $4001: Wire.Pairs := PlusRotate4001;
+      $4040: Wire.Pairs := PlusRotate4040;
+    end;
+  Wire.FailCall := Fail;
+  Wire.CorruptCall := Corrupt;
+  Wire.CorruptByte := ByteIndex;
+  Wire.CorruptBit := BitIndex;
+  Wire.BeginFailure := BeginFail;
+  Wire.EndFailure := EndFail;
+  Wire.ChangedUidBegin := UidChange;
+  Reader := TMifarePlusCardReaderWriter.Create(nil);
+  Entries := PersonalizationEntries;
+  NewKey := HexToBytes('112233445566778899AABBCCDDEEFF00');
+  OriginalKey := HexToBytes('00000000000000000000000000000000');
+  Failed := False;
+  Uncertain := False;
+  try
+    Reader.Session := Session;
+    Reader.CryptoProvider := TFixed.Create;
+    Reader.Key := OriginalKey;
+    Reader.ExpectedUid := HexToBytes('04112233445566');
+    Reader.KeyNumber := $4000;
+    if Target = $4040 then
+    begin
+      Reader.Model := mpm4K;
+      Reader.KeyNumber := Target;
+    end;
+    Reader.Communication := mpcMac; // Credential writes must still be encrypted.
+    if Freeze then
+    begin
+      Wire.MutateCall := 1;
+      if Personalize then
+        Wire.Borrowed := Entries[3].Data
+      else
+        Wire.Borrowed := NewKey;
+    end;
+    try
+      if Personalize then
+      begin
+        Evidence := Reader.PersonalizeAndCommitSl3Verified(Entries, True);
+        Check(Evidence.AcknowledgedEntries=5, 'Exact acknowledged SL0 entry count');
+        Check(Evidence.VerifiedKeys=3, 'Fresh sector/master/configuration key proofs');
+        Check(Evidence.VerifiedBlocks=1, 'Fresh SL3 data proof');
+        Check(Evidence.Sl3Verified, 'SL3 only proven after complete release');
+      end
+      else
+        Reader.RotateSectorKeyVerified(Target, NewKey, True);
+    except
+      on E: Exception do
+      begin
+        Failed := True;
+        Uncertain := E is EContactlessWriteUncertain;
+      end;
+    end;
+    Check(not Reader.Busy and not Wire.Active, 'Management releases exclusive ownership');
+    Check(Wire.Begins=Wire.Ends, 'Every acquired management session released');
+    Check(Reader.Communication=mpcMac, 'Caller mode restored after encrypted management');
+    Check(BytesEqual(Reader.Key,OriginalKey), 'Caller configured credentials restored');
+    Check(BytesToHex(Reader.ExpectedUid)='04112233445566', 'Caller identity retained');
+    if (Fail=0) and (Corrupt=0) and (BeginFail=0) and (EndFail=0) and (UidChange=0) then
+    begin
+      Check(not Failed, 'Independent management transcript succeeds');
+      Check(Wire.Calls=Length(Wire.Pairs), 'Complete write and fresh proof transcript');
+    end
+    else
+    begin
+      Check(Failed, 'Injected management failure observable');
+      if Personalize then
+        ExpectedUncertain := Wire.Calls > 0
+      else
+        ExpectedUncertain := Wire.Calls >= 3;
+      Check(Uncertain=ExpectedUncertain, 'Mutation uncertainty persists across fresh sessions');
+      Check(Wire.Calls<=Length(Wire.Pairs), 'No management replay/fallback');
+    end;
+  finally
+    Reader.Free;
+    TCardCrypto.Clear(NewKey);
+    TCardCrypto.Clear(OriginalKey);
+    for I := 0 to High(Entries) do
+      TCardCrypto.Clear(Entries[I].Data);
+  end;
+end;
+
+procedure TestPlusManagement;
+var
+  Personalize: Boolean;
+  Target: Word;
+  Pairs: TExtendedPairs;
+  I, J, N, K: Integer;
+  Entries: TMifarePlusPersonalizationEntries;
+  Wire: TWire;
+  Session: IMifarePlusSession;
+  Reader: TMifarePlusCardReaderWriter;
+  Failed: Boolean;
+  Evidence: TMifarePlusPersonalizationResult;
+begin
+  for Personalize := False to True do
+    for K := 0 to 2 do
+    begin
+      Target := $4000;
+      if K=1 then Target := $4001;
+      if K=2 then Target := $4040;
+      if Personalize then
+      begin
+        if K<>0 then Continue;
+        Pairs := PlusPersonalize;
+        N := 6;
+      end
+      else
+      begin
+        case Target of
+          $4000: Pairs := PlusRotate4000;
+          $4001: Pairs := PlusRotate4001;
+          $4040: Pairs := PlusRotate4040;
+        end;
+        N := 2;
+      end;
+      RunPlusManagement(Personalize,Target,0,0,0,0,0,0,0,False);
+      RunPlusManagement(Personalize,Target,0,0,0,0,0,0,0,True);
+      for I := 1 to Length(Pairs) do
+        RunPlusManagement(Personalize,Target,I,0,0,0,0,0,0,False);
+      for I := 1 to N do
+      begin
+        RunPlusManagement(Personalize,Target,0,0,0,0,I,0,0,False);
+        RunPlusManagement(Personalize,Target,0,0,0,0,0,I,0,False);
+        RunPlusManagement(Personalize,Target,0,0,0,0,0,0,I,False);
+      end;
+      // Every bit of plaintext native acknowledgements and protected key-write MAC.
+      if Personalize then
+        for I := 1 to 6 do
+          for J := 0 to 7 do
+            RunPlusManagement(True,Target,0,I,0,J,0,0,0,False)
+      else
+        for J := 0 to 71 do
+          RunPlusManagement(False,Target,0,3,J div 8,J mod 8,0,0,0,False);
+      // Corrupt all bits of each encrypted first nonce block in fresh proofs.
+      for I := 1 to Length(Pairs) do
+        if (Copy(Pairs[I-1].Command,1,2)='72') and
+          ((Personalize and (I>6)) or (not Personalize and (I=5))) then
+          for J := 8 to 135 do
+            RunPlusManagement(Personalize,Target,0,I,J div 8,J mod 8,0,0,0,False);
+      if Personalize then
+        for J := 0 to 199 do
+          RunPlusManagement(True,Target,0,Length(Pairs),J div 8,J mod 8,0,0,0,False);
+    end;
+  // Every invalid plan must fail before activation, never by trying WritePerso.
+  for K := 0 to 8 do
+  begin
+    Entries := PersonalizationEntries;
+    Wire := TWire.Create;
+    Session := Wire;
+    Reader := TMifarePlusCardReaderWriter.Create(nil);
+    try
+      Reader.Session := Session;
+      Reader.CryptoProvider := TFixed.Create;
+      Reader.ExpectedUid := HexToBytes('04112233445566');
+      case K of
+        0: Entries[0].Address := $9002;
+        1: Entries[4].Address := 0;
+        2: Entries[4].Address := 3;
+        3: Entries[4].Address := 128;
+        4: Entries[4].Address := $4000;
+        5: SetLength(Entries[3].Data,15);
+        6: Reader.ExpectedUid := nil;
+        7: Entries[3].Address := $4040;
+      end;
+      Failed := False;
+      try
+        Evidence := Reader.PersonalizeAndCommitSl3Verified(Entries,K<>8);
+        Check(not Evidence.Sl3Verified,'Invalid plan cannot produce successful evidence');
+      except on E: EMifarePlusError do Failed := True; end;
+      Check(Failed,'Invalid SL0 plan refused');
+      Check(Wire.Calls=0,'Invalid SL0 plan never probes with writes');
+      Check(Wire.Begins=0,'Invalid SL0 plan fails before acquisition');
+    finally
+      Reader.Free;
+      for I := 0 to High(Entries) do TCardCrypto.Clear(Entries[I].Data);
+    end;
+  end;
+end;
+
 begin
   try
 {$IFDEF MSWINDOWS} Base:=TCardWindowsAesProvider.Create; {$ELSE} Base:=TCardOpenSslAesProvider.Create; {$ENDIF}
-    TestCodecs; TestDf; TestPlus; TestPlusWorkflow; TestAcr; TestPlus4K; TestFrozenInputs;
+    TestCodecs; TestDf; TestPlus; TestPlusWorkflow; TestAcr; TestPlus4K; TestFrozenInputs; TestPlusManagement;
     Writeln('PASS: ',Checks,' DESFire extension/Plus assertions.');
   except on E: Exception do begin Writeln(E.ClassName,': ',E.Message); ExitCode:=1; end; end;
 end.

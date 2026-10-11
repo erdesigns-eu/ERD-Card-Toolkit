@@ -9,6 +9,8 @@ ERD Contactless palette and starts inactive.
 | `ReadUid` | Fresh acquisition and successful release, without authentication |
 | `ReadBlocks` | Fresh mutual AES authentication; 1–15 ordinary blocks in one sector; response MAC checked before decrypting |
 | `WriteBlockVerified` | Fresh authentication, exact sixteen-byte prior-state comparison, one write, protected acknowledgement and read-back proof |
+| `RotateSectorKeyVerified` | Encrypted replacement authorized by the configured sector key, release and fresh same-card target-key authentication |
+| `PersonalizeAndCommitSl3Verified` | Frozen explicit SL0 entries, one commit and fresh selected SL3 key/data proofs |
 | MACed mode | Plain data, command and response MACs |
 | Full mode (default) | AES-CBC data, command and response MACs |
 
@@ -73,11 +75,69 @@ A failure after a write was dispatched, including failed MAC/read-back or releas
 raises `EContactlessWriteUncertain`. Acknowledgement loss must not trigger a retry.
 Partial workflow results retain the existing engine's completed/uncertain evidence.
 
+## Sector AES key replacement
+
+`RotateSectorKeyVerified(TargetKey, NewKey, True)` uses the configured sector
+key as authority to replace key A or B in that same sector. Native access policy
+determines whether that key may perform the change. The target address is checked
+against the selected 2K/4K model before activation. The command always encrypts
+the new key, even when ordinary data communication is configured as MACed.
+
+After protected acknowledgement, the old RF session is released. The acquired UID
+is pinned and a fresh session authenticates with the replacement target key.
+Successful release completes proof. Caller-configured key, key number, UID and
+communication mode are restored; explicitly update your key store and component
+configuration after success. The component does not overwrite application-owned
+credentials. Callers clear their supplied replacement-key arrays after use.
+
+A write or later proof/release failure raises `EContactlessWriteUncertain`.
+Permission/authentication/profile failures before write dispatch are ordinary
+errors. There is no retry or rollback. Authentication proves the new key, without
+claiming independent read-back of secret key memory.
+
+## SL0 personalization and commit
+
+`PersonalizeAndCommitSl3Verified(Entries, True)` is an application-callable
+personalization pipeline. It requires an explicit nonempty `ExpectedUid`, an
+AES/CSPRNG provider and a card already in SL0 using ISO14443-4 activation whose
+native CommitPerso results directly in SL3. The ACR122 backend never tries to
+identify the level by writing to a card. There is no SL1/SL2 fallback.
+
+Each `TMifarePlusPersonalizationEntry` contains an explicit sixteen-byte value and
+native address. The entire ordered plan is copied and validated before I/O:
+
+- Required supplied Card Master ($9000), Card Configuration ($9001) and L3 Switch
+  ($9003) keys; no generated or default credentials.
+- At least one supplied sector AES key; addresses must fit the explicit model.
+- Optional ordinary data blocks, each with a supplied matching sector key in the plan.
+- No duplicate addresses, block zero, trailers or unrecognized configuration addresses.
+
+Include every additional sector key/data entry needed by your application. The
+component verifies the selected entries; it does not infer or complete the rest
+of a card's security policy. Keys belong to the caller and must be cleared after use.
+
+WritePerso ($A8) is **plaintext** in SL0. Each native acknowledgement is counted;
+no secret-memory read-back is invented. CommitPerso ($AA) is sent once, after all
+selected writes are acknowledged. The session is released and SL3 is established
+by fresh sector-key authentication. Every supplied sector/master/configuration
+key then receives a fresh authentication proof, and every supplied ordinary data
+block receives MAC-verified encrypted read-back. Every acquisition checks the
+expected UID. Switch key $9003 remains acknowledgement-only.
+
+The returned `TMifarePlusPersonalizationResult` contains only acknowledged-entry,
+verified-key and verified-block counts plus `Sl3Verified`. It is returned only
+after all selected proofs and releases succeed. Failures after the first WritePerso
+dispatch raise `EContactlessWriteUncertain`, including failures during later fresh
+sessions. There is no automatic resume, re-personalization, commit replay or
+rollback of acknowledged steps. Application operators must inspect uncertain state
+before choosing a subsequent operation.
+
 ## Scope and validation
 
-SL0/SL1/SL2 transitions, personalization, key replacement, value commands,
-manufacturer/trailer programming and Plus EV2 LRP negotiation are not implemented
-by this profile. Ordinary-content copying does not copy a card's keys or security state.
+SL1/SL2 transition protocols, value commands, manufacturer/trailer/configuration
+programming and Plus EV2 LRP negotiation are not implemented by this profile.
+SL0 personalization/commit applies only to an explicitly selected ISO14443-4
+profile whose native commit results directly in SL3. Ordinary-content copying does not copy a card's keys or security state.
 
 Literal independently generated transcripts cover both messaging modes, full
 sixteen-bit counters, 4K high sectors, authentication, writes, reader acquisition,

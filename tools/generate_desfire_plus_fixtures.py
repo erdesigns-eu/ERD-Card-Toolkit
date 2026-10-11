@@ -19,9 +19,9 @@ def apdu(cmd,d=b''):return bytes([0x90,cmd,0,0])+ (bytes([len(d)])+d if d else b
 def evkeys(k):
  v=bytes.fromhex('A55A00010080')+A[:2]+bytes(x^y for x,y in zip(A[2:8],B[:6]))+B[6:]+A[8:]
  return cmac(k,v),cmac(k,bytes.fromhex('5AA5')+v[2:])
-def auth(pairs,key=K,plus=False):
+def auth(pairs,key=K,plus=False,slot=0x4000):
  if plus:
-  pairs.append((bytes.fromhex('70004000'),b'\x90'+enc(key,Z,B)))
+  pairs.append((b'\x70'+le(slot)+b'\x00',b'\x90'+enc(key,Z,B)))
   pairs.append((b'\x72'+enc(key,Z,A+B[1:]+B[:1]),b'\x90'+enc(key,Z,TI+A[1:]+A[:1]+bytes(12))))
  else:
   pairs.append((apdu(0x71,b'\0\0'),enc(key,Z,B)+bytes.fromhex('91AF')))
@@ -84,6 +84,27 @@ for writing in [False,True]:
   packet=h+mac(PM,h[:1]+le(wc)+TI+h[1:]);wc+=1
   p.append((packet,b'\x90'+mac(PM,b'\x90'+le(wc)+TI)));high_read(DATA,1)
  vectors['Plus4K'+('Write' if writing else 'Read')]=p
+# SL3 sector-key replacement: secure encrypted write at the full 16-bit key address,
+# protected acknowledgement, RF release, fresh mutual authentication with the new key.
+for target in [0x4000, 0x4001, 0x4040]:
+ p=[];authority=target if target==0x4040 else 0x4000
+ auth(p,plus=True,slot=authority)
+ cipher=enc(PE,TI+bytes(12),NEW);h=b'\xA1'+le(target)+cipher
+ p.append((h+mac(PM,h[:1]+le(0)+TI+h[1:]),b'\x90'+mac(PM,b'\x90'+le(1)+TI)))
+ auth(p,key=NEW,plus=True,slot=target)
+ vectors['PlusRotate'+hex(target)[2:].upper()]=p
+# Explicit SL0 plan writes and commit, then independent fresh SL3 proofs for
+# sector key, master/configuration keys and selected data. Switch key is ack-only.
+p=[];entries=[(0x9000,K),(0x9001,K),(0x9003,K),(0x4000,NEW),(2,DATA)]
+for addr,data in entries:p.append((b'\xA8'+le(addr)+data,b'\x90'))
+p.append((b'\xAA',b'\x90'));auth(p,key=NEW,plus=True)
+for slot in [0x9000,0x9001,0x4000]:auth(p,key=NEW if slot==0x4000 else K,plus=True,slot=slot)
+auth(p,key=NEW,plus=True)
+v=A[11:]+B[11:]+bytes(x^y for x,y in zip(A[4:9],B[4:9]))+b'\x11';e=enc(NEW,Z,v)
+v=A[7:12]+B[7:12]+bytes(x^y for x,y in zip(A[:5],B[:5]))+b'\x22';m=enc(NEW,Z,v)
+h=bytes.fromhex('31020001');payload=enc(e,le(1)+le(0)+le(1)+le(0)+le(1)+le(0)+TI,DATA)
+p.append((h+mac(m,h[:1]+le(0)+TI+h[1:]),b'\x90'+payload+mac(m,b'\x90'+le(1)+TI+h[1:]+payload)))
+vectors['PlusPersonalize']=p
 s='''unit DesfirePlus.Vectors;
 {$IFDEF FPC}{$MODE DELPHI}{$ENDIF}
 interface

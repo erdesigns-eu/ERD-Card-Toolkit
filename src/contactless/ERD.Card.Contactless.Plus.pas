@@ -51,6 +51,26 @@ type
     /// <summary>Independent sixteen-byte MAC key; clear after use.</summary>
     Authentication: TBytes;
   end;
+  /// <summary>One explicitly supplied SL0 personalization entry; data is borrowed by the caller and frozen before I/O.</summary>
+  TMifarePlusPersonalizationEntry = record
+    /// <summary>Native ordinary block, sector AES key address, or 9000/9001/9003 management key address.</summary>
+    Address: Word;
+    /// <summary>Exactly sixteen data/key bytes; caller must clear secret entries after use.</summary>
+    Data: TBytes;
+  end;
+  /// <summary>Ordered explicit SL0 entries; no inferred defaults, duplicate addresses or automatic key generation.</summary>
+  TMifarePlusPersonalizationEntries = array of TMifarePlusPersonalizationEntry;
+  /// <summary>Completed personalization evidence without credentials or card contents.</summary>
+  TMifarePlusPersonalizationResult = record
+    /// <summary>Entries whose native plaintext WritePerso acknowledgement was received.</summary>
+    AcknowledgedEntries: Integer;
+    /// <summary>Sector/master/configuration keys proven by fresh SL3 mutual authentication.</summary>
+    VerifiedKeys: Integer;
+    /// <summary>Ordinary data entries proven by fresh SL3 authenticated read-back.</summary>
+    VerifiedBlocks: Integer;
+    /// <summary>True only after commit, fresh authentication, all selected proofs and successful release.</summary>
+    Sl3Verified: Boolean;
+  end;
   /// <summary>Pure explicit Plus SL3 geometry, key derivation, IV and MAC codecs.</summary>
   TMifarePlusCodec = class
   public
@@ -86,7 +106,7 @@ type
     class procedure ClearKeys(var AKeys: TMifarePlusKeys); static;
   end;
   /// <summary>Inactive native Plus SL3 AES reader/writer with fresh mutual authentication for each operation.</summary>
-  /// <remarks>Ordinary data only; no implicit level transition, personalization, key replacement, trailers or manufacturer writes.
+  /// <remarks>Ordinary reads/writes and explicit acknowledged key replacement/SL0 personalization; no implicit level transition, trailers or manufacturer writes.
   /// Reads verify response MAC before decrypting. Writes compare a supplied preimage and verify read-back in the same exclusive session.</remarks>
   TMifarePlusCardReaderWriter = class(TComponent)
   private
@@ -115,7 +135,7 @@ type
     procedure ValidateRange(const ABlock, ACount: Integer);
     function MacInput(const AStatus: Byte; const ACounter: Integer; const ATail: TBytes): TBytes;
     function ReadNative(const ABlock, ACount: Integer): TBytes;
-    procedure WriteNative(const ABlock: Integer; const AData: TBytes);
+    procedure WriteNative(const AAddress: Word; const AData: TBytes);
   public
     /// <summary>Creates an inactive 2K/Full component without selecting a reader or key.</summary>
     /// <param name="AOwner">Optional owning component.</param>
@@ -136,6 +156,23 @@ type
     /// <param name="AData">Exactly sixteen new data bytes; copied before I/O.</param>
     /// <exception cref="EContactlessWriteUncertain">Write dispatch, MAC, read-back or release cannot be proven complete.</exception>
     procedure WriteBlockVerified(const ABlock: Integer; const AExpected, AData: TBytes);
+    /// <summary>Replaces one sector AES key with encrypted secure messaging and fresh same-card new-key proof.</summary>
+    /// <param name="ATargetKey">Sector key A/B address in the currently authenticated sector.</param>
+    /// <param name="ANewKey">Exactly sixteen supplied replacement bytes, frozen before I/O.</param>
+    /// <param name="AAcknowledge">Explicit acknowledgement that key replacement changes credentials immediately.</param>
+    /// <remarks>Uses the configured sector key as authority. Native ACLs determine permission. Original component credentials remain configured.</remarks>
+    /// <exception cref="EContactlessWriteUncertain">Dispatch or subsequent fresh proof/release cannot be established.</exception>
+    procedure RotateSectorKeyVerified(const ATargetKey: Word; const ANewKey: TBytes;
+      const AAcknowledge: Boolean);
+    /// <summary>Executes an explicit SL0 plan, commits once and proves selected keys/data through fresh SL3 sessions.</summary>
+    /// <param name="AEntries">Unique sixteen-byte ordinary-block/sector-key entries and required 9000/9001/9003 keys.</param>
+    /// <param name="AAcknowledge">Explicit acknowledgement of plaintext personalization and irreversible level commit.</param>
+    /// <returns>Credential-free counts after every selected postcondition and release has succeeded.</returns>
+    /// <remarks>Requires a nonempty ExpectedUid and an explicitly SL0 ISO14443-4 card. Data entries require a supplied same-sector key.
+    /// All entries are frozen and validated before I/O. Switch key 9003 has native acknowledgement only; no SL1/SL2 or fallback.</remarks>
+    /// <exception cref="EContactlessWriteUncertain">Any dispatched personalization/commit or subsequent proof cannot be established.</exception>
+    function PersonalizeAndCommitSl3Verified(const AEntries: TMifarePlusPersonalizationEntries;
+      const AAcknowledge: Boolean): TMifarePlusPersonalizationResult;
     /// <summary>Retained explicit native ISO14443-4 backend; immutable while busy.</summary>
     property Session: IMifarePlusSession read FSession write SetSession;
     /// <summary>Retained maintained AES/CSPRNG provider; immutable while busy.</summary>
@@ -268,7 +305,8 @@ end;
 procedure TMifarePlusCardReaderWriter.Authenticate;
 var H,C,B,A,Zero,Plain,Expected,Capabilities: TBytes; I: Integer;
 begin
-  if (FProvider=nil) or (Length(FKey)<>16) or (FKeyNumber<$4000) or (FKeyNumber>$404F) then Invalid;
+  if (FProvider=nil) or (Length(FKey)<>16) or not (((FKeyNumber>=$4000) and (FKeyNumber<=$404F)) or
+    (FKeyNumber=$9000) or (FKeyNumber=$9001)) then Invalid;
   H:=HexToBytes('70000000'); H[1]:=Byte(FKeyNumber and $FF); H[2]:=Byte(FKeyNumber shr 8);
   C:=nil; B:=nil; A:=nil; Plain:=nil; Expected:=nil; SetLength(Zero,16);
   try
@@ -323,11 +361,12 @@ begin
   end else Result:=CopyBytes(Data);
   if Length(Result)<>ACount*16 then Invalid;
 end;
-procedure TMifarePlusCardReaderWriter.WriteNative(const ABlock: Integer; const AData: TBytes);
+procedure TMifarePlusCardReaderWriter.WriteNative(const AAddress: Word; const AData: TBytes);
 var H,Data,Iv,Expected,R: TBytes;
 begin
   if FWriteCounter>=65535 then Invalid;
-  H:=HexToBytes('A10000'); if FMode=mpcMac then H[0]:=$A3; H[1]:=Byte(ABlock);
+  H:=HexToBytes('A10000'); if FMode=mpcMac then H[0]:=$A3;
+  H[1]:=Byte(AAddress and $FF); H[2]:=Byte(AAddress shr 8);
   Data:=CopyBytes(AData);
   try
     if FMode=mpcFull then begin
@@ -377,6 +416,258 @@ begin
       finally Finish(Ok); end;
     except on E: Exception do begin if FDispatched then raise EContactlessWriteUncertain.Create(E.ClassName); raise; end; end;
   finally TCardCrypto.Clear(Old); TCardCrypto.Clear(NewData); end;
+end;
+
+procedure TMifarePlusCardReaderWriter.RotateSectorKeyVerified(const ATargetKey: Word;
+  const ANewKey: TBytes; const AAcknowledge: Boolean);
+var
+  NewKey, SavedKey, SavedUid, Uid: TBytes;
+  SavedNumber: Word;
+  SavedMode: TMifarePlusMode;
+  Ok, Mutation: Boolean;
+  SectorCount: Integer;
+begin
+  Ready;
+  SectorCount := 32;
+  if FModel = mpm4K then
+    SectorCount := 40;
+  if not AAcknowledge or (Length(ANewKey) <> 16) or (Length(FKey) <> 16) or
+    (FProvider = nil) or (ATargetKey < $4000) or (ATargetKey >= $4000 + SectorCount * 2) or
+    (FKeyNumber < $4000) or (FKeyNumber >= $4000 + SectorCount * 2) or
+    ((ATargetKey - $4000) div 2 <> (FKeyNumber - $4000) div 2) then
+    Invalid;
+  NewKey := CopyBytes(ANewKey);
+  SavedKey := FKey;
+  FKey := CopyBytes(SavedKey);
+  SavedNumber := FKeyNumber;
+  SavedMode := FMode;
+  SavedUid := FExpectedUid;
+  Ok := False;
+  Mutation := False;
+  try
+    try
+      Uid := BeginOperation;
+      FExpectedUid := CopyBytes(Uid);
+      try
+        Authenticate;
+        FMode := mpcFull;
+        try
+          WriteNative(ATargetKey, NewKey);
+        finally
+          Mutation := FDispatched;
+        end;
+        Ok := True;
+      finally
+        Finish(Ok);
+      end;
+      TCardCrypto.Clear(FKey);
+      FKey := CopyBytes(NewKey);
+      FKeyNumber := ATargetKey;
+      BeginOperation;
+      Ok := False;
+      try
+        Authenticate;
+        Ok := True;
+      finally
+        Finish(Ok);
+      end;
+    except
+      on E: Exception do
+      begin
+        if Mutation then
+          raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    TCardCrypto.Clear(FKey);
+    TCardCrypto.Clear(NewKey);
+    FKey := SavedKey;
+    FKeyNumber := SavedNumber;
+    FMode := SavedMode;
+    FExpectedUid := SavedUid;
+  end;
+end;
+
+function TMifarePlusCardReaderWriter.PersonalizeAndCommitSl3Verified(
+  const AEntries: TMifarePlusPersonalizationEntries;
+  const AAcknowledge: Boolean): TMifarePlusPersonalizationResult;
+var
+  Entries: TMifarePlusPersonalizationEntries;
+  SavedKey, Packet, Response, Data: TBytes;
+  SavedNumber: Word;
+  SavedMode: TMifarePlusMode;
+  I, J, Sector, SectorCount, KeyIndex, Master, Config, SwitchKey: Integer;
+  Ok, Mutation: Boolean;
+  procedure SelectKey(const AIndex: Integer);
+  begin
+    TCardCrypto.Clear(FKey);
+    FKey := CopyBytes(Entries[AIndex].Data);
+    FKeyNumber := Entries[AIndex].Address;
+  end;
+  procedure Ack(const B: TBytes);
+  begin
+    Mutation := True;
+    Response := FSession.ExchangeNative(B);
+    if (Length(Response) <> 1) or (Response[0] <> $90) then
+      Invalid;
+  end;
+begin
+  Result.AcknowledgedEntries := 0;
+  Result.VerifiedKeys := 0;
+  Result.VerifiedBlocks := 0;
+  Result.Sl3Verified := False;
+  Ready;
+  if not AAcknowledge or (FProvider = nil) or (Length(FExpectedUid) = 0) or
+    (Length(AEntries) < 4) or (Length(AEntries) > 339) then
+    Invalid;
+  Entries := nil;
+  SetLength(Entries, Length(AEntries));
+  SavedKey := nil;
+  Master := -1;
+  Config := -1;
+  SwitchKey := -1;
+  Mutation := False;
+  try
+    // Freeze the complete caller plan before reader or provider callbacks.
+    for I := 0 to High(Entries) do
+    begin
+      Entries[I].Address := AEntries[I].Address;
+      Entries[I].Data := CopyBytes(AEntries[I].Data);
+    end;
+    SectorCount := 32;
+    if FModel = mpm4K then
+      SectorCount := 40;
+    for I := 0 to High(Entries) do
+    begin
+      if Length(Entries[I].Data) <> 16 then
+        Invalid;
+      for J := 0 to I - 1 do
+        if Entries[J].Address = Entries[I].Address then
+          Invalid;
+      case Entries[I].Address of
+        $9000: Master := I;
+        $9001: Config := I;
+        $9003: SwitchKey := I;
+      else
+        if (Entries[I].Address >= $4000) and
+          (Entries[I].Address < $4000 + SectorCount * 2) then
+          Continue;
+        Sector := TMifarePlusCodec.DataSector(FModel, Entries[I].Address);
+        KeyIndex := -1;
+        for J := 0 to High(Entries) do
+          if (Entries[J].Address >= $4000) and
+            (Entries[J].Address < $4000 + SectorCount * 2) and
+            ((Entries[J].Address - $4000) div 2 = Sector) then
+            KeyIndex := J;
+        if KeyIndex < 0 then
+          Invalid;
+      end;
+    end;
+    if (Master < 0) or (Config < 0) or (SwitchKey < 0) then
+      Invalid;
+    KeyIndex := -1;
+    for I := 0 to High(Entries) do
+      if (Entries[I].Address >= $4000) and
+        (Entries[I].Address < $4000 + SectorCount * 2) then
+        KeyIndex := I;
+    if KeyIndex < 0 then
+      Invalid;
+    SavedKey := FKey;
+    FKey := nil;
+    SavedNumber := FKeyNumber;
+    SavedMode := FMode;
+    FMode := mpcFull;
+    try
+      try
+        BeginOperation;
+        Ok := False;
+        try
+          for I := 0 to High(Entries) do
+          begin
+            Packet := HexToBytes('A80000');
+            Packet[1] := Byte(Entries[I].Address and $FF);
+            Packet[2] := Byte(Entries[I].Address shr 8);
+            Packet := Joined(Packet, Entries[I].Data);
+            try
+              Ack(Packet);
+            finally
+              TCardCrypto.Clear(Packet);
+            end;
+            Inc(Result.AcknowledgedEntries);
+          end;
+          Ack(HexToBytes('AA'));
+          Ok := True;
+        finally
+          Finish(Ok);
+        end;
+        // Prove SL3 with a selected sector key before authenticating management keys.
+        SelectKey(KeyIndex);
+        BeginOperation;
+        Ok := False;
+        try
+          Authenticate;
+          Ok := True;
+        finally
+          Finish(Ok);
+        end;
+        for I := 0 to High(Entries) do
+        begin
+          if Entries[I].Address = $9003 then
+            Continue; // No invented read-back or switching-key proof.
+          if Entries[I].Address >= $4000 then
+            SelectKey(I)
+          else
+          begin
+            Sector := TMifarePlusCodec.DataSector(FModel, Entries[I].Address);
+            KeyIndex := -1;
+            for J := 0 to High(Entries) do
+              if (Entries[J].Address >= $4000) and
+                (Entries[J].Address < $4000 + SectorCount * 2) and
+                ((Entries[J].Address - $4000) div 2 = Sector) then
+                KeyIndex := J;
+            SelectKey(KeyIndex);
+          end;
+          BeginOperation;
+          Ok := False;
+          try
+            Authenticate;
+            if Entries[I].Address < $4000 then
+            begin
+              Data := ReadNative(Entries[I].Address, 1);
+              if not BytesEqual(Data, Entries[I].Data) then
+                Invalid;
+              Inc(Result.VerifiedBlocks);
+            end
+            else
+              Inc(Result.VerifiedKeys);
+            Ok := True;
+          finally
+            TCardCrypto.Clear(Data);
+            Finish(Ok);
+          end;
+        end;
+        Result.Sl3Verified := True;
+      except
+        on E: Exception do
+        begin
+          if Mutation then
+            raise EContactlessWriteUncertain.Create(E.ClassName);
+          raise;
+        end;
+      end;
+    finally
+      TCardCrypto.Clear(FKey);
+      FKey := SavedKey;
+      FKeyNumber := SavedNumber;
+      FMode := SavedMode;
+    end;
+  finally
+    TCardCrypto.Clear(Packet);
+    TCardCrypto.Clear(Response);
+    for I := 0 to High(Entries) do
+      TCardCrypto.Clear(Entries[I].Data);
+  end;
 end;
 
 end.

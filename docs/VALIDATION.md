@@ -965,3 +965,27 @@ warning remains outside this change.
 The full `tools/run_core_tests.py` regression run passed. The new suite passed **48,029 assertions** with range/overflow checks and no heap leaks. Seventeen independently generated literal transcripts cover native Plus MACed/Full authentication, reads, writes, 4K high sectors, the ACR122 ISO14443-4 chain and DESFire key-set/configuration/SDM management. Failure injection covers every transcript I/O boundary and protected response bits, UID/preimage refusal, frozen input buffers and cleanup uncertainty. Published NXP AN12196 SDM PICC, session-key, MAC and encrypted-file vectors also pass. Plus backup/compare/restore exercises the existing protected-memory engine.
 
 The reproducible generator is `tools/generate_desfire_plus_fixtures.py --check`. All 21 source checkers passed. Palette registration covers **58 components** and inactive registration/streaming covers **59 cases**. Distribution validation reports **62 projects, 2 groups and 48 DFM files**, with no findings. No demo files were changed in this increment. These results establish synthetic protocol/ABI behavior, not physical device certification. Existing unrelated compiler notes/warnings have not been suppressed.
+
+## Plus SL0 personalization and SL3 sector key replacement (2026-10-11)
+
+The extended DESFire/Plus suite passes **117,396 assertions** (69,367 added in
+this increment), with range/overflow checking and zero heap leaks. Four additional
+independently generated literal transcripts bring the fixture set to **21**:
+self-key and same-sector A/B replacement, 4K high-sector key replacement, and SL0
+WritePerso/CommitPerso followed by fresh sector/master/configuration authentication
+and encrypted ordinary-data read-back. Replacement uses encrypted messaging even
+when the caller selects MACed ordinary communication.
+
+Failure injection covers every exchange, every acquisition/release stage,
+identity changes between fresh sessions, acknowledgement/MAC bits and encrypted
+nonce proof corruption. Tests verify frozen caller key/plan buffers, restored
+component configuration, invalid/duplicate/manufacturer/trailer/model-mismatched
+plans before acquisition, and persistent uncertainty after any mutation dispatch.
+Switch-key personalization has acknowledgement only, as documented; there is no
+invented secret-memory read-back or SL1/SL2 fallback.
+
+The complete FPC/native regression runner and all **21 source checkers** passed.
+Fixture reproducibility and distribution checks passed: **62 projects, 2 groups,
+48 DFM forms**, no findings. No demo/package format changes were required. Existing
+unrelated FPC notes/warnings remain unsuppressed. These are synthetic protocol
+results; the exact direct-SL3 commit profile is an explicit caller prerequisite.

@@ -151,7 +151,7 @@ documentation. Use the same complete scope for upcoming batches:
 3. **DESFire expansion and additional chip families:** D40 and EV1 DES/2K3DES/3K3DES security are implemented. EV2 AES key sets, configuration subset and SDM settings/crypto are implemented. Remaining extensions include LRP, TMAC receipts and multi-access rights, followed by
    originality and physical card profiles. Owned ordinary transactions and basic create/delete
    management and verified AES key/policy/access administration are implemented. EV1/EV2 AES secure
-   file access and EV2 NonFirst through maintained providers are implemented. Plus SL3 AES ordinary-memory profiles and ACR122/workflow adapters are implemented. Further Plus level transitions, personalization, key administration and value commands remain separate, alongside
+   file access and EV2 NonFirst through maintained providers are implemented. Plus SL3 AES ordinary-memory profiles and ACR122/workflow adapters are implemented. Explicit SL0 personalization/commit with selected SL3 proofs and sector AES key replacement are implemented. Further Plus SL1/SL2 transition protocols, trailer/configuration programming and value commands remain separate, alongside
    additional ISO 15693 authentication/reader backends,
    then authenticated AT88SC/CryptoMemory and additional reader backends.
    SLE4404 code access/programming/explicit erases are implemented through ACS38 CCID;
