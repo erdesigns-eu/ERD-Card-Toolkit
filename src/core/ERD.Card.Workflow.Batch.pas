@@ -43,6 +43,8 @@ type
   end;
   /// <summary>Independent array of per-card batch outcomes.</summary>
   TCardBatchResults = array of TCardBatchResult;
+  /// <summary>Batch-owned prepared workflow components sharing one Delphi array type.</summary>
+  TCardBatchChildren = array of TCardWorkflow;
   /// <summary>Bounded batch personalization using application-supplied prepared templates.</summary>
   /// <remarks>All templates are built before card I/O. Executes each child once, stopping on
   /// any non-completed outcome. Never retries, rolls back or resumes a consumed batch. Use
@@ -52,7 +54,7 @@ type
   /// or destruction. Execute and events use the caller's thread.</remarks>
   TCardBatchWorkflow = class(TCardWorkflow)
   private
-    FChildren: array of TCardWorkflow;
+    FChildren: TCardBatchChildren;
     FResults: TCardBatchResults;
     FPrepared, FConsumed: Boolean;
     FCurrentIndex: Integer;
@@ -114,7 +116,7 @@ end;
 
 procedure TCardBatchWorkflow.Prepare(const AIdentifiers: TCardBatchIdentifiers;
   const AFactory: ICardBatchFactory);
-var I, J: Integer; Children: array of TCardWorkflow; R: TCardBatchResults;
+var I, J: Integer; Children: TCardBatchChildren; R: TCardBatchResults;
 begin
   RequireIdle;
   if (AFactory = nil) or (Length(AIdentifiers) < 1) or
