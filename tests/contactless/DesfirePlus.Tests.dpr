@@ -19,7 +19,7 @@ type
   TWire = class(TInterfacedObject,ICardTransport,ICardTransaction,IMifarePlusSession)
     Pairs: TExtendedPairs; Borrowed: TBytes; MutateCall: Integer;
     Calls,Begins,Ends,Writes,FailCall,CorruptCall,CorruptByte,CorruptBit: Integer;
-    Active,EndFails,WrongUid: Boolean;
+    Active,EndFails,WrongUid,RepairRawCrc: Boolean;
     BeginFailure, EndFailure, ChangedUidBegin: Integer;
     function Exchange(const B: TBytes): TBytes;
     procedure BeginTransaction;
@@ -72,7 +72,7 @@ function TWire.Exchange(const B: TBytes): TBytes;
 begin
   Check(Active,'Exclusive exchange'); Inc(Calls); Check(Calls<=Length(Pairs),'No fallback or replay');
   Check(BytesEqual(B,HexToBytes(Pairs[Calls-1].Command)),'Independent native command '+IntToStr(Calls));
-  if (B[0] in [$A1,$A3]) or ((B[0]=$90) and (B[1] in [$CA,$56,$C6,$57,$55,$5C,$5F])) then Inc(Writes);
+  if (B[0] in [$A1,$A3,$B5,$B7,$B9]) or ((B[0]=$90) and (B[1] in [$CA,$56,$C6,$57,$55,$5C,$5F])) then Inc(Writes);
   if Calls=FailCall then raise ECardTransportError.Create('Synthetic response lost');
   if (Calls=MutateCall) and (Length(Borrowed)>0) then Borrowed[0]:=Borrowed[0] xor $FF;
   Result:=HexToBytes(Pairs[Calls-1].Response);
@@ -104,6 +104,8 @@ begin
   Check(ABitCount=Length(AFrame)*8, 'Native SL1 authentication uses full-byte CRC framing');
   Result := Default(TRawRfResponse);
   Result.Data := FWire.Exchange(AFrame);
+  if FWire.RepairRawCrc and (FWire.Calls=FWire.CorruptCall) then
+    Result.Data := TRawUidCodec.AppendCrcA(Copy(Result.Data,0,Length(Result.Data)-2));
   Result.BitCount := Length(Result.Data)*8;
   if FWire.Calls=PartialCall then Dec(Result.BitCount);
   if FWire.Calls=TimeoutCall then
@@ -631,7 +633,8 @@ begin
 end;
 
 procedure RunPlusLevel(const Kind, Fail, Corrupt, ByteIndex, BitIndex,
-  BeginFail, EndFail, UidChange, Partial, Timeout, Freeze: Integer);
+  BeginFail, EndFail, UidChange, Partial, Timeout, Freeze: Integer;
+  const RepairCrc: Boolean = False);
 var
   Wire: TWire;
   Sl3: IMifarePlusSession;
@@ -647,6 +650,7 @@ begin
     0: Wire.Pairs := PlusLevel9004;
     1: Wire.Pairs := PlusLevel9002;
     2: Wire.Pairs := PlusLevel3Proof;
+    3: Wire.Pairs := PlusLevel2To3;
   end;
   Wire.FailCall := Fail;
   Wire.CorruptCall := Corrupt;
@@ -655,6 +659,7 @@ begin
   Wire.BeginFailure := BeginFail;
   Wire.EndFailure := EndFail;
   Wire.ChangedUidBegin := UidChange;
+  Wire.RepairRawCrc := RepairCrc;
   Raw := TLevelRaw.Create(Wire);
   RawInterface := Raw;
   Raw.PartialCall := Partial;
@@ -684,6 +689,7 @@ begin
         0: Manager.AuthenticateSl1(Key);
         1: Manager.SwitchSl1ToSl2Acknowledged(Key, True);
         2: Manager.SwitchSl1ToSl3Verified(Key, $4000, ProofKey, 2, Expected, True);
+        3: Manager.SwitchSl2ToSl3Verified(Key, $4000, ProofKey, 2, Expected, True);
       end;
     except
       on E: Exception do
@@ -699,7 +705,7 @@ begin
     begin
       Check(not Failed, 'Independent 76/72 level transcript succeeds');
       Check(Wire.Calls=Length(Wire.Pairs), 'Transition and fresh SL3 proof complete');
-      Check(Wire.Begins=1+Ord(Kind=2), 'No hidden level/authentication retries');
+      Check(Wire.Begins=1+Ord(Kind>=2), 'No hidden level/authentication retries');
     end
     else
     begin
@@ -726,36 +732,39 @@ var
   Key: TBytes;
   Failed: Boolean;
 begin
-  for Kind := 0 to 2 do
+  for Kind := 0 to 3 do
   begin
     case Kind of
       0: Pairs := PlusLevel9004;
       1: Pairs := PlusLevel9002;
       2: Pairs := PlusLevel3Proof;
+      3: Pairs := PlusLevel2To3;
     end;
     RunPlusLevel(Kind,0,0,0,0,0,0,0,0,0,0);
     for I := 1 to 3 do
-      if (Kind=2) or (I=1) then
+      if (Kind>=2) or (I=1) then
         RunPlusLevel(Kind,0,0,0,0,0,0,0,0,0,I);
     for I := 1 to Length(Pairs) do
       RunPlusLevel(Kind,I,0,0,0,0,0,0,0,0,0);
     for I := 1 to 2 do
     begin
-      for J := 0 to 151 do
+      for J := 0 to Length(HexToBytes(Pairs[I-1].Response))*8-1 do
         RunPlusLevel(Kind,0,I,J div 8,J mod 8,0,0,0,0,0,0);
+      for J := 0 to (Length(HexToBytes(Pairs[I-1].Response))-2)*8-1 do
+        RunPlusLevel(Kind,0,I,J div 8,J mod 8,0,0,0,0,0,0,True);
       RunPlusLevel(Kind,0,0,0,0,0,0,0,I,0,0);
       RunPlusLevel(Kind,0,0,0,0,0,0,0,0,I,0);
     end;
-    N := 1+Ord(Kind=2);
+    N := 1+Ord(Kind>=2);
     for I := 1 to N do
     begin
       RunPlusLevel(Kind,0,0,0,0,I,0,0,0,0,0);
       RunPlusLevel(Kind,0,0,0,0,0,I,0,0,0,0);
       RunPlusLevel(Kind,0,0,0,0,0,0,I,0,0,0);
     end;
-    if Kind=2 then
+    if Kind>=2 then
       for J := 0 to 199 do
-        RunPlusLevel(2,0,Length(Pairs),J div 8,J mod 8,0,0,0,0,0,0);
+        RunPlusLevel(Kind,0,Length(Pairs),J div 8,J mod 8,0,0,0,0,0,0);
   end;
   // The actual raw ACR122 factory must suppress RATS, verify CRC and restore saved registers.
   Wire := TWire.Create;
@@ -922,10 +931,225 @@ begin
   RunPlusValue(True,0,0,0,0,False,True);
 end;
 
+function NativeValuePairs(const Operation: TMifarePlusNativeValueOperation;
+  const Separate: Boolean): TExtendedPairs;
+begin
+  if Separate then
+    case Operation of
+      mnvoIncrementThenTransfer: Result := PlusNative0Cross;
+      mnvoDecrementThenTransfer: Result := PlusNative1Cross;
+      mnvoIncrementTransfer: Result := PlusNative2Cross;
+      mnvoDecrementTransfer: Result := PlusNative3Cross;
+    else Result := PlusNative4Cross;
+    end
+  else
+    case Operation of
+      mnvoIncrementThenTransfer: Result := PlusNative0Same;
+      mnvoDecrementThenTransfer: Result := PlusNative1Same;
+      mnvoIncrementTransfer: Result := PlusNative2Same;
+      mnvoDecrementTransfer: Result := PlusNative3Same;
+    else Result := PlusNative4Same;
+    end;
+end;
+
+procedure RunNativeValue(const Operation: TMifarePlusNativeValueOperation;
+  const Separate: Boolean; const Fail, Corrupt, ByteIndex, BitIndex,
+  WrongPreimage, Freeze: Integer; const EndFail: Boolean);
+var
+  Wire: TWire;
+  Session: IMifarePlusSession;
+  Reader: TMifarePlusCardReaderWriter;
+  Source, Target: TBytes;
+  Amount: Cardinal;
+  SourceBlock, PersistentCall, I: Integer;
+  Failed, Uncertain: Boolean;
+begin
+  Wire := TWire.Create;
+  Session := Wire;
+  Wire.Pairs := NativeValuePairs(Operation, Separate);
+  PersistentCall := 0;
+  for I := 0 to High(Wire.Pairs) do
+    if Copy(Wire.Pairs[I].Command,1,2)='B5' then PersistentCall := I+1
+    else if (Copy(Wire.Pairs[I].Command,1,2)='B7') or
+      (Copy(Wire.Pairs[I].Command,1,2)='B9') then PersistentCall := I+1;
+  Wire.FailCall := Fail;
+  Wire.CorruptCall := Corrupt;
+  Wire.CorruptByte := ByteIndex;
+  Wire.CorruptBit := BitIndex;
+  Wire.EndFails := EndFail;
+  SourceBlock := 2;
+  if Separate then SourceBlock := 1;
+  Source := TMifarePlusValueCodec.Encode(100,Byte(SourceBlock));
+  Target := TMifarePlusValueCodec.Encode(100,2);
+  if Separate then Target := TMifarePlusValueCodec.Encode(7,2);
+  if WrongPreimage=1 then Source := TMifarePlusValueCodec.Encode(101,Byte(SourceBlock));
+  if WrongPreimage=2 then Target := TMifarePlusValueCodec.Encode(8,2);
+  Amount := 42;
+  if Operation=mnvoRestoreTransfer then Amount := 0;
+  if Freeze>0 then
+  begin
+    Wire.MutateCall := 1;
+    if Freeze=1 then Wire.Borrowed := Source else Wire.Borrowed := Target;
+  end;
+  Reader := TMifarePlusCardReaderWriter.Create(nil);
+  Failed := False;
+  Uncertain := False;
+  try
+    Reader.Session := Session;
+    Reader.CryptoProvider := TFixed.Create;
+    Reader.Key := HexToBytes('00000000000000000000000000000000');
+    Reader.KeyNumber := $4000;
+    Reader.Communication := mpcMac;
+    try
+      Reader.ExecuteNativeValueVerified(Operation,SourceBlock,2,Source,Target,Amount,2);
+    except
+      on E: Exception do
+      begin
+        Failed := True;
+        Uncertain := E is EContactlessWriteUncertain;
+      end;
+    end;
+    Check(not Reader.Busy and not Wire.Active and (Wire.Begins=Wire.Ends),'Native value ownership released');
+    Check(Reader.Communication=mpcMac,'Native Full messaging restores caller mode');
+    if (Fail=0) and (Corrupt=0) and (WrongPreimage=0) and not EndFail then
+    begin
+      Check(not Failed,'Independent native value workflow succeeds');
+      Check(Wire.Calls=Length(Wire.Pairs),'Native command and source/target proofs complete');
+      if PersistentCall=0 then Check(Wire.Writes=0,'Equal native target skips buffer and transfer mutation')
+      else Check(Wire.Writes=1,'Exactly one persistent native value command');
+    end
+    else
+    begin
+      Check(Failed,'Native value failure or wrong preimage observable');
+      Check(Uncertain=((PersistentCall>0) and (Wire.Calls>=PersistentCall)),
+        'Uncertainty starts at persistent transfer, not volatile buffer dispatch');
+      if WrongPreimage>0 then Check(Wire.Writes=0,'Wrong native value preimage never transferred');
+    end;
+  finally
+    Reader.Free;
+  end;
+end;
+
+procedure TestNativeValues;
+var
+  Operation: TMifarePlusNativeValueOperation;
+  Separate: Boolean;
+  Pairs: TExtendedPairs;
+  Wire: TWire;
+  Session: IMifarePlusSession;
+  Reader: TMifarePlusCardReaderWriter;
+  Source, Target: TBytes;
+  I, J, K, SourceBlock: Integer;
+  Amount: Cardinal;
+  Failed: Boolean;
+begin
+  for Operation := Low(TMifarePlusNativeValueOperation) to High(TMifarePlusNativeValueOperation) do
+    for Separate := False to True do
+    begin
+      Pairs := NativeValuePairs(Operation,Separate);
+      RunNativeValue(Operation,Separate,0,0,0,0,0,0,False);
+      RunNativeValue(Operation,Separate,0,0,0,0,0,1,False);
+      RunNativeValue(Operation,Separate,0,0,0,0,0,2,False);
+      RunNativeValue(Operation,Separate,0,0,0,0,0,0,True);
+      RunNativeValue(Operation,Separate,0,0,0,0,1,0,False);
+      if Separate then RunNativeValue(Operation,True,0,0,0,0,2,0,False);
+      for I := 1 to Length(Pairs) do
+        RunNativeValue(Operation,Separate,I,0,0,0,0,0,False);
+      for I := 3 to Length(Pairs) do
+        for J := 0 to Length(HexToBytes(Pairs[I-1].Response))*8-1 do
+          RunNativeValue(Operation,Separate,0,I,J div 8,J mod 8,0,0,False);
+    end;
+  for K := 0 to 1 do
+  begin
+    Wire := TWire.Create;
+    Session := Wire;
+    if K=0 then Wire.Pairs := PlusNative4KIncrement else Wire.Pairs := PlusNative4KDecrement;
+    Reader := TMifarePlusCardReaderWriter.Create(nil);
+    try
+      Reader.Session := Session;
+      Reader.CryptoProvider := TFixed.Create;
+      Reader.Key := HexToBytes('00000000000000000000000000000000');
+      Reader.Model := mpm4K;
+      Reader.KeyNumber := $4040;
+      Target := TMifarePlusValueCodec.Encode(7,129);
+      Operation := mnvoIncrementTransfer;
+      Source := TMifarePlusValueCodec.Encode(Low(Integer),128);
+      if K=1 then
+      begin
+        Operation := mnvoDecrementTransfer;
+        Source := TMifarePlusValueCodec.Encode(High(Integer),128);
+      end;
+      Reader.ExecuteNativeValueVerified(Operation,128,129,Source,Target,High(Cardinal),129);
+      Check(Wire.Calls=Length(Wire.Pairs),'Full unsigned amount and high 4K block addresses');
+      Check(not Wire.Active and not Reader.Busy,'4K native boundary operation released');
+    finally
+      Reader.Free;
+    end;
+  end;
+  // Valid MACs do not excuse incorrect read-back or changed source content.
+  for K := 0 to 1 do
+  begin
+    Wire := TWire.Create;
+    Session := Wire;
+    if K=0 then Wire.Pairs := PlusNativeBadTarget else Wire.Pairs := PlusNativeBadSource;
+    Reader := TMifarePlusCardReaderWriter.Create(nil);
+    try
+      Reader.Session := Session;
+      Reader.CryptoProvider := TFixed.Create;
+      Reader.Key := HexToBytes('00000000000000000000000000000000');
+      Reader.KeyNumber := $4000;
+      Source := TMifarePlusValueCodec.Encode(100,1);
+      Target := TMifarePlusValueCodec.Encode(7,2);
+      Failed := False;
+      try Reader.ExecuteNativeValueVerified(mnvoIncrementTransfer,1,2,Source,Target,42,2);
+      except on E: EContactlessWriteUncertain do Failed := True; end;
+      Check(Failed,'Authenticated wrong target/changed source remains uncertain');
+      Check(Wire.Calls=6+K,'Semantic failure stops at the exact proof boundary');
+      Check(not Wire.Active and not Reader.Busy,'Authenticated semantic failure releases ownership');
+    finally
+      Reader.Free;
+    end;
+  end;
+  for K := 0 to 7 do
+  begin
+    Wire := TWire.Create;
+    Session := Wire;
+    Reader := TMifarePlusCardReaderWriter.Create(nil);
+    try
+      Reader.Session := Session;
+      Reader.CryptoProvider := TFixed.Create;
+      Reader.Key := HexToBytes('00000000000000000000000000000000');
+      Reader.KeyNumber := $4000;
+      Source := TMifarePlusValueCodec.Encode(100,1);
+      Target := TMifarePlusValueCodec.Encode(7,2);
+      SourceBlock := 1;
+      Operation := mnvoIncrementTransfer;
+      Amount := 42;
+      case K of
+        0: Source := TMifarePlusValueCodec.Encode(High(Integer),1);
+        1: begin Source := TMifarePlusValueCodec.Encode(Low(Integer),1); Operation := mnvoDecrementTransfer; end;
+        2: Source[0] := Source[0] xor 1;
+        3: Target[12] := 3;
+        4: Operation := mnvoRestoreTransfer;
+        5: SourceBlock := 0;
+        6: SourceBlock := 4;
+        7: SourceBlock := 2;
+      end;
+      Failed := False;
+      try Reader.ExecuteNativeValueVerified(Operation,SourceBlock,2,Source,Target,Amount,2);
+      except on E: EMifarePlusError do Failed := True; end;
+      Check(Failed and (Wire.Calls=0) and (Wire.Begins=0),'Invalid native value profile/overflow refused before I/O');
+      Check(not Reader.Busy,'Invalid native value profile retains inactive state');
+    finally
+      Reader.Free;
+    end;
+  end;
+end;
+
 begin
   try
 {$IFDEF MSWINDOWS} Base:=TCardWindowsAesProvider.Create; {$ELSE} Base:=TCardOpenSslAesProvider.Create; {$ENDIF}
-    TestCodecs; TestDf; TestPlus; TestPlusWorkflow; TestAcr; TestPlus4K; TestFrozenInputs; TestPlusManagement; TestPlusLevels; TestPlusValues;
+    TestCodecs; TestDf; TestPlus; TestPlusWorkflow; TestAcr; TestPlus4K; TestFrozenInputs; TestPlusManagement; TestPlusLevels; TestPlusValues; TestNativeValues;
     Writeln('PASS: ',Checks,' DESFire extension/Plus assertions.');
   except on E: Exception do begin Writeln(E.ClassName,': ',E.Message); ExitCode:=1; end; end;
 end.

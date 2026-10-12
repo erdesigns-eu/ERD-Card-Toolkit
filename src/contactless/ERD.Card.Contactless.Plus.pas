@@ -71,6 +71,18 @@ type
     /// <summary>True only after commit, fresh authentication, all selected proofs and successful release.</summary>
     Sl3Verified: Boolean;
   end;
+  /// <summary>Explicit native SL3 value workflow; transfer-buffer state never escapes the exclusive operation.</summary>
+  TMifarePlusNativeValueOperation = (
+    /// <summary>Native B1 increment into the volatile buffer followed by B5 transfer.</summary>
+    mnvoIncrementThenTransfer,
+    /// <summary>Native B3 decrement into the volatile buffer followed by B5 transfer.</summary>
+    mnvoDecrementThenTransfer,
+    /// <summary>Native B7 combined increment and transfer.</summary>
+    mnvoIncrementTransfer,
+    /// <summary>Native B9 combined decrement and transfer.</summary>
+    mnvoDecrementTransfer,
+    /// <summary>Native C3 restore into the volatile buffer followed by B5 transfer; amount must be zero.</summary>
+    mnvoRestoreTransfer);
   /// <summary>Verified Classic-compatible value-block contents, independent of physical block number.</summary>
   TMifarePlusValue = record
     /// <summary>Signed thirty-two-bit stored amount; all redundant copies were checked.</summary>
@@ -163,6 +175,8 @@ type
     function MacInput(const AStatus: Byte; const ACounter: Integer; const ATail: TBytes): TBytes;
     function ReadNative(const ABlock, ACount: Integer): TBytes;
     procedure WriteNative(const AAddress: Word; const AData: TBytes);
+    procedure NativeValueCommand(const ACommand: Byte; const ASource, ATarget: Integer;
+      const AAmount: Cardinal; const APersistent: Boolean);
   public
     /// <summary>Creates an inactive 2K/Full component without selecting a reader or key.</summary>
     /// <param name="AOwner">Optional owning component.</param>
@@ -196,6 +210,21 @@ type
     /// <exception cref="EContactlessWriteUncertain">Dispatched ordinary write cannot be verified complete.</exception>
     procedure WriteValueBlockVerified(const ABlock, AExpectedValue, ANewValue: Integer;
       const AValueAddress: Byte);
+    /// <summary>Executes native increment/decrement/restore and transfer with exact preimages and protected read-back.</summary>
+    /// <param name="AOperation">Explicit staged or combined native workflow; no ordinary data-write substitution.</param>
+    /// <param name="ASourceBlock">Ordinary source block in the configured authenticated sector.</param>
+    /// <param name="ATargetBlock">Ordinary target block in that same sector; may equal source.</param>
+    /// <param name="AExpectedSource">Exact sixteen-byte acquired value block, frozen before I/O.</param>
+    /// <param name="AExpectedTarget">Exact sixteen-byte acquired target value block, frozen before I/O.</param>
+    /// <param name="AAmount">Unsigned thirty-two-bit increment/decrement amount; zero for restore.</param>
+    /// <param name="AResultAddress">Explicit expected logical address after native transfer; not programmed or guessed by the library.</param>
+    /// <remarks>Requires an explicitly selected Plus X-compatible native value command set. Always uses Full reads and encrypted padded amounts with command/response MACs.
+    /// Both preimages are checked; a distinct source is verified unchanged. Signed overflow is refused before acquisition.
+    /// Equal target results skip native mutation. Staged buffer failure before transfer never dispatches a persistent write.</remarks>
+    /// <exception cref="EContactlessWriteUncertain">Persistent transfer dispatch or later read-back/release cannot be established.</exception>
+    procedure ExecuteNativeValueVerified(const AOperation: TMifarePlusNativeValueOperation;
+      const ASourceBlock, ATargetBlock: Integer; const AExpectedSource, AExpectedTarget: TBytes;
+      const AAmount: Cardinal; const AResultAddress: Byte);
     /// <summary>Replaces one sector AES key with encrypted secure messaging and fresh same-card new-key proof.</summary>
     /// <param name="ATargetKey">Sector key A/B address in the currently authenticated sector.</param>
     /// <param name="ANewKey">Exactly sixteen supplied replacement bytes, frozen before I/O.</param>
@@ -456,6 +485,165 @@ begin
       finally Finish(Ok); end;
     except on E: Exception do begin if FDispatched then raise EContactlessWriteUncertain.Create(E.ClassName); raise; end; end;
   finally TCardCrypto.Clear(Old); TCardCrypto.Clear(NewData); end;
+end;
+
+procedure TMifarePlusCardReaderWriter.NativeValueCommand(const ACommand: Byte;
+  const ASource, ATarget: Integer; const AAmount: Cardinal; const APersistent: Boolean);
+var
+  H, Padded, Cipher, Iv, Expected, Response: TBytes;
+  I: Integer;
+begin
+  if not (ACommand in [$B1, $B3, $B5, $B7, $B9, $C3]) or
+    (FWriteCounter >= 65535) then
+    Invalid;
+  H := nil;
+  Padded := nil;
+  SetLength(H, 3);
+  H[0] := ACommand;
+  H[1] := Byte(ASource and $FF);
+  H[2] := Byte(ASource shr 8);
+  try
+    if ACommand in [$B7, $B9] then
+    begin
+      SetLength(H, 5);
+      H[3] := Byte(ATarget and $FF);
+      H[4] := Byte(ATarget shr 8);
+    end;
+    if ACommand in [$B1, $B3, $B7, $B9] then
+    begin
+      SetLength(Padded, 16);
+      for I := 0 to 3 do
+        Padded[I] := Byte((AAmount shr (I * 8)) and $FF);
+      Padded[4] := $80;
+      Iv := TMifarePlusCodec.DataIv(FTi, FReadCounter, FWriteCounter, False);
+      Cipher := FProvider.EncryptCbc(FKeys.Encryption, Iv, Padded);
+      if Length(Cipher) <> 16 then
+        Invalid;
+      H := Joined(H, Cipher);
+    end;
+    Expected := TMifarePlusCodec.Mac(FProvider, FKeys.Authentication,
+      MacInput(ACommand, FWriteCounter, Copy(H, 1, Length(H) - 1)));
+    H := Joined(H, Expected);
+    if APersistent then
+      FDispatched := True;
+    Response := FSession.ExchangeNative(H);
+    Inc(FWriteCounter);
+    if (Length(Response) <> 9) or (Response[0] <> $90) then
+      Invalid;
+    Expected := TMifarePlusCodec.Mac(FProvider, FKeys.Authentication,
+      MacInput($90, FWriteCounter, nil));
+    if not TCardCrypto.EqualSecret(Expected, Copy(Response, 1, 8)) then
+      Invalid;
+  finally
+    TCardCrypto.Clear(H);
+    TCardCrypto.Clear(Padded);
+    TCardCrypto.Clear(Cipher);
+    TCardCrypto.Clear(Response);
+    TCardCrypto.Clear(Expected);
+    TCardCrypto.Clear(Iv);
+  end;
+end;
+
+procedure TMifarePlusCardReaderWriter.ExecuteNativeValueVerified(
+  const AOperation: TMifarePlusNativeValueOperation;
+  const ASourceBlock, ATargetBlock: Integer;
+  const AExpectedSource, AExpectedTarget: TBytes;
+  const AAmount: Cardinal; const AResultAddress: Byte);
+var
+  Source, Target, Desired, Acquired: TBytes;
+  SourceValue: TMifarePlusValue;
+  ResultValue: Int64;
+  SavedMode: TMifarePlusMode;
+  Command: Byte;
+  Ok: Boolean;
+begin
+  Ready;
+  if not (AOperation in [mnvoIncrementThenTransfer, mnvoDecrementThenTransfer,
+    mnvoIncrementTransfer, mnvoDecrementTransfer, mnvoRestoreTransfer]) or
+    ((AOperation = mnvoRestoreTransfer) and (AAmount <> 0)) or
+    (FProvider = nil) or (Length(FKey) <> 16) then
+    Invalid;
+  ValidateRange(ASourceBlock, 1);
+  ValidateRange(ATargetBlock, 1);
+  Source := CopyBytes(AExpectedSource);
+  Target := CopyBytes(AExpectedTarget);
+  Desired := nil;
+  Acquired := nil;
+  SavedMode := FMode;
+  try
+    SourceValue := TMifarePlusValueCodec.Decode(Source);
+    TMifarePlusValueCodec.Decode(Target);
+    if (ASourceBlock = ATargetBlock) and not BytesEqual(Source, Target) then
+      Invalid;
+    ResultValue := SourceValue.Value;
+    case AOperation of
+      mnvoIncrementThenTransfer, mnvoIncrementTransfer:
+        ResultValue := ResultValue + Int64(AAmount);
+      mnvoDecrementThenTransfer, mnvoDecrementTransfer:
+        ResultValue := ResultValue - Int64(AAmount);
+    end;
+    if (ResultValue < Low(Integer)) or (ResultValue > High(Integer)) then
+      Invalid;
+    Desired := TMifarePlusValueCodec.Encode(Integer(ResultValue), AResultAddress);
+    BeginOperation;
+    Ok := False;
+    try
+      try
+        Authenticate;
+        FMode := mpcFull;
+        Acquired := ReadNative(ASourceBlock, 1);
+        if not BytesEqual(Acquired, Source) then
+          Invalid;
+        if ATargetBlock <> ASourceBlock then
+        begin
+          Acquired := ReadNative(ATargetBlock, 1);
+          if not BytesEqual(Acquired, Target) then
+            Invalid;
+        end;
+        if not BytesEqual(Desired, Target) then
+        begin
+          case AOperation of
+            mnvoIncrementThenTransfer: Command := $B1;
+            mnvoDecrementThenTransfer: Command := $B3;
+            mnvoIncrementTransfer: Command := $B7;
+            mnvoDecrementTransfer: Command := $B9;
+          else
+            Command := $C3;
+          end;
+          NativeValueCommand(Command, ASourceBlock, ATargetBlock, AAmount,
+            AOperation in [mnvoIncrementTransfer, mnvoDecrementTransfer]);
+          if AOperation in [mnvoIncrementThenTransfer, mnvoDecrementThenTransfer,
+            mnvoRestoreTransfer] then
+            NativeValueCommand($B5, ATargetBlock, 0, 0, True);
+          Acquired := ReadNative(ATargetBlock, 1);
+          if not BytesEqual(Acquired, Desired) then
+            Invalid;
+          if ASourceBlock <> ATargetBlock then
+          begin
+            Acquired := ReadNative(ASourceBlock, 1);
+            if not BytesEqual(Acquired, Source) then
+              Invalid;
+          end;
+        end;
+        Ok := True;
+      finally
+        Finish(Ok);
+      end;
+    except
+      on E: Exception do
+      begin
+        if FDispatched then
+          raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    FMode := SavedMode;
+    TCardCrypto.Clear(Source);
+    TCardCrypto.Clear(Target);
+    TCardCrypto.Clear(Desired);
+    TCardCrypto.Clear(Acquired);
+  end;
 end;
 
 class function TMifarePlusValueCodec.Decode(const AData: TBytes): TMifarePlusValue;

@@ -1015,3 +1015,28 @@ Inactive palette/RTL streaming now covers **60 cases** for **59 registered
 components**. Distribution checks report **62 projects, 2 groups, 48 DFM forms**
 and no findings; fixture reproducibility and BOM/CRLF checks pass. No demo files
 changed. Existing unrelated compiler notes/warnings remain unsuppressed.
+
+## Plus native value workflows and SL2→SL3 (2026-10-12)
+
+The complete FPC/native regression runner passed. Final focused verification passed
+**331,970 assertions** (182,322 added in this increment) with range/overflow checks
+and zero heap leaks. The independent fixture generator now produces **43 literal
+transcripts**, adding explicit raw first-authentication SL2→SL3 with fresh SL3 data
+proof, all five staged/combined native value workflows, same/separate-block paths,
+4K high addresses and full unsigned amounts spanning both signed endpoints.
+
+Tests inject every native I/O boundary and protected response bit, preimage errors,
+signed overflow, malformed value/address redundancy, and caller buffer mutation.
+They distinguish volatile-buffer failure from persistent-transfer dispatch and
+verify unchanged distinct sources. Two additional transcripts carry valid response
+MACs with wrong destination or changed source data; both fail at the precise proof
+boundary. Authentication tests also corrupt nonces/status with recomputed valid
+CRC-A, exercising nonce/capability checks independently of RF CRC rejection.
+
+All **21 source checkers**, fixture reproducibility and distribution checks pass.
+Distribution remains **62 projects, 2 groups and 48 DFM forms**, with no findings;
+registration/streaming remains **60 cases** for **59 palette components**. Pascal
+BOM/CRLF is preserved and no demos changed. Native value support is explicitly the
+Plus X-compatible command profile, within one authenticated sector. SL2 sector
+data sessions/key modifiers remain separate. Existing unrelated compiler notes
+and warnings have not been suppressed.

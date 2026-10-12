@@ -501,3 +501,18 @@ explicit one-way-change acknowledgement; they do not infer levels or replay.
 value-block access to the Plus component. They retain logical addresses and check
 exact prior content; native increment/decrement/transfer permissions are separate.
 See [MIFARE_PLUS.md](MIFARE_PLUS.md) for exact API and evidence contracts.
+
+
+## Native Plus value and SL2→SL3 pipelines
+
+`ExecuteNativeValueVerified` performs native staged increment/decrement or restore
+followed by transfer, or native combined increment/decrement-transfer. It pins
+both exact ordinary-value preimages, checks signed arithmetic, keeps volatile
+buffer state inside one exclusive session and verifies target/source content.
+Persistent-transfer uncertainty is distinct from a failed volatile-buffer step;
+there is no retry or exposed pending transfer buffer. Source/target must fit the
+same authenticated sector and the selected Plus X-compatible command profile.
+
+`SwitchSl2ToSl3Verified` adds explicit raw first authentication with the supplied
+L3 switch key, then a separate fresh same-card protected SL3 data proof. SL2 sector
+data sessions/key modifiers remain separate. See [MIFARE_PLUS.md](MIFARE_PLUS.md).

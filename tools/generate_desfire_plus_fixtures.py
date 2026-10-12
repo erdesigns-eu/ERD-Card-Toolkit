@@ -149,6 +149,60 @@ for writing in [False,True]:
   packet=h+mac(PM,h[:1]+le(wc)+TI+h[1:]);wc+=1
   p.append((packet,b'\x90'+mac(PM,b'\x90'+le(wc)+TI)));read_value(valueblock(100,2))
  vectors['PlusValue'+('Write' if writing else 'Read')]=p
+# Explicit SL2 first-authentication switch, CRC framed, followed by a fresh SL3 proof.
+p=[];auth(p,plus=True,slot=0x9003)
+vectors['PlusLevel2To3']=[(crc_a(c),crc_a(resp)) for c,resp in p]+vectors['PlusFullRead']
+# Native value workflows: independent amount mode-2 padding, AES IV and write MAC.
+# No ordinary A1 data write substitutes for B1/B3/B5/B7/B9/C3.
+for operation in range(5):
+ for separate in [False,True]:
+  source=1 if separate else 2;target=2;old=valueblock(100,source);previous=valueblock(7,target) if separate else old
+  result=100 if operation==4 else (142 if operation in [0,2] else 58)
+  p=[];auth(p,plus=True);rc=wc=0
+  def native_read(block,value):
+   global rc,wc
+   h=b'\x31'+le(block)+b'\x01';request=h+mac(PM,h[:1]+le(rc)+TI+h[1:]);rc+=1
+   payload=enc(PE,(le(rc)+le(wc))*3+TI,value)
+   p.append((request,b'\x90'+payload+mac(PM,b'\x90'+le(rc)+TI+h[1:]+payload)))
+  def native_value(cmd,block,destination=0,amount=42):
+   global wc
+   h=bytes([cmd])+le(block)
+   if cmd in [0xB7,0xB9]:h+=le(destination)
+   if cmd in [0xB1,0xB3,0xB7,0xB9]:h+=enc(PE,TI+(le(rc)+le(wc))*3,le(amount,4)+b'\x80'+bytes(11))
+   request=h+mac(PM,h[:1]+le(wc)+TI+h[1:]);wc+=1
+   p.append((request,b'\x90'+mac(PM,b'\x90'+le(wc)+TI)))
+  native_read(source,old)
+  if separate:native_read(target,previous)
+  desired=valueblock(result,target)
+  if desired!=previous:
+   cmd=[0xB1,0xB3,0xB7,0xB9,0xC3][operation];native_value(cmd,source,target)
+   if operation in [0,1,4]:native_value(0xB5,target)
+   native_read(target,desired)
+   if separate:native_read(source,old)
+  vectors['PlusNative'+str(operation)+('Cross' if separate else 'Same')]=p
+# 4K boundary vectors exercise 32-bit unsigned amounts and high physical addresses.
+for decrement in [False,True]:
+ p=[];auth(p,plus=True,slot=0x4040);rc=wc=0
+ old=valueblock(2147483647 if decrement else -2147483648,128);previous=valueblock(7,129)
+ def boundary_read(block,value):
+  global rc,wc
+  h=b'\x31'+le(block)+b'\x01';request=h+mac(PM,h[:1]+le(rc)+TI+h[1:]);rc+=1
+  payload=enc(PE,(le(rc)+le(wc))*3+TI,value)
+  p.append((request,b'\x90'+payload+mac(PM,b'\x90'+le(rc)+TI+h[1:]+payload)))
+ boundary_read(128,old);boundary_read(129,previous)
+ h=bytes([0xB9 if decrement else 0xB7])+le(128)+le(129)+enc(PE,TI+(le(rc)+le(wc))*3,bytes.fromhex('FFFFFFFF80')+bytes(11))
+ request=h+mac(PM,h[:1]+le(wc)+TI+h[1:]);wc+=1
+ p.append((request,b'\x90'+mac(PM,b'\x90'+le(wc)+TI)))
+ boundary_read(129,valueblock(-2147483648 if decrement else 2147483647,129));boundary_read(128,old)
+ vectors['PlusNative4K'+('Decrement' if decrement else 'Increment')]=p
+# Authenticated semantic failures: valid response MAC but incorrect destination or changed source.
+for source_changed in [False,True]:
+ p=list(vectors['PlusNative2Cross']);block=1 if source_changed else 2;rc=4 if source_changed else 3
+ h=b'\x31'+le(block)+b'\x01';value=valueblock(101,1) if source_changed else valueblock(143,2)
+ payload=enc(PE,(le(rc)+le(1))*3+TI,value)
+ response=b'\x90'+payload+mac(PM,b'\x90'+le(rc)+TI+h[1:]+payload)
+ index=-1 if source_changed else -2;p[index]=(p[index][0],response)
+ vectors['PlusNativeBad'+('Source' if source_changed else 'Target')]=p
 s='''unit DesfirePlus.Vectors;
 {$IFDEF FPC}{$MODE DELPHI}{$ENDIF}
 interface

@@ -12,6 +12,7 @@ ERD Contactless palette and starts inactive.
 | `RotateSectorKeyVerified` | Encrypted replacement authorized by the configured sector key, release and fresh same-card target-key authentication |
 | `PersonalizeAndCommitSl3Verified` | Frozen explicit SL0 entries, one commit and fresh selected SL3 key/data proofs |
 | `ReadValueBlock` / `WriteValueBlockVerified` | Signed value/address redundancy; preimage-checked ordinary secure write and read-back |
+| `ExecuteNativeValueVerified` | Selected native increment/decrement/restore plus staged/combined transfer; exact preimages and protected result/source proof |
 | MACed mode | Plain data, command and response MACs |
 | Full mode (default) | AES-CBC data, command and response MACs |
 
@@ -148,11 +149,12 @@ turns RF off and restores PN532 parameter baseline on release.
 | `AuthenticateSl1` | $9004; native $76/$72 mutual AES nonce proof, no level mutation |
 | `SwitchSl1ToSl2Acknowledged` | $9002; explicit acknowledgement, authenticated nonce proof and successful release; no independent SL2 sector proof |
 | `SwitchSl1ToSl3Verified` | $9003; authenticated raw transition, then fresh same-UID SL3 AES authentication and encrypted MAC-verified data comparison |
+| `SwitchSl2ToSl3Verified` | $9003; explicit raw first $70/$72 authentication with nonce/capability checks, followed by fresh same-UID protected SL3 data proof |
 
-The caller selects a card explicitly known to be SL1 and supplies valid provisioned
+The caller selects a card explicitly known to be SL1, or SL2 for the SL2→SL3 method, and supplies valid provisioned
 keys; the component does not infer levels or try keys. SL2 is a generation-specific
 option and is not available on every Plus variant. Unsupported native commands
-fail without fallback. The SL3 method requires an independent `Sl3Session`, proof
+fail without fallback. Both SL3 methods require an independent `Sl3Session`, proof
 sector key number/key, ordinary proof block and exact sixteen-byte expected data.
 Geometry, credentials and proof inputs are validated/frozen before transition I/O.
 The two backends must refer to the same dedicated reader; acquisitions are sequential.
@@ -198,11 +200,61 @@ or substitute for native increment/decrement/restore/transfer commands granted b
 different access conditions. Use explicit expected values and preserved logical
 addresses; do not calculate updates from stale cached data.
 
+## Native increment, decrement, restore and transfer
+
+`ExecuteNativeValueVerified` provides complete exclusive value workflows for an
+explicit Plus X-compatible SL3 command set. This is separate from ordinary data
+writes: it sends the actual native commands and respects native value-operation
+permissions. The caller supplies readable source/target blocks in one authenticated
+sector, their complete exact sixteen-byte preimages, an unsigned 32-bit amount and
+the expected resulting logical address.
+
+| `TMifarePlusNativeValueOperation` | Native commands |
+| --- | --- |
+| `mnvoIncrementThenTransfer` | $B1 source increment, then $B5 target transfer |
+| `mnvoDecrementThenTransfer` | $B3 source decrement, then $B5 target transfer |
+| `mnvoIncrementTransfer` | $B7 combined source increment and target transfer |
+| `mnvoDecrementTransfer` | $B9 combined source decrement and target transfer |
+| `mnvoRestoreTransfer` | $C3 source restore, then $B5 target transfer; amount zero |
+
+All commands and responses have MACs. Amounts are little-endian four-byte values
+with ISO 9797 mode-2 padding and AES encryption under the current native IV.
+Source/target preimages and signed arithmetic bounds are checked before mutation;
+amounts up to $FFFFFFFF are supported when the resulting signed value fits.
+Inputs are copied before I/O. Source may equal target; then both expected arrays
+must agree. A target already equal to the desired result skips native mutation.
+
+Staged operations keep the volatile transfer buffer inside the same exclusive RF
+session. A buffer-command failure stops the workflow and releases RF; no later
+transfer is dispatched. Persistent dispatch starts at $B5/$B7/$B9. Failures from
+that point, including MAC/read-back/release errors, raise `EContactlessWriteUncertain`.
+Protected read-back checks the complete target and, for distinct blocks, verifies
+that the source remains unchanged. Neither a command nor a transfer is replayed.
+
+`AResultAddress` is an explicit expected postcondition for the native transfer,
+not an address programmed by the library. Supply the address required by the
+selected card/layout; the library does not guess address-preservation semantics.
+Read-back must match it exactly. Cross-sector transfers, exposed long-lived transfer
+buffers and variants lacking these native commands remain separate profiles.
+
+The SL2→SL3 method uses raw first authentication ($70, key $9003, empty PCD
+capabilities), checks the returned nonce/capability echo, releases RF, then performs
+a fresh ISO14443-4 SL3 proof. It does not create an SL2 Crypto1 sector session or
+derive an SL2 key modifier. There is no alternate-authentication fallback.
+
+Protocol framing, operation codes, encrypted-amount padding and write-counter/MAC
+inputs were cross-checked against the NXP reader API reference mirrored at
+[phalMfp.h](https://github.com/zhaohuizhang/DWMS/blob/31aaff5575e567af0bef3f585483baad78fab736/android/android_fore/jni/nxp/intfs/phalMfp.h)
+and [command definitions](https://github.com/zhaohuizhang/DWMS/blob/31aaff5575e567af0bef3f585483baad78fab736/android/android_fore/jni/nxp/comps/phalMfp/src/phalMfp_Int.h).
+The Delphi code and independently generated transcripts are implemented here;
+no external reader-library source is included or compiled.
+
 ## Scope and validation
 
-SL2→SL3 transitions, SL2 sector data sessions, native increment/decrement/restore/transfer
-commands, manufacturer/trailer/configuration programming and Plus EV2 LRP
-negotiation are not implemented by these profiles.
+SL2 sector data sessions, manufacturer/trailer/configuration programming and
+Plus EV2 LRP negotiation are not implemented by these profiles. Native value
+workflows require the Plus X-compatible command set, supplied read/operation
+authority and an initialized value layout; they are not claimed for every Plus variant.
 SL0 personalization/commit applies only to an explicitly selected ISO14443-4
 profile whose native commit results directly in SL3. Ordinary-content copying does not copy a card's keys or security state.
 

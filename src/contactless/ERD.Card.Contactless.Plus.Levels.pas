@@ -36,7 +36,12 @@ type
     procedure SetModel(const V: TMifarePlusModel);
     function Exchange(const B: TBytes; const AExpected: Integer): TBytes;
     procedure AuthenticateRaw(const ASlot: Word; const AKey: TBytes;
-      const AMutating: Boolean; var ADispatched: Boolean);
+      const AMutating: Boolean; var ADispatched: Boolean;
+      const AFirstAuth: Boolean = False);
+    procedure SwitchToSl3(const ASwitchKey: TBytes;
+      const AProofKeyNumber: Word; const AProofKey: TBytes;
+      const AProofBlock: Integer; const AExpectedData: TBytes;
+      const AAcknowledge, AFirstAuth: Boolean);
   public
     /// <summary>Creates an inactive explicit 2K profile without reader, thread or credentials.</summary>
     /// <param name="AOwner">Optional component owner.</param>
@@ -64,6 +69,20 @@ type
     /// <remarks>Uses separate raw and ISO14443-4 acquisitions; both pin ExpectedUid. No transition/authentication replay or fallback.</remarks>
     /// <exception cref="EContactlessWriteUncertain">Transition or subsequent fresh SL3 proof/release cannot be established.</exception>
     procedure SwitchSl1ToSl3Verified(const ASwitchKey: TBytes;
+      const AProofKeyNumber: Word; const AProofKey: TBytes;
+      const AProofBlock: Integer; const AExpectedData: TBytes;
+      const AAcknowledge: Boolean);
+    /// <summary>Switches an explicit SL2 card using raw first AES authentication and proves fresh same-card SL3 data.</summary>
+    /// <param name="ASwitchKey">Exactly sixteen supplied bytes for native key 9003.</param>
+    /// <param name="AProofKeyNumber">Explicit resulting SL3 sector key address matching model and proof block.</param>
+    /// <param name="AProofKey">Exactly sixteen supplied resulting SL3 sector key bytes.</param>
+    /// <param name="AProofBlock">Ordinary data block covered by the proof key.</param>
+    /// <param name="AExpectedData">Exact sixteen-byte expected proof data, frozen before raw I/O.</param>
+    /// <param name="AAcknowledge">Explicit acknowledgement of the irreversible level change.</param>
+    /// <remarks>Uses raw 70/72 with empty PCD capabilities, nonce/capability verification and separate fresh ISO14443-4 proof.
+    /// No Crypto1 sector session, SL2 key-modifier derivation, level probing or 76/70 fallback is performed.</remarks>
+    /// <exception cref="EContactlessWriteUncertain">Transition dispatch or later SL3 proof/release cannot be established.</exception>
+    procedure SwitchSl2ToSl3Verified(const ASwitchKey: TBytes;
       const AProofKeyNumber: Word; const AProofKey: TBytes;
       const AProofBlock: Integer; const AExpectedData: TBytes;
       const AAcknowledge: Boolean);
@@ -167,10 +186,11 @@ begin
 end;
 
 procedure TMifarePlusLevelManager.AuthenticateRaw(const ASlot: Word;
-  const AKey: TBytes; const AMutating: Boolean; var ADispatched: Boolean);
+  const AKey: TBytes; const AMutating: Boolean; var ADispatched: Boolean;
+  const AFirstAuth: Boolean);
 var
   Key, Uid, Zero, R, A, B, Rotated, Plain, Cipher, Packet: TBytes;
-  I: Integer;
+  I, ResponseLength, NonceOffset: Integer;
   Active, Ok: Boolean;
 begin
   if (FRaw = nil) or (FProvider = nil) or (Length(FUid) = 0) or
@@ -189,6 +209,8 @@ begin
       if not BytesEqual(Uid, FUid) then
         Invalid;
       Packet := HexToBytes('760000');
+      if AFirstAuth then
+        Packet := HexToBytes('70000000');
       Packet[1] := Byte(ASlot and $FF);
       Packet[2] := Byte(ASlot shr 8);
       R := Exchange(Packet, 17);
@@ -212,17 +234,28 @@ begin
       Move(Cipher[0], Packet[1], 32);
       if AMutating then
         ADispatched := True;
-      R := Exchange(Packet, 17);
+      ResponseLength := 17;
+      NonceOffset := 0;
+      if AFirstAuth then
+      begin
+        ResponseLength := 33;
+        NonceOffset := 4;
+      end;
+      R := Exchange(Packet, ResponseLength);
       TCardCrypto.Clear(Plain);
-      Plain := FProvider.DecryptCbc(Key, Zero, Copy(R, 1, 16));
-      if Length(Plain) <> 16 then
+      Plain := FProvider.DecryptCbc(Key, Zero, Copy(R, 1, ResponseLength - 1));
+      if Length(Plain) <> ResponseLength - 1 then
         Invalid;
       Rotated := nil;
       SetLength(Rotated, 16);
       for I := 0 to 15 do
         Rotated[I] := A[(I + 1) mod 16];
-      if not TCardCrypto.EqualSecret(Plain, Rotated) then
+      if not TCardCrypto.EqualSecret(Copy(Plain, NonceOffset, 16), Rotated) then
         Invalid;
+      if AFirstAuth then
+        for I := 26 to 31 do
+          if Plain[I] <> 0 then
+            Invalid;
       Ok := True;
     finally
       if Active then
@@ -286,10 +319,10 @@ begin
   end;
 end;
 
-procedure TMifarePlusLevelManager.SwitchSl1ToSl3Verified(const ASwitchKey: TBytes;
+procedure TMifarePlusLevelManager.SwitchToSl3(const ASwitchKey: TBytes;
   const AProofKeyNumber: Word; const AProofKey: TBytes;
   const AProofBlock: Integer; const AExpectedData: TBytes;
-  const AAcknowledge: Boolean);
+  const AAcknowledge, AFirstAuth: Boolean);
 var
   Key, Expected, Data: TBytes;
   Proof: TMifarePlusCardReaderWriter;
@@ -319,7 +352,7 @@ begin
     Proof.Key := AProofKey;
     Proof.ExpectedUid := FUid;
     try
-      AuthenticateRaw($9003, Key, True, Dispatched);
+      AuthenticateRaw($9003, Key, True, Dispatched, AFirstAuth);
       Data := Proof.ReadBlocks(AProofBlock, 1);
       if not BytesEqual(Data, Expected) then
         Invalid;
@@ -338,6 +371,24 @@ begin
     TCardCrypto.Clear(Data);
     FBusy := False;
   end;
+end;
+
+procedure TMifarePlusLevelManager.SwitchSl1ToSl3Verified(const ASwitchKey: TBytes;
+  const AProofKeyNumber: Word; const AProofKey: TBytes;
+  const AProofBlock: Integer; const AExpectedData: TBytes;
+  const AAcknowledge: Boolean);
+begin
+  SwitchToSl3(ASwitchKey, AProofKeyNumber, AProofKey, AProofBlock,
+    AExpectedData, AAcknowledge, False);
+end;
+
+procedure TMifarePlusLevelManager.SwitchSl2ToSl3Verified(const ASwitchKey: TBytes;
+  const AProofKeyNumber: Word; const AProofKey: TBytes;
+  const AProofBlock: Integer; const AExpectedData: TBytes;
+  const AAcknowledge: Boolean);
+begin
+  SwitchToSl3(ASwitchKey, AProofKeyNumber, AProofKey, AProofBlock,
+    AExpectedData, AAcknowledge, True);
 end;
 
 end.
