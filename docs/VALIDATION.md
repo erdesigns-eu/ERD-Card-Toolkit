@@ -1270,3 +1270,39 @@ The full regression run before the final secure-store addition passes, including
 Python tests** and all **21 source checkers**. Focused latest builds separately
 verify protected storage, RequestStop admission and the expanded palette described
 above. All new Pascal units retain UTF-8 BOM/CRLF and public API XML documentation.
+
+
+## 2026-10-12 — typed artifacts, atomic files and multi-reader coordination
+
+The latest focused native studio bundle passes **98 assertions**, with zero heap
+leaks; ten repeated runs pass. Coverage includes all-reader reservation before any
+Open, busy/missing/duplicate members, wrong-thread group access, generation changes
+during another member Open, partial-open rollback, continued cleanup after Close
+failure, one-shot queued/background execution and Failed versus Uncertain evidence.
+The concrete multi-workflow bridge preserves/restores observers, supports cooperative
+cancellation, retains precise failure classes and rejects a consumed operation.
+
+Typed selected-memory, ordinary DESFire, MOBIB and magstripe adapters round-trip
+independent buffers and reject cross-family/version, truncated and invalid artifacts
+without replacing valid project data. Native Linux filesystem tests exercise new
+files, replacement, rename refusal, failure before replacement, protection-provider
+failure, protected roundtrip/tamper rejection, temporary-file cleanup, destroyed
+provider binding and a reentrant source change during protection. The protection
+oracle checks the contract; it is not a cryptographic implementation.
+
+Existing studio tests pass **303 assertions**. Latest inactive palette/RTL streaming
+passes **68 cases** for **67 components**; distribution checks cover **62 projects,
+2 groups and 48 DFM forms** with no findings. All **21 source checkers** and **39
+Python tool tests** pass. Pascal/package CRLF and new-unit BOM are preserved. No
+forms or demos were changed. Native Windows CreateFile/FlushFileBuffers/MoveFileEx
+and DPAPI paths are delivered but were not executed on this Linux host.
+
+
+The complete regression runner finishes successfully, including **3,962,935
+DESFire/Plus assertions**, **99 PC/SC/provider assertions**, **303 studio assertions**,
+**68 registration/streaming cases**, **39 Python tests**, distribution validation
+and all **21 checkers** across sources/tests/examples. Its compiled bundle snapshot
+had **86 assertions**; the subsequent concrete multi-workflow bridge and checked
+native handle-close changes are covered by the latest **98-assertion** focused
+build and repeated runs above. Existing unrelated FPC compiler notes/warnings are
+unchanged; the new filesystem unit emits only an FPC inline-not-inlined note.

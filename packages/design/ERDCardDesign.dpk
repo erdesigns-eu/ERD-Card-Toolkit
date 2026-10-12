@@ -35,6 +35,10 @@ requires
   designide;
 
 contains
+  ERD.Card.MagStripe.Project in '..\..\src\magstripe\ERD.Card.MagStripe.Project.pas',
+  ERD.Card.Contactless.Project in '..\..\src\contactless\ERD.Card.Contactless.Project.pas',
+  ERD.Card.Project.Artifacts in '..\..\src\core\ERD.Card.Project.Artifacts.pas',
+  ERD.Card.Project.Files in '..\..\src\core\ERD.Card.Project.Files.pas',
   ERD.Card.Contactless.DESFire.Extensions in '..\..\src\contactless\ERD.Card.Contactless.DESFire.Extensions.pas',
   ERD.Card.Contactless.Plus in '..\..\src\contactless\ERD.Card.Contactless.Plus.pas',
   ERD.Card.Contactless.Plus.Levels in '..\..\src\contactless\ERD.Card.Contactless.Plus.Levels.pas',

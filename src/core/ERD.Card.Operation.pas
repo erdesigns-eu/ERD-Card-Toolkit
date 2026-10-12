@@ -39,6 +39,16 @@ type
     function Execute(const ASession: ICardSessionLease;
       const ACancellation: ICardCancellation): TCardWorkflowState;
   end;
+  /// <summary>Single-use operation requiring an exclusive complete reader group.</summary>
+  ICardMultiOperation = interface
+    ['{57BE4BDC-B386-41B0-A4A1-9A83D7ED59C1}']
+    /// <summary>Runs once after every source/target reservation has opened successfully.</summary>
+    /// <param name="ASessions">Caller-order reader group, owned and closed by the queue.</param>
+    /// <param name="ACancellation">Cooperative cancellation flag.</param>
+    /// <returns>Terminal workflow evidence; no distributed atomic write guarantee.</returns>
+    function ExecuteMany(const ASessions: ICardSessionGroup;
+      const ACancellation: ICardCancellation): TCardWorkflowState;
+  end;
   /// <summary>Optional precise failure evidence exposed by a completed operation.</summary>
   ICardOperationFailure = interface
     ['{7AB6F815-7863-42B5-A167-646DC1ED4197}']
@@ -52,6 +62,8 @@ type
     Id: string;
     /// <summary>Selected reader identifier.</summary>
     ReaderId: string;
+    /// <summary>Number of reserved readers; ReaderId identifies the first member.</summary>
+    ReaderCount: Integer;
     /// <summary>Terminal evidence; unclassified Execute exceptions conservatively become Uncertain.</summary>
     State: TCardWorkflowState;
     /// <summary>Exception class name only.</summary>
@@ -71,6 +83,8 @@ type
   private
     FState: IInterface;
     FOnResult: TCardOperationResultEvent;
+    procedure AddJob(const AId: string; const AReaderIds: array of string;
+      const AOperation: ICardOperation; const AMulti: ICardMultiOperation);
   public
     /// <summary>Creates an inactive queue with capacity 256.</summary>
     /// <param name="AOwner">Optional component owner.</param>
@@ -82,6 +96,12 @@ type
     /// <param name="AReaderId">Nonempty registered reader identifier, at most 1024 characters.</param>
     /// <param name="AOperation">Non-nil single-use job; implementation owns its prepared inputs.</param>
     procedure Enqueue(const AId, AReaderId: string; const AOperation: ICardOperation);
+    /// <summary>Enqueues a source/target job with copied ordered reader IDs.</summary>
+    /// <param name="AId">Unique pending/executing job identifier, at most 128 characters.</param>
+    /// <param name="AReaderIds">One through sixteen distinct registered physical reader IDs.</param>
+    /// <param name="AOperation">Retained prepared operation; failures never trigger retries.</param>
+    procedure EnqueueMany(const AId: string; const AReaderIds: array of string;
+      const AOperation: ICardMultiOperation);
     /// <summary>Consumes one job and releases its reader lease, even after an exception.</summary>
     /// <param name="AManager">Non-nil live reader registry, retained by the application during execution.</param>
     /// <param name="AResult">Independent terminal evidence; reset to default if no job exists.</param>
@@ -124,6 +144,8 @@ type
   TJob = record
     Id, ReaderId: string;
     Operation: ICardOperation;
+    Multi: ICardMultiOperation;
+    ReaderIds: array of string;
   end;
   TQueueState = class(TInterfacedObject)
   public
@@ -187,21 +209,46 @@ begin
 end;
 
 procedure TCardOperationQueue.Enqueue(const AId, AReaderId: string; const AOperation: ICardOperation);
-var S: TQueueState; I, N: Integer; Wake: ICardOperationWake;
 begin
-  if (Length(AId)<1) or (Length(AId)>128) or (Length(AReaderId)<1) or
-    (Length(AReaderId)>1024) or (AOperation=nil) then raise ECardOperationError.Create('Invalid queued operation.');
+  AddJob(AId,[AReaderId],AOperation,nil);
+end;
+
+procedure TCardOperationQueue.EnqueueMany(const AId: string; const AReaderIds: array of string;
+  const AOperation: ICardMultiOperation);
+begin
+  AddJob(AId,AReaderIds,nil,AOperation);
+end;
+
+procedure TCardOperationQueue.AddJob(const AId: string; const AReaderIds: array of string;
+  const AOperation: ICardOperation; const AMulti: ICardMultiOperation);
+var S: TQueueState; I, J, N: Integer; Wake: ICardOperationWake; Job: TJob;
+begin
+  if (Length(AId)<1) or (Length(AId)>128) or (Length(AReaderIds)<1) or
+    (Length(AReaderIds)>16) or ((AOperation=nil)=(AMulti=nil)) then
+    raise ECardOperationError.Create('Invalid queued operation.');
+  Job := Default(TJob); Job.Id := AId; Job.ReaderId := AReaderIds[0];
+  Job.Operation := AOperation; Job.Multi := AMulti;
+  SetLength(Job.ReaderIds,Length(AReaderIds));
+  for I := 0 to High(AReaderIds) do begin
+    if (Length(AReaderIds[I])<1) or (Length(AReaderIds[I])>1024) then
+      raise ECardOperationError.Create('Invalid queued reader.');
+    for J := 0 to I-1 do if AReaderIds[I]=AReaderIds[J] then
+      raise ECardOperationError.Create('Duplicate queued reader.');
+    Job.ReaderIds[I] := AReaderIds[I];
+  end;
   S := QueueState(FState); S.Enter;
   try
-    if S.Busy and ((S.Current.Id=AId) or (S.Current.Operation=AOperation)) then
+    if S.Busy and ((S.Current.Id=AId) or
+      ((AOperation<>nil) and (S.Current.Operation=AOperation)) or
+      ((AMulti<>nil) and (S.Current.Multi=AMulti))) then
       raise ECardOperationError.Create('Operation is already executing.');
     N := Length(S.Jobs);
     if N>=256 then raise ECardOperationError.Create('Operation queue is full.');
     for I := 0 to N-1 do
-      if (S.Jobs[I].Id=AId) or (S.Jobs[I].Operation=AOperation) then
+      if (S.Jobs[I].Id=AId) or ((AOperation<>nil) and (S.Jobs[I].Operation=AOperation)) or
+        ((AMulti<>nil) and (S.Jobs[I].Multi=AMulti)) then
         raise ECardOperationError.Create('Duplicate queued operation.');
-    SetLength(S.Jobs,N+1); S.Jobs[N].Id := AId;
-    S.Jobs[N].ReaderId := AReaderId; S.Jobs[N].Operation := AOperation; Wake := S.Wake;
+    SetLength(S.Jobs,N+1); S.Jobs[N] := Job; Wake := S.Wake;
   finally S.Leave; end;
   if Wake<>nil then Wake.Signal;
 end;
@@ -209,7 +256,7 @@ end;
 function TCardOperationQueue.ExecuteNext(const AManager: TCardSessionManager;
   out AResult: TCardOperationResult): Boolean;
 var S: TQueueState; Job: TJob; I: Integer;
-  Lease: ICardSessionLease; Cancellation: ICardCancellation; Executing: Boolean;
+  Lease: ICardSessionLease; Group: ICardSessionGroup; Cancellation: ICardCancellation; Executing: Boolean;
   Retained: IInterface; Observer: TCardOperationResultEvent; Failure: ICardOperationFailure;
 begin
   AResult := Default(TCardOperationResult); Result := False;
@@ -225,30 +272,38 @@ begin
     Cancellation := TCancel.Create; S.Cancellation := Cancellation; S.Busy := True; S.Current := Job;
   finally S.Leave; end;
   Result := True; Executing := False;
-  AResult.Id := Job.Id; AResult.ReaderId := Job.ReaderId;
+  AResult.Id := Job.Id; AResult.ReaderId := Job.ReaderId; AResult.ReaderCount := Length(Job.ReaderIds);
   try
     try
-      Lease := AManager.Acquire(Job.ReaderId);
+      if Job.Multi<>nil then Group := AManager.AcquireMany(Job.ReaderIds)
+      else Lease := AManager.Acquire(Job.ReaderId);
       if Cancellation.Requested then AResult.State := cwsCancelled
       else begin
         Executing := True;
-        AResult.State := Job.Operation.Execute(Lease,Cancellation);
+        if Job.Multi<>nil then AResult.State := Job.Multi.ExecuteMany(Group,Cancellation)
+        else AResult.State := Job.Operation.Execute(Lease,Cancellation);
       end;
       if not (AResult.State in [cwsCompleted,cwsCancelled,cwsFailed,cwsUncertain,cwsNeedsVerification]) then
         raise ECardOperationError.Create('Operation returned a nonterminal state.');
       if (AResult.State in [cwsFailed,cwsUncertain]) and
-        Supports(Job.Operation,ICardOperationFailure,Failure) then AResult.ErrorClass := Failure.FailureClass;
+        ((Supports(Job.Operation,ICardOperationFailure,Failure)) or
+        (Supports(Job.Multi,ICardOperationFailure,Failure))) then AResult.ErrorClass := Failure.FailureClass;
     except on E: Exception do begin
       AResult.ErrorClass := E.ClassName;
       AResult.State := cwsFailed; if Executing then AResult.State := cwsUncertain;
     end; end;
+    if Group<>nil then
+      try Group.Close;
+      except on E: Exception do begin
+        AResult.ErrorClass := E.ClassName; AResult.State := cwsUncertain;
+      end; end;
     if Lease<>nil then
       try Lease.Close;
       except on E: Exception do begin
         AResult.ErrorClass := E.ClassName; AResult.State := cwsUncertain;
       end; end;
   finally
-    Lease := nil; S.Enter;
+    Group := nil; Lease := nil; S.Enter;
     try S.Busy := False; S.Cancellation := nil; S.Current := Default(TJob); finally S.Leave; end;
   end;
   Observer := FOnResult;

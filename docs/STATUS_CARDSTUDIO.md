@@ -21,7 +21,7 @@ profielen eerst verder uit, zonder nu nieuwe demo's of een applicatie te maken.
 
 ## Beschikbare basis
 
-De library telt **66 geregistreerde componenten** en **24 gedocumenteerde
+De library telt **67 geregistreerde componenten** en **24 gedocumenteerde
 workflowklassen**, inclusief de generieke geheugenworkflow. Dat is geen maat voor
 het aantal volledig ondersteunde kaarten: één klasse kan meerdere profielen bevatten.
 
@@ -105,7 +105,8 @@ begrensde projecten met atomaire import. De volgende productuitbreidingen blijve
 
 - **Reader- en sessieregie:** centrale transportreservering en generatiebewaking bestaan;
   een signal-driven achtergrondexecutor en lazy PC/SC-connectiebeheer bestaan nu
-  ook. Typed non-APDU leases en multi-reader coordination blijven componentwerk.
+  ook, inclusief atomische multi-readerreservering en queued groepsjobs. Typed non-APDU leases
+  en automatische hot-plugregistratie blijven componentwerk.
 - **Profielkeuze en capaciteiten:** acties aanbieden op basis van kaart én reader;
   ATR/UID-herkenning is een hint en geen bewijs dat iedere schrijfactie past.
 - **Inspectiemodel en schermen:** kaart/applicatie/fileboom, geparste velden, ruwe data,
@@ -113,8 +114,9 @@ begrensde projecten met atomaire import. De volgende productuitbreidingen blijve
 - **Bewerkingsregie:** preview, bron/doelkeuze, expliciete sleutels/instellingen,
   voortgang/annulering en een zichtbaar onderscheid tussen Verified en Uncertain.
 - **Projecten en geheimen:** het nieuwe begrensde projectformaat en streamopslag bestaan;
-  Windows-user DPAPI streamopslag bestaat ook; typed metadata/adapters, portable
-  beschermde opslag, atomic file replacement en een
+  Windows-user DPAPI en atomische bestandsopslag bestaan ook, met typed geheugen-,
+  DESFire-, MOBIB- en magstripe-adapters. Projectversiemigraties, overige typed adapters,
+  portable beschermde opslag en een
   gescheiden sleutelprovider moeten nog als componenten worden gebouwd.
 - **Heropening na fouten:** nieuwe kaartinspectie en gecontroleerde vervolgplannen;
   geen automatisch herhalen van een mogelijk al uitgevoerde schrijfactie.

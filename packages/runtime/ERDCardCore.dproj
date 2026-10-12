@@ -180,6 +180,8 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="..\..\src\core\ERD.Card.Project.Artifacts.pas"/>
+        <DCCReference Include="..\..\src\core\ERD.Card.Project.Files.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Inspection.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Session.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Operation.Executor.pas"/>

@@ -1,14 +1,16 @@
 # Sessieregie, bewerkingen en projecten
 
 Deze componentlaag staat tussen de kaartprotocollen/workflows en een toekomstige
-CardStudio-UI. Er zijn geen nieuwe schermen of demo's. De zeven niet-visuele
+CardStudio-UI. Er zijn geen nieuwe schermen of demo's. De acht niet-visuele
 componenten staan op de palette **ERD Studio** en worden geleverd in het bestaande
-core- en designpackage.
+core-, PC/SC-, Windows-crypto- en designpackage.
 
 | Component/API | Verantwoordelijkheid |
 | --- | --- |
 | `TCardSessionManager` | Registry van verbonden `ICardTransport`-readers, één applicatiereservering per reader, thread-eigenaarschap en ongeldig maken bij kaartwissel/loskoppeling |
 | `TCardOperationQueue` | Begrensde FIFO, één executor, eenmalige consumptie per queue-entry, annulering, terminale resultaten en `OnResult` |
+| `CreateCardMultiWorkflowOperation` | Voorbereide bron/doelworkflow aansluiten op een volledige lezergroep |
+| `TCardProjectFileStore` | Expliciete plain/protected bestandssaves, native flush, atomische replacement en replacement-evidence |
 | `CreateCardWorkflowOperation` | Een bestaande voorbereide single-card workflow aansluiten op een lease; cancellation doorgeven via veilige voortgangsgrenzen en bestaande observers behouden |
 | `TCardOperationExecutor` | Signaalgestuurde worker, veilig stoppen/joinen en creator-thread-resultaten |
 | `TCardPcscSessionProvider` | Gekopieerde PC/SC-configuratie, openen/sluiten op de workerthread per lease |
@@ -21,8 +23,8 @@ Verbind de bestaande readercomponent en registreer diens transport met
 `BindReader(ReaderId, Transport)`. Gebruik een vaste unieke ID voor iedere fysieke
 reader. Twee verschillende adapters voor dezelfde fysieke reader kunnen niet door
 interfacevergelijking als alias worden herkend; registreer die niet afzonderlijk.
-Een manager opent geen hardware, doet geen kaartselectie en start geen eigen
-PC/SC-transactie. De kaartcomponent blijft verantwoordelijk voor fysieke
+Constructie en registratie openen geen hardware. Acquisition kan een lazy provider
+openen; de manager doet geen kaartselectie en start geen eigen PC/SC-transactie. De kaartcomponent blijft verantwoordelijk voor fysieke
 Begin/EndTransaction, authenticatie, commit/abort en protocolverificatie.
 
 `Acquire(ReaderId)` geeft een lease op de aanroepende workerthread. Geef
@@ -83,8 +85,8 @@ met `OwnsWorkflow=True` vernietigt de operation de overgenomen workflow.
 Deze bridge is gericht op één kaartgeneratie. Voor single-reader bron/doelwissels:
 maak eerst een acquisition/back-up job en daarna een expliciete restore job op de
 nieuwe lease. Een wissel binnen dezelfde lease wordt terecht ongeldig. Gecoördineerde
-multi-reader jobs en typed magstripe/HID-backendleases
-zijn aanvullende infrastructuurprofielen; dit is geen generieke guard voor elk
+multi-reader jobs zijn beschikbaar via AcquireMany/EnqueueMany. Typed magstripe/HID-backendleases
+blijven aanvullende infrastructuurprofielen; dit is geen generieke guard voor elk
 vendorprotocol dat geen `ICardTransport` implementeert.
 
 ## Projecten
@@ -112,15 +114,15 @@ heeft. Use op één ownerthread; projectbuffers zijn geen concurrent database.
 Artifacts kunnen persoonsgegevens bevatten. Het formaat is niet versleuteld of
 ondertekend en is geen sleutelkluis. Credentials worden niet automatisch opgeslagen;
 voeg ze ook niet zelf toe aan artifacts. Windows-user DPAPI streamopslag is beschikbaar via de aparte store/provider.
-Portable key-providers, artifact-schema-adapters en projectversiemigraties blijven
+Portable key-providers en projectversiemigraties blijven
 verdere componentuitbreidingen.
 
 ## Componentgrens voor de UI
 
 De UI selecteert readers/projecten, preparet een bestaande workflow, bindt events
 en toont de teruggegeven evidence. Reservering, invalidatie, FIFO-consumptie,
-annulering en projectvalidatie horen bij deze componenten. Typed opslag, multi-reader coordination en meer readeradapters horen ook in deze laag; ze worden
-niet in forms gebouwd.
+annulering en projectvalidatie horen bij deze componenten. Typed artifact-opslag en multi-reader coordination zijn hieronder uitgewerkt. Meer readeradapters
+horen eveneens in deze laag en worden niet in forms gebouwd.
 
 ## Achtergrondexecutor en PC/SC-provider
 
@@ -158,9 +160,9 @@ lease sluit. Een verlaten idle lease sluit zijn provider op de eigen thread;
 verkeerde-thread/actieve-transaction abandonment maakt de registratie ongeldig.
 Dit is geen impliciete authenticatie, reset, reconnect, commit of abort.
 
-De huidige automatische provider is PC/SC. Typed non-APDU leases, multi-reader
-coordination, typed artifact adapters en portable/atomische file storage blijven
-verdere componentuitbreidingen. Er zijn geen schermen of demos toegevoegd.
+De huidige automatische provider is PC/SC. Typed non-APDU leases, automatische
+hot-plugregistratie, projectversiemigraties en portable protection/key-providers
+blijven verdere componentuitbreidingen. Er zijn geen schermen of demos toegevoegd.
 
 ## Beveiligde projectopslag
 
@@ -191,3 +193,84 @@ beschikbaar, en wordt nooit impliciet gebruikt bij een protectiefout.
 De huidige job kan zijn verificatie afronden, nieuwe jobs worden niet meer
 geaccepteerd voor uitvoering. Roep Stop later aan om de workerresources vrij te
 geven; Stop/destructie joinet voordat afhankelijke componenten verdwijnen.
+
+
+## Meerdere lezers in één job
+
+`Manager.AcquireMany(['source', 'target'])` reserveert één tot zestien unieke
+reader-ID's onder één registrylock. Een ontbrekende of bezette member weigert de
+hele aanvraag voordat een provider wordt geopend. Er wordt niet gewacht op een
+andere job: geen gedeeltelijk vastgehouden reserveringen of lock-order-deadlock.
+Callerorder blijft behouden voor `Group.ReaderId(Index)` en `Group.Lease(Index)`.
+
+Providers openen daarna op de acquiring thread. Een gedeeltelijke openfout sluit
+reeds geopende members in omgekeerde volgorde en geeft alle reserveringen vrij,
+ook wanneer een Close fout gaat. Een gefaalde verbinding wordt verwijderd en niet
+opnieuw geprobeerd. `Group.Validate` controleert alle kaartgeneraties zonder I/O;
+een wijziging tijdens het openen van een andere member wordt vóór oplevering geweigerd.
+Gebruik Validate ook tussen bron- en doelfasen. Elk membertransport bewaakt zijn
+eigen generatie bij iedere Exchange. Het systeem maakt geen gedistribueerde
+kaarttransactie: een verstuurde doelwrite kan niet door Group.Close worden teruggedraaid.
+
+`Queue.EnqueueMany(Id, ReaderIds, Operation)` kopieert de readerselectie en bewaart
+een `ICardMultiOperation`. ExecuteMany ontvangt de complete groep pas na succesvolle
+acquisition. De bestaande achtergrondexecutor, cancellation en eenmalige FIFO-consumptie
+werken ook voor deze jobs. ReaderId in het resultaat is de eerste member; ReaderCount
+is de groepsgrootte. Een acquisitionfout wordt Failed zonder ExecuteMany aan te roepen;
+een niet-geclassificeerde uitvoerings- of cleanupfout wordt Uncertain. Close probeert
+iedere member te sluiten, ook na een eerdere cleanupfout. De workflow moet eigen
+native transacties eindigen voordat de queue de groep kan vrijgeven.
+
+`CreateCardMultiWorkflowOperation(Workflow, BindGroup, OwnsWorkflow)` sluit bestaande
+voorbereide bron/doelworkflows aan op EnqueueMany. De callback bindt beide expliciete
+backends; de gedeelde bridge bewaart cancellation, observers en failure evidence.
+Er is een groepsvalidatie vóór binding en na uitvoering. Native transacties en
+inhoudsverificatie blijven bij de workflow. De adapter wordt maar één keer uitgevoerd.
+
+Een groep reserveert uitsluitend `ICardTransport`-backends. Magstripe/HID-projectdata
+worden ondersteund door adapters, maar krijgen hiermee geen fictieve APDU-sessies.
+
+## Getypeerde project-artifacts
+
+| Adapter | Methoden | Schema |
+| --- | --- | --- |
+| TCardProjectArtifacts | PutMemory/GetMemory | memory.v1 |
+| TContactlessProjectArtifacts | PutDesfire/GetDesfire | desfire.v1 |
+| TContactlessProjectArtifacts | PutMobib/GetMobib | mobib.v2 |
+| TMagStripeProjectArtifacts | Put/Get | magstripe.v1 |
+
+De geheugen-, DESFire- en MOBIB-adapters gebruiken de bestaande bounded archivecodecs.
+Magstripe bewaart een expliciete trackselectie en gevalideerde unframed payloads;
+onselected payloads, ongeldige lengtes, trailing bytes en ongeldige karakters worden
+geweigerd. Iedere Get controleert het exacte schema en retourneert onafhankelijke
+data. Een ongeldige Put verandert het project niet. De bestaande projectlimiet van
+**1 MiB per artifact** blijft gelden, ook wanneer een los familiearchief groter kan
+zijn. Schema-ID's en kaartgeometrie blijven onderscheiden. Geen sleutels, live readers,
+queued jobs of restore-permissies worden afgeleid uit een opgeslagen snapshot.
+
+## Atomische bestandsopslag
+
+`TCardProjectFileStore` is een inactieve palettecomponent. Verbind ProtectedStore
+met `TCardProtectedProjectStore`; `Save(Project, FileName)` en `Load` vereisen dat
+beleid. `SavePlain`/`LoadPlain` zijn afzonderlijke expliciete plaintext-methoden.
+Er bestaat geen automatische fallback wanneer een provider ontbreekt of weigert.
+
+Save maakt eerst een onafhankelijk projectarchief. Daarna wordt een exclusief,
+uniek tijdelijk bestand in dezelfde directory aangemaakt, volledig geschreven en
+geflusht. Windows gebruikt CreateFile CREATE_NEW, FlushFileBuffers en MoveFileEx
+REPLACE_EXISTING/WRITE_THROUGH; FPC Linux gebruikt O_EXCL met mode 0600, fsync,
+rename en daarna een directory-fsync. Een bestaande destination blijft intact bij
+fouten vóór replacement. Tijdelijke bestanden worden bij afgevangen fouten verwijderd.
+Een procescrash kan een ongebruikt tijdelijk bestand achterlaten; er is geen scan die
+bestanden van andere processen verwijdert. De parentdirectory moet bestaan.
+
+`LastSaveReplaced` onderscheidt een fout vóór replacement van een fout ná replacement,
+zoals een mislukte directorysync. Het project wordt pas clean na volledige succesvolle
+opslag, en alleen als het intussen niet door een protection callback is gewijzigd.
+Controleer bij een fout ná replacement het opgeslagen bestand vóór een eventuele nieuwe
+save. Er is geen automatische retry. Gelijktijdige saves naar hetzelfde pad hebben
+last-replacement-wins-semantiek; projectrevision-locking is nog geen onderdeel hiervan.
+Netwerkfilesystem/power-lossgaranties hangen af van het filesystem. Native Windows
+is geleverd; de native filesystem-tests hier draaien op Linux. Andere native targets
+worden expliciet geweigerd. Load gebruikt bounded streamvalidatie en verandert het
+project pas na volledige succesvolle import/authenticatie.

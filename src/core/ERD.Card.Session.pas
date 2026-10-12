@@ -29,6 +29,29 @@ type
     /// <summary>Releases the application reservation; safe to repeat on its owner thread.</summary>
     procedure Close;
   end;
+  /// <summary>Exclusive source/target reader group, acquired completely before any operation runs.</summary>
+  /// <remarks>Reservations are atomic; opening connections is sequential and rolled back on failure.
+  /// This is not a distributed card transaction: dispatched writes cannot be undone by Close.</remarks>
+  ICardSessionGroup = interface
+    ['{61295B81-91BC-488F-9A67-C27297A4ACD5}']
+    /// <summary>Returns the number of selected readers in caller order.</summary>
+    /// <returns>One through sixteen.</returns>
+    function Count: Integer;
+    /// <summary>Returns one exact reader identifier.</summary>
+    /// <param name="AIndex">Zero-based caller-order position.</param>
+    /// <returns>Owned identifier text.</returns>
+    function ReaderId(const AIndex: Integer): string;
+    /// <summary>Returns a guarded member lease; the group owns its release.</summary>
+    /// <param name="AIndex">Zero-based caller-order position.</param>
+    /// <returns>Retained owner-thread lease; do not close it separately.</returns>
+    function Lease(const AIndex: Integer): ICardSessionLease;
+    /// <summary>Checks all member generations without sending commands.</summary>
+    /// <remarks>Call between workflow phases; every member transport also checks its own generation.</remarks>
+    procedure Validate;
+    /// <summary>Closes every member in reverse order, continuing after cleanup failures.</summary>
+    /// <remarks>Raises on any cleanup failure. An active physical transaction must be ended by its owner first.</remarks>
+    procedure Close;
+  end;
   /// <summary>Central nonvisual registry and exclusive reservation of connected reader transports.</summary>
   /// <remarks>Bind distinct physical readers under unique IDs; aliases cannot establish physical exclusivity.
   /// Leases run on their acquiring thread. Protocol code still owns Begin/EndTransaction.
@@ -65,6 +88,11 @@ type
     /// <param name="AReaderId">Exact registered reader ID; concurrent reservations are refused.</param>
     /// <returns>Owned single-thread lease, independent of manager lifetime.</returns>
     function Acquire(const AReaderId: string): ICardSessionLease;
+    /// <summary>Atomically reserves all selected readers before opening any lazy connection.</summary>
+    /// <param name="AReaderIds">One through sixteen distinct exact registered IDs, in source/target order.</param>
+    /// <returns>Owner-thread group; partial opening failure closes opened members and releases all reservations.</returns>
+    /// <remarks>No waits, retries, card resets or distributed commit are inferred.</remarks>
+    function AcquireMany(const AReaderIds: array of string): ICardSessionGroup;
   end;
 
 implementation
@@ -91,6 +119,7 @@ type
     procedure Disable;
     function List: TStringList;
     function Reserve(const Id: string): ICardSessionLease;
+    function ReserveMany(const Ids: array of string): ICardSessionGroup;
     procedure Check(const Id: string; const Generation: Int64);
     procedure Release(const Id: string; const Generation: Int64);
   end;
@@ -111,6 +140,7 @@ type
     procedure Disable;
     function List: TStringList;
     function Reserve(const Id: string): ICardSessionLease;
+    function ReserveMany(const Ids: array of string): ICardSessionGroup;
     procedure Check(const Id: string; const Generation: Int64);
     procedure Release(const Id: string; const Generation: Int64);
   end;
@@ -139,6 +169,23 @@ type
   end;
 
   TTransactionLease = class(TLease, ICardTransaction)
+  end;
+
+  TGroup = class(TInterfacedObject, ICardSessionGroup)
+  private
+    FIds: array of string;
+    FLeases: array of ICardSessionLease;
+    FThread: NativeUInt;
+    FClosed: Boolean;
+    procedure CheckThread;
+  public
+    constructor Create(const Ids: array of string);
+    destructor Destroy; override;
+    function Count: Integer;
+    function ReaderId(const AIndex: Integer): string;
+    function Lease(const AIndex: Integer): ICardSessionLease;
+    procedure Validate;
+    procedure Close;
   end;
 
 procedure Invalid;
@@ -231,35 +278,133 @@ begin
   finally Leave; end;
 end;
 
-function TRegistry.Reserve(const Id: string): ICardSessionLease;
-var I: Integer; Generation: Int64; Backend: ICardTransport;
-  Tx: ICardTransaction; Connection: ICardSessionConnection; Opened: Boolean;
+constructor TGroup.Create(const Ids: array of string);
+var I: Integer;
 begin
-  Result := nil; Opened := False;
+  inherited Create;
+  FThread := NativeUInt(TThread.CurrentThread.ThreadID);
+  SetLength(FIds,Length(Ids)); SetLength(FLeases,Length(Ids));
+  for I := 0 to High(Ids) do FIds[I] := Ids[I];
+end;
+
+destructor TGroup.Destroy;
+begin
+  if not FClosed and (NativeUInt(TThread.CurrentThread.ThreadID)=FThread) then
+    try Close; except end;
+  inherited Destroy;
+end;
+
+procedure TGroup.CheckThread;
+begin
+  if NativeUInt(TThread.CurrentThread.ThreadID)<>FThread then Invalid;
+end;
+
+function TGroup.Count: Integer;
+begin
+  CheckThread; Result := Length(FIds);
+end;
+
+function TGroup.ReaderId(const AIndex: Integer): string;
+begin
+  CheckThread;
+  if (AIndex<0) or (AIndex>=Length(FIds)) then Invalid;
+  Result := FIds[AIndex];
+end;
+
+function TGroup.Lease(const AIndex: Integer): ICardSessionLease;
+begin
+  Validate;
+  if (AIndex<0) or (AIndex>=Length(FLeases)) then Invalid;
+  Result := FLeases[AIndex];
+end;
+
+procedure TGroup.Validate;
+var I: Integer; Transport: ICardTransport;
+begin
+  CheckThread; if FClosed then Invalid;
+  for I := 0 to High(FLeases) do begin
+    if FLeases[I]=nil then Invalid;
+    Transport := FLeases[I].Transport;
+    if Transport=nil then Invalid;
+  end;
+end;
+
+procedure TGroup.Close;
+var I: Integer; Failed: Boolean;
+begin
+  CheckThread; if FClosed then Exit;
+  Failed := False;
+  for I := High(FLeases) downto 0 do if FLeases[I]<>nil then
+    try FLeases[I].Close; FLeases[I] := nil;
+    except Failed := True; end;
+  // Retain failed members so an owner can end a transaction and retry cleanup.
+  FClosed := not Failed;
+  if Failed then raise ECardSessionError.Create('Reader group cleanup failed.');
+end;
+
+function TRegistry.Reserve(const Id: string): ICardSessionLease;
+var Group: ICardSessionGroup;
+begin
+  Group := ReserveMany([Id]);
+  Result := Group.Lease(0);
+  // Transfer the sole member without releasing its reservation.
+  (Group as TGroup).FLeases[0] := nil;
+  (Group as TGroup).FClosed := True;
+end;
+
+function TRegistry.ReserveMany(const Ids: array of string): ICardSessionGroup;
+var I, J, K: Integer; Bindings: array of TBinding; Group: TGroup;
+  Retained: ICardSessionGroup; Backend: ICardTransport; Tx: ICardTransaction; Opened: Boolean;
+begin
+  Result := nil;
+  if (Length(Ids)<1) or (Length(Ids)>16) then Invalid;
+  for I := 0 to High(Ids) do begin
+    if (Length(Ids[I])<1) or (Length(Ids[I])>1024) then Invalid;
+    for J := 0 to I-1 do if Ids[I]=Ids[J] then Invalid;
+  end;
+  Group := TGroup.Create(Ids); Retained := Group;
+  SetLength(Bindings,Length(Ids));
   Enter;
   try
-    I := Index(Id);
-    if not FEnabled or (I<0) then Invalid;
-    if FItems[I].Busy or ((FItems[I].Backend=nil) and (FItems[I].Connection=nil)) then Invalid;
-    Backend := FItems[I].Backend; Connection := FItems[I].Connection;
-    Generation := FItems[I].Generation;
-    FItems[I].Busy := True; FItems[I].Reservation := Generation;
+    if not FEnabled then Invalid;
+    // Validate every member before changing any Busy flag.
+    for I := 0 to High(Ids) do begin
+      K := Index(Ids[I]); if K<0 then Invalid;
+      if FItems[K].Busy or ((FItems[K].Backend=nil) and (FItems[K].Connection=nil)) then Invalid;
+      Bindings[I] := FItems[K];
+    end;
+    for I := 0 to High(Ids) do begin
+      K := Index(Ids[I]); FItems[K].Busy := True;
+      FItems[K].Reservation := FItems[K].Generation;
+    end;
   finally Leave; end;
   try
-    if Connection<>nil then begin
-      Backend := Connection.Open; Opened := True;
-      if Backend=nil then Invalid;
+    for I := 0 to High(Ids) do begin
+      Backend := Bindings[I].Backend; Opened := False;
+      try
+        if Bindings[I].Connection<>nil then begin
+          Backend := Bindings[I].Connection.Open; Opened := True;
+          if Backend=nil then Invalid;
+        end;
+        Check(Ids[I],Bindings[I].Generation);
+        if Supports(Backend,ICardTransaction,Tx) then
+          Group.FLeases[I] := TTransactionLease.Create(Self,Ids[I],Bindings[I].Generation,Backend,Bindings[I].Connection)
+        else Group.FLeases[I] := TLease.Create(Self,Ids[I],Bindings[I].Generation,Backend,Bindings[I].Connection);
+      except
+        try if Opened then Bindings[I].Connection.Close;
+        finally Invalidate(Ids[I],True); end;
+        raise;
+      end;
     end;
-    Check(Id,Generation);
-    if Supports(Backend,ICardTransaction,Tx) then
-      Result := TTransactionLease.Create(Self,Id,Generation,Backend,Connection)
-    else Result := TLease.Create(Self,Id,Generation,Backend,Connection);
+    Group.Validate; Result := Retained;
   except
-    try
-      if Opened then Connection.Close;
-    finally
-      Invalidate(Id,True); Release(Id,Generation);
+    // Every reservation is released, even when another member's Close raises.
+    for J := High(Ids) downto 0 do begin
+      if Group.FLeases[J]<>nil then
+        try Group.FLeases[J].Close; except end;
+      Release(Ids[J],Bindings[J].Generation);
     end;
+    Group.FClosed := True;
     raise;
   end;
 end;
@@ -416,6 +561,11 @@ end;
 function TCardSessionManager.Acquire(const AReaderId: string): ICardSessionLease;
 begin
   Result := (FRegistry as IRegistry).Reserve(AReaderId);
+end;
+
+function TCardSessionManager.AcquireMany(const AReaderIds: array of string): ICardSessionGroup;
+begin
+  Result := (FRegistry as IRegistry).ReserveMany(AReaderIds);
 end;
 
 end.
