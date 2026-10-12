@@ -15,7 +15,7 @@ uses
   System.Classes,
 {$ENDIF}
   ERD.Card.EID.Inspection, ERD.Card.EMV.Inspection, ERD.Card.MOBIB.Inspection,
-  ERD.Card.Contactless.Plus, ERD.Card.Contactless.Plus.Levels,
+  ERD.Card.Contactless.Plus, ERD.Card.Contactless.Plus.SL2, ERD.Card.Contactless.Plus.Levels,
   ERD.Card.Contactless.Workflow.Ndef.Protected,
   ERD.Card.Contactless.Workflow.Password, ERD.Card.Contactless.Workflow.Security,
   ERD.Card.GlobalPlatform, ERD.Card.EMV.Calculator, ERD.Card.PCSC.Monitor, ERD.Card.HID.Monitor, ERD.Card.SIM.Reader, ERD.Card.SIM.Workflow, ERD.Card.SIM.Inspection,
@@ -38,7 +38,7 @@ uses
   ERD.Card.Contactless.Workflow.Ndef, ERD.Card.MagStripe.Workflow,
   ERD.Card.Workflow.Batch, ERD.Card.Contactless.Workflow.ISO15693,
   ERD.Card.Memory.Workflow, ERD.Card.Memory.Workflow.Sle,
-  ERD.Card.Contactless.Workflow.Personalization, ERD.Card.Contactless.Workflow.DESFire;
+  ERD.Card.Contactless.Workflow.Personalization, ERD.Card.Contactless.Workflow.DESFire, ERD.Card.Contactless.Workflow.SDM;
 
 procedure Register;
 begin
@@ -47,14 +47,14 @@ begin
     TBelgianEIDReader, TICAODocumentReader, TSimCardReaderWriter,
     TEmvCalculator, TEMVCardReader, TMagStripeReaderWriter, TMemoryCardReaderWriter,
     TSleCounterCardReaderWriter, TSle4404CardReaderWriter]);
-  RegisterComponents('ERD Workflows', [TProtectedNdefWorkflow, TProtectedMemoryWorkflow, TCardSecurityWorkflow, TEidInspectionWorkflow, TEmvInspectionWorkflow, TMobibInspectionWorkflow, TSle4404Workflow, TSleCounterWorkflow, TDesfirePersonalizationWorkflow, TSimPhonebookWorkflow, TSimSmsWorkflow, TSimInspectionWorkflow, TContactMemoryWorkflow, TDesfireApplicationWorkflow,
+  RegisterComponents('ERD Workflows', [TDesfireSdmTemplateWorkflow, TProtectedNdefWorkflow, TProtectedMemoryWorkflow, TCardSecurityWorkflow, TEidInspectionWorkflow, TEmvInspectionWorkflow, TMobibInspectionWorkflow, TSle4404Workflow, TSleCounterWorkflow, TDesfirePersonalizationWorkflow, TSimPhonebookWorkflow, TSimSmsWorkflow, TSimInspectionWorkflow, TContactMemoryWorkflow, TDesfireApplicationWorkflow,
     TDesfireProvisionWorkflow, TCardBatchWorkflow, TIso15693MemoryWorkflow, TCardMemoryCopyWorkflow, TMifareClassicCopyWorkflow,
     TType2MemoryWorkflow, TUidProgrammingWorkflow, TClassicCredentialWorkflow,
     TNdefTransferWorkflow, TMagStripeCopyWorkflow]);
   RegisterComponents('ERD Input', [THidDeviceMonitor, TUsbHidInputMonitor,
     TRfidKeyboardReader, TRfidHidReportReader, TUsbHidReaderWriter,
     TTwn4CardReaderWriter]);
-  RegisterComponents('ERD Contactless', [TMifarePlusLevelManager, TMifarePlusCardReaderWriter, TTopazCardReader, TType1NdefCardReader,
+  RegisterComponents('ERD Contactless', [TMifarePlusSl2ReaderWriter, TMifarePlusLevelManager, TMifarePlusCardReaderWriter, TTopazCardReader, TType1NdefCardReader,
     TFelicaCardReader, TType3NdefCardReader, TUltralightCCardReaderWriter,
     TCalypsoCardReader, TContactlessCardReader, TType2NdefCardReader,
     TType4NdefCardReader, TIso15693CardReader, TIso15693SecurityManager,

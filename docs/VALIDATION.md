@@ -1342,3 +1342,32 @@ latest **54-assertion** build and repeated runs. New API XML documentation, UTF-
 BOM and CRLF are preserved; no forms or demos changed. The existing unrelated FPC
 TLV constructor warning remains unchanged; the new infrastructure code adds no
 compiler warnings or hints.
+
+## Combined DESFire workflows and native Plus SL2 (2026-10-12)
+
+The full `tools/run_core_tests.py` regression passed, including **3,962,935**
+existing DESFire/Plus assertions and **5,544** new protocol/workflow assertions,
+with range/overflow checks and no heap leaks. The new suite covers combined
+multiple-right AES TMAC, authenticated Plain stored SDM templates, native SL2
+AES-to-Crypto1 sector/trailer operations, and the actual ACR122/PN532 adapter's
+framing transition. Independent Python/OpenSSL fixtures now contain **226**
+synthetic transcripts; regeneration matches the checked-in bytes.
+
+Failure injection covers every new native transcript exchange, lost write/release
+responses, wrong preimages/settings/receipts, wrong UID before credential dispatch,
+failed AES proof before Crypto1, terminal-session refusal and cleanup. Access tests
+cover every data condition, trailer Key B-readable combination and 4K trailer
+geometry. New trailer proofs distinguish readable B data from fresh A/B key
+authentication. Native workflow adapters prove frozen configuration ownership,
+single-use TMAC mutation ownership, explicit read-calculation Abort, copied receipts,
+provisioning-policy rejection before creation and consumed SL2 credential backends.
+SDM archive/project and workflow cases prove stored-byte roundtrips, compare without
+writes, target policy checks, retained uncertainty and denied card presentation
+before I/O. DESFire archive/project v2 retains the complete extended right tuples.
+
+All **21 source checkers** pass across SDK/tests/examples; distribution validation
+reports zero findings; **39 validation-tool tests** pass; `git diff --check` is clean.
+Registration/RTL streaming passes **76 assertions for 75 inactive components**.
+Modified Pascal/package files preserve CRLF and their original BOM choices; new
+Pascal sources use UTF-8 BOM and CRLF. Protocol execution evidence uses injected
+synthetic transports and native shims, without claiming physical card traces.

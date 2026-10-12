@@ -295,10 +295,18 @@ option while masking only the established mutable value/record-count fields.
 Commit verifies complete final content/count/settings and exclusive release;
 verified commit acknowledgement alone does not make VerificationSucceeded true.
 Abort does not claim final-content readback. Limits and mutation budgets remain
-those of the ordinary journal. No migration/archive-format extension is inferred.
+those of the ordinary journal. Application workflow archive v2 now retains these
+layouts; see [the workflow profiles](PROTOCOL_COMPLETION.md).
 
 Plain, MACed and Full are supported with explicit minimum communication. Plain
 content is not cryptographically authenticated: an altered full-file preimage can
 remain unobservable when the entire file is replaced. Postimage equality remains
 checked; MACed/Full additionally verify protected responses. SDM mirrors and TMAC
 combination/partial-record canonical input require their own profiles.
+
+## Combined workflow profiles
+
+Multiple-right AES TMAC owners, profile-aware application workflows and authenticated
+stored SDM template backup/compare/restore are described in
+[protocol/workflow profiles](PROTOCOL_COMPLETION.md). SDM/TMAC combined data operations
+remain separate; the template profile refuses an application containing a TMAC file.

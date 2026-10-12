@@ -42,7 +42,7 @@ type
     cwsFailed,
     /// <summary>A mutation may have occurred and requires inspection.</summary>
     cwsUncertain,
-    /// <summary>Programming succeeded but fresh active UID evidence is still required.</summary>
+    /// <summary>An immediate mutation needs independent verification before claiming complete evidence.</summary>
     cwsNeedsVerification);
   /// <summary>Card role requested from an application, including single-reader card swaps.</summary>
   TCardWorkflowRole = (
@@ -264,7 +264,7 @@ begin
     cwsCancelled: Result := 'Cancelled';
     cwsFailed: Result := 'Failed';
     cwsUncertain: Result := 'Uncertain';
-    cwsNeedsVerification: Result := 'Needs active UID verification';
+    cwsNeedsVerification: Result := 'Needs verification';
   else Result := 'Unknown'; end;
 end;
 

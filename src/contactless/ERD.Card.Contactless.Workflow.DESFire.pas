@@ -11,7 +11,7 @@ uses
   System.SysUtils, System.Classes,
 {$ENDIF}
   ERD.Card.Bytes, ERD.Card.Workflow, ERD.Card.Contactless, ERD.Card.Crypto,
-  ERD.Card.Contactless.DESFire, ERD.Card.Contactless.DESFire.EV2;
+  ERD.Card.Contactless.DESFire, ERD.Card.Contactless.DESFire.EV2, ERD.Card.Contactless.DESFire.Extensions;
 
 type
   /// <summary>Complete readable ordinary application file, excluding keys and hidden configuration.</summary>
@@ -61,14 +61,53 @@ type
     /// <param name="AData">Complete data bytes.</param>
     procedure WriteStandard(const AAid: Cardinal; const AFile: Byte; const AData: TBytes);
   end;
+  /// <summary>Explicit complete rights for one provisioned file; no authentication key material.</summary>
+  TDesfireWorkflowFilePolicy = record
+    /// <summary>Native file number.</summary>
+    FileNumber: Byte;
+    /// <summary>Primary and optional additional complete rights tuples.</summary>
+    Rights: TDesfireAccessRightSets;
+  end;
+  /// <summary>Unique caller-selected per-file provisioning policies.</summary>
+  TDesfireWorkflowFilePolicies = array of TDesfireWorkflowFilePolicy;
+  /// <summary>Optional profile-aware workflow lifecycle and commit evidence.</summary>
+  IDesfireWorkflowSessionPolicy = interface
+    ['{ED2FBC1A-AFC2-45E8-995A-7D3C1B0A19F9}']
+    /// <summary>Closes captured reads; owned TMAC captures explicitly abort their read calculation.</summary>
+    /// <param name="ASession">Captured session owned by the workflow.</param>
+    procedure CloseCapture(const ASession: IDesfireSession);
+    /// <summary>Returns whether standard writes must share the explicit verified TMAC owner.</summary>
+    /// <returns>True for the TMAC profile; immediate standard writes still cannot be rolled back by Abort.</returns>
+    function TransactionalStandard: Boolean;
+    /// <summary>Commits ordinary or verified TMAC state and retains copied receipt evidence.</summary>
+    /// <param name="ASession">Prepared owned transaction.</param>
+    procedure CommitSession(const ASession: IDesfireSession);
+    /// <summary>Creates a file using the configured complete rights policy, or the ordinary definition.</summary>
+    /// <param name="ASession">Explicit management owner.</param>
+    /// <param name="ADefinition">Validated ordinary geometry and primary rights.</param>
+    procedure CreateFile(const ASession: IDesfireSession; const ADefinition: TDesfireFileDefinition);
+    /// <summary>Checks every configured creation policy before any application mutation.</summary>
+    /// <param name="ADefinitions">Requested file definitions.</param>
+    /// <param name="AKeyCount">Explicit new application key count.</param>
+    procedure ValidateProvisioning(const ADefinitions: TDesfireWorkflowDefinitions; const AKeyCount: Byte);
+    /// <summary>Returns the last verified TMAC receipt, without supplied keys.</summary>
+    /// <returns>Independent MAC bytes; empty before verified commit.</returns>
+    function Receipt: TDesfireTmacRecord;
+  end;
   /// <summary>Native adapter copying explicit reader configuration without card I/O.</summary>
   /// <remarks>The adapter owns a frozen reader and independently copied credentials, retaining
   /// its transport/provider interfaces. The original reader may be freed after construction;
   /// exclusively own its physical connection throughout each phase. Existing public, EV1/EV2 AES and DES/3DES profiles
   /// remain explicit; keys are never discovered, copied from a snapshot or replaced implicitly.</remarks>
-  TDesfireWorkflowCard = class(TInterfacedObject, IDesfireWorkflowCard)
+  TDesfireWorkflowCard = class(TInterfacedObject, IDesfireWorkflowCard, IDesfireWorkflowSessionPolicy)
   private
     FReader: TDesfireCardReader;
+    FMulti,FUseTmac,FTmacConsumed: Boolean;
+    FTmacAid,FCounter: Cardinal;
+    FTmacFile: Byte;
+    FUid,FTmacKey: TBytes;
+    FPolicies: TDesfireWorkflowFilePolicies;
+    FReceipt: TDesfireTmacRecord;
     function Granted(const AKey: Byte): Boolean;
   public
     /// <summary>Copies reader configuration and keys without acquiring a card.</summary>
@@ -76,6 +115,40 @@ type
     constructor Create(const AReader: TDesfireCardReader);
     /// <summary>Releases the frozen native reader and wipes its retained credentials.</summary>
     destructor Destroy; override;
+    /// <summary>Creates frozen multiple-right workflow configuration with optional per-file provisioning policies.</summary>
+    /// <param name="AReader">Explicit EV2 AES reader configuration.</param>
+    /// <param name="APolicies">Unique explicit primary/additional tuples; independently copied.</param>
+    constructor CreateMultiAccess(const AReader: TDesfireCardReader; const APolicies: TDesfireWorkflowFilePolicies);
+    /// <summary>Creates a single-use explicit TMAC workflow owner with trusted UID/key/counter.</summary>
+    /// <param name="AReader">Explicit EV2 AES reader.</param>
+    /// <param name="AAid">Pinned application identifier.</param>
+    /// <param name="ATmacFile">Existing TMAC file excluded from ordinary snapshots.</param>
+    /// <param name="AUid">Trusted seven-byte real UID.</param>
+    /// <param name="ATmacKey">Sixteen supplied static TMAC bytes.</param>
+    /// <param name="APreviousCounter">Trusted last accepted counter.</param>
+    /// <param name="AAcknowledgeFresh">Required fresh ownership attestation, including read captures.</param>
+    constructor CreateMultiAccessTmac(const AReader: TDesfireCardReader; const AAid: Cardinal; const ATmacFile: Byte;
+      const AUid, ATmacKey: TBytes; const APreviousCounter: Cardinal; const AAcknowledgeFresh: Boolean);
+    /// <summary>Closes read capture, explicitly discarding owned TMAC input.</summary>
+    /// <param name="ASession">Owned read capture.</param>
+    procedure CloseCapture(const ASession: IDesfireSession);
+    /// <summary>Returns whether standard writes participate in the TMAC owner.</summary>
+    /// <returns>True only for the explicitly configured TMAC profile.</returns>
+    function TransactionalStandard: Boolean;
+    /// <summary>Commits with native journal/receipt verification.</summary>
+    /// <param name="ASession">Owned transaction.</param>
+    procedure CommitSession(const ASession: IDesfireSession);
+    /// <summary>Creates a file using frozen explicit rights.</summary>
+    /// <param name="ASession">Management session.</param>
+    /// <param name="ADefinition">Ordinary geometry and primary policy.</param>
+    procedure CreateFile(const ASession: IDesfireSession; const ADefinition: TDesfireFileDefinition);
+    /// <summary>Checks every configured creation policy before any application mutation.</summary>
+    /// <param name="ADefinitions">Requested file definitions.</param>
+    /// <param name="AKeyCount">Explicit new application key count.</param>
+    procedure ValidateProvisioning(const ADefinitions: TDesfireWorkflowDefinitions; const AKeyCount: Byte);
+    /// <summary>Returns independently owned last verified receipt.</summary>
+    /// <returns>Empty before verified TMAC commit.</returns>
+    function Receipt: TDesfireTmacRecord;
     /// <summary>Returns configured plaintext/journal bound without I/O.</summary>
     /// <returns>Native reader transfer limit.</returns>
     function TransferLimit: Integer;
@@ -128,8 +201,10 @@ type
     FSourceAid, FTargetAid: Cardinal;
     FAccess: TDesfireSessionAccess;
     FPrepared, FConsumed, FCompare: Boolean;
+    FReceipt: TDesfireTmacRecord;
     function GetSnapshot: TDesfireWorkflowSnapshot;
     function GetResults: TCardWorkflowUnits;
+    function GetReceipt: TDesfireTmacRecord;
     function Capture(const ACard: IDesfireWorkflowCard; const AAid: Cardinal): TDesfireWorkflowSnapshot;
     procedure CheckIdentity(const ACard: IDesfireWorkflowCard; const AIdentity: TBytes);
     procedure Configure(const ASource, ATarget: IDesfireWorkflowCard;
@@ -168,6 +243,8 @@ type
     property Snapshot: TDesfireWorkflowSnapshot read GetSnapshot;
     /// <summary>Independent per-file evidence, including earlier immediate writes and uncertain staged changes.</summary>
     property Results: TCardWorkflowUnits read GetResults;
+    /// <summary>Independent verified TMAC receipt from the target profile; empty without verified TMAC commit.</summary>
+    property TransactionMacReceipt: TDesfireTmacRecord read GetReceipt;
   end;
   /// <summary>Explicit creation of one new application and its ordinary file definitions.</summary>
   /// <remarks>Creation is immediate and can be partial; never deletes an existing application,
@@ -226,6 +303,25 @@ begin
     Result.Files[I].Data := CopyBytes(S.Files[I].Data);
   end;
 end;
+function DecodeWorkflowSettings(const Number: Byte; const Raw: TBytes): TDesfireFileSettings;
+var Multi: TDesfireMultiAccessSettings;
+begin
+  if (Length(Raw)>1) and ((Raw[1] and $80)<>0) then begin
+    Multi := TDesfireExtensionCodec.MultiAccessSettings(Raw);
+    Result := TDesfireCodec.FileSettings(Number,Multi.BaseBytes); Result.RawBytes := CopyBytes(Raw);
+  end else Result := TDesfireCodec.FileSettings(Number,Raw);
+end;
+function StaticPolicyEqual(const A,B: TDesfireFileSettings): Boolean;
+var Left,Right: TBytes;
+begin
+  Left := CopyBytes(A.RawBytes); Right := CopyBytes(B.RawBytes);
+  if Length(Left)<>Length(Right) then Exit(False);
+  case A.FileType of
+    dftValue: begin if Length(Left)<17 then Invalid; FillChar(Left[12],4,0); FillChar(Right[12],4,0); end;
+    dftLinearRecords,dftCyclicRecords: begin if Length(Left)<13 then Invalid; FillChar(Left[10],3,0); FillChar(Right[10],3,0); end;
+  end;
+  Result := BytesEqual(Left,Right);
+end;
 function SameSettings(const A, B: TDesfireFileSettings): Boolean;
 begin
   Result := (A.FileNumber = B.FileNumber) and (A.FileType = B.FileType) and
@@ -234,7 +330,7 @@ begin
     (A.ChangeKey = B.ChangeKey) and (A.FileBytes = B.FileBytes) and
     (A.LowerLimit = B.LowerLimit) and (A.UpperLimit = B.UpperLimit) and
     (A.RecordBytes = B.RecordBytes) and (A.MaxRecords = B.MaxRecords) and
-    (A.ValueOptions = B.ValueOptions);
+    (A.ValueOptions = B.ValueOptions) and StaticPolicyEqual(A,B);
 end;
 constructor TDesfireWorkflowCard.Create(const AReader: TDesfireCardReader);
 var Key: TBytes;
@@ -252,15 +348,29 @@ begin
   try FReader.ReauthenticationKey := Key; finally TCardCrypto.Clear(Key); end;
 end;
 destructor TDesfireWorkflowCard.Destroy;
-begin FReader.Free; inherited; end;
+begin TCardCrypto.Clear(FUid); TCardCrypto.Clear(FTmacKey); TCardCrypto.Clear(FReceipt.Mac); FReader.Free; inherited; end;
 function TDesfireWorkflowCard.TransferLimit: Integer;
 begin Result := FReader.MaxTransferBytes; end;
 function TDesfireWorkflowCard.ReadIdentity: TBytes;
 var V: TDesfireVersion;
-begin V := FReader.ReadVersion; Result := Copy(V.RawBytes, 14, 7); end;
+begin
+  if FUseTmac then begin Result := FReader.ReadCardUid(FTmacAid); if not BytesEqual(Result,FUid) then Invalid; end
+  else begin V := FReader.ReadVersion; Result := Copy(V.RawBytes,14,7); end;
+end;
 function TDesfireWorkflowCard.OpenSession(const AAid: Cardinal;
   const AAccess: TDesfireSessionAccess): IDesfireSession;
-begin Result := FReader.OpenSession(AAid, AAccess); end;
+begin
+  if FUseTmac then begin
+    if (AAid<>FTmacAid) or not (AAccess in [dsaReadOnly,dsaFreshTransaction]) or
+      ((AAccess=dsaFreshTransaction) and FTmacConsumed) then Invalid;
+    if AAccess=dsaFreshTransaction then FTmacConsumed := True;
+    TCardCrypto.Clear(FReceipt.Mac); FReceipt := Default(TDesfireTmacRecord);
+    Result := FReader.OpenMultiAccessTransactionMacSession(AAid,FTmacFile,FUid,FTmacKey,FCounter,True);
+  end else if FMulti and (AAid<>0) then
+    if AAccess=dsaFreshTransaction then Result := FReader.OpenMultiAccessTransactionSession(AAid,True)
+    else Result := FReader.OpenMultiAccessSession(AAid,AAccess)
+  else Result := FReader.OpenSession(AAid,AAccess);
+end;
 function TDesfireWorkflowCard.Granted(const AKey: Byte): Boolean;
 var Key: Byte; Rekey: TBytes;
 begin
@@ -272,7 +382,7 @@ begin
 end;
 procedure TDesfireWorkflowCard.ValidateWrite(const ASettings: TDesfireFileSettings;
   const AValueIncrease: Boolean);
-var Allowed: Boolean;
+var Allowed: Boolean; Multi: TDesfireMultiAccessSettings; I: Integer;
 begin
   if FReader.Security = dfsPublic then
   begin if ASettings.Communication <> dfcPlain then Invalid; end
@@ -281,11 +391,108 @@ begin
   if ASettings.FileType = dftValue then
     if AValueIncrease then Allowed := Granted(ASettings.ReadWriteKey)
     else Allowed := Allowed or Granted(ASettings.ReadKey);
+  if FMulti then begin
+    Multi := TDesfireExtensionCodec.MultiAccessSettings(ASettings.RawBytes); Allowed := False;
+    for I := 0 to High(Multi.Rights) do
+      if (ASettings.FileType=dftValue) and AValueIncrease then Allowed := Allowed or Granted((Multi.Rights[I] shr 4) and $F)
+      else begin
+        Allowed := Allowed or Granted((Multi.Rights[I] shr 8) and $F) or Granted((Multi.Rights[I] shr 4) and $F);
+        if ASettings.FileType=dftValue then Allowed := Allowed or Granted((Multi.Rights[I] shr 12) and $F);
+      end;
+  end;
   if not Allowed then raise ECardWorkflowError.Create('Target credentials do not grant the requested write.');
 end;
 procedure TDesfireWorkflowCard.WriteStandard(const AAid: Cardinal;
   const AFile: Byte; const AData: TBytes);
-begin FReader.WriteData(AAid, AFile, 0, AData); end;
+var Session: IDesfireFileManagement; Old: TBytes;
+begin
+  if FUseTmac then Invalid;
+  if not FMulti then begin FReader.WriteData(AAid,AFile,0,AData); Exit; end;
+  Session := FReader.OpenFileManagementSession(AAid);
+  try
+    Old := Session.ReadMultiAccessData(AFile,0,Length(AData));
+    Session.WriteMultiAccessDataVerified(AFile,0,Old,AData); Session.Close;
+  except try Session.Close; except end; raise; end;
+end;
+constructor TDesfireWorkflowCard.CreateMultiAccess(const AReader: TDesfireCardReader; const APolicies: TDesfireWorkflowFilePolicies);
+var I,J: Integer; Raw: TBytes;
+begin
+  Create(AReader); if AReader.Security<>dfsEv2Aes then Invalid; FMulti := True;
+  if Length(APolicies)>32 then Invalid;
+  SetLength(FPolicies,Length(APolicies));
+  for I := 0 to High(APolicies) do begin
+    if APolicies[I].FileNumber>31 then Invalid;
+    for J := 0 to I-1 do if APolicies[J].FileNumber=APolicies[I].FileNumber then Invalid;
+    if Length(APolicies[I].Rights)<1 then Invalid;
+    Raw := TDesfireExtensionCodec.AccessChange(3,APolicies[I].Rights);
+    if Length(Raw)=0 then Invalid;
+    FPolicies[I].FileNumber := APolicies[I].FileNumber; FPolicies[I].Rights := Copy(APolicies[I].Rights,0,Length(APolicies[I].Rights));
+  end;
+end;
+constructor TDesfireWorkflowCard.CreateMultiAccessTmac(const AReader: TDesfireCardReader;
+  const AAid: Cardinal; const ATmacFile: Byte; const AUid,ATmacKey: TBytes;
+  const APreviousCounter: Cardinal; const AAcknowledgeFresh: Boolean);
+begin
+  CreateMultiAccess(AReader,nil); ValidateAid(AAid);
+  if not AAcknowledgeFresh or (ATmacFile>31) or (Length(AUid)<>7) or (Length(ATmacKey)<>16) or
+    (APreviousCounter=High(Cardinal)) then Invalid;
+  FUseTmac := True; FTmacAid := AAid; FTmacFile := ATmacFile; FUid := CopyBytes(AUid);
+  FTmacKey := CopyBytes(ATmacKey); FCounter := APreviousCounter;
+end;
+procedure TDesfireWorkflowCard.CloseCapture(const ASession: IDesfireSession);
+begin
+  if FUseTmac then begin
+    try if ASession.Outcome=dsoActive then ASession.Abort; finally ASession.Close; end;
+  end else ASession.Close;
+end;
+function TDesfireWorkflowCard.TransactionalStandard: Boolean;
+begin Result := FUseTmac; end;
+procedure TDesfireWorkflowCard.CommitSession(const ASession: IDesfireSession);
+var Tmac: IDesfireTransactionMacSession;
+begin
+  if not FUseTmac then begin ASession.Commit; Exit; end;
+  if not Supports(ASession,IDesfireTransactionMacSession,Tmac) then Invalid;
+  FReceipt := Tmac.CommitTransactionMacVerified;
+end;
+procedure TDesfireWorkflowCard.CreateFile(const ASession: IDesfireSession; const ADefinition: TDesfireFileDefinition);
+var I: Integer; Management: IDesfireFileManagement; Settings: TDesfireMultiAccessSettings; Created: Boolean;
+begin
+  for I := 0 to High(FPolicies) do if FPolicies[I].FileNumber=ADefinition.FileNumber then begin
+    if not Supports(ASession,IDesfireFileManagement,Management) then Invalid;
+    if FPolicies[I].Rights[0]<>((Word(ADefinition.ReadKey) shl 12) or (Word(ADefinition.WriteKey) shl 8) or
+      (Word(ADefinition.ReadWriteKey) shl 4) or ADefinition.ChangeKey) then Invalid;
+    Created := False;
+    try
+      ASession.CreateFile(ADefinition); Created := True;
+      Settings := Management.ReadMultiAccessSettings(ADefinition.FileNumber);
+      Management.ChangeMultiAccessVerified(ADefinition.FileNumber,Settings.RawBytes,Settings.RawBytes[1] and 3,FPolicies[I].Rights);
+    except on E: Exception do begin if Created then raise EContactlessWriteUncertain.Create(E.ClassName); raise; end; end;
+    Exit;
+  end;
+  ASession.CreateFile(ADefinition);
+end;
+procedure TDesfireWorkflowCard.ValidateProvisioning(const ADefinitions: TDesfireWorkflowDefinitions; const AKeyCount: Byte);
+var I,J,K,N: Integer; Found: Boolean; Rights: Word; Definition: TDesfireFileDefinition;
+begin
+  if FUseTmac or (AKeyCount<1) or (AKeyCount>14) then Invalid;
+  for I := 0 to High(FPolicies) do begin
+    Found := False; Definition := Default(TDesfireFileDefinition);
+    for J := 0 to High(ADefinitions) do if ADefinitions[J].FileNumber=FPolicies[I].FileNumber then begin
+      Found := True; Definition := ADefinitions[J]; Break;
+    end;
+    if not Found then Invalid;
+    if FPolicies[I].Rights[0]<>((Word(Definition.ReadKey) shl 12) or (Word(Definition.WriteKey) shl 8) or
+      (Word(Definition.ReadWriteKey) shl 4) or Definition.ChangeKey) then Invalid;
+    if not Granted(Definition.ChangeKey) then Invalid;
+    for J := 0 to High(FPolicies[I].Rights) do begin
+      Rights := FPolicies[I].Rights[J];
+      for K := 0 to 3 do begin N := (Rights shr (K*4)) and 15; if (N<14) and (N>=AKeyCount) then Invalid; end;
+    end;
+  end;
+end;
+function TDesfireWorkflowCard.Receipt: TDesfireTmacRecord;
+begin Result := FReceipt; Result.Mac := CopyBytes(FReceipt.Mac); end;
+
 class procedure TDesfireWorkflowArchive.Validate(const ASnapshot: TDesfireWorkflowSnapshot);
 var I, J, Size, Total, V: Integer; S: TDesfireFileSettings;
 begin
@@ -295,7 +502,7 @@ begin
   Total := 0;
   for I := 0 to High(ASnapshot.Files) do
   begin
-    S := TDesfireCodec.FileSettings(ASnapshot.Files[I].Settings.FileNumber,
+    S := DecodeWorkflowSettings(ASnapshot.Files[I].Settings.FileNumber,
       ASnapshot.Files[I].Settings.RawBytes);
     if not SameSettings(S, ASnapshot.Files[I].Settings) or
       (S.CurrentRecords <> ASnapshot.Files[I].Settings.CurrentRecords) or
@@ -319,11 +526,13 @@ begin
   end;
 end;
 class function TDesfireWorkflowArchive.Encode(const ASnapshot: TDesfireWorkflowSnapshot): string;
-var I: Integer; Lines: TStringList; Data: string;
+var I,Version: Integer; Lines: TStringList; Data: string;
 begin
   Validate(ASnapshot); Lines := TStringList.Create;
   try
-    Lines.Add('ERD-DESFIRE 1'); Lines.Add(IntToStr(ASnapshot.Aid)); Lines.Add(BytesToHex(ASnapshot.Identity));
+    Version := 1; for I := 0 to High(ASnapshot.Files) do
+      if (ASnapshot.Files[I].Settings.RawBytes[1] and $80)<>0 then Version := 2;
+    Lines.Add('ERD-DESFIRE '+IntToStr(Version)); Lines.Add(IntToStr(ASnapshot.Aid)); Lines.Add(BytesToHex(ASnapshot.Identity));
     for I := 0 to High(ASnapshot.Files) do
     begin
       Data := '-'; if Length(ASnapshot.Files[I].Data) > 0 then Data := BytesToHex(ASnapshot.Files[I].Data);
@@ -342,7 +551,7 @@ begin
   Lines := TStringList.Create; Fields := TStringList.Create;
   try
     Lines.Text := AText;
-    if (Lines.Count < 3) or (Lines.Count > 35) or (Lines[0] <> 'ERD-DESFIRE 1') then Invalid;
+    if (Lines.Count < 3) or (Lines.Count > 35) or not ((Lines[0]='ERD-DESFIRE 1') or (Lines[0]='ERD-DESFIRE 2')) then Invalid;
     if not TryStrToInt(Lines[1], N) then Invalid;
     if (N < 1) or (N > $FFFFFF) or (IntToStr(N) <> Lines[1]) then Invalid;
     Result.Aid := N; Result.Identity := HexToBytes(Lines[2]);
@@ -352,7 +561,8 @@ begin
       Fields.DelimitedText := Lines[I]; if Fields.Count <> 3 then Invalid;
       if not TryStrToInt(Fields[0], N) then Invalid;
       if (N < 0) or (N > 31) or (IntToStr(N) <> Fields[0]) then Invalid;
-      Result.Files[I - 3].Settings := TDesfireCodec.FileSettings(N, HexToBytes(Fields[1]));
+      Result.Files[I - 3].Settings := DecodeWorkflowSettings(N,HexToBytes(Fields[1]));
+      if (Lines[0]='ERD-DESFIRE 1') and ((Result.Files[I-3].Settings.RawBytes[1] and $80)<>0) then Invalid;
       if Fields[2] <> '-' then Result.Files[I - 3].Data := HexToBytes(Fields[2]);
     end;
     Validate(Result);
@@ -360,10 +570,12 @@ begin
       #10, #13#10, [rfReplaceAll]) then Invalid;
   finally Fields.Free; Lines.Free; end;
 end;
+function TDesfireApplicationWorkflow.GetReceipt: TDesfireTmacRecord;
+begin Result := FReceipt; Result.Mac := CopyBytes(FReceipt.Mac); end;
 procedure TDesfireApplicationWorkflow.Configure(const ASource, ATarget: IDesfireWorkflowCard;
   const ASourceAid, ATargetAid: Cardinal; const AAccess: TDesfireSessionAccess; const ACompareOnly: Boolean);
 begin
-  RequireIdle;
+  RequireIdle; FReceipt := Default(TDesfireTmacRecord);
   if (ASource = nil) and (ATarget = nil) then Invalid;
   if ASource <> nil then begin ValidateAid(ASourceAid);
     if (ASource.TransferLimit < 1) or (ASource.TransferLimit > DesfireMaxTransferBytes) then Invalid; end;
@@ -399,7 +611,7 @@ begin if not BytesEqual(ACard.ReadIdentity, AIdentity) then
   raise ECardWorkflowError.Create('DESFire card identity changed.'); end;
 function TDesfireApplicationWorkflow.Capture(const ACard: IDesfireWorkflowCard;
   const AAid: Cardinal): TDesfireWorkflowSnapshot;
-var Session: IDesfireSession; Files: TDesfireFiles; I, Total: Integer; V: Integer;
+var Policy: IDesfireWorkflowSessionPolicy; Session: IDesfireSession; Files: TDesfireFiles; I, Total: Integer; V: Integer;
 begin
   Result := Default(TDesfireWorkflowSnapshot); Result.Aid := AAid; Result.Identity := ACard.ReadIdentity;
   Session := ACard.OpenSession(AAid, dsaReadOnly);
@@ -420,11 +632,13 @@ begin
       Inc(Total, Length(Result.Files[I].Data));
     end;
     TDesfireWorkflowArchive.Validate(Result);
-  finally Session.Close; end;
+  finally
+    if Supports(ACard,IDesfireWorkflowSessionPolicy,Policy) then Policy.CloseCapture(Session) else Session.Close;
+  end;
   CheckIdentity(ACard, Result.Identity);
 end;
 procedure TDesfireApplicationWorkflow.DoExecute;
-var Target: TDesfireWorkflowSnapshot; I, J, Found, Commands, StagedByteBudget, N, Count: Integer;
+var Policy: IDesfireWorkflowSessionPolicy; Standard: IDesfireTransactionMacDataSession; IncludeStandard: Boolean; Target: TDesfireWorkflowSnapshot; I, J, Found, Commands, StagedByteBudget, N, Count: Integer;
   Transaction: IDesfireSession; TransactionNeeded: Boolean; S: TDesfireFileSettings;
   Current, Wanted, Delta: Int64; Acquired: TDesfireWorkflowSnapshot; Live: TDesfireFiles; Data: TBytes;
   function TargetFile(const Number: Byte): Integer;
@@ -438,9 +652,12 @@ var Target: TDesfireWorkflowSnapshot; I, J, Found, Commands, StagedByteBudget, N
     for K := 0 to High(FResults) do
       if FSnapshot.Files[K].Settings.FileType <> dftStandard then
         if FResults[K].State = cwusUncertain then FResults[K].State := cwusPending;
+    for K := 0 to High(FResults) do if (FSnapshot.Files[K].Settings.FileType=dftStandard) and
+      (FResults[K].State=cwusUncertain) then begin Progress(cwsNeedsVerification,0,Length(FResults)); Exit; end;
   end;
 begin
-  FConsumed := True;
+  FConsumed := True; IncludeStandard := Supports(FTarget,IDesfireWorkflowSessionPolicy,Policy);
+  if IncludeStandard then IncludeStandard := Policy.TransactionalStandard;
   if FSource <> nil then
   begin
     if not RequestCard(cwrSource) then begin Cancel; Exit; end;
@@ -467,13 +684,13 @@ begin
         Current := TDesfireCodec.SignedValue(Target.Files[Found].Data); Wanted := TDesfireCodec.SignedValue(FResults[I].Data); end;
       FTarget.ValidateWrite(Target.Files[Found].Settings, Wanted > Current);
       if Length(FResults[I].Data) > FTarget.TransferLimit then Invalid;
-      if S.FileType <> dftStandard then
+      if (S.FileType<>dftStandard) or IncludeStandard then
       begin
         TransactionNeeded := True; N := Length(FResults[I].Data);
         if Length(Target.Files[Found].Data) > N then N := Length(Target.Files[Found].Data);
         if N > FTarget.TransferLimit - StagedByteBudget then Invalid; Inc(StagedByteBudget, N);
         case S.FileType of
-          dftBackup: Inc(Commands);
+          dftStandard,dftBackup: Inc(Commands);
           dftValue: Inc(Commands, Integer((Abs(Wanted - Current) + High(Integer) - 1) div High(Integer)));
           dftLinearRecords, dftCyclicRecords: Inc(Commands, 1 + Length(FResults[I].Data) div S.RecordBytes);
         end;
@@ -484,7 +701,7 @@ begin
   end;
   if FCompare then Exit;
   for I := 0 to High(FResults) do
-    if (FSnapshot.Files[I].Settings.FileType = dftStandard) and (FResults[I].State = cwusPending) then
+    if not IncludeStandard and (FSnapshot.Files[I].Settings.FileType = dftStandard) and (FResults[I].State = cwusPending) then
     begin
       if CancelRequested then Exit; CheckIdentity(FTarget, Target.Identity);
       Progress(cwsWriting, I, Length(FResults)); if CancelRequested then Exit;
@@ -504,14 +721,14 @@ begin
     for I := 0 to High(FResults) do
     begin
       S := FSnapshot.Files[I].Settings;
-      if (S.FileType = dftStandard) or (FResults[I].State <> cwusPending) then Continue;
+      if ((S.FileType=dftStandard) and not IncludeStandard) or (FResults[I].State<>cwusPending) then Continue;
       Found := -1;
       for J := 0 to High(Live) do if Live[J].FileNumber = S.FileNumber then Found := J;
       if Found < 0 then Invalid;
       if not SameSettings(S, Live[Found]) then Invalid;
       Data := nil;
       case S.FileType of
-        dftBackup: Data := Transaction.ReadData(S.FileNumber, 0, S.FileBytes);
+        dftStandard,dftBackup: Data := Transaction.ReadData(S.FileNumber, 0, S.FileBytes);
         dftValue: begin N := Transaction.ReadValue(S.FileNumber); SetLength(Data, 4); Move(N, Data[0], 4); end;
         dftLinearRecords, dftCyclicRecords: if Live[Found].CurrentRecords > 0 then
           Data := Transaction.ReadRecords(S.FileNumber, 0, Live[Found].CurrentRecords);
@@ -523,11 +740,15 @@ begin
     begin
       if CancelRequested then begin AbortCancelled; Exit; end;
       S := FSnapshot.Files[I].Settings;
-      if (S.FileType = dftStandard) or (FResults[I].State <> cwusPending) then Continue;
+      if ((S.FileType=dftStandard) and not IncludeStandard) or (FResults[I].State<>cwusPending) then Continue;
       Progress(cwsWriting, I, Length(FResults));
       if CancelRequested then begin AbortCancelled; Exit; end;
       MutationPending(True); FResults[I].State := cwusUncertain;
       case S.FileType of
+        dftStandard: begin
+          if not Supports(Transaction,IDesfireTransactionMacDataSession,Standard) then Invalid;
+          Standard.WriteStandardDataVerified(S.FileNumber,0,Target.Files[TargetFile(S.FileNumber)].Data,FResults[I].Data);
+        end;
         dftBackup: Transaction.WriteBackup(S.FileNumber, 0, CopyBytes(FResults[I].Data));
         dftValue: begin
           Found := TargetFile(S.FileNumber); Current := TDesfireCodec.SignedValue(Target.Files[Found].Data);
@@ -550,7 +771,8 @@ begin
     end;
     Progress(cwsVerifying, 0, Length(FResults));
     if CancelRequested then begin AbortCancelled; Exit; end;
-    Transaction.Commit;
+    if Policy<>nil then begin Policy.CommitSession(Transaction); FReceipt := Policy.Receipt; end
+    else Transaction.Commit;
     if (Transaction.Outcome <> dsoCommitted) or not Transaction.VerificationSucceeded then Invalid;
     CheckIdentity(FTarget, Target.Identity);
     for I := 0 to High(FResults) do if FResults[I].State = cwusUncertain then FResults[I].State := cwusVerified;
@@ -560,7 +782,7 @@ end;
 procedure TDesfireProvisionWorkflow.Prepare(const APicc, AApplication: IDesfireWorkflowCard;
   const AAid: Cardinal; const AKeySettings, AKeyCount: Byte;
   const AKeyType: TDesfireApplicationKeyType; const ADefinitions: TDesfireWorkflowDefinitions);
-var I, J: Integer;
+var I, J: Integer; Policy: IDesfireWorkflowSessionPolicy;
 begin
   RequireIdle; ValidateAid(AAid);
   if (APicc = nil) or (AApplication = nil) or (AKeyCount < 1) or (AKeyCount > 14) or
@@ -575,6 +797,7 @@ begin
       ((ADefinitions[I].ReadWriteKey < 14) and (ADefinitions[I].ReadWriteKey >= AKeyCount)) or
       ((ADefinitions[I].ChangeKey < 14) and (ADefinitions[I].ChangeKey >= AKeyCount)) then Invalid;
   end;
+  if Supports(AApplication,IDesfireWorkflowSessionPolicy,Policy) then Policy.ValidateProvisioning(ADefinitions,AKeyCount);
   FDefinitions := nil; SetLength(FDefinitions, Length(ADefinitions));
   for I := 0 to High(ADefinitions) do FDefinitions[I] := ADefinitions[I];
   FPicc := APicc; FApplication := AApplication; FAid := AAid; FKeySettings := AKeySettings;
@@ -588,7 +811,7 @@ var I: Integer;
 begin Result := nil; SetLength(Result, Length(FResults));
   for I := 0 to High(FResults) do begin Result[I] := FResults[I]; Result[I].Data := CopyBytes(FResults[I].Data); end; end;
 procedure TDesfireProvisionWorkflow.DoExecute;
-var Session: IDesfireSession; Management: IDesfireApplicationManagement; I: Integer; Identity: TBytes;
+var Policy: IDesfireWorkflowSessionPolicy; Session: IDesfireSession; Management: IDesfireApplicationManagement; I: Integer; Identity: TBytes;
   Settings: TDesfireApplicationSettings; TypeBits: Byte; AnyCreated, FailedUncertain: Boolean;
 begin
   FConsumed := True;
@@ -625,7 +848,9 @@ begin
       if CancelRequested then Exit;
       Progress(cwsWriting, I + 1, Length(FDefinitions) + 1); if CancelRequested then Exit;
       MutationPending(True); FResults[I].State := cwusUncertain;
-      try Session.CreateFile(FDefinitions[I]);
+      try
+        if Supports(FApplication,IDesfireWorkflowSessionPolicy,Policy) then Policy.CreateFile(Session,FDefinitions[I])
+        else Session.CreateFile(FDefinitions[I]);
       except
         on E: EContactlessWriteUncertain do begin FailedUncertain := True; raise; end;
         on E: Exception do begin MutationPending(False); FResults[I].State := cwusPending; raise; end;

@@ -284,3 +284,7 @@ is available through `TIso15693PasswordSession`, including the existing strict
 Type 5 reader/writer. Verified password/protection management is provided by
 `TIso15693SecurityManager`; ST25TV/KC and irreversible lock/provisioning dialects
 remain outside the implementation. See [the profile and RF-session contract](ISO15693_TYPE5.md).
+
+The latest [protocol/workflow bundle](PROTOCOL_COMPLETION.md) adds explicit Plus SL2
+AES/Crypto1 sector and trailer programming, multiple-right AES TMAC transactions,
+extended application archives/provisioning and stored SDM template workflows.

@@ -24,8 +24,9 @@ no card I/O; the caller supplies configured readers, profiles and credentials.
 | `TSleCounterWorkflow` | Full declared counter window snapshot, one-way program planner, explicit carry/backup before/after plans, checked prefix resume |
 | `TDesfirePersonalizationWorkflow` | Ordered application/file creation, complete ordinary content population, AES/DES/3DES key rotation and rights/policy steps, with checked prefix resume |
 | `TContactMemoryWorkflow` | Complete SLE/I2C backup; selected-range copy, comparison and restore with protection/retry preflight and per-range verification |
-| `TDesfireApplicationWorkflow` | Complete ordinary application backup; compatible standard/backup/value/record copy, comparison and restore with explicit transaction ownership |
-| `TDesfireProvisionWorkflow` | Explicit application key policy/type/count and ordinary-file creation with per-file metadata evidence |
+| `TDesfireApplicationWorkflow` | Complete ordinary or multiple-right application backup/copy/compare/restore; optional explicitly owned TMAC with verified receipt |
+| `TDesfireProvisionWorkflow` | Explicit application key policy/type/count and ordinary-file creation; optional prevalidated multiple-right policy with verified settings |
+| `TDesfireSdmTemplateWorkflow` | Complete stored SDM template backup, comparison and restore under the same combined target policy; no dynamic mirror copying |
 | `TSimPhonebookWorkflow` | Standalone ADN/standard classic EXT1 or explicit PBR-linked contact backup, compatible-layout restore preview and reviewed apply |
 | `TSimSmsWorkflow` | Complete EF.SMS backup, status-preserving restore preview and reviewed apply; offline free-slot/multipart import planners |
 | `TSimInspectionWorkflow` | Explicit ICCID/PIN state/IMSI/provider/services/EF.DIR inspection with per-section refusal evidence |
@@ -515,7 +516,8 @@ same authenticated sector and the selected Plus X-compatible command profile.
 
 `SwitchSl2ToSl3Verified` adds explicit raw first authentication with the supplied
 L3 switch key, then a separate fresh same-card protected SL3 data proof. SL2 sector
-data sessions/key modifiers remain separate. See [MIFARE_PLUS.md](MIFARE_PLUS.md).
+data/key-modifier access and verified trailer programming are documented in
+[the protocol/workflow guide](PROTOCOL_COMPLETION.md). See [MIFARE_PLUS.md](MIFARE_PLUS.md).
 
 
 ## DESFire ISO/multi-access and AES TMAC native pipelines
@@ -561,3 +563,6 @@ First/NonFirst retained sessions with native chaining and fail-closed cleanup.
 Owned LRP TMAC verifies split counters, offline receipt and journal content, with
 deferred previous ReaderID available only after complete success. LRP provisioning
 and combined-layout application archives remain separate profiles.
+
+See [protocol/workflow profiles](PROTOCOL_COMPLETION.md) for SL2 memory backends,
+DESFire archive v2, TMAC lifecycle, SDM stored-byte evidence and operation-queue binding.
