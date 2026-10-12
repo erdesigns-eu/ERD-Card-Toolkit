@@ -20,6 +20,38 @@ type
     /// <summary>Closes the owned connection once; failures propagate and invalidate its registration.</summary>
     procedure Close;
   end;
+  /// <summary>Owner-thread generation guard for typed non-APDU device adapters.</summary>
+  ICardResourceGuard = interface
+    ['{07EEFD41-81D6-472E-8B02-2C879D620850}']
+    /// <summary>Checks generation, ownership and idle state before one native call.</summary>
+    procedure BeginCall;
+    /// <summary>Ends a dispatched call and checks generation before exposing its result.</summary>
+    procedure EndCall;
+    /// <summary>Clears the in-call flag after a native exception, preserving that primary exception.</summary>
+    procedure CancelCall;
+  end;
+  /// <summary>Lazy typed resource provider; Open must return a wrapper using the supplied guard for every I/O.</summary>
+  ICardResourceConnection = interface
+    ['{A72A6FE3-E0B1-4DFC-82DC-85814BC4632E}']
+    /// <summary>Opens on the lease thread; cleans partial acquisition itself on failure.</summary>
+    /// <param name="AGuard">Retained guard used before/after device calls; do not invoke card commands in Open.</param>
+    /// <returns>Guarded typed interface, never a fabricated APDU transport.</returns>
+    function Open(const AGuard: ICardResourceGuard): IInterface;
+    /// <summary>Returns a stable retained backend identity without I/O, for rejecting duplicate device aliases.</summary>
+    /// <returns>Non-nil identity; distinct adapters for the same physical reader still require one caller-selected ID.</returns>
+    function Identity: IInterface;
+    /// <summary>Releases device ownership once on the opening thread.</summary>
+    procedure Close;
+  end;
+  /// <summary>Exclusive typed non-APDU resource reservation in the common reader registry.</summary>
+  ICardResourceLease = interface
+    ['{7F4AC0D6-2A61-4E1E-B053-AB9F3DB71A03}']
+    /// <summary>Returns the guarded device interface; query its actual magstripe/HID capability.</summary>
+    /// <returns>Retained adapter, unusable after Close, detach or card change.</returns>
+    function Resource: IInterface;
+    /// <summary>Releases native resource and registry ownership; refuses in-flight calls.</summary>
+    procedure Close;
+  end;
   /// <summary>Exclusive application reservation; protocol transactions remain separate.</summary>
   ICardSessionLease = interface
     ['{861E686D-8B63-4D4F-A722-50636750B8EC}']
@@ -75,6 +107,23 @@ type
     /// <param name="AConnection">Non-nil provider; Open/Close execute on the acquiring worker.</param>
     /// <remarks>Reserved entries cannot be replaced. Acquisition failure never executes or retries the job.</remarks>
     procedure BindConnection(const AReaderId: string; const AConnection: ICardSessionConnection);
+    /// <summary>Registers a reconnected reader, deferring replacement only behind a detached live lease.</summary>
+    /// <param name="AReaderId">Physical reader identifier.</param>
+    /// <param name="AConnection">Retained fresh lazy provider; never opened until acquired.</param>
+    /// <remarks>An active registered connection is never replaced while busy.</remarks>
+    procedure BindConnectionWhenIdle(const AReaderId: string; const AConnection: ICardSessionConnection);
+    /// <summary>Registers a retained lazy non-APDU provider in the same exclusive reader namespace.</summary>
+    /// <param name="AReaderId">Unique physical device identifier.</param>
+    /// <param name="AConnection">Guarded typed resource provider; nil and duplicate aliases are refused.</param>
+    procedure BindResourceConnection(const AReaderId: string; const AConnection: ICardResourceConnection);
+    /// <summary>Stages a reappeared resource behind a detached old lease; no hardware is reopened here.</summary>
+    /// <param name="AReaderId">Unique physical resource ID.</param>
+    /// <param name="AConnection">Retained fresh guarded resource provider.</param>
+    procedure BindResourceConnectionWhenIdle(const AReaderId: string; const AConnection: ICardResourceConnection);
+    /// <summary>Reserves and opens one typed device on the caller thread.</summary>
+    /// <param name="AReaderId">Registered resource identifier; APDU entries are refused.</param>
+    /// <returns>Owned guarded resource lease; close after native workflow completion.</returns>
+    function AcquireResource(const AReaderId: string): ICardResourceLease;
     /// <summary>Invalidates a reader and removes it from future reservations.</summary>
     /// <param name="AReaderId">Exact reader ID; absent IDs are harmless.</param>
     procedure DetachReader(const AReaderId: string);
@@ -109,17 +158,22 @@ type
     Id: string;
     Backend: ICardTransport;
     Connection: ICardSessionConnection;
+    Resource: ICardResourceConnection;
+    PendingConnection: ICardSessionConnection;
+    PendingResource: ICardResourceConnection;
     Generation, Reservation: Int64;
     Busy: Boolean;
   end;
   IRegistry = interface
     ['{3B81A3F4-B8B2-4EEA-9991-F678FB54F807}']
-    procedure Bind(const Id: string; const Backend: ICardTransport; const Connection: ICardSessionConnection);
+    procedure Bind(const Id: string; const Backend: ICardTransport; const Connection: ICardSessionConnection; const Resource: ICardResourceConnection);
     procedure Invalidate(const Id: string; const Remove: Boolean);
     procedure Disable;
     function List: TStringList;
     function Reserve(const Id: string): ICardSessionLease;
     function ReserveMany(const Ids: array of string): ICardSessionGroup;
+    function ReserveResource(const Id: string): ICardResourceLease;
+    procedure BindDeferred(const Id: string; const Connection: ICardSessionConnection; const Resource: ICardResourceConnection);
     procedure Check(const Id: string; const Generation: Int64);
     procedure Release(const Id: string; const Generation: Int64);
   end;
@@ -135,12 +189,14 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-    procedure Bind(const Id: string; const Backend: ICardTransport; const Connection: ICardSessionConnection);
+    procedure Bind(const Id: string; const Backend: ICardTransport; const Connection: ICardSessionConnection; const Resource: ICardResourceConnection);
     procedure Invalidate(const Id: string; const Remove: Boolean);
     procedure Disable;
     function List: TStringList;
     function Reserve(const Id: string): ICardSessionLease;
     function ReserveMany(const Ids: array of string): ICardSessionGroup;
+    function ReserveResource(const Id: string): ICardResourceLease;
+    procedure BindDeferred(const Id: string; const Connection: ICardSessionConnection; const Resource: ICardResourceConnection);
     procedure Check(const Id: string; const Generation: Int64);
     procedure Release(const Id: string; const Generation: Int64);
   end;
@@ -188,6 +244,29 @@ type
     procedure Close;
   end;
 
+  TResourceGuard = class(TInterfacedObject, ICardResourceGuard)
+  public
+    Registry: IRegistry;
+    Id: string;
+    Generation: Int64;
+    Thread: NativeUInt;
+    Closed, InCall: Boolean;
+    procedure Check;
+    procedure BeginCall;
+    procedure EndCall;
+    procedure CancelCall;
+  end;
+  TResourceLease = class(TInterfacedObject, ICardResourceLease)
+  public
+    Guard: TResourceGuard;
+    RetainedGuard: ICardResourceGuard;
+    Device: IInterface;
+    Connection: ICardResourceConnection;
+    destructor Destroy; override;
+    function Resource: IInterface;
+    procedure Close;
+  end;
+
 procedure Invalid;
 begin
   raise ECardSessionError.Create('Reader session is unavailable or invalid.');
@@ -222,10 +301,12 @@ begin
   Result := -1;
 end;
 
-procedure TRegistry.Bind(const Id: string; const Backend: ICardTransport; const Connection: ICardSessionConnection);
+procedure TRegistry.Bind(const Id: string; const Backend: ICardTransport; const Connection: ICardSessionConnection; const Resource: ICardResourceConnection);
 var I, J: Integer;
 begin
-  if (Length(Id)<1) or (Length(Id)>1024) or ((Backend=nil) = (Connection=nil)) then Invalid;
+  if (Length(Id)<1) or (Length(Id)>1024) then Invalid;
+  if Ord(Backend<>nil)+Ord(Connection<>nil)+Ord(Resource<>nil)<>1 then Invalid;
+  if (Resource<>nil) and (Resource.Identity=nil) then Invalid;
   Enter;
   try
     if not FEnabled or (FGeneration=High(Int64)) then Invalid;
@@ -233,14 +314,45 @@ begin
     if (I>=0) and FItems[I].Busy then Invalid;
     for J := 0 to High(FItems) do
       if (J<>I) and (((Backend<>nil) and (FItems[J].Backend=Backend)) or
-        ((Connection<>nil) and (FItems[J].Connection=Connection))) then Invalid;
+        ((Connection<>nil) and ((FItems[J].Connection=Connection) or (FItems[J].PendingConnection=Connection))) or
+        ((Resource<>nil) and (FItems[J].Resource=Resource))) then Invalid;
+    if Resource<>nil then for J := 0 to High(FItems) do if J<>I then begin
+      if (FItems[J].Resource<>nil) and (FItems[J].Resource.Identity=Resource.Identity) then Invalid;
+      if (FItems[J].PendingResource<>nil) and (FItems[J].PendingResource.Identity=Resource.Identity) then Invalid;
+    end;
     if I<0 then begin
       if Length(FItems)>=256 then Invalid;
       I := Length(FItems); SetLength(FItems,I+1); FItems[I].Id := Id;
     end;
     Inc(FGeneration); FItems[I].Generation := FGeneration;
-    FItems[I].Backend := Backend; FItems[I].Connection := Connection; FItems[I].Busy := False;
+    FItems[I].Backend := Backend; FItems[I].Connection := Connection; FItems[I].Resource := Resource; FItems[I].PendingConnection := nil; FItems[I].PendingResource := nil; FItems[I].Busy := False;
   finally Leave; end;
+end;
+
+procedure TRegistry.BindDeferred(const Id: string; const Connection: ICardSessionConnection; const Resource: ICardResourceConnection);
+var I,J: Integer; Deferred: Boolean;
+begin
+  if (Length(Id)<1) or (Length(Id)>1024) or ((Connection=nil)=(Resource=nil)) then Invalid;
+  Deferred := False; Enter;
+  try
+    if not FEnabled then Invalid;
+    I := Index(Id);
+    if (I>=0) and FItems[I].Busy then begin
+      if (FItems[I].Backend<>nil) or (FItems[I].Connection<>nil) or (FItems[I].Resource<>nil) then Invalid;
+      for J := 0 to High(FItems) do if (J<>I) and
+        (((Connection<>nil) and ((FItems[J].Connection=Connection) or (FItems[J].PendingConnection=Connection))) or
+        ((Resource<>nil) and ((FItems[J].Resource=Resource) or (FItems[J].PendingResource=Resource)))) then Invalid;
+      if Resource<>nil then begin
+        if Resource.Identity=nil then Invalid;
+        for J := 0 to High(FItems) do if J<>I then begin
+          if (FItems[J].Resource<>nil) and (FItems[J].Resource.Identity=Resource.Identity) then Invalid;
+          if (FItems[J].PendingResource<>nil) and (FItems[J].PendingResource.Identity=Resource.Identity) then Invalid;
+        end;
+      end;
+      FItems[I].PendingConnection := Connection; FItems[I].PendingResource := Resource; Deferred := True;
+    end;
+  finally Leave; end;
+  if not Deferred then Bind(Id,nil,Connection,Resource);
 end;
 
 procedure TRegistry.Invalidate(const Id: string; const Remove: Boolean);
@@ -253,7 +365,7 @@ begin
     Inc(FGeneration); FItems[I].Generation := FGeneration;
     // Retain a live reservation until its lease releases; do not overlap old I/O.
     if Remove then begin
-      FItems[I].Backend := nil; FItems[I].Connection := nil;
+      FItems[I].Backend := nil; FItems[I].Connection := nil; FItems[I].Resource := nil; FItems[I].PendingConnection := nil; FItems[I].PendingResource := nil;
       if not FItems[I].Busy then begin
         for J := I to High(FItems)-1 do FItems[J] := FItems[J+1];
         SetLength(FItems,Length(FItems)-1);
@@ -274,8 +386,78 @@ begin
   Result := TStringList.Create;
   Enter;
   try
-    for I := 0 to High(FItems) do if (FItems[I].Backend<>nil) or (FItems[I].Connection<>nil) then Result.Add(FItems[I].Id);
+    for I := 0 to High(FItems) do if (FItems[I].Backend<>nil) or (FItems[I].Connection<>nil) or (FItems[I].Resource<>nil) or (FItems[I].PendingConnection<>nil) or (FItems[I].PendingResource<>nil) then Result.Add(FItems[I].Id);
   finally Leave; end;
+end;
+
+procedure TResourceGuard.Check;
+begin
+  if (NativeUInt(TThread.CurrentThread.ThreadID)<>Thread) or Closed or InCall then Invalid;
+  Registry.Check(Id,Generation);
+end;
+procedure TResourceGuard.BeginCall;
+begin Check; InCall := True; end;
+procedure TResourceGuard.EndCall;
+begin
+  if (NativeUInt(TThread.CurrentThread.ThreadID)<>Thread) or not InCall then Invalid;
+  InCall := False; Check;
+end;
+procedure TResourceGuard.CancelCall;
+begin
+  if NativeUInt(TThread.CurrentThread.ThreadID)<>Thread then Invalid;
+  InCall := False;
+end;
+function TResourceLease.Resource: IInterface;
+begin Guard.Check; Result := Device; end;
+procedure TResourceLease.Close;
+begin
+  if NativeUInt(TThread.CurrentThread.ThreadID)<>Guard.Thread then Invalid;
+  if Guard.Closed then Exit;
+  if Guard.InCall then Invalid;
+  Guard.Closed := True;
+  try
+    try Connection.Close; except Guard.Registry.Invalidate(Guard.Id,True); raise; end;
+  finally
+    Guard.Registry.Release(Guard.Id,Guard.Generation); Device := nil; Connection := nil;
+  end;
+end;
+destructor TResourceLease.Destroy;
+begin
+  if (Guard<>nil) and not Guard.Closed then
+    if NativeUInt(TThread.CurrentThread.ThreadID)=Guard.Thread then
+      try Close; except end
+    else begin Guard.Closed := True; Guard.Registry.Invalidate(Guard.Id,True); end;
+  inherited Destroy;
+end;
+function TRegistry.ReserveResource(const Id: string): ICardResourceLease;
+var I: Integer; Connection: ICardResourceConnection; Generation: Int64;
+  Guard: TResourceGuard; KeepGuard: ICardResourceGuard; Lease: TResourceLease;
+  KeepLease: ICardResourceLease; Device: IInterface; Opened: Boolean;
+begin
+  Result := nil; Opened := False;
+  Enter;
+  try
+    I := Index(Id); if not FEnabled or (I<0) then Invalid;
+    if FItems[I].Busy or (FItems[I].Resource=nil) then Invalid;
+    Connection := FItems[I].Resource; Generation := FItems[I].Generation;
+    FItems[I].Busy := True; FItems[I].Reservation := Generation;
+  finally Leave; end;
+  try
+    Guard := TResourceGuard.Create; KeepGuard := Guard;
+    Guard.Registry := Self; Guard.Id := Id; Guard.Generation := Generation;
+    Guard.Thread := NativeUInt(TThread.CurrentThread.ThreadID);
+    Device := Connection.Open(KeepGuard); Opened := True;
+    if Device=nil then Invalid;
+    Guard.Check;
+    Lease := TResourceLease.Create; KeepLease := Lease;
+    Lease.Guard := Guard; Lease.RetainedGuard := KeepGuard;
+    Lease.Device := Device; Lease.Connection := Connection; Result := KeepLease;
+  except
+    if KeepGuard<>nil then Guard.Closed := True;
+    try if Opened then Connection.Close;
+    finally Invalidate(Id,True); Release(Id,Generation); end;
+    raise;
+  end;
 end;
 
 constructor TGroup.Create(const Ids: array of string);
@@ -343,9 +525,9 @@ begin
 end;
 
 function TRegistry.Reserve(const Id: string): ICardSessionLease;
-var Group: ICardSessionGroup;
+var Group: ICardSessionGroup; Ids: array[0..0] of string;
 begin
-  Group := ReserveMany([Id]);
+  Ids[0] := Id; Group := ReserveMany(Ids);
   Result := Group.Lease(0);
   // Transfer the sole member without releasing its reservation.
   (Group as TGroup).FLeases[0] := nil;
@@ -428,7 +610,13 @@ begin
     I := Index(Id);
     if (I>=0) and (FItems[I].Reservation=Generation) then begin
       FItems[I].Busy := False;
-      if (FItems[I].Backend=nil) and (FItems[I].Connection=nil) then begin
+      if FItems[I].PendingConnection<>nil then begin
+        FItems[I].Connection := FItems[I].PendingConnection; FItems[I].PendingConnection := nil;
+      end;
+      if FItems[I].PendingResource<>nil then begin
+        FItems[I].Resource := FItems[I].PendingResource; FItems[I].PendingResource := nil;
+      end;
+      if (FItems[I].Backend=nil) and (FItems[I].Connection=nil) and (FItems[I].Resource=nil) then begin
         for J := I to High(FItems)-1 do FItems[J] := FItems[J+1];
         SetLength(FItems,Length(FItems)-1);
       end;
@@ -535,12 +723,12 @@ end;
 
 procedure TCardSessionManager.BindReader(const AReaderId: string; const ATransport: ICardTransport);
 begin
-  (FRegistry as IRegistry).Bind(AReaderId,ATransport,nil);
+  (FRegistry as IRegistry).Bind(AReaderId,ATransport,nil,nil);
 end;
 
 procedure TCardSessionManager.BindConnection(const AReaderId: string; const AConnection: ICardSessionConnection);
 begin
-  (FRegistry as IRegistry).Bind(AReaderId,nil,AConnection);
+  (FRegistry as IRegistry).Bind(AReaderId,nil,AConnection,nil);
 end;
 
 procedure TCardSessionManager.DetachReader(const AReaderId: string);
@@ -567,5 +755,19 @@ function TCardSessionManager.AcquireMany(const AReaderIds: array of string): ICa
 begin
   Result := (FRegistry as IRegistry).ReserveMany(AReaderIds);
 end;
+
+procedure TCardSessionManager.BindResourceConnection(const AReaderId: string;
+  const AConnection: ICardResourceConnection);
+begin (FRegistry as IRegistry).Bind(AReaderId,nil,nil,AConnection); end;
+function TCardSessionManager.AcquireResource(const AReaderId: string): ICardResourceLease;
+begin Result := (FRegistry as IRegistry).ReserveResource(AReaderId); end;
+
+procedure TCardSessionManager.BindConnectionWhenIdle(const AReaderId: string;
+  const AConnection: ICardSessionConnection);
+begin (FRegistry as IRegistry).BindDeferred(AReaderId,AConnection,nil); end;
+
+procedure TCardSessionManager.BindResourceConnectionWhenIdle(const AReaderId: string;
+  const AConnection: ICardResourceConnection);
+begin (FRegistry as IRegistry).BindDeferred(AReaderId,nil,AConnection); end;
 
 end.

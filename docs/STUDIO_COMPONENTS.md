@@ -1,9 +1,9 @@
 # Sessieregie, bewerkingen en projecten
 
 Deze componentlaag staat tussen de kaartprotocollen/workflows en een toekomstige
-CardStudio-UI. Er zijn geen nieuwe schermen of demo's. De acht niet-visuele
+CardStudio-UI. Er zijn geen nieuwe schermen of demo's. De veertien niet-visuele
 componenten staan op de palette **ERD Studio** en worden geleverd in het bestaande
-core-, PC/SC-, Windows-crypto- en designpackage.
+core-, PC/SC-, input-, magstripe-, Windows-crypto- en designpackage.
 
 | Component/API | Verantwoordelijkheid |
 | --- | --- |
@@ -15,6 +15,10 @@ core-, PC/SC-, Windows-crypto- en designpackage.
 | `TCardOperationExecutor` | Signaalgestuurde worker, veilig stoppen/joinen en creator-thread-resultaten |
 | `TCardPcscSessionProvider` | Gekopieerde PC/SC-configuratie, openen/sluiten op de workerthread per lease |
 | `TCardProtectedProjectStore` / `TCardWindowsUserProtection` | Geauthenticeerde projectstreamopslag met Windows-user DPAPI en componentbinding |
+| `TCardPcscSessionRegistry` / `TCardHidSessionRegistry` | Eigen native monitors verbinden inventory-events met lazy registratie en generatiebewaking |
+| `THidSessionProvider` / `TMagStripeSessionProvider` | Getypeerde non-APDU providers met dezelfde centrale exclusiviteit |
+| `TCardKeyProvider` | Expliciete scoped credentials, onafhankelijke immutable worker-snapshots en bufferopruiming |
+| `TCardProjectSchemaRegistry` | Expliciete offline schema-conversies met atomaire eindvervanging |
 | `TCardProject` | Gekopieerde artifacts, schema-ID's, dirty state, versiebeheer van het archiefformaat, atomaire import en streamopslag |
 
 ## Reader- en kaartlevensduur
@@ -86,7 +90,7 @@ Deze bridge is gericht op één kaartgeneratie. Voor single-reader bron/doelwiss
 maak eerst een acquisition/back-up job en daarna een expliciete restore job op de
 nieuwe lease. Een wissel binnen dezelfde lease wordt terecht ongeldig. Gecoördineerde
 multi-reader jobs zijn beschikbaar via AcquireMany/EnqueueMany. Typed magstripe/HID-backendleases
-blijven aanvullende infrastructuurprofielen; dit is geen generieke guard voor elk
+zijn beschikbaar via AcquireResource/EnqueueResource; dit is geen generieke guard voor elk
 vendorprotocol dat geen `ICardTransport` implementeert.
 
 ## Projecten
@@ -114,8 +118,9 @@ heeft. Use op één ownerthread; projectbuffers zijn geen concurrent database.
 Artifacts kunnen persoonsgegevens bevatten. Het formaat is niet versleuteld of
 ondertekend en is geen sleutelkluis. Credentials worden niet automatisch opgeslagen;
 voeg ze ook niet zelf toe aan artifacts. Windows-user DPAPI streamopslag is beschikbaar via de aparte store/provider.
-Portable key-providers en projectversiemigraties blijven
-verdere componentuitbreidingen.
+Een immutable in-memory sleutelprovider en expliciete artifact-schemamigraties zijn
+beschikbaar. Persistente credential-vaultpolicies en migraties van toekomstige
+projectcontainer-versies blijven verdere uitbreidingen.
 
 ## Componentgrens voor de UI
 
@@ -160,9 +165,9 @@ lease sluit. Een verlaten idle lease sluit zijn provider op de eigen thread;
 verkeerde-thread/actieve-transaction abandonment maakt de registratie ongeldig.
 Dit is geen impliciete authenticatie, reset, reconnect, commit of abort.
 
-De huidige automatische provider is PC/SC. Typed non-APDU leases, automatische
-hot-plugregistratie, projectversiemigraties en portable protection/key-providers
-blijven verdere componentuitbreidingen. Er zijn geen schermen of demos toegevoegd.
+Lazy PC/SC en typed HID/magstripe providers zijn beschikbaar, met automatische
+PC/SC/HID-hotplugregistratie. Persistente key-vaultpolicies, portable projectprotection
+en toekomstige projectcontainer-versiemigraties blijven verdere uitbreidingen. Er zijn geen schermen of demos toegevoegd.
 
 ## Beveiligde projectopslag
 
@@ -227,8 +232,9 @@ backends; de gedeelde bridge bewaart cancellation, observers en failure evidence
 Er is een groepsvalidatie vóór binding en na uitvoering. Native transacties en
 inhoudsverificatie blijven bij de workflow. De adapter wordt maar één keer uitgevoerd.
 
-Een groep reserveert uitsluitend `ICardTransport`-backends. Magstripe/HID-projectdata
-worden ondersteund door adapters, maar krijgen hiermee geen fictieve APDU-sessies.
+Een groep reserveert uitsluitend `ICardTransport`-backends. Typed magstripe/HID-resources hebben hun eigen lease/job-API en krijgen geen
+fictieve APDU-transporten. AcquireMany blijft gericht op APDU-groepen; source/target
+resources kunnen apart worden gereserveerd, maar hebben nog geen atomische resourcegroep-API.
 
 ## Getypeerde project-artifacts
 
@@ -238,6 +244,9 @@ worden ondersteund door adapters, maar krijgen hiermee geen fictieve APDU-sessie
 | TContactlessProjectArtifacts | PutDesfire/GetDesfire | desfire.v1 |
 | TContactlessProjectArtifacts | PutMobib/GetMobib | mobib.v2 |
 | TMagStripeProjectArtifacts | Put/Get | magstripe.v1 |
+| TNdefProjectArtifacts | Put/Get | ndef.v1 |
+| TSimProjectArtifacts | Put/Get | sim.v1 |
+| TContactMemoryProjectArtifacts | Put/Get | contact-memory.v1 |
 
 De geheugen-, DESFire- en MOBIB-adapters gebruiken de bestaande bounded archivecodecs.
 Magstripe bewaart een expliciete trackselectie en gevalideerde unframed payloads;
@@ -274,3 +283,102 @@ Netwerkfilesystem/power-lossgaranties hangen af van het filesystem. Native Windo
 is geleverd; de native filesystem-tests hier draaien op Linux. Andere native targets
 worden expliciet geweigerd. Load gebruikt bounded streamvalidatie en verandert het
 project pas na volledige succesvolle import/authenticatie.
+
+
+## Typed non-APDU sessies en jobs
+
+Registreer een expliciete `TMagStripeSessionProvider.Device` of een
+`THidSessionProvider` met exact DevicePath/injected Device en WriteAccess. Registratie
+kopieert de device-interface/policy zonder Open/Acquire; houd de onderliggende
+backendconfiguratie stabiel tot alle leases gesloten zijn. RegisterDevice gebruikt
+dezelfde reader-ID-namespace en exclusieve reservering als PC/SC. Dubbele referenties
+naar dezelfde resource-backend worden geweigerd; verschillende adapters voor één
+fysiek apparaat blijven de verantwoordelijkheid van de caller.
+
+`Manager.AcquireResource(Id)` opent op de acquiring thread en retourneert
+`ICardResourceLease`. Query `Lease.Resource` voor `IHidReportDevice` of
+`IMagStripeDevice`. Deze wrappers bewaken ownerthread, generatie en reentrancy bij
+iedere aanroep. Native ownership loopt over de hele lease; device Open/Close of
+Acquire/Release binnen een bestaande component zijn logische gebruiksgrenzen en
+openen de fysieke verbinding niet nogmaals. Lease.Close sluit de fysieke backend
+precies één keer. Een retained wrapper is daarna ongeldig. Openfouten moeten door
+de provider worden opgeruimd; Closefouten verwijderen de registratie zonder retry.
+
+HID behoudt expliciete read/write-toegang en reportsemantiek. Een succesvolle Send
+gevolgd door generatieverlies wordt EHidSendUncertain. Magstripe behoudt echte
+verified-write capabilities en ondersteunt IMagStripeStatusWriter uitsluitend als
+de backend dit zelf ondersteunt; generatieverlies na Write/ProgramStatus wordt
+EMagStripeWriteUncertain. Er wordt nooit echo-data als read-back verzonnen.
+
+`Queue.EnqueueResource` voert een `ICardResourceOperation` uit met dezelfde
+achtergrondexecutor/cancellation/resultregels. `CreateCardResourceWorkflowOperation`
+verbindt bestaande voorbereide workflows aan de typed backend, met behoud van
+observers en failure evidence. Deze API reserveert één resource per job; er is nog
+geen mixed APDU/resource-groep of atomische multi-resource-acquisition. Een losse
+bronacquisition en doelrestore kunnen wel afzonderlijk worden gepland.
+
+## Automatische inventoryregistratie
+
+`TCardPcscSessionRegistry` bezit een eigen inactive monitor en lazy provider.
+Verbind Manager en roep Start aan op de main thread. Native PC/SC PnP/status-events
+registreren `pcsc:` plus de exacte readernaam, zonder een kaart te openen. Insertion,
+removal, ATR- en beschikbaarheidswijzigingen invalidateren kaartgeneraties; usage,
+exclusive-use en power-only vlagwijzigingen doen dat niet. Dit voorkomt dat een
+job zijn eigen lease ongeldig maakt doordat Connect een INUSE/power-event oplevert.
+ObserveReaderAdded/Removed en ObserveState kunnen ook door een eigen inventorydriver
+worden gevoed; geef arrival vóór state door. Lazy defaults zijn T=0/T=1 en shared;
+voor andere readerpolicies kan een expliciete providerconfiguratie worden gebonden.
+
+`TCardHidSessionRegistry` bezit een eigen native HID device-notification monitor,
+gebruikt `hid:` plus het lowercase collectionpath en kopieert WriteAccess bij registratie.
+Native Start seedt bestaande devices stil via native enumeration; OnDeviceAdded
+meldt hotplug-arrivals. Injected hosts leveren hun initiële inventory expliciet aan.
+Het oorspronkelijke opaque path blijft intact voor native Open. Casevarianten van
+Windows notifications gebruiken dezelfde reservering, ook bij reconnect. Een
+injectable Factory maakt inactive exact-path devices zonder I/O. USB-devicepresence
+is geen bewijs van een aangeboden RFID-kaart; gebruik de bestaande input/identifier-
+events voor kaartinhoud, zonder verzonnen card-removal-events.
+
+Removal invalideert oude leases. Reappearance kan een nieuwe lazy verbinding stagen
+achter de detached oude reservering; pas haar Close promoveert de nieuwe provider.
+Er loopt nooit oude en nieuwe native I/O tegelijk. Een hernieuwde removal wist staged
+registratie. Native cleanupfouten quarantainen de registratie; herstel is expliciet,
+geen automatische herhaling. Stop verwijdert alleen eigen inventorymembers en
+vernietiging van Manager stopt de monitors via free-notifications. Er worden geen
+bestaande application-monitorhandlers overgenomen. Alle registryevents zijn main-thread.
+
+## Scoped credentials
+
+`TCardKeyProvider.Put(Id, Purpose, Key)` bewaart een onafhankelijke sleutelkopie.
+Er zijn maximaal 256 entries, met één tot 4096 bytes per sleutel en bounded ASCII
+identifiers. ID én Purpose moeten exact overeenkomen. `Snapshot` geeft een
+immutable retained `ICardKeyProvider`, onafhankelijk van later Clear/Remove of
+componentdestructie en bruikbaar door workers. Resolve geeft opnieuw een onafhankelijke
+kopie; wis die na expliciete configuratie van de workflow. Voorbeeldscopes zijn
+`desfire`, `classic` of `sim`; er is geen key guessing, fallback tussen scopes of
+implicit provisioning. De applicatie kiest referenties en injecteert credentials
+vóór preparation. Constructor/DFM-streaming schrijven geen keys. Owned providerbuffers
+worden gewist bij Remove/Clear/destructie; dit is geen claim dat alle historische
+heapkopieën uit caller-code zijn verwijderd.
+
+Dit is een in-memory provider, geen persistent encrypted key vault. Project-DPAPI
+is projectbescherming en wordt niet stilzwijgend gebruikt voor credentialopslag.
+HSM/credential-vaultadapters kunnen hetzelfde ICardKeyProvider-contract implementeren.
+
+## Expliciete artifact-schemamigraties
+
+`TCardProjectSchemaRegistry.RegisterMigration(Source, Target, Converter)` registreert
+maximaal 256 exacte offline schema-edges. `MigratePath(Project, Id, [Targets])`
+valideert vooraf één tot acht geselecteerde stappen. Iedere converter ontvangt
+copy-isolated data en moet dezelfde artifact-ID en de geregistreerde targetschema
+opleveren. Pas na succesvolle conversie/budgetvalidatie van de hele keten wordt
+het oorspronkelijke artifact vervangen. Een ontbrekende edge, ongeldige ID of
+latere conversion failure laat het oorspronkelijke project behouden. Convertercallbacks
+mogen het project niet wijzigen of kaartoperaties uitvoeren. De registry doet geen
+path guessing, implicit downgrades of auto-migration bij Load.
+
+`RegisterContactlessProjectMigrations` levert een concrete `mobib.v1` → `mobib.v2`
+upgrade via de bestaande legacy decoder en huidige encoder. Bestaande records en
+statussen blijven behouden; ontbrekende applicationmetadata wordt niet verzonnen.
+Het overkoepelende projectcontainerformaat blijft ERD-PROJECT 1; er bestaat nog
+geen v2-container waarvoor een container-migratie nodig is.

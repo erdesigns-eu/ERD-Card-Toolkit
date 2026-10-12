@@ -20,7 +20,8 @@ uses
   ERD.Card.Contactless.Workflow.Password, ERD.Card.Contactless.Workflow.Security,
   ERD.Card.GlobalPlatform, ERD.Card.EMV.Calculator, ERD.Card.PCSC.Monitor, ERD.Card.HID.Monitor, ERD.Card.SIM.Reader, ERD.Card.SIM.Workflow, ERD.Card.SIM.Inspection,
   ERD.Card.Reader.TWN4, ERD.Card.RFID.Input, ERD.Card.RFID.HID, ERD.Card.HID,
-  ERD.Card.Project.Files, ERD.Card.Session, ERD.Card.Operation, ERD.Card.Project,
+  ERD.Card.Keys, ERD.Card.Project.Schema, ERD.Card.HID.Session, ERD.Card.HID.Registry,
+  ERD.Card.PCSC.Registry, ERD.Card.MagStripe.Session, ERD.Card.Project.Files, ERD.Card.Session, ERD.Card.Operation, ERD.Card.Project,
   ERD.Card.Project.DPAPI, ERD.Card.Project.Secure, ERD.Card.Operation.Executor, ERD.Card.PCSC.Session,
   DesignIntf, ERD.Card.Memory, ERD.Card.Memory.Counter, ERD.Card.Memory.Sle4404,
   ERD.Card.PCSC.Reader, ERD.Card.EID.Reader,
@@ -41,7 +42,7 @@ uses
 
 procedure Register;
 begin
-  RegisterComponents('ERD Studio', [TCardSessionManager, TCardOperationQueue, TCardProject, TCardOperationExecutor, TCardPcscSessionProvider, TCardProtectedProjectStore, TCardWindowsUserProtection, TCardProjectFileStore]);
+  RegisterComponents('ERD Studio', [TCardSessionManager, TCardOperationQueue, TCardProject, TCardOperationExecutor, TCardPcscSessionProvider, TCardProtectedProjectStore, TCardWindowsUserProtection, TCardProjectFileStore, TCardKeyProvider, TCardProjectSchemaRegistry, THidSessionProvider, TMagStripeSessionProvider, TCardPcscSessionRegistry, TCardHidSessionRegistry]);
   RegisterComponents('ERD Cards', [TGlobalPlatformCardManager, TSmartCardMonitor, TSmartCardReader,
     TBelgianEIDReader, TICAODocumentReader, TSimCardReaderWriter,
     TEmvCalculator, TEMVCardReader, TMagStripeReaderWriter, TMemoryCardReaderWriter,

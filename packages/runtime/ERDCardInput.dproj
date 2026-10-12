@@ -180,6 +180,8 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="..\..\src\input\ERD.Card.HID.Session.pas"/>
+        <DCCReference Include="..\..\src\input\ERD.Card.HID.Registry.pas"/>
         <DCCReference Include="..\..\src\input\ERD.Card.HID.Monitor.pas"/>
         <DCCReference Include="rtl.dcp"/>
         <DCCReference Include="ERDCardCore.dcp"/>

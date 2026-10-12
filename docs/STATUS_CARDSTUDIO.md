@@ -21,7 +21,7 @@ profielen eerst verder uit, zonder nu nieuwe demo's of een applicatie te maken.
 
 ## Beschikbare basis
 
-De library telt **67 geregistreerde componenten** en **24 gedocumenteerde
+De library telt **73 geregistreerde componenten** en **24 gedocumenteerde
 workflowklassen**, inclusief de generieke geheugenworkflow. Dat is geen maat voor
 het aantal volledig ondersteunde kaarten: één klasse kan meerdere profielen bevatten.
 
@@ -105,8 +105,8 @@ begrensde projecten met atomaire import. De volgende productuitbreidingen blijve
 
 - **Reader- en sessieregie:** centrale transportreservering en generatiebewaking bestaan;
   een signal-driven achtergrondexecutor en lazy PC/SC-connectiebeheer bestaan nu
-  ook, inclusief atomische multi-readerreservering en queued groepsjobs. Typed non-APDU leases
-  en automatische hot-plugregistratie blijven componentwerk.
+  ook, inclusief atomische multi-readerreservering en queued groepsjobs. Typed HID/magstripe-leases en automatische PC/SC/HID-hotplugregistratie bestaan ook.
+  Gemengde APDU/resourcegroepen en atomische multi-resource-acquisition ontbreken nog.
 - **Profielkeuze en capaciteiten:** acties aanbieden op basis van kaart én reader;
   ATR/UID-herkenning is een hint en geen bewijs dat iedere schrijfactie past.
 - **Inspectiemodel en schermen:** kaart/applicatie/fileboom, geparste velden, ruwe data,
@@ -115,9 +115,10 @@ begrensde projecten met atomaire import. De volgende productuitbreidingen blijve
   voortgang/annulering en een zichtbaar onderscheid tussen Verified en Uncertain.
 - **Projecten en geheimen:** het nieuwe begrensde projectformaat en streamopslag bestaan;
   Windows-user DPAPI en atomische bestandsopslag bestaan ook, met typed geheugen-,
-  DESFire-, MOBIB- en magstripe-adapters. Projectversiemigraties, overige typed adapters,
-  portable beschermde opslag en een
-  gescheiden sleutelprovider moeten nog als componenten worden gebouwd.
+  DESFire-, MOBIB-, magstripe-, NDEF-, SIM/USIM- en contact-memory-adapters.
+  Expliciete artifact-schemamigraties en een gescheiden immutable in-memory sleutelprovider
+  bestaan ook. Portable beschermde opslag, persistente credential-vaultpolicies en
+  eventuele toekomstige container-versiemigraties blijven verdere uitbreidingen.
 - **Heropening na fouten:** nieuwe kaartinspectie en gecontroleerde vervolgplannen;
   geen automatisch herhalen van een mogelijk al uitgevoerde schrijfactie.
 

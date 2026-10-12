@@ -10,6 +10,8 @@ requires
   rtl;
 
 contains
+  ERD.Card.Keys in '..\..\src\core\ERD.Card.Keys.pas',
+  ERD.Card.Project.Schema in '..\..\src\core\ERD.Card.Project.Schema.pas',
   ERD.Card.Project.Artifacts in '..\..\src\core\ERD.Card.Project.Artifacts.pas',
   ERD.Card.Project.Files in '..\..\src\core\ERD.Card.Project.Files.pas',
   ERD.Card.Inspection in '..\..\src\core\ERD.Card.Inspection.pas',

@@ -180,6 +180,7 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="..\..\src\magstripe\ERD.Card.MagStripe.Session.pas"/>
         <DCCReference Include="..\..\src\magstripe\ERD.Card.MagStripe.Project.pas"/>
         <DCCReference Include="..\..\src\magstripe\ERD.Card.MagStripe.Workflow.pas"/>
         <DCCReference Include="rtl.dcp"/>

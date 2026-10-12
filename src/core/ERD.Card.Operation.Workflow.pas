@@ -13,9 +13,14 @@ type
   /// <param name="AWorkflow">Prepared workflow; configure its backend to ASession.Transport.</param>
   TCardWorkflowBindEvent = procedure(const ASession: ICardSessionLease;
     const AWorkflow: TCardWorkflow) of object;
-  /// <summary>Binds ordered source/target transports to an existing prepared workflow on its worker.</summary>
-  /// <param name="ASessions">Complete reserved group; do not close or retain it.</param>
-  /// <param name="AWorkflow">Prepared workflow; configure its source/target backends explicitly.</param>
+  /// <summary>Binds an existing prepared workflow to a typed device on its worker.</summary>
+  /// <param name="ASession">Reserved guarded resource, queried for magstripe/HID capability.</param>
+  /// <param name="AWorkflow">Prepared workflow receiving the explicit guarded backend.</param>
+  TCardResourceWorkflowBindEvent = procedure(const ASession: ICardResourceLease;
+    const AWorkflow: TCardWorkflow) of object;
+  /// <summary>Binds ordered source/target transports to a prepared workflow.</summary>
+  /// <param name="ASessions">Complete reserved group.</param>
+  /// <param name="AWorkflow">Prepared workflow with explicit source/target backends.</param>
   TCardMultiWorkflowBindEvent = procedure(const ASessions: ICardSessionGroup;
     const AWorkflow: TCardWorkflow) of object;
 
@@ -37,6 +42,14 @@ function CreateCardWorkflowOperation(const AWorkflow: TCardWorkflow;
 /// <remarks>The workflow owns native transactions and target verification; reservations do not make multi-card writes atomic.</remarks>
 function CreateCardMultiWorkflowOperation(const AWorkflow: TCardWorkflow;
   const ABind: TCardMultiWorkflowBindEvent; const AOwnsWorkflow: Boolean = False): ICardMultiOperation;
+
+/// <summary>Adapts an existing prepared magstripe/HID workflow to EnqueueResource with cancellation and observer restoration.</summary>
+/// <param name="AWorkflow">Inactive workflow kept alive until operation release.</param>
+/// <param name="ABind">Required typed backend binding callback, kept alive by the caller.</param>
+/// <param name="AOwnsWorkflow">Transfers destruction only after successful creation.</param>
+/// <returns>Single-use retained typed operation; credentials are never persisted.</returns>
+function CreateCardResourceWorkflowOperation(const AWorkflow: TCardWorkflow;
+  const ABind: TCardResourceWorkflowBindEvent; const AOwnsWorkflow: Boolean = False): ICardResourceOperation;
 
 implementation
 
@@ -61,6 +74,26 @@ type
     destructor Destroy; override;
     function FailureClass: string;
     function Execute(const ASession: ICardSessionLease;
+      const ACancellation: ICardCancellation): TCardWorkflowState;
+  end;
+
+  TResourceWorkflowOperation = class(TInterfacedObject, ICardResourceOperation, ICardOperationFailure)
+  private
+    FWorkflow: TCardWorkflow;
+    FBind: TCardResourceWorkflowBindEvent;
+    FOwns, FConsumed: Boolean;
+    FCancel: ICardCancellation;
+    FProgress: TCardWorkflowProgressEvent;
+    FStage: TNotifyEvent;
+    procedure Progress(Sender: TObject; const AState: TCardWorkflowState;
+      const ADone, ATotal: Integer);
+    procedure Stage(Sender: TObject);
+    procedure CheckCancel;
+  public
+    constructor Create(const Workflow: TCardWorkflow; const Bind: TCardResourceWorkflowBindEvent; const Owns: Boolean);
+    destructor Destroy; override;
+    function FailureClass: string;
+    function ExecuteResource(const ASession: ICardResourceLease;
       const ACancellation: ICardCancellation): TCardWorkflowState;
   end;
 
@@ -162,6 +195,59 @@ begin
   end;
 end;
 
+constructor TResourceWorkflowOperation.Create(const Workflow: TCardWorkflow;
+  const Bind: TCardResourceWorkflowBindEvent; const Owns: Boolean);
+begin
+  inherited Create;
+  if (Workflow=nil) or not Assigned(Bind) or Workflow.Busy then
+    raise ECardOperationError.Create('An inactive workflow and binding are required.');
+  FWorkflow := Workflow; FBind := Bind; FOwns := Owns;
+end;
+
+destructor TResourceWorkflowOperation.Destroy;
+begin
+  if FOwns then FWorkflow.Free;
+  inherited Destroy;
+end;
+
+function TResourceWorkflowOperation.FailureClass: string;
+begin
+  Result := FWorkflow.ErrorClass;
+end;
+
+procedure TResourceWorkflowOperation.CheckCancel;
+begin
+  if (FCancel<>nil) and FCancel.Requested then FWorkflow.Cancel;
+end;
+
+procedure TResourceWorkflowOperation.Progress(Sender: TObject; const AState: TCardWorkflowState;
+  const ADone, ATotal: Integer);
+begin
+  CheckCancel; if Assigned(FProgress) then FProgress(Sender,AState,ADone,ATotal);
+end;
+
+procedure TResourceWorkflowOperation.Stage(Sender: TObject);
+begin
+  CheckCancel; if Assigned(FStage) then FStage(Sender);
+end;
+
+function TResourceWorkflowOperation.ExecuteResource(const ASession: ICardResourceLease;
+  const ACancellation: ICardCancellation): TCardWorkflowState;
+begin
+  if FConsumed or (ASession=nil) or (ACancellation=nil) then
+    raise ECardOperationError.Create('Invalid or consumed workflow operation.');
+  FConsumed := True; FWorkflow.CheckPrepared;
+  if ACancellation.Requested then Exit(cwsCancelled);
+  FBind(ASession,FWorkflow);
+  FCancel := ACancellation; FProgress := FWorkflow.OnProgress; FStage := FWorkflow.OnStageChanged;
+  FWorkflow.OnProgress := Progress; FWorkflow.OnStageChanged := Stage;
+  try Result := FWorkflow.Execute;
+  finally
+    FWorkflow.OnProgress := FProgress; FWorkflow.OnStageChanged := FStage;
+    FCancel := nil; FProgress := nil; FStage := nil;
+  end;
+end;
+
 function CreateCardWorkflowOperation(const AWorkflow: TCardWorkflow;
   const ABind: TCardWorkflowBindEvent; const AOwnsWorkflow: Boolean): ICardOperation;
 begin
@@ -173,5 +259,9 @@ function CreateCardMultiWorkflowOperation(const AWorkflow: TCardWorkflow;
 begin
   Result := TMultiWorkflowOperation.Create(AWorkflow,ABind,AOwnsWorkflow);
 end;
+
+function CreateCardResourceWorkflowOperation(const AWorkflow: TCardWorkflow;
+  const ABind: TCardResourceWorkflowBindEvent; const AOwnsWorkflow: Boolean): ICardResourceOperation;
+begin Result := TResourceWorkflowOperation.Create(AWorkflow,ABind,AOwnsWorkflow); end;
 
 end.

@@ -26,10 +26,12 @@ type
     /// <param name="AOwner">Optional component owner.</param>
     /// <param name="AApi">Non-nil PC/SC adapter retained by registered factories.</param>
     constructor CreateWithApi(AOwner: TComponent; const AApi: IPcscApi);
-    /// <summary>Registers a copied lazy connection on the given session manager.</summary>
-    /// <param name="AManager">Non-nil manager; binding does not access hardware.</param>
-    /// <param name="AReaderId">Stable physical-reader identity, matching event invalidation IDs.</param>
-    /// <remarks>Later property changes/destruction do not affect already registered configuration.</remarks>
+    /// <summary>Copies validated configuration into an independent lazy connection without I/O.</summary>
+    /// <returns>Retained provider, safe after this component is destroyed.</returns>
+    function CreateConnection: ICardSessionConnection;
+    /// <summary>Registers copied lazy connection configuration without hardware access.</summary>
+    /// <param name="AManager">Non-nil session registry.</param>
+    /// <param name="AReaderId">Exact physical reader ID.</param>
     procedure RegisterReader(const AManager: TCardSessionManager; const AReaderId: string);
   published
     /// <summary>Exact Unicode system reader name; never selected by index or guessed.</summary>
@@ -104,15 +106,18 @@ begin
   Create(AOwner); if AApi=nil then raise ECardSessionError.Create('A PC/SC adapter is required.'); FApi := AApi;
 end;
 
-procedure TCardPcscSessionProvider.RegisterReader(const AManager: TCardSessionManager; const AReaderId: string);
-var Connection: ICardSessionConnection;
+function TCardPcscSessionProvider.CreateConnection: ICardSessionConnection;
 begin
-  if (AManager=nil) or (Length(FReaderName)<1) or (Length(FReaderName)>1024) or
+  if (Length(FReaderName)<1) or (Length(FReaderName)>1024) or
     (Pos(#0,FReaderName)<>0) or not (FProtocols in [1,2,3]) or
     not (FShareMode in [psmShared,psmExclusive]) then
     raise ECardSessionError.Create('Explicit valid PC/SC configuration is required.');
-  Connection := TPcscSessionConnection.Create(FApi,FReaderName,FProtocols,FShareMode);
-  AManager.BindConnection(AReaderId,Connection);
+  Result := TPcscSessionConnection.Create(FApi,FReaderName,FProtocols,FShareMode);
+end;
+procedure TCardPcscSessionProvider.RegisterReader(const AManager: TCardSessionManager; const AReaderId: string);
+begin
+  if AManager=nil then raise ECardSessionError.Create('A session manager is required.');
+  AManager.BindConnection(AReaderId,CreateConnection);
 end;
 
 end.

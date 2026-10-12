@@ -11,6 +11,7 @@ requires
   ERDCardCore;
 
 contains
+  ERD.Card.Ndef.Project in '..\..\src\contactless\ERD.Card.Ndef.Project.pas',
   ERD.Card.Contactless.Project in '..\..\src\contactless\ERD.Card.Contactless.Project.pas',
   ERD.Card.Contactless.DESFire.Extensions in '..\..\src\contactless\ERD.Card.Contactless.DESFire.Extensions.pas',
   ERD.Card.Contactless.Plus in '..\..\src\contactless\ERD.Card.Contactless.Plus.pas',

@@ -1306,3 +1306,39 @@ had **86 assertions**; the subsequent concrete multi-workflow bridge and checked
 native handle-close changes are covered by the latest **98-assertion** focused
 build and repeated runs above. Existing unrelated FPC compiler notes/warnings are
 unchanged; the new filesystem unit emits only an FPC inline-not-inlined note.
+
+
+## 2026-10-12 — inventory, typed device sessions, key providers and schemas
+
+Latest native infrastructure tests pass **54 assertions**, with zero heap leaks,
+including ten repeated runs. They exercise typed HID/magstripe acquisition on the
+common registry, backend alias rejection, truthful optional status-write support,
+logical versus native acquisition boundaries, wrong-thread refusal, revoked retained
+wrappers, native close failure quarantine, generation loss after receive/send/write,
+real background typed jobs and an existing magstripe workflow through the concrete
+resource bridge. No failed submission is replayed.
+
+Injected inventory tests exercise native HID notification callbacks, duplicate
+case-variant paths, removal/reappearance behind an old lease, deferred promotion,
+owned Stop/detach, PC/SC ATR invalidation and ignoring INUSE/power-only changes.
+Native Windows inventory/report I/O was not executed on this Linux host; the existing
+monitor/native adapter implementation remains reused and independently tested.
+
+Key tests verify input/output copy isolation, exact purpose refusal, immutable
+snapshot lifetime after component destruction, key-entry budgets and absence of
+key buffers from component streaming. Schema tests validate multi-step rollback,
+wrong identity refusal, explicit registered edges and the concrete legacy MOBIB
+v1-to-v2 archive upgrade without invented missing metadata. NDEF, SIM/USIM and
+contact-memory typed adapters round-trip through their existing validation codecs.
+
+Latest registration/RTL streaming passes **74 cases** for **73 palette components**.
+Existing studio suites pass **303** and **98** assertions with zero heap leaks.
+The complete regression runner passes **3,962,935 DESFire/Plus assertions**, **99
+PC/SC/provider assertions**, all protocol suites, **39 Python tests**, distribution
+checks (**62 projects, 2 groups, 48 forms**) and all **21 source checkers** across
+sources/tests/examples. Its compiled infrastructure snapshot had **51 assertions**;
+the final alias, MOBIB migration and HID-case changes are separately covered by the
+latest **54-assertion** build and repeated runs. New API XML documentation, UTF-8
+BOM and CRLF are preserved; no forms or demos changed. The existing unrelated FPC
+TLV constructor warning remains unchanged; the new infrastructure code adds no
+compiler warnings or hints.

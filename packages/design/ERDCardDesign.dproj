@@ -123,6 +123,15 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Ndef.Project.pas"/>
+        <DCCReference Include="..\..\src\memory\ERD.Card.Memory.Project.pas"/>
+        <DCCReference Include="..\..\src\sim\ERD.Card.SIM.Project.pas"/>
+        <DCCReference Include="..\..\src\pcsc\ERD.Card.PCSC.Registry.pas"/>
+        <DCCReference Include="..\..\src\magstripe\ERD.Card.MagStripe.Session.pas"/>
+        <DCCReference Include="..\..\src\input\ERD.Card.HID.Session.pas"/>
+        <DCCReference Include="..\..\src\input\ERD.Card.HID.Registry.pas"/>
+        <DCCReference Include="..\..\src\core\ERD.Card.Keys.pas"/>
+        <DCCReference Include="..\..\src\core\ERD.Card.Project.Schema.pas"/>
         <DCCReference Include="..\..\src\magstripe\ERD.Card.MagStripe.Project.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Project.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Project.Artifacts.pas"/>

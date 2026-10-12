@@ -10,6 +10,8 @@ requires
   ERDCardCore;
 
 contains
+  ERD.Card.HID.Session in '..\..\src\input\ERD.Card.HID.Session.pas',
+  ERD.Card.HID.Registry in '..\..\src\input\ERD.Card.HID.Registry.pas',
   ERD.Card.HID.Monitor in '..\..\src\input\ERD.Card.HID.Monitor.pas',
   ERD.Card.RFID.Input in '..\..\src\input\ERD.Card.RFID.Input.pas',
   ERD.Card.HID in '..\..\src\input\ERD.Card.HID.pas',

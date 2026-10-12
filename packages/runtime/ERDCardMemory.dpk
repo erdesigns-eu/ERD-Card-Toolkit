@@ -10,6 +10,7 @@ requires
   ERDCardCore;
 
 contains
+  ERD.Card.Memory.Project in '..\..\src\memory\ERD.Card.Memory.Project.pas',
   ERD.Card.Memory.Workflow.Sle in '..\..\src\memory\ERD.Card.Memory.Workflow.Sle.pas',
   ERD.Card.Memory.Workflow in '..\..\src\memory\ERD.Card.Memory.Workflow.pas',
   ERD.Card.Memory.Sle4404 in '..\..\src\memory\ERD.Card.Memory.Sle4404.pas',
