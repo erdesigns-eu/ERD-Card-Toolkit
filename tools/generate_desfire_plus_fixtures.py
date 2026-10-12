@@ -286,6 +286,74 @@ f=DF();f.settings();f.settings();f.cmd(0xF5,b'\x01',reply=tmac);f.cmd(0x5F,b'\x0
 f=DF();f.settings();f.cmd(0xF5,b'\x01',reply=tmac);f.cmd(0xDF,b'\x01');f.cmd(0x6F,reply=b'\0');vectors['DfTmacDelete']=f.p
 f=DF();f.p[1]=(apdu(0x71,b'\x01\x00'),f.p[1][1]);settings=bytes.fromhex('0B930101021000');rights=bytes.fromhex('0083F0FF040000011F11')
 f.cmd(0x45,reply=settings);f.cmd(0xF5,b'\0',reply=rights);f.cmd(0x45,reply=settings);df_read_full(f,0,bytes.fromhex('01020304'));f.cmd(0xF5,b'\0',reply=rights);vectors['DfMultiNonMasterRead']=f.p
+# ISO FID/DF name follow the complete AES key-set header; FID is native LE.
+f=DF(0);f.cmd(0x45,reply=bytes.fromhex('0F81'));f.cmd(0x6A,reply=bytes.fromhex('020000'));df_directory(f,[old_iso])
+iso_key_header=bytes.fromhex('5634120FB3012104100105E1D276000085010100')
+f.cmd(0xCA,iso_key_header);df_directory(f,[old_iso,new_iso])
+f.p.append((apdu(0x5A,bytes.fromhex('563412')),bytes.fromhex('9100')))
+f.p.append((apdu(0x45),iso_key_header[3:10]+bytes.fromhex('9100')))
+f.p.append((apdu(0x5A,bytes(3)),bytes.fromhex('9100')));auth(f.p)
+f.e,f.m=evkeys(K);f.ctr=0
+# A subsequent PICC directory operation proves authentication and counters were restored.
+f.cmd(0x45,reply=bytes.fromhex('0F81'));df_directory(f,[old_iso,new_iso]);vectors['DfIsoCreateKeySets']=f.p
+for error in ['Geometry','Fid','Name']:
+ p=list(vectors['DfIsoCreateKeySets'])
+ if error=='Geometry':
+  i=next(i for i,(c,resp) in enumerate(p) if c==apdu(0x45))
+  c,resp=p[i];p[i]=(c,resp[:3]+bytes([resp[3]^1])+resp[4:])
+ else:
+  # Alter the post-create ISO tuple and recompute its valid aggregate session MAC.
+  i=next(i for i,(c,resp) in enumerate(p) if c==apdu(0xCA,iso_key_header+mac(evkeys(K)[1],b'\xCA'+le(3)+TI+iso_key_header)))
+  i+=2;c,resp=p[i];entry=bytearray(resp[:-10]);entry[3 if error=='Fid' else 5]^=1
+  aggregate=old_iso+bytes(entry);p[i]=(c,bytes(entry)+mac(evkeys(K)[1],b'\0'+le(5)+TI+aggregate)+bytes.fromhex('9100'))
+ vectors['DfIsoCreateBad'+error]=p
+# Standard writes are immediate; each range is verified and captured in TMI,
+# then all final overlapping/disjoint ranges are checked after receipt verification.
+for action in ['Write','Overlap','Disjoint','Noop','Abort','Repeat','Preimage','ImmediateMismatch','CommitMismatch']:
+ f=DF();f.cmd(0x6F,reply=bytes.fromhex('0001'));standard=bytes.fromhex('00030000080000');tmsettings=bytes.fromhex('0500F0EF0234')
+ f.cmd(0xF5,b'\0',reply=standard);f.cmd(0xF5,b'\x01',reply=tmsettings)
+ iv=enc(f.e,Z,bytes.fromhex('5AA5')+TI+le(f.ctr+1)+bytes(8));f.cmd(0x51,reply=enc(f.e,iv,UID+b'\x80'+bytes(8)))
+ tmi=b'';journal=[]
+ changes=[(2,bytes.fromhex('01020304'),bytes.fromhex('AABBCCDD'))]
+ if action=='Overlap':changes+=[(3,bytes.fromhex('BBCC'),bytes.fromhex('5566'))]
+ if action=='Repeat':changes+=[(2,bytes.fromhex('AABBCCDD'),bytes.fromhex('22334455'))]
+ if action=='Disjoint':changes=[(0,bytes.fromhex('0102'),bytes.fromhex('AABB')),(6,bytes.fromhex('0708'),bytes.fromhex('CCDD'))]
+ if action=='Noop':changes=[(2,bytes.fromhex('01020304'),bytes.fromhex('01020304'))]
+ def read_range(offset,value,capture=True):
+  global tmi
+  h=b'\0'+le(offset,3)+le(len(value),3)
+  iv=enc(f.e,Z,bytes.fromhex('5AA5')+TI+le(f.ctr+1)+bytes(8))
+  f.cmd(0xAD,h,reply=enc(f.e,iv,value+b'\x80'+bytes((15-len(value))%16)))
+  if capture:tmi+=align(b'\xAD'+h)+align(value)
+ for offset,before,after in changes:
+  f.cmd(0xF5,b'\0',reply=standard);read_range(offset,before);f.cmd(0xF5,b'\0',reply=standard)
+  if action=='Preimage':break
+  if before==after:continue
+  h=b'\0'+le(offset,3)+le(len(after),3);f.cmd(0x8D,h,after,full=True);tmi+=align(b'\x8D'+h)+align(after)
+  for j,(start,current) in enumerate(journal):
+   current=bytearray(current)
+   for k in range(len(current)):
+    if offset<=start+k<offset+len(after):current[k]=after[start+k-offset]
+   journal[j]=(start,bytes(current))
+  journal.append((offset,after))
+  read_range(offset,before if action=='ImmediateMismatch' else after)
+  if action=='ImmediateMismatch':break
+  f.cmd(0xF5,b'\0',reply=standard)
+ if action=='Abort':f.cmd(0xA7)
+ elif action not in ['Preimage','ImmediateMismatch']:
+  f.cmd(0xF5,b'\x01',reply=tmsettings);f.cmd(0xC7,b'\x01',reply=le(1,4)+mac(TM_MAC,tmi))
+  for offset,after in journal:
+   f.cmd(0xF5,b'\0',reply=standard)
+   read_range(offset,bytes(len(after)) if action=='CommitMismatch' else after,False)
+   if action=='CommitMismatch':break
+   f.cmd(0xF5,b'\0',reply=standard)
+ vectors['DfTmacStandard'+action]=f.p
+# Acquired file type, write/read authority and bounds must refuse before any data mutation.
+for name,metadata in [('DeniedWrite','0003F00F080000'),('DeniedRead','0003F0F0080000'),('WrongFile','01030000080000'),('Bounds','00030000080000')]:
+ f=DF();f.cmd(0x6F,reply=bytes.fromhex('0001'));settings=bytes.fromhex(metadata);tmsettings=bytes.fromhex('0500F0EF0234')
+ f.cmd(0xF5,b'\0',reply=settings);f.cmd(0xF5,b'\x01',reply=tmsettings)
+ iv=enc(f.e,Z,bytes.fromhex('5AA5')+TI+le(f.ctr+1)+bytes(8));f.cmd(0x51,reply=enc(f.e,iv,UID+b'\x80'+bytes(8)))
+ f.cmd(0xF5,b'\0',reply=settings);vectors['DfTmacStandard'+name]=f.p
 s='''unit DesfirePlus.Vectors;
 {$IFDEF FPC}{$MODE DELPHI}{$ENDIF}
 interface

@@ -1065,3 +1065,27 @@ Pascal source encoding and CRLF are retained; no demos changed. The complete
 FPC/native regression runner passed. Existing unrelated compiler notes/warnings
 remain unsuppressed. LRP, combined extended transaction layouts and ISO creation
 combined with new key sets are separate remaining profiles.
+
+## Combined DESFire ISO key sets and TMAC standard ranges (2026-10-12)
+
+The focused DESFire/Plus suite passes **1,451,063 assertions** with range/overflow
+checks and zero heap leaks. The independently generated fixture set now contains
+**88 transcripts**. New vectors cover combined native ISO/key-set creation,
+public seven-byte key-settings proof, PICC reauthentication and subsequent
+protected directory use, plus standard-data immediate/range/commit verification.
+
+Tests cover repeated, overlapping and disjoint writes, no-op data, explicit abort,
+wrong preimages, acquired read/write denial, wrong file type and out-of-file bounds.
+All exchange boundaries and every protected response data/MAC bit are injected.
+Additional vectors carry valid MACs with wrong ISO FID/name, key-set geometry or
+immediate/post-commit range contents. Caller buffers are mutated during I/O to
+prove that frozen inputs control dispatch. Invalid local parameters and policies
+that cannot expose new key-set settings are rejected without additional I/O.
+
+The complete FPC/native regression runner, all **21 source checkers**, independent
+fixture reproducibility and distribution checks pass. Distribution remains
+**62 projects, 2 groups, 48 DFM forms** with no findings; **59 registered components**
+and **60 inactive registration/RTL streaming cases**. Existing source encoding,
+CRLF and formatting are retained; no demos changed. Existing unrelated compiler
+notes/warnings remain unsuppressed. Abort semantics are explicit: cancellation of
+a TMAC calculation does not undo immediate standard writes.

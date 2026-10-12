@@ -535,6 +535,42 @@ type
     function CommitTransactionMacVerified: TDesfireTmacRecord;
   end;
 
+  /// <summary>Optional ISO creation with independently acquired multiple-key-set geometry.</summary>
+  /// <remarks>Existing file-management interface layout and IID are unchanged.</remarks>
+  IDesfireIsoKeySetManagement = interface(IDesfireFileManagement)
+    ['{A0926332-5E35-45D0-88F5-07BECA72F6B8}']
+    /// <summary>Creates one ISO AES application and verifies its directory tuple and exact public key-set settings.</summary>
+    /// <param name="AAid">Unused nonzero twenty-four-bit native application identifier.</param>
+    /// <param name="APolicy">Explicit key policy; bit one must permit unauthenticated key-settings acquisition.</param>
+    /// <param name="AKeyCount">One through fourteen keys per set.</param>
+    /// <param name="ASetCount">Two through sixteen native key sets.</param>
+    /// <param name="ASetVersion">Initial active-set version.</param>
+    /// <param name="ARollKey">Existing roll selector zero through seven.</param>
+    /// <param name="AIsoFid">Unused nonreserved native ISO FID.</param>
+    /// <param name="ADfName">One through sixteen owned directory-name bytes, frozen before I/O.</param>
+    /// <remarks>PICC selection and explicit EV2 AES management are required. No initial application key is guessed.</remarks>
+    procedure CreateIsoApplicationWithKeySetsVerified(const AAid: Cardinal;
+      const APolicy, AKeyCount, ASetCount, ASetVersion, ARollKey: Byte;
+      const AIsoFid: Word; const ADfName: TBytes);
+  end;
+
+  /// <summary>Optional verified standard-data writes inside an explicitly owned AES TMAC calculation.</summary>
+  /// <remarks>Standard writes are immediate. Abort cancels the calculation but cannot restore written bytes.
+  /// Existing transaction interface layout and IID are unchanged.</remarks>
+  IDesfireTransactionMacDataSession = interface(IDesfireTransactionMacSession)
+    ['{708CD4D7-CB26-42A6-AB97-78A24259F157}']
+    /// <summary>Checks an exact range preimage, writes changed standard data, verifies it immediately and journals its final range for commit proof.</summary>
+    /// <param name="AFile">Existing ordinary standard-data file number zero through thirty-one.</param>
+    /// <param name="AOffset">Nonnegative byte offset within the acquired file.</param>
+    /// <param name="AExpected">Exact current range bytes, frozen before I/O.</param>
+    /// <param name="AData">Equal-length replacement bytes, frozen before I/O; equal data skips mutation.</param>
+    /// <remarks>Both acquired read and write permissions are required. Overlapping writes update earlier range proofs.
+    /// Reads and immediate verification contribute to canonical TMI. Commit verifies the receipt and every final journaled range.</remarks>
+    /// <exception cref="EContactlessWriteUncertain">A write may have executed but its response, range/settings proof or subsequent receipt cannot be established.</exception>
+    procedure WriteStandardDataVerified(const AFile: Byte; const AOffset: Integer;
+      const AExpected, AData: TBytes);
+  end;
+
   /// <summary>Pure strict codecs for wrapped ordinary DESFire native commands and settings.</summary>
   TDesfireCodec = class
   public
@@ -721,6 +757,9 @@ type
     /// <param name="AAid">Exact PICC zero or native application AID.</param>
     /// <returns>Owned optional file-management interface; no transaction ownership is inferred.</returns>
     function OpenFileManagementSession(const AAid: Cardinal): IDesfireFileManagement;
+    /// <summary>Opens explicit PICC AES management including ISO creation with multiple key sets.</summary>
+    /// <returns>Owned optional management interface, independent of component lifetime.</returns>
+    function OpenIsoKeySetManagementSession: IDesfireIsoKeySetManagement;
     /// <summary>Opens one explicit fresh AES TMAC transaction, verifies real card UID and captures canonical data operations.</summary>
     /// <param name="AAid">Nonzero native application AID.</param>
     /// <param name="ATmacFile">Exact existing type-05 AES TMAC file number.</param>
@@ -732,6 +771,17 @@ type
     function OpenTransactionMacSession(const AAid: Cardinal; const ATmacFile: Byte;
       const AUid, ATmacKey: TBytes; const APreviousCounter: Cardinal;
       const AAcknowledgeFresh: Boolean): IDesfireTransactionMacSession;
+    /// <summary>Opens a fresh AES TMAC session that also supports immediate standard-data range writes.</summary>
+    /// <param name="AAid">Nonzero native application AID.</param>
+    /// <param name="ATmacFile">Exact existing AES TMAC file number.</param>
+    /// <param name="AUid">Seven trusted real UID bytes, checked by protected acquisition.</param>
+    /// <param name="ATmacKey">Sixteen supplied static TMAC key bytes, frozen before I/O.</param>
+    /// <param name="APreviousCounter">Trusted previous counter below FFFFFFFF.</param>
+    /// <param name="AAcknowledgeFresh">Explicit assertion that no external pending transaction exists.</param>
+    /// <returns>Owned optional data interface; Abort does not reverse immediate standard writes.</returns>
+    function OpenTransactionMacDataSession(const AAid: Cardinal; const ATmacFile: Byte;
+      const AUid, ATmacKey: TBytes; const APreviousCounter: Cardinal;
+      const AAcknowledgeFresh: Boolean): IDesfireTransactionMacDataSession;
     /// <summary>Opens retained native management with an optional explicit application key-type creation API.</summary>
     /// <param name="AAid">Zero for PICC application management, nonzero for ordinary file management.</param>
     /// <returns>Owned session; close explicitly. Authentication uses this component's selected profile.</returns>
@@ -778,12 +828,13 @@ uses ERD.Card.Bytes, ERD.Card.APDU;
 type
   TDesfireJournalEntry = record
     Settings: TDesfireFileSettings;
+    Offset: Integer;
     Expected: TBytes;
     UsedLimitedCredit: Boolean;
   end;
 
   TDesfireSession = class(TInterfacedObject, IDesfireSession,
-    IDesfireManagement, IDesfireApplicationManagement, IDesfireDesManagement, IDesfireExtendedManagement, IDesfireFileManagement, IDesfireTransactionMacSession)
+    IDesfireManagement, IDesfireApplicationManagement, IDesfireDesManagement, IDesfireExtendedManagement, IDesfireFileManagement, IDesfireTransactionMacSession, IDesfireIsoKeySetManagement, IDesfireTransactionMacDataSession)
   private
     FEngine: TDesfireCardReader;
     FAid: Cardinal;
@@ -820,6 +871,8 @@ type
     procedure RequireKeySet(const ASet, AKeyNumber: Byte);
     function KeySetVersion(const ASet, AKeyNumber: Byte): Byte;
     procedure RequireFileManagement(const ACreation: Boolean = False);
+    procedure CreateIsoApplicationInternal(const AAid: Cardinal; const AIsoFid: Word;
+      const ADfName, AHeader, AExpectedSettings: TBytes);
     function IsoDirectory: TDesfireIsoApplications;
     function IsoIds: TDesfireIsoFileIds;
     function MultiSettings(const AFile: Byte): TDesfireMultiAccessSettings;
@@ -907,6 +960,11 @@ type
     function CommitTransactionMacVerified: TDesfireTmacRecord;
     procedure ChangeSdmSettingsVerified(const AFile: Byte; const AExpected: TBytes;
       const ADesired: TDesfireSdmSettings);
+    procedure CreateIsoApplicationWithKeySetsVerified(const AAid: Cardinal;
+      const APolicy, AKeyCount, ASetCount, ASetVersion, ARollKey: Byte;
+      const AIsoFid: Word; const ADfName: TBytes);
+    procedure WriteStandardDataVerified(const AFile: Byte; const AOffset: Integer;
+      const AExpected, AData: TBytes);
     function GetOutcome: TDesfireSessionOutcome;
     function GetVerificationSucceeded: Boolean;
     function GetPendingChanges: Boolean;
@@ -2824,6 +2882,74 @@ begin
   end;
 end;
 
+procedure TDesfireSession.WriteStandardDataVerified(const AFile: Byte; const AOffset: Integer;
+  const AExpected, AData: TBytes);
+var
+  Before, Index, I, Left, Right, Size: Integer;
+  S: TDesfireFileSettings;
+  Expected, Data, Actual, Reply: TBytes;
+begin
+  Before := Enter;
+  try
+    try
+      RequireOwner;
+      if (FTmacFile < 0) or (FMutations >= 256) or (AFile > 31) or (AOffset < 0) or
+        (Length(AData) < 1) or (Length(AExpected) <> Length(AData)) or
+        (Length(AData) > FEngine.FMaxTransfer) then InvalidDesfire;
+      Expected := CopyBytes(AExpected);
+      Data := CopyBytes(AData);
+      Size := Length(Data);
+      S := FEngine.Settings(AFile);
+      if (S.FileType <> dftStandard) or (AOffset > S.FileBytes - Size) then InvalidDesfire;
+      FEngine.CheckAccess(S, True);
+      Actual := FEngine.ReadSelected(S, AOffset, Size);
+      FEngine.CheckSettings(S);
+      if not BytesEqual(Actual, Expected) then InvalidDesfire;
+      if BytesEqual(Expected, Data) then Exit;
+      for I := 0 to High(FJournal) do
+        if FJournal[I].Settings.FileNumber = AFile then CheckStatic(FJournal[I].Settings, S);
+      if (Length(FJournal) >= 256) or (Size > FEngine.FMaxTransfer - JournalBytes) then InvalidDesfire;
+      Index := Length(FJournal);
+      SetLength(FJournal, Index + 1);
+      FJournal[Index].Settings := S;
+      FJournal[Index].Offset := AOffset;
+      FJournal[Index].Expected := CopyBytes(Data);
+      Reply := FEngine.Send($8D, TDesfireCodec.RangeHeader(AFile, AOffset, Size),
+        Data, S.Communication, 0, True);
+      if Length(Reply) <> 0 then InvalidDesfire;
+      FPending := True;
+      Inc(FMutations);
+      for I := 0 to Index - 1 do
+        if FJournal[I].Settings.FileNumber = AFile then
+        begin
+          Left := AOffset;
+          if FJournal[I].Offset > Left then Left := FJournal[I].Offset;
+          Right := AOffset + Size;
+          if FJournal[I].Offset + Length(FJournal[I].Expected) < Right then
+            Right := FJournal[I].Offset + Length(FJournal[I].Expected);
+          if Right > Left then
+            Move(Data[Left - AOffset], FJournal[I].Expected[Left - FJournal[I].Offset], Right - Left);
+        end;
+      TCardCrypto.Clear(Actual);
+      Actual := FEngine.ReadSelected(S, AOffset, Size);
+      if not BytesEqual(Actual, Data) then InvalidDesfire;
+      FEngine.CheckSettings(S);
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    TCardCrypto.Clear(Expected);
+    TCardCrypto.Clear(Data);
+    TCardCrypto.Clear(Actual);
+    TCardCrypto.Clear(Reply);
+    FInCall := False;
+  end;
+end;
+
 procedure TDesfireSession.WriteBackup(const AFile: Byte; const AOffset: Integer;
   const AData: TBytes);
 var
@@ -3124,6 +3250,8 @@ begin
         CheckStatic(FJournal[I].Settings, S);
         Actual := nil;
         case S.FileType of
+          dftStandard:
+            Actual := FEngine.ReadSelected(S, FJournal[I].Offset, Length(FJournal[I].Expected));
           dftBackup:
             Actual := FEngine.ReadSelected(S, 0, S.FileBytes);
           dftValue:
@@ -4376,27 +4504,63 @@ end;
 procedure TDesfireSession.CreateIsoApplicationVerified(const AAid: Cardinal;
   const APolicy, AKeyCount: Byte; const AIsoFid: Word; const ADfName: TBytes);
 var
+  Header: TBytes;
+begin
+  if (AKeyCount < 1) or (AKeyCount > 14) or
+    (((APolicy shr 4) < 14) and ((APolicy shr 4) >= AKeyCount)) then InvalidDesfire;
+  Header := Joined(TDesfireCodec.ApplicationBytes(AAid), HexToBytes('00A0'));
+  Header[3] := APolicy;
+  Header[4] := $A0 or AKeyCount;
+  try
+    CreateIsoApplicationInternal(AAid, AIsoFid, ADfName, Header, nil);
+  finally
+    TCardCrypto.Clear(Header);
+  end;
+end;
+
+procedure TDesfireSession.CreateIsoApplicationWithKeySetsVerified(const AAid: Cardinal;
+  const APolicy, AKeyCount, ASetCount, ASetVersion, ARollKey: Byte;
+  const AIsoFid: Word; const ADfName: TBytes);
+var
+  Header, Expected: TBytes;
+begin
+  if (APolicy and 2) = 0 then InvalidDesfire;
+  Header := TDesfireExtensionCodec.ApplicationHeader(AAid, APolicy, AKeyCount,
+    ASetCount, ASetVersion, ARollKey);
+  Header[4] := Header[4] or $20;
+  Expected := Copy(Header, 3, 7);
+  try
+    CreateIsoApplicationInternal(AAid, AIsoFid, ADfName, Header, Expected);
+  finally
+    TCardCrypto.Clear(Header);
+    TCardCrypto.Clear(Expected);
+  end;
+end;
+
+procedure TDesfireSession.CreateIsoApplicationInternal(const AAid: Cardinal; const AIsoFid: Word;
+  const ADfName, AHeader, AExpectedSettings: TBytes);
+var
   Before: Integer;
-  Header, Name, Reply: TBytes;
+  Header, Name, Expected, Reply, Fid: TBytes;
   Directory: TDesfireIsoApplications;
   Ids: TDesfireApplicationIds;
+  Settings: TDesfireApplicationSettings;
   I: Integer;
   Found: Boolean;
 begin
   Before := Enter;
   try
     try
-      if (FAid <> 0) or (AAid = 0) or (AAid > $FFFFFF) or (AKeyCount < 1) or (AKeyCount > 14) or
-        (((APolicy shr 4) < 14) and ((APolicy shr 4) >= AKeyCount)) or
+      if (FAid <> 0) or (AAid = 0) or (AAid > $FFFFFF) or
         (Length(ADfName) < 1) or (Length(ADfName) > 16) then InvalidDesfire;
       TDesfireExtensionCodec.ValidateIsoFid(AIsoFid);
       Name := CopyBytes(ADfName);
-      Header := Joined(TDesfireCodec.ApplicationBytes(AAid), HexToBytes('00A00000'));
-      Header[3] := APolicy;
-      Header[4] := $A0 or AKeyCount;
-      Header[5] := Byte(AIsoFid and $FF);
-      Header[6] := Byte(AIsoFid shr 8);
-      Header := Joined(Header, Name);
+      Expected := CopyBytes(AExpectedSettings);
+      Fid := nil;
+      SetLength(Fid, 2);
+      Fid[0] := Byte(AIsoFid and $FF);
+      Fid[1] := Byte(AIsoFid shr 8);
+      Header := Joined(Joined(AHeader, Fid), Name);
       RequireFileManagement(True);
       Ids := TDesfireCodec.ApplicationIds(FEngine.Metadata($6A, nil, 3072, False));
       for I := 0 to High(Ids) do if Ids[I] = AAid then InvalidDesfire;
@@ -4411,6 +4575,17 @@ begin
         if Directory[I].Aid = AAid then
           Found := (Directory[I].IsoFid = AIsoFid) and BytesEqual(Directory[I].DfName, Name);
       if not Found then InvalidDesfire;
+      if Length(Expected) > 0 then
+      begin
+        FEngine.FAuthenticated := False;
+        Reply := FEngine.Exchange($5A, TDesfireCodec.ApplicationBytes(AAid), 0, False);
+        if Length(Reply) <> 0 then InvalidDesfire;
+        Settings := AppSettings;
+        if not BytesEqual(Settings.RawBytes, Expected) then InvalidDesfire;
+        Reply := FEngine.Exchange($5A, TDesfireCodec.ApplicationBytes(0), 0, False);
+        if Length(Reply) <> 0 then InvalidDesfire;
+        FEngine.Authenticate(False);
+      end;
       FEngine.FWriteAttempt := False;
     except
       on E: Exception do
@@ -4423,6 +4598,8 @@ begin
   finally
     TCardCrypto.Clear(Header);
     TCardCrypto.Clear(Name);
+    TCardCrypto.Clear(Expected);
+    TCardCrypto.Clear(Fid);
     TCardCrypto.Clear(Reply);
     FInCall := False;
   end;
@@ -4759,6 +4936,25 @@ begin
   if FBusy or not AAcknowledgeFresh then InvalidDesfire;
   Result := TDesfireSession.Create(Self, AAid, dsaFreshTransaction, ATmacFile,
     AUid, ATmacKey, APreviousCounter);
+end;
+
+function TDesfireCardReader.OpenIsoKeySetManagementSession: IDesfireIsoKeySetManagement;
+var
+  Session: IDesfireFileManagement;
+begin
+  Session := OpenFileManagementSession(0);
+  Result := Session as IDesfireIsoKeySetManagement;
+end;
+
+function TDesfireCardReader.OpenTransactionMacDataSession(const AAid: Cardinal; const ATmacFile: Byte;
+  const AUid, ATmacKey: TBytes; const APreviousCounter: Cardinal;
+  const AAcknowledgeFresh: Boolean): IDesfireTransactionMacDataSession;
+var
+  Session: IDesfireTransactionMacSession;
+begin
+  Session := OpenTransactionMacSession(AAid, ATmacFile, AUid, ATmacKey,
+    APreviousCounter, AAcknowledgeFresh);
+  Result := Session as IDesfireTransactionMacDataSession;
 end;
 
 procedure TDesfireCardReader.ReserveTmac(const ACommand: Byte;

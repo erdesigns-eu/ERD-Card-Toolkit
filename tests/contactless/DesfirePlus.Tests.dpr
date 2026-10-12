@@ -1516,10 +1516,303 @@ begin
   end;
 end;
 
+function IsoKeySetPairs(const Kind: Integer): TExtendedPairs;
+begin
+  case Kind of
+    0: Result := DfIsoCreateKeySets;
+    1: Result := DfIsoCreateBadGeometry;
+    2: Result := DfIsoCreateBadFid;
+  else Result := DfIsoCreateBadName;
+  end;
+end;
+
+procedure RunIsoKeySets(const Kind, Fail, Corrupt, ByteIndex, BitIndex: Integer;
+  const Freeze, ReleaseFails: Boolean);
+var
+  Wire: TWire;
+  Hold: ICardTransport;
+  Reader: TDesfireCardReader;
+  Session: IDesfireIsoKeySetManagement;
+  Name: TBytes;
+  Entries: TDesfireIsoApplications;
+  Failed, Uncertain: Boolean;
+begin
+  Wire := TWire.Create;
+  Hold := Wire;
+  Wire.Pairs := IsoKeySetPairs(Kind);
+  Wire.FailCall := Fail;
+  Wire.CorruptCall := Corrupt;
+  Wire.CorruptByte := ByteIndex;
+  Wire.CorruptBit := BitIndex;
+  Wire.EndFails := ReleaseFails;
+  Name := HexToBytes('D276000085010100');
+  if Freeze then
+  begin
+    Wire.MutateCall := 4;
+    Wire.Borrowed := Name;
+  end;
+  Reader := TDesfireCardReader.Create(nil);
+  Failed := False;
+  Uncertain := False;
+  try
+    Reader.Transport := Hold;
+    Reader.CryptoProvider := TFixed.Create;
+    Reader.Security := dfsEv2Aes;
+    Reader.AuthenticationKey := HexToBytes('00000000000000000000000000000000');
+    try
+      Session := Reader.OpenIsoKeySetManagementSession;
+      Session.CreateIsoApplicationWithKeySetsVerified($123456,$0F,3,4,$21,1,$E105,Name);
+      Entries := Session.ReadIsoApplications;
+      Check((Length(Entries)=2) and (Entries[1].Aid=$123456),'Restored PICC authentication and acquired ISO directory');
+      Session.Close;
+    except
+      on E: Exception do
+      begin
+        Failed := True;
+        Uncertain := E is EContactlessWriteUncertain;
+        if (Kind=0) and (Fail=0) and (Corrupt=0) and not ReleaseFails then
+          Writeln('ISO key-set diagnostic: ',E.ClassName,': ',E.Message,' calls=',Wire.Calls);
+      end;
+    end;
+    if (Kind=0) and (Fail=0) and (Corrupt=0) and not ReleaseFails then
+    begin
+      Check(not Failed,'ISO and key sets verified in one native creation');
+      Check(Wire.Calls=Length(Wire.Pairs),'Complete ISO tuple, geometry and restored authentication transcript');
+    end
+    else
+    begin
+      Check(Failed,'ISO tuple, key geometry or native/release fault is observable');
+      Check(Uncertain=((Wire.Writes>0) and (Fail<=14) and (Corrupt<=14) and not ReleaseFails),
+        'ISO creation uncertainty until geometry proof and reauthentication complete');
+    end;
+  finally
+    Session := nil;
+    Reader.Free;
+    Check(not Wire.Active and (Wire.Begins=Wire.Ends),'ISO key-set owner released');
+    TCardCrypto.Clear(Name);
+  end;
+end;
+
+function StandardTmacPairs(const Kind: Integer): TExtendedPairs;
+begin
+  case Kind of
+    0: Result := DfTmacStandardWrite;
+    1: Result := DfTmacStandardOverlap;
+    2: Result := DfTmacStandardDisjoint;
+    3: Result := DfTmacStandardNoop;
+    4: Result := DfTmacStandardAbort;
+    5: Result := DfTmacStandardRepeat;
+    6: Result := DfTmacStandardPreimage;
+    7: Result := DfTmacStandardImmediateMismatch;
+    8: Result := DfTmacStandardCommitMismatch;
+    9: Result := DfTmacStandardDeniedWrite;
+    10: Result := DfTmacStandardDeniedRead;
+    11: Result := DfTmacStandardWrongFile;
+  else Result := DfTmacStandardBounds;
+  end;
+end;
+
+procedure RunStandardTmac(const Kind, Fail, Corrupt, ByteIndex, BitIndex, Freeze: Integer;
+  const ReleaseFails: Boolean);
+var
+  Wire: TWire;
+  Hold: ICardTransport;
+  Reader: TDesfireCardReader;
+  Session: IDesfireTransactionMacDataSession;
+  Receipt: TDesfireTmacRecord;
+  Expected, Data, Input: TBytes;
+  Offset: Integer;
+  Failed, Uncertain: Boolean;
+begin
+  Wire := TWire.Create;
+  Hold := Wire;
+  Wire.Pairs := StandardTmacPairs(Kind);
+  Wire.FailCall := Fail;
+  Wire.CorruptCall := Corrupt;
+  Wire.CorruptByte := ByteIndex;
+  Wire.CorruptBit := BitIndex;
+  Wire.EndFails := ReleaseFails;
+  Offset := 2;
+  Expected := HexToBytes('01020304');
+  Data := HexToBytes('AABBCCDD');
+  if Kind=2 then
+  begin
+    Offset := 0;
+    Expected := HexToBytes('0102');
+    Data := HexToBytes('AABB');
+  end;
+  if Kind=3 then Data := Copy(Expected);
+  if Kind=6 then Expected[0] := $FF;
+  if Kind=12 then Offset := 7;
+  if Freeze>0 then
+  begin
+    Wire.MutateCall := 8;
+    if Freeze=1 then Wire.Borrowed := Expected else Wire.Borrowed := Data;
+  end;
+  Reader := TDesfireCardReader.Create(nil);
+  Failed := False;
+  Uncertain := False;
+  try
+    Reader.Transport := Hold;
+    Reader.CryptoProvider := TFixed.Create;
+    Reader.Security := dfsEv2Aes;
+    Reader.AuthenticationKey := HexToBytes('00000000000000000000000000000000');
+    try
+      Session := Reader.OpenTransactionMacDataSession(1,1,HexToBytes('04112233445566'),
+        HexToBytes('112233445566778899AABBCCDDEEFF00'),0,True);
+      Session.WriteStandardDataVerified(0,Offset,Expected,Data);
+      case Kind of
+        1: Session.WriteStandardDataVerified(0,3,HexToBytes('BBCC'),HexToBytes('5566'));
+        2: Session.WriteStandardDataVerified(0,6,HexToBytes('0708'),HexToBytes('CCDD'));
+        5: Session.WriteStandardDataVerified(0,2,HexToBytes('AABBCCDD'),HexToBytes('22334455'));
+      end;
+      Input := Session.ReadTransactionMacInput;
+      Check((Length(Input)>0) and (Length(Input) mod 16=0),'Range reads/write/read-back captured in canonical TMI');
+      Check(Session.PendingChanges,'Explicit pending standard-data TMAC calculation');
+      if Kind=4 then
+      begin
+        Session.Abort;
+        Check(Session.Outcome=dsoAborted,'Abort calculation has no fabricated standard-data rollback');
+      end
+      else
+      begin
+        Receipt := Session.CommitTransactionMacVerified;
+        Check((Receipt.Counter=1) and Receipt.KeyVerified and Receipt.SessionProtected and
+          Session.VerificationSucceeded,'Standard range receipt and final range proofs both required');
+      end;
+    except
+      on E: Exception do
+      begin
+        Failed := True;
+        Uncertain := E is EContactlessWriteUncertain;
+        if (Kind<6) and (Fail=0) and (Corrupt=0) and not ReleaseFails then
+          Writeln('Standard TMAC diagnostic: ',E.ClassName,': ',E.Message,' calls=',Wire.Calls);
+      end;
+    end;
+    if (Kind<6) and (Fail=0) and (Corrupt=0) and not ReleaseFails then
+    begin
+      Check(not Failed,'Independent standard TMAC range chain '+IntToStr(Kind));
+      Check(Wire.Calls=Length(Wire.Pairs),'Every immediate and post-commit range proof executed');
+    end
+    else
+    begin
+      Check(Failed,'Native, preimage, valid-MAC wrong content or release fault observed');
+      if (Kind>=9) and (Fail=0) and (Corrupt=0) then
+        Check((Wire.Writes=0) and (Wire.Calls=Length(Wire.Pairs)), 'Acquired type/authority/bounds refused before data dispatch');
+      Check(Uncertain=(Wire.Writes>0),'Immediate standard-data dispatch retains uncertainty through commit/abort/release');
+    end;
+  finally
+    Session := nil;
+    Reader.Free;
+    Check(not Wire.Active and (Wire.Begins=Wire.Ends),'Standard TMAC owner always released');
+    TCardCrypto.Clear(Expected);
+    TCardCrypto.Clear(Data);
+    TCardCrypto.Clear(Input);
+  end;
+end;
+
+procedure TestIsoAndRangeInputGuards;
+var
+  Wire: TWire;
+  Hold: ICardTransport;
+  Reader: TDesfireCardReader;
+  Iso: IDesfireIsoKeySetManagement;
+  Data: IDesfireTransactionMacDataSession;
+  Failed: Boolean;
+  I, Before: Integer;
+  Name, Empty: TBytes;
+begin
+  Wire := TWire.Create;
+  Hold := Wire;
+  Wire.Pairs := DfIsoCreateKeySets;
+  Reader := TDesfireCardReader.Create(nil);
+  Name := HexToBytes('D276000085010100');
+  Empty := nil;
+  try
+    Reader.Transport := Hold;
+    Reader.CryptoProvider := TFixed.Create;
+    Reader.Security := dfsEv2Aes;
+    Reader.AuthenticationKey := HexToBytes('00000000000000000000000000000000');
+    Iso := Reader.OpenIsoKeySetManagementSession;
+    Before := Wire.Calls;
+    for I := 0 to 6 do
+    begin
+      Failed := False;
+      try
+        case I of
+          0: Iso.CreateIsoApplicationWithKeySetsVerified($123456,$0D,3,4,$21,1,$E105,Name);
+          1: Iso.CreateIsoApplicationWithKeySetsVerified($123456,$0F,3,1,$21,1,$E105,Name);
+          2: Iso.CreateIsoApplicationWithKeySetsVerified($123456,$0F,3,4,$21,3,$E105,Name);
+          3: Iso.CreateIsoApplicationWithKeySetsVerified($123456,$0F,3,4,$21,1,$3F00,Name);
+          4: Iso.CreateIsoApplicationWithKeySetsVerified($123456,$0F,3,4,$21,1,$E105,Empty);
+          5: Iso.CreateIsoApplicationWithKeySetsVerified(0,$0F,3,4,$21,1,$E105,Name);
+          6: Iso.CreateIsoApplicationWithKeySetsVerified($123456,$3F,3,4,$21,1,$E105,Name);
+        end;
+      except on E: Exception do Failed := True; end;
+      Check(Failed and (Wire.Calls=Before) and (Wire.Writes=0),'Invalid ISO/key-set inputs refused without card I/O');
+    end;
+    Iso.Close;
+    Iso := nil;
+    Wire.Pairs := DfTmacStandardWrite;
+    Wire.Calls := 0;
+    Data := Reader.OpenTransactionMacDataSession(1,1,HexToBytes('04112233445566'),
+      HexToBytes('112233445566778899AABBCCDDEEFF00'),0,True);
+    Before := Wire.Calls;
+    for I := 0 to 4 do
+    begin
+      Failed := False;
+      try
+        case I of
+          0: Data.WriteStandardDataVerified(32,0,Name,Name);
+          1: Data.WriteStandardDataVerified(0,-1,Name,Name);
+          2: Data.WriteStandardDataVerified(0,0,Empty,Empty);
+          3: Data.WriteStandardDataVerified(0,0,Empty,Name);
+          4: Data.WriteStandardDataVerified(0,0,Name,Empty);
+        end;
+      except on E: Exception do Failed := True; end;
+      Check(Failed and (Wire.Calls=Before) and (Wire.Writes=0),'Invalid standard ranges refused before I/O');
+    end;
+    Data.Close;
+  finally
+    Iso := nil;
+    Data := nil;
+    Reader.Free;
+    TCardCrypto.Clear(Name);
+    Check(not Wire.Active and (Wire.Begins=Wire.Ends),'Guard-only acquisitions released without hidden abort');
+  end;
+end;
+
+procedure TestIsoKeySetsAndStandardTmac;
+var
+  Kind, I, J: Integer;
+  Pairs: TExtendedPairs;
+begin
+  for Kind := 0 to 3 do RunIsoKeySets(Kind,0,0,0,0,False,False);
+  RunIsoKeySets(0,0,0,0,0,True,False);
+  RunIsoKeySets(0,0,0,0,0,False,True);
+  Pairs := IsoKeySetPairs(0);
+  for I := 1 to Length(Pairs) do RunIsoKeySets(0,I,0,0,0,False,False);
+  for I := 4 to Length(Pairs) do
+    for J := 0 to Length(HexToBytes(Pairs[I-1].Response))*8-17 do
+      RunIsoKeySets(0,0,I,J div 8,J mod 8,False,False);
+  for Kind := 0 to 12 do RunStandardTmac(Kind,0,0,0,0,0,False);
+  for Kind := 0 to 5 do
+  begin
+    RunStandardTmac(Kind,0,0,0,0,1,False);
+    RunStandardTmac(Kind,0,0,0,0,2,False);
+    RunStandardTmac(Kind,0,0,0,0,0,True);
+    Pairs := StandardTmacPairs(Kind);
+    for I := 1 to Length(Pairs) do RunStandardTmac(Kind,I,0,0,0,0,False);
+    for I := 4 to Length(Pairs) do
+      for J := 0 to Length(HexToBytes(Pairs[I-1].Response))*8-17 do
+        RunStandardTmac(Kind,0,I,J div 8,J mod 8,0,False);
+  end;
+end;
+
 begin
   try
 {$IFDEF MSWINDOWS} Base:=TCardWindowsAesProvider.Create; {$ELSE} Base:=TCardOpenSslAesProvider.Create; {$ENDIF}
-    TestCodecs; TestDf; TestPlus; TestPlusWorkflow; TestAcr; TestPlus4K; TestFrozenInputs; TestPlusManagement; TestPlusLevels; TestPlusValues; TestNativeValues; TestFileManagement; TestTmacTransactions;
+    TestCodecs; TestDf; TestPlus; TestPlusWorkflow; TestAcr; TestPlus4K; TestFrozenInputs; TestPlusManagement; TestPlusLevels; TestPlusValues; TestNativeValues; TestFileManagement; TestTmacTransactions; TestIsoKeySetsAndStandardTmac; TestIsoAndRangeInputGuards;
     Writeln('PASS: ',Checks,' DESFire extension/Plus assertions.');
   except on E: Exception do begin Writeln(E.ClassName,': ',E.Message); ExitCode:=1; end; end;
 end.

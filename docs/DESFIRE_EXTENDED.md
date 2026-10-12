@@ -33,6 +33,11 @@ whose completion cannot be established poisons the session and retains uncertain
 reopen and inspect state instead of repeating the operation. Protected acknowledgement
 is distinguished from independent read-back in the API names and table above.
 
+Combined ISO creation is available through `IDesfireIsoKeySetManagement`; it
+verifies both the directory tuple and public key-set settings and restores PICC
+authentication. See [ISO/TMAC profiles](DESFIRE_FILES_TMAC.md). Existing key-set
+interfaces and their IIDs remain unchanged.
+
 ## Explicit configuration
 
 `SetConfigurationAcknowledged(Option, Data)` validates and encrypts one supported

@@ -534,3 +534,15 @@ ordinary sessions do not silently adopt the profile. See
 [DESFIRE_FILES_TMAC.md](DESFIRE_FILES_TMAC.md). This extends native pipelines;
 existing workflow archives do not yet serialize ISO mappings or combined extended
 layouts, and no CardStudio/demo layer has been added.
+
+## DESFire ISO key sets and immediate TMAC standard ranges
+
+The native optional interfaces now combine ISO application creation with AES key
+sets and support exact-preimage standard-data range writes in an owned TMAC
+calculation. ISO creation verifies the tuple and public key settings and restores
+PICC authentication. Standard writes verify immediately, update overlapping range
+proofs and verify all final ranges after the authenticated/offline-verified receipt.
+
+These APIs do not change ordinary application archives or add an automatic
+application migration profile. Standard writes are immediate: aborting the
+calculation does not restore them. See [native profile contracts](DESFIRE_FILES_TMAC.md).

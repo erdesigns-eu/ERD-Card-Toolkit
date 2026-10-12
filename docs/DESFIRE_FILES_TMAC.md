@@ -1,6 +1,6 @@
 # DESFire ISO files, multiple access rights and AES TMAC
 
-These APIs extend `TDesfireCardReader` through two new optional interfaces.
+These APIs extend `TDesfireCardReader` through optional management and transaction interfaces.
 Existing interface layouts and IIDs are unchanged. Select an explicit EV2 AES
 profile and supply valid application/PICC credentials and an AES/CSPRNG provider.
 No reader, key or card generation is guessed.
@@ -16,6 +16,7 @@ an explicit application AID for file operations.
 | `ReadIsoApplications` | Native AID, ISO FID and DF name; preserves native response-frame boundaries |
 | `ReadIsoFileIds` | Unique native ISO FID list, independent of file-number ordering |
 | `CreateIsoApplicationVerified` | AES application creation acknowledgement and exact acquired AID/FID/DF-name directory tuple |
+| `CreateIsoApplicationWithKeySetsVerified` | Combined AES key-set/ISO creation; exact directory tuple, acquired key-set geometry and restored PICC authentication |
 | `CreateIsoFileVerified` | Standard/backup/linear/cyclic file settings and newly acquired ISO FID presence |
 
 Creation validates unused native/ISO identifiers and, for applications, an unused
@@ -35,8 +36,23 @@ independently proves the ISO tuple. No guessed initial application key is used t
 read back a new application's key policy. File creation independently verifies
 ordinary geometry, mode, rights and FID presence under exclusive ownership.
 ISO identifiers do not automatically make a complete NFC Forum mapping: provision
-CC/NDEF content and permissions explicitly. ISO creation combined with new
-multi-key-set provisioning remains a separate creation profile.
+CC/NDEF content and permissions explicitly.
+
+`OpenIsoKeySetManagementSession` returns `IDesfireIsoKeySetManagement`, a new
+optional extension of file management. `CreateIsoApplicationWithKeySetsVerified`
+places the ISO FID and name after the complete key-set header, enabling both ISO
+and multiple-set flags. It accepts one-through-fourteen AES keys, two-through-sixteen
+sets, an explicit initial set version and roll selector. It verifies the directory
+then selects the new application and acquires all seven key-settings bytes before
+restoring PICC selection and authentication. A subsequent management operation
+therefore starts with the restored session's counters and credentials.
+
+The creation policy must allow public key-settings acquisition (bit one set).
+A policy that closes this access is refused before creation; no initial application
+key is inferred to obtain the proof. Native/ISO/name collisions are checked before
+mutation. Wrong acquired FID/name/geometry and any failure after creation through
+reauthentication retain dispatch uncertainty. These optional interfaces preserve
+all existing interface layouts and IIDs.
 
 ## Multiple access-right tuples
 
@@ -144,6 +160,39 @@ Abort uses the ordinary native abort path and clears the owned calculation/key.
 The ordinary `Commit` method is refused on this profile, so it cannot silently
 discard the receipt. A read-only calculation can also be committed and verified.
 It updates the counter/receipt without inventing file mutations.
+
+## Immediate standard data inside a TMAC calculation
+
+`OpenTransactionMacDataSession` accepts the same explicit application, TMAC file,
+real UID, static transaction key, trusted previous counter and fresh-state
+acknowledgement. It returns `IDesfireTransactionMacDataSession`, a new optional
+extension of the existing TMAC transaction interface.
+
+`WriteStandardDataVerified(File, Offset, Expected, Data)`:
+
+1. Freezes both equal-length nonempty buffers before I/O.
+2. Acquires ordinary standard-file type, geometry and read/write authority.
+3. Reads the exact range and checks unchanged settings and the supplied preimage.
+4. Skips a write when data is equal; otherwise dispatches one native immediate write.
+5. Verifies the written range immediately and checks unchanged settings.
+6. Journals the expected final range for another content/settings proof after a
+   separately verified TMAC commit.
+
+Both primary read and write rights must grant access. The profile does not silently
+extend to SDM or multiple-access layouts. Bounds use acquired file geometry.
+Journal bytes and entry counts are bounded before mutation. Repeated and
+overlapping writes update earlier expected ranges; disjoint ranges remain
+independent. The post-commit proof covers every journaled range and its settings,
+not untouched file bytes. No-op preimage reads still contribute to TMI and require
+an explicit calculation commit or abort.
+
+**Standard writes are immediate and survive Abort.** `Abort` cancels the native
+transaction/TMAC calculation and clears its owned secrets; `dsoAborted` does not
+mean standard data was restored. Closing does not perform an automatic rollback.
+A caller needing rollback-capable file updates must use backup files and the
+existing transaction operations. Unverified write/receipt/read-back/release after
+mutation raises `EContactlessWriteUncertain`, even if the write itself was
+acknowledged. Never retry such a write solely because commit proof failed.
 
 ## Offline tools and references
 
