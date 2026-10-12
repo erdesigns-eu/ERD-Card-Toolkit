@@ -1,7 +1,7 @@
 # Componenten en gereedheid voor CardStudio
 
-Stand: 12 oktober 2026. Dit overzicht beschrijft de huidige branch van PR #50,
-inclusief native DESFire Light LRP-beheer en transacties met meerdere toegangsrechten.
+Stand: 12 oktober 2026. Dit overzicht omvat de gemergede PR #50 en de nieuwe
+sessie-, bewerkings- en projectcomponenten op de opvolgbranch.
 Het is een overzicht van geïmplementeerde profielen, geen compatibiliteitsgarantie
 voor iedere kaart of reader met een vergelijkbare productnaam.
 
@@ -21,7 +21,7 @@ profielen eerst verder uit, zonder nu nieuwe demo's of een applicatie te maken.
 
 ## Beschikbare basis
 
-De library telt **59 geregistreerde componenten** en **24 gedocumenteerde
+De library telt **62 geregistreerde componenten** en **24 gedocumenteerde
 workflowklassen**, inclusief de generieke geheugenworkflow. Dat is geen maat voor
 het aantal volledig ondersteunde kaarten: één klasse kan meerdere profielen bevatten.
 
@@ -99,20 +99,22 @@ staan niet op deze route.
 
 ## Wat een CardStudio-applicatie zelf nog nodig heeft
 
-Deze applicatielaag is nog niet gebouwd. De library neemt de kaartprotocollen en
-veel losse workflows over, maar niet de productstructuur:
+De UI is nog niet gebouwd. [Studio-componenten](STUDIO_COMPONENTS.md) leveren nu
+readerreservering/generatiebewaking, een operation-queue, workflowbridge en
+begrensde projecten met atomaire import. De volgende productuitbreidingen blijven:
 
-- **Reader- en sessieregie:** één centrale selectie, connectielevensduur, workerqueue,
-  exclusieve eigenaar en veilige afhandeling van hot-plug/kaartwissels.
+- **Reader- en sessieregie:** centrale transportreservering en generatiebewaking bestaan;
+  automatisch connectiebeheer, achtergrondexecutor en typed non-APDU leases moeten
+  nog in componenten worden toegevoegd.
 - **Profielkeuze en capaciteiten:** acties aanbieden op basis van kaart én reader;
   ATR/UID-herkenning is een hint en geen bewijs dat iedere schrijfactie past.
 - **Inspectiemodel en schermen:** kaart/applicatie/fileboom, geparste velden, ruwe data,
   resultaten met betrouwbaarheidsniveau en behoud van gedeeltelijke uitlezingen.
 - **Bewerkingsregie:** preview, bron/doelkeuze, expliciete sleutels/instellingen,
   voortgang/annulering en een zichtbaar onderscheid tussen Verified en Uncertain.
-- **Projecten en geheimen:** eigen projectformaat, metadata en encryptie/opslagbeleid
-  voor back-ups; gescheiden sleutelopslag. De bestaande geheugenarchieven zijn
-  begrensde dataformaten, geen versleutelde universele studio-projecten.
+- **Projecten en geheimen:** het nieuwe begrensde projectformaat en streamopslag bestaan;
+  typed metadata/adapters, versleutelde opslag, atomic file replacement en een
+  gescheiden sleutelprovider moeten nog als componenten worden gebouwd.
 - **Heropening na fouten:** nieuwe kaartinspectie en gecontroleerde vervolgplannen;
   geen automatisch herhalen van een mogelijk al uitgevoerde schrijfactie.
 

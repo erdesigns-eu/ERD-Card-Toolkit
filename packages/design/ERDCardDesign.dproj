@@ -137,6 +137,10 @@
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Workflow.DESFire.pas"/>
         <DCCReference Include="..\..\src\memory\ERD.Card.Memory.Workflow.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Workflow.ISO15693.pas"/>
+        <DCCReference Include="..\..\src\core\ERD.Card.Session.pas"/>
+        <DCCReference Include="..\..\src\core\ERD.Card.Operation.pas"/>
+        <DCCReference Include="..\..\src\core\ERD.Card.Operation.Workflow.pas"/>
+        <DCCReference Include="..\..\src\core\ERD.Card.Project.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Workflow.Batch.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Workflow.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Workflow.Archive.pas"/>

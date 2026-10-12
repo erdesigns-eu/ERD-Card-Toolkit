@@ -181,6 +181,10 @@
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
         <DCCReference Include="..\..\src\core\ERD.Card.Inspection.pas"/>
+        <DCCReference Include="..\..\src\core\ERD.Card.Session.pas"/>
+        <DCCReference Include="..\..\src\core\ERD.Card.Operation.pas"/>
+        <DCCReference Include="..\..\src\core\ERD.Card.Operation.Workflow.pas"/>
+        <DCCReference Include="..\..\src\core\ERD.Card.Project.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Workflow.Batch.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Workflow.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Workflow.Archive.pas"/>

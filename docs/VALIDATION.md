@@ -1214,3 +1214,16 @@ were changed. Component/studio readiness is documented in
 The full native DESFire/Plus suite passes **3,962,935 assertions**, zero unfreed
 heap blocks, including an explicit test showing the unauthenticated Plain preimage
 case and the previously implemented Light/AES/LRP/ISO/SDM/TMAC behavior.
+
+
+## 2026-10-12 — studio session, operation and project components
+
+Introduced three inactive nonvisual palette components and a prepared-workflow
+operation bridge. Native focused tests pass **125 assertions**, including real
+wrong-thread execution, exclusive reservations, generation invalidation before/
+after I/O, physical transaction cleanup on card change, detached-reader rebind,
+FIFO single consumption, cooperative cancellation, observer isolation, workflow
+observer restoration and single-use refusal, copy-isolated project artifacts,
+duplicate/truncated atomic import, empty payloads, stream failure/roundtrip and
+payload budgets. Heap tracing reports zero unfreed blocks. New units retain
+UTF-8 BOM/CRLF and complete public API XML documentation. No demos/forms changed.
