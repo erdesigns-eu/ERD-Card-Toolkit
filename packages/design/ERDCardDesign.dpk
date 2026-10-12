@@ -116,6 +116,7 @@ contains
   ERD.Card.Contactless.DESFire in '..\..\src\contactless\ERD.Card.Contactless.DESFire.pas',
   ERD.Card.Contactless.DESFire.EV1 in '..\..\src\contactless\ERD.Card.Contactless.DESFire.EV1.pas',
   ERD.Card.Contactless.DESFire.EV2 in '..\..\src\contactless\ERD.Card.Contactless.DESFire.EV2.pas',
+  ERD.Card.Contactless.DESFire.LRP in '..\..\src\contactless\ERD.Card.Contactless.DESFire.LRP.pas',
   ERD.Card.Contactless.ISO15693 in '..\..\src\contactless\ERD.Card.Contactless.ISO15693.pas',
   ERD.Card.Contactless.Raw in '..\..\src\contactless\ERD.Card.Contactless.Raw.pas',
   ERD.Card.Contactless.Type2 in '..\..\src\contactless\ERD.Card.Contactless.Type2.pas',

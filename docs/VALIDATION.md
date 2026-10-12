@@ -1089,3 +1089,35 @@ and **60 inactive registration/RTL streaming cases**. Existing source encoding,
 CRLF and formatting are retained; no demos changed. Existing unrelated compiler
 notes/warnings remain unsuppressed. Abort semantics are explicit: cancellation of
 a TMAC calculation does not undo immediate standard writes.
+
+## Native LRP, combined SDM rights and cyclic-record updates (2026-10-12)
+
+The focused DESFire/Plus suite passes **2,123,006 assertions** with range/overflow
+checks and zero heap leaks. The independent generator now emits **131 literal
+fixture sets**, including **150 published NXP AN12304 known answers** for
+LRP evaluation, LRICB and CMAC. The published wrapping-counter case is explicitly
+refused by the library's nonwrapping counter contract; other LRICB cases execute
+both encryption and decryption.
+
+Independent native LRP fixtures cover master-key derivation, first/NonFirst MACs,
+TI/capability verification and Plain/MAC/Full command/response framing. Tests
+corrupt every protected response bit, accept no correct-MAC wrong capability or
+padding/length, inject every provider encryption/decryption call boundary and
+prove that MAC rejection occurs before any AES decryption. Failed codec operations
+preserve caller-owned encryption counters.
+
+Combined SDM tests cover enable/disable, additional-right removal, no-op changes,
+strict conditional framing, wrong preimage and valid-MAC wrong postimage, every
+I/O/response boundary, and mutation of caller rights/preimages during I/O. Record
+tests cover ordinary and TMAC owners, native BA outbound AF chaining, repeated
+updates, abort, no-op, wrong preimages, append/clear conflicts in both orders,
+different-record conflicts, every native boundary/response bit and valid-MAC wrong
+post-commit record content. Owned dispatch uncertainty and release are checked.
+
+The complete FPC/native regression runner, **21 source checkers**, fixture
+reproducibility and distribution checks pass. Distribution remains **62 projects,
+2 groups, 48 DFM forms**, no findings; **59 components** and **60 inactive streaming
+cases**. Runtime/design packages include the new LRP unit with native BOM/CRLF;
+existing source formatting is preserved and no demos changed. Existing unrelated
+compiler notes/warnings remain unsuppressed. Automatic LRP card-reader sessions,
+LRP TMAC and partial/unaligned-record TMAC profiles are not claimed by these tests.

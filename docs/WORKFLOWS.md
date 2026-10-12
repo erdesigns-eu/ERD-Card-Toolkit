@@ -546,3 +546,16 @@ proofs and verify all final ranges after the authenticated/offline-verified rece
 These APIs do not change ordinary application archives or add an automatic
 application migration profile. Standard writes are immediate: aborting the
 calculation does not restore them. See [native profile contracts](DESFIRE_FILES_TMAC.md).
+
+## Combined SDM rights, record updates and native LRP codec
+
+Native optional APIs now preserve combined SDM/additional-right settings through
+exact-preimage change and full read-back, and stage full sixteen-byte cyclic
+record updates with owned journal/commit/abort and optional TMAC receipt proof.
+Record update cannot mix append/clear or a different record index in one file
+transaction. These APIs do not silently extend the ordinary archive format.
+
+The native [LRP codec](DESFIRE_LRP.md) includes published primitive, authentication
+and Plain/MAC/Full framing. It performs no I/O: transport acquisition, native
+chaining and fail-closed retained session integration remain explicit caller work
+until the automatic LRP reader profile is added.

@@ -275,6 +275,135 @@ function DfTmacStandardWrongFile: TExtendedPairs;
 /// <summary>Returns independent synthetic DfTmacStandardBounds native protocol vector.</summary>
 /// <returns>Owned literal command/response pairs.</returns>
 function DfTmacStandardBounds: TExtendedPairs;
+/// <summary>Returns independent synthetic DfSdmAccessRead native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfSdmAccessRead: TExtendedPairs;
+/// <summary>Returns independent synthetic DfSdmAccessEnable native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfSdmAccessEnable: TExtendedPairs;
+/// <summary>Returns independent synthetic DfSdmAccessDisableSdm native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfSdmAccessDisableSdm: TExtendedPairs;
+/// <summary>Returns independent synthetic DfSdmAccessRemoveRights native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfSdmAccessRemoveRights: TExtendedPairs;
+/// <summary>Returns independent synthetic DfSdmAccessRemoveBoth native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfSdmAccessRemoveBoth: TExtendedPairs;
+/// <summary>Returns independent synthetic DfSdmAccessNoop native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfSdmAccessNoop: TExtendedPairs;
+/// <summary>Returns independent synthetic DfSdmAccessBadPreimage native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfSdmAccessBadPreimage: TExtendedPairs;
+/// <summary>Returns independent synthetic DfSdmAccessBadPostimage native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfSdmAccessBadPostimage: TExtendedPairs;
+/// <summary>Returns independent synthetic DfRecordWrite native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfRecordWrite: TExtendedPairs;
+/// <summary>Returns independent synthetic DfRecordRepeat native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfRecordRepeat: TExtendedPairs;
+/// <summary>Returns independent synthetic DfRecordAbort native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfRecordAbort: TExtendedPairs;
+/// <summary>Returns independent synthetic DfRecordNoop native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfRecordNoop: TExtendedPairs;
+/// <summary>Returns independent synthetic DfRecordPreimage native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfRecordPreimage: TExtendedPairs;
+/// <summary>Returns independent synthetic DfRecordAppendConflict native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfRecordAppendConflict: TExtendedPairs;
+/// <summary>Returns independent synthetic DfRecordClearConflict native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfRecordClearConflict: TExtendedPairs;
+/// <summary>Returns independent synthetic DfRecordDifferentConflict native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfRecordDifferentConflict: TExtendedPairs;
+/// <summary>Returns independent synthetic DfRecordWrongCommit native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfRecordWrongCommit: TExtendedPairs;
+/// <summary>Returns independent synthetic DfRecordAppendFirstConflict native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfRecordAppendFirstConflict: TExtendedPairs;
+/// <summary>Returns independent synthetic DfRecordClearFirstConflict native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfRecordClearFirstConflict: TExtendedPairs;
+/// <summary>Returns independent synthetic DfRecordTmacWrite native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfRecordTmacWrite: TExtendedPairs;
+/// <summary>Returns independent synthetic DfRecordTmacRepeat native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfRecordTmacRepeat: TExtendedPairs;
+/// <summary>Returns independent synthetic DfRecordTmacAbort native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfRecordTmacAbort: TExtendedPairs;
+/// <summary>Returns independent synthetic DfRecordTmacNoop native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfRecordTmacNoop: TExtendedPairs;
+/// <summary>Returns independent synthetic DfRecordTmacPreimage native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfRecordTmacPreimage: TExtendedPairs;
+/// <summary>Returns independent synthetic DfRecordTmacAppendConflict native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfRecordTmacAppendConflict: TExtendedPairs;
+/// <summary>Returns independent synthetic DfRecordTmacClearConflict native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfRecordTmacClearConflict: TExtendedPairs;
+/// <summary>Returns independent synthetic DfRecordTmacDifferentConflict native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfRecordTmacDifferentConflict: TExtendedPairs;
+/// <summary>Returns independent synthetic DfRecordTmacWrongCommit native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfRecordTmacWrongCommit: TExtendedPairs;
+/// <summary>Returns independent synthetic DfRecordTmacAppendFirstConflict native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfRecordTmacAppendFirstConflict: TExtendedPairs;
+/// <summary>Returns independent synthetic DfRecordTmacClearFirstConflict native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function DfRecordTmacClearFirstConflict: TExtendedPairs;
+/// <summary>Returns independent synthetic LrpPublishedEval native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function LrpPublishedEval: TExtendedPairs;
+/// <summary>Returns independent synthetic LrpPublishedCrypt native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function LrpPublishedCrypt: TExtendedPairs;
+/// <summary>Returns independent synthetic LrpPublishedCmac native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function LrpPublishedCmac: TExtendedPairs;
+/// <summary>Returns independent synthetic LrpAuth native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function LrpAuth: TExtendedPairs;
+/// <summary>Returns independent synthetic LrpAuthBadCapability native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function LrpAuthBadCapability: TExtendedPairs;
+/// <summary>Returns independent synthetic LrpPlainRead native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function LrpPlainRead: TExtendedPairs;
+/// <summary>Returns independent synthetic LrpPlainWrite native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function LrpPlainWrite: TExtendedPairs;
+/// <summary>Returns independent synthetic LrpMacRead native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function LrpMacRead: TExtendedPairs;
+/// <summary>Returns independent synthetic LrpMacWrite native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function LrpMacWrite: TExtendedPairs;
+/// <summary>Returns independent synthetic LrpFullRead native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function LrpFullRead: TExtendedPairs;
+/// <summary>Returns independent synthetic LrpFullWrite native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function LrpFullWrite: TExtendedPairs;
+/// <summary>Returns independent synthetic LrpBadPadding native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function LrpBadPadding: TExtendedPairs;
+/// <summary>Returns independent synthetic LrpBadLength native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function LrpBadLength: TExtendedPairs;
 implementation
 function DfInitialize: TExtendedPairs;
 begin
@@ -2193,5 +2322,1187 @@ begin
   Result[6].Response := 'D9B0901C6551F4AA3FDEAD0728B8A455352D7CD5EEA8AF569100';
   Result[7].Command := '90F5000009008428DE102013DFA700';
   Result[7].Response := '000300000800006294F3B40A6CEEEA9100';
+end;
+function DfSdmAccessRead: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,5);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '90450000085888703EC1CC8E6D00';
+  Result[3].Response := '0F9301010210008F655C5D0A7F9D6F9100';
+  Result[4].Command := '90F5000009001F9015C357E6E7C000';
+  Result[4].Response := '00C000E0000100010101C1F1212000004300004300007ABC852994CFEB699100';
+end;
+function DfSdmAccessEnable: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,9);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '90450000085888703EC1CC8E6D00';
+  Result[3].Response := '0F9301010210008F655C5D0A7F9D6F9100';
+  Result[4].Command := '90450000083CF4E07AFAF054C100';
+  Result[4].Response := '0F9301010210000F85847F7A1809D79100';
+  Result[5].Command := '9045000008F63E7701FF6E28F400';
+  Result[5].Response := '0F9301010210003112C3AC03F0ED249100';
+  Result[6].Command := '90F5000009003F8EDE83A22FBA2B00';
+  Result[6].Response := '000000E00001003390D847A31DE2F09100';
+  Result[7].Command := '905F000029003DA10E5DEA15D04B6FE9D691CF6B5B473F8114300B6221FC0EB0FF1613256C2197AF1093EA22501700';
+  Result[7].Response := '1A4B5CB5980618979100';
+  Result[8].Command := '90F5000009002B40A61528387FA400';
+  Result[8].Response := '00C000E0000100010101C1F121200000430000430000AA2DBBED01DB7B1C9100';
+end;
+function DfSdmAccessDisableSdm: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,9);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '90450000085888703EC1CC8E6D00';
+  Result[3].Response := '0F9301010210008F655C5D0A7F9D6F9100';
+  Result[4].Command := '90450000083CF4E07AFAF054C100';
+  Result[4].Response := '0F9301010210000F85847F7A1809D79100';
+  Result[5].Command := '9045000008F63E7701FF6E28F400';
+  Result[5].Response := '0F9301010210003112C3AC03F0ED249100';
+  Result[6].Command := '90F5000009003F8EDE83A22FBA2B00';
+  Result[6].Response := '00C000E0000100010101C1F12120000043000043000051F5386BD59458539100';
+  Result[7].Command := '905F000019003B3A7A8F90BD3B413A05305C12C75803E0D39778518FF38A00';
+  Result[7].Response := '1A4B5CB5980618979100';
+  Result[8].Command := '90F5000009002B40A61528387FA400';
+  Result[8].Response := '008000E000010001010180B28AD513E9EB8A9100';
+end;
+function DfSdmAccessRemoveRights: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,9);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '90450000085888703EC1CC8E6D00';
+  Result[3].Response := '0F9301010210008F655C5D0A7F9D6F9100';
+  Result[4].Command := '90450000083CF4E07AFAF054C100';
+  Result[4].Response := '0F9301010210000F85847F7A1809D79100';
+  Result[5].Command := '9045000008F63E7701FF6E28F400';
+  Result[5].Response := '0F9301010210003112C3AC03F0ED249100';
+  Result[6].Command := '90F5000009003F8EDE83A22FBA2B00';
+  Result[6].Response := '00C000E0000100010101C1F12120000043000043000051F5386BD59458539100';
+  Result[7].Command := '905F00001900B37EACAA3C416D211BC06D4A54607718460988B3AD515F7D00';
+  Result[7].Response := '1A4B5CB5980618979100';
+  Result[8].Command := '90F5000009002B40A61528387FA400';
+  Result[8].Response := '004000E0000100C1F121200000430000430000DDE9D8590CAEF0289100';
+end;
+function DfSdmAccessRemoveBoth: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,9);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '90450000085888703EC1CC8E6D00';
+  Result[3].Response := '0F9301010210008F655C5D0A7F9D6F9100';
+  Result[4].Command := '90450000083CF4E07AFAF054C100';
+  Result[4].Response := '0F9301010210000F85847F7A1809D79100';
+  Result[5].Command := '9045000008F63E7701FF6E28F400';
+  Result[5].Response := '0F9301010210003112C3AC03F0ED249100';
+  Result[6].Command := '90F5000009003F8EDE83A22FBA2B00';
+  Result[6].Response := '00C000E0000100010101C1F12120000043000043000051F5386BD59458539100';
+  Result[7].Command := '905F00001900418ECEC4D4DC2564F3368EFCB447E17B070EBD1D2429F9BB00';
+  Result[7].Response := '1A4B5CB5980618979100';
+  Result[8].Command := '90F5000009002B40A61528387FA400';
+  Result[8].Response := '000000E000010093AE9C19F84078C69100';
+end;
+function DfSdmAccessNoop: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,7);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '90450000085888703EC1CC8E6D00';
+  Result[3].Response := '0F9301010210008F655C5D0A7F9D6F9100';
+  Result[4].Command := '90450000083CF4E07AFAF054C100';
+  Result[4].Response := '0F9301010210000F85847F7A1809D79100';
+  Result[5].Command := '9045000008F63E7701FF6E28F400';
+  Result[5].Response := '0F9301010210003112C3AC03F0ED249100';
+  Result[6].Command := '90F5000009003F8EDE83A22FBA2B00';
+  Result[6].Response := '00C000E0000100010101C1F12120000043000043000051F5386BD59458539100';
+end;
+function DfSdmAccessBadPreimage: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,7);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '90450000085888703EC1CC8E6D00';
+  Result[3].Response := '0F9301010210008F655C5D0A7F9D6F9100';
+  Result[4].Command := '90450000083CF4E07AFAF054C100';
+  Result[4].Response := '0F9301010210000F85847F7A1809D79100';
+  Result[5].Command := '9045000008F63E7701FF6E28F400';
+  Result[5].Response := '0F9301010210003112C3AC03F0ED249100';
+  Result[6].Command := '90F5000009003F8EDE83A22FBA2B00';
+  Result[6].Response := '00C000E0000100010101C1F12120000043000043000051F5386BD59458539100';
+end;
+function DfSdmAccessBadPostimage: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,9);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '90450000085888703EC1CC8E6D00';
+  Result[3].Response := '0F9301010210008F655C5D0A7F9D6F9100';
+  Result[4].Command := '90450000083CF4E07AFAF054C100';
+  Result[4].Response := '0F9301010210000F85847F7A1809D79100';
+  Result[5].Command := '9045000008F63E7701FF6E28F400';
+  Result[5].Response := '0F9301010210003112C3AC03F0ED249100';
+  Result[6].Command := '90F5000009003F8EDE83A22FBA2B00';
+  Result[6].Response := '000000E00001003390D847A31DE2F09100';
+  Result[7].Command := '905F000029003DA10E5DEA15D04B6FE9D691CF6B5B473F8114300B6221FC0EB0FF1613256C2197AF1093EA22501700';
+  Result[7].Response := '1A4B5CB5980618979100';
+  Result[8].Command := '90F5000009002B40A61528387FA400';
+  Result[8].Response := '00C000E0000100010202C1F1212000004300004300000DAE9BB11E402AB99100';
+end;
+function DfRecordWrite: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,14);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '906F000008B8A773BEDD5F982B00';
+  Result[3].Response := '0056AFD8643363A5A19100';
+  Result[4].Command := '90F5000009001F9015C357E6E7C000';
+  Result[4].Response := '04030000100000040000020000AF3D60ED17D963C09100';
+  Result[5].Command := '90F500000900BCFFE1398690DDB700';
+  Result[5].Response := '040300001000000400000200003D92A24DE72AED2E9100';
+  Result[6].Command := '90AB00000F000000000200008D92777B1CBA2FE400';
+  Result[6].Response := 'A4F738A219D4E43AAE2C7329F2F6ABE6BDF1666096E863549FAD4BF13F32B1F5402C29EB846D2A1042CD55D8270ADB50F82D09A5E80EF6CF9100';
+  Result[7].Command := '90F5000009008428DE102013DFA700';
+  Result[7].Response := '04030000100000040000020000AE3C71A486F86E5F9100';
+  Result[8].Command := '90BA00003000010000000000100000B2A339D7464EF5B3D270D296D7AF1E3C82F60C562829BA5752724B474F2BC4FFF4960C33709300';
+  Result[8].Response := '91AF';
+  Result[9].Command := '90AF000002738E00';
+  Result[9].Response := 'E03FB3C38F9C73D19100';
+  Result[10].Command := '90C7000009004613A9713E755A8300';
+  Result[10].Response := 'F4D4C94B9F3EB5119100';
+  Result[11].Command := '90F500000900BA8F5B04BD348EAA00';
+  Result[11].Response := '0403000010000004000002000043EEA78C98274C3C9100';
+  Result[12].Command := '90AB00000F00000000020000540C15BA9DFF0A5900';
+  Result[12].Response := '5E0190AF11642DD5AC52BDD3C66BDB60FB05F7666CCEB1ECA9930754A19ECD2E3BB9C3DEE09EFABEA6D2EFE3935564586EA82735C2DC9F529100';
+  Result[13].Command := '90F50000090008B058DF21788E4A00';
+  Result[13].Response := '040300001000000400000200004E9BEDEC9A54F8B99100';
+end;
+function DfRecordRepeat: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,17);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '906F000008B8A773BEDD5F982B00';
+  Result[3].Response := '0056AFD8643363A5A19100';
+  Result[4].Command := '90F5000009001F9015C357E6E7C000';
+  Result[4].Response := '04030000100000040000020000AF3D60ED17D963C09100';
+  Result[5].Command := '90F500000900BCFFE1398690DDB700';
+  Result[5].Response := '040300001000000400000200003D92A24DE72AED2E9100';
+  Result[6].Command := '90AB00000F000000000200008D92777B1CBA2FE400';
+  Result[6].Response := 'A4F738A219D4E43AAE2C7329F2F6ABE6BDF1666096E863549FAD4BF13F32B1F5402C29EB846D2A1042CD55D8270ADB50F82D09A5E80EF6CF9100';
+  Result[7].Command := '90F5000009008428DE102013DFA700';
+  Result[7].Response := '04030000100000040000020000AE3C71A486F86E5F9100';
+  Result[8].Command := '90BA00003000010000000000100000B2A339D7464EF5B3D270D296D7AF1E3C82F60C562829BA5752724B474F2BC4FFF4960C33709300';
+  Result[8].Response := '91AF';
+  Result[9].Command := '90AF000002738E00';
+  Result[9].Response := 'E03FB3C38F9C73D19100';
+  Result[10].Command := '90F500000900E6C48DB58B3A4E5000';
+  Result[10].Response := '0403000010000004000002000065E84A1CD23671BC9100';
+  Result[11].Command := '90BA00003000010000000000100000C3731FEC88D72B10A30D6F0B3A01C77FE785E9A577BABA52D4281D96FA6EB6FB295702339C7600';
+  Result[11].Response := '91AF';
+  Result[12].Command := '90AF000002542400';
+  Result[12].Response := 'DCF5C762E10055089100';
+  Result[13].Command := '90C70000090010FB1A72D54B14D700';
+  Result[13].Response := '0ACE7A1CA867FB5D9100';
+  Result[14].Command := '90F50000090008B058DF21788E4A00';
+  Result[14].Response := '040300001000000400000200004E9BEDEC9A54F8B99100';
+  Result[15].Command := '90AB00000F00000000020000D87D9493D4F7592C00';
+  Result[15].Response := 'B7510CB2FC287C4CDB93869694B9F6343C39E09431CB098BFA9FF972D167587836DC89865E72D1ADCE766C31F1490AA9AD60E30A6BFF2E4A9100';
+  Result[16].Command := '90F5000009002015F8825CE1C7FB00';
+  Result[16].Response := '04030000100000040000020000D344EE34284AC9E89100';
+end;
+function DfRecordAbort: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,11);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '906F000008B8A773BEDD5F982B00';
+  Result[3].Response := '0056AFD8643363A5A19100';
+  Result[4].Command := '90F5000009001F9015C357E6E7C000';
+  Result[4].Response := '04030000100000040000020000AF3D60ED17D963C09100';
+  Result[5].Command := '90F500000900BCFFE1398690DDB700';
+  Result[5].Response := '040300001000000400000200003D92A24DE72AED2E9100';
+  Result[6].Command := '90AB00000F000000000200008D92777B1CBA2FE400';
+  Result[6].Response := 'A4F738A219D4E43AAE2C7329F2F6ABE6BDF1666096E863549FAD4BF13F32B1F5402C29EB846D2A1042CD55D8270ADB50F82D09A5E80EF6CF9100';
+  Result[7].Command := '90F5000009008428DE102013DFA700';
+  Result[7].Response := '04030000100000040000020000AE3C71A486F86E5F9100';
+  Result[8].Command := '90BA00003000010000000000100000B2A339D7464EF5B3D270D296D7AF1E3C82F60C562829BA5752724B474F2BC4FFF4960C33709300';
+  Result[8].Response := '91AF';
+  Result[9].Command := '90AF000002738E00';
+  Result[9].Response := 'E03FB3C38F9C73D19100';
+  Result[10].Command := '90A7000008D08F5ABDB4B8EFE600';
+  Result[10].Response := 'F4D4C94B9F3EB5119100';
+end;
+function DfRecordNoop: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,8);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '906F000008B8A773BEDD5F982B00';
+  Result[3].Response := '0056AFD8643363A5A19100';
+  Result[4].Command := '90F5000009001F9015C357E6E7C000';
+  Result[4].Response := '04030000100000040000020000AF3D60ED17D963C09100';
+  Result[5].Command := '90F500000900BCFFE1398690DDB700';
+  Result[5].Response := '040300001000000400000200003D92A24DE72AED2E9100';
+  Result[6].Command := '90AB00000F000000000200008D92777B1CBA2FE400';
+  Result[6].Response := 'A4F738A219D4E43AAE2C7329F2F6ABE6BDF1666096E863549FAD4BF13F32B1F5402C29EB846D2A1042CD55D8270ADB50F82D09A5E80EF6CF9100';
+  Result[7].Command := '90F5000009008428DE102013DFA700';
+  Result[7].Response := '04030000100000040000020000AE3C71A486F86E5F9100';
+end;
+function DfRecordPreimage: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,8);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '906F000008B8A773BEDD5F982B00';
+  Result[3].Response := '0056AFD8643363A5A19100';
+  Result[4].Command := '90F5000009001F9015C357E6E7C000';
+  Result[4].Response := '04030000100000040000020000AF3D60ED17D963C09100';
+  Result[5].Command := '90F500000900BCFFE1398690DDB700';
+  Result[5].Response := '040300001000000400000200003D92A24DE72AED2E9100';
+  Result[6].Command := '90AB00000F000000000200008D92777B1CBA2FE400';
+  Result[6].Response := 'A4F738A219D4E43AAE2C7329F2F6ABE6BDF1666096E863549FAD4BF13F32B1F5402C29EB846D2A1042CD55D8270ADB50F82D09A5E80EF6CF9100';
+  Result[7].Command := '90F5000009008428DE102013DFA700';
+  Result[7].Response := '04030000100000040000020000AE3C71A486F86E5F9100';
+end;
+function DfRecordAppendConflict: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,11);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '906F000008B8A773BEDD5F982B00';
+  Result[3].Response := '0056AFD8643363A5A19100';
+  Result[4].Command := '90F5000009001F9015C357E6E7C000';
+  Result[4].Response := '04030000100000040000020000AF3D60ED17D963C09100';
+  Result[5].Command := '90F500000900BCFFE1398690DDB700';
+  Result[5].Response := '040300001000000400000200003D92A24DE72AED2E9100';
+  Result[6].Command := '90AB00000F000000000200008D92777B1CBA2FE400';
+  Result[6].Response := 'A4F738A219D4E43AAE2C7329F2F6ABE6BDF1666096E863549FAD4BF13F32B1F5402C29EB846D2A1042CD55D8270ADB50F82D09A5E80EF6CF9100';
+  Result[7].Command := '90F5000009008428DE102013DFA700';
+  Result[7].Response := '04030000100000040000020000AE3C71A486F86E5F9100';
+  Result[8].Command := '90BA00003000010000000000100000B2A339D7464EF5B3D270D296D7AF1E3C82F60C562829BA5752724B474F2BC4FFF4960C33709300';
+  Result[8].Response := '91AF';
+  Result[9].Command := '90AF000002738E00';
+  Result[9].Response := 'E03FB3C38F9C73D19100';
+  Result[10].Command := '90F500000900E6C48DB58B3A4E5000';
+  Result[10].Response := '0403000010000004000002000065E84A1CD23671BC9100';
+end;
+function DfRecordClearConflict: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,11);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '906F000008B8A773BEDD5F982B00';
+  Result[3].Response := '0056AFD8643363A5A19100';
+  Result[4].Command := '90F5000009001F9015C357E6E7C000';
+  Result[4].Response := '04030000100000040000020000AF3D60ED17D963C09100';
+  Result[5].Command := '90F500000900BCFFE1398690DDB700';
+  Result[5].Response := '040300001000000400000200003D92A24DE72AED2E9100';
+  Result[6].Command := '90AB00000F000000000200008D92777B1CBA2FE400';
+  Result[6].Response := 'A4F738A219D4E43AAE2C7329F2F6ABE6BDF1666096E863549FAD4BF13F32B1F5402C29EB846D2A1042CD55D8270ADB50F82D09A5E80EF6CF9100';
+  Result[7].Command := '90F5000009008428DE102013DFA700';
+  Result[7].Response := '04030000100000040000020000AE3C71A486F86E5F9100';
+  Result[8].Command := '90BA00003000010000000000100000B2A339D7464EF5B3D270D296D7AF1E3C82F60C562829BA5752724B474F2BC4FFF4960C33709300';
+  Result[8].Response := '91AF';
+  Result[9].Command := '90AF000002738E00';
+  Result[9].Response := 'E03FB3C38F9C73D19100';
+  Result[10].Command := '90F500000900E6C48DB58B3A4E5000';
+  Result[10].Response := '0403000010000004000002000065E84A1CD23671BC9100';
+end;
+function DfRecordDifferentConflict: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,11);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '906F000008B8A773BEDD5F982B00';
+  Result[3].Response := '0056AFD8643363A5A19100';
+  Result[4].Command := '90F5000009001F9015C357E6E7C000';
+  Result[4].Response := '04030000100000040000020000AF3D60ED17D963C09100';
+  Result[5].Command := '90F500000900BCFFE1398690DDB700';
+  Result[5].Response := '040300001000000400000200003D92A24DE72AED2E9100';
+  Result[6].Command := '90AB00000F000000000200008D92777B1CBA2FE400';
+  Result[6].Response := 'A4F738A219D4E43AAE2C7329F2F6ABE6BDF1666096E863549FAD4BF13F32B1F5402C29EB846D2A1042CD55D8270ADB50F82D09A5E80EF6CF9100';
+  Result[7].Command := '90F5000009008428DE102013DFA700';
+  Result[7].Response := '04030000100000040000020000AE3C71A486F86E5F9100';
+  Result[8].Command := '90BA00003000010000000000100000B2A339D7464EF5B3D270D296D7AF1E3C82F60C562829BA5752724B474F2BC4FFF4960C33709300';
+  Result[8].Response := '91AF';
+  Result[9].Command := '90AF000002738E00';
+  Result[9].Response := 'E03FB3C38F9C73D19100';
+  Result[10].Command := '90F500000900E6C48DB58B3A4E5000';
+  Result[10].Response := '0403000010000004000002000065E84A1CD23671BC9100';
+end;
+function DfRecordWrongCommit: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,13);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '906F000008B8A773BEDD5F982B00';
+  Result[3].Response := '0056AFD8643363A5A19100';
+  Result[4].Command := '90F5000009001F9015C357E6E7C000';
+  Result[4].Response := '04030000100000040000020000AF3D60ED17D963C09100';
+  Result[5].Command := '90F500000900BCFFE1398690DDB700';
+  Result[5].Response := '040300001000000400000200003D92A24DE72AED2E9100';
+  Result[6].Command := '90AB00000F000000000200008D92777B1CBA2FE400';
+  Result[6].Response := 'A4F738A219D4E43AAE2C7329F2F6ABE6BDF1666096E863549FAD4BF13F32B1F5402C29EB846D2A1042CD55D8270ADB50F82D09A5E80EF6CF9100';
+  Result[7].Command := '90F5000009008428DE102013DFA700';
+  Result[7].Response := '04030000100000040000020000AE3C71A486F86E5F9100';
+  Result[8].Command := '90BA00003000010000000000100000B2A339D7464EF5B3D270D296D7AF1E3C82F60C562829BA5752724B474F2BC4FFF4960C33709300';
+  Result[8].Response := '91AF';
+  Result[9].Command := '90AF000002738E00';
+  Result[9].Response := 'E03FB3C38F9C73D19100';
+  Result[10].Command := '90C7000009004613A9713E755A8300';
+  Result[10].Response := 'F4D4C94B9F3EB5119100';
+  Result[11].Command := '90F500000900BA8F5B04BD348EAA00';
+  Result[11].Response := '0403000010000004000002000043EEA78C98274C3C9100';
+  Result[12].Command := '90AB00000F00000000020000540C15BA9DFF0A5900';
+  Result[12].Response := '6CFD1BEF2A53CF890149034BD0E8E3A5D8A7591686A41202FF869060C7E560A50397C33337C5C4F7ECD357C2C683F68FA55D7F34C20E79D19100';
+end;
+function DfRecordAppendFirstConflict: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,10);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '906F000008B8A773BEDD5F982B00';
+  Result[3].Response := '0056AFD8643363A5A19100';
+  Result[4].Command := '90F5000009001F9015C357E6E7C000';
+  Result[4].Response := '04030000100000040000020000AF3D60ED17D963C09100';
+  Result[5].Command := '90F500000900BCFFE1398690DDB700';
+  Result[5].Response := '040300001000000400000200003D92A24DE72AED2E9100';
+  Result[6].Command := '90AB00000F000000000200008D92777B1CBA2FE400';
+  Result[6].Response := 'A4F738A219D4E43AAE2C7329F2F6ABE6BDF1666096E863549FAD4BF13F32B1F5402C29EB846D2A1042CD55D8270ADB50F82D09A5E80EF6CF9100';
+  Result[7].Command := '90F5000009008428DE102013DFA700';
+  Result[7].Response := '04030000100000040000020000AE3C71A486F86E5F9100';
+  Result[8].Command := '908B00002F00000000100000B2A339D7464EF5B3D270D296D7AF1E3C82F60C562829BA5752724B474F2BC4FF809C8F45D15292B000';
+  Result[8].Response := 'E03FB3C38F9C73D19100';
+  Result[9].Command := '90F500000900E6C48DB58B3A4E5000';
+  Result[9].Response := '0403000010000004000002000065E84A1CD23671BC9100';
+end;
+function DfRecordClearFirstConflict: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,10);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '906F000008B8A773BEDD5F982B00';
+  Result[3].Response := '0056AFD8643363A5A19100';
+  Result[4].Command := '90F5000009001F9015C357E6E7C000';
+  Result[4].Response := '04030000100000040000020000AF3D60ED17D963C09100';
+  Result[5].Command := '90F500000900BCFFE1398690DDB700';
+  Result[5].Response := '040300001000000400000200003D92A24DE72AED2E9100';
+  Result[6].Command := '90AB00000F000000000200008D92777B1CBA2FE400';
+  Result[6].Response := 'A4F738A219D4E43AAE2C7329F2F6ABE6BDF1666096E863549FAD4BF13F32B1F5402C29EB846D2A1042CD55D8270ADB50F82D09A5E80EF6CF9100';
+  Result[7].Command := '90F5000009008428DE102013DFA700';
+  Result[7].Response := '04030000100000040000020000AE3C71A486F86E5F9100';
+  Result[8].Command := '90EB000009002748098FC5EC6F1B00';
+  Result[8].Response := 'E03FB3C38F9C73D19100';
+  Result[9].Command := '90F500000900E6C48DB58B3A4E5000';
+  Result[9].Response := '0403000010000004000002000065E84A1CD23671BC9100';
+end;
+function DfRecordTmacWrite: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,17);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '906F000008B8A773BEDD5F982B00';
+  Result[3].Response := '0001DA8CC717E990CDDC9100';
+  Result[4].Command := '90F5000009001F9015C357E6E7C000';
+  Result[4].Response := '04030000100000040000020000AF3D60ED17D963C09100';
+  Result[5].Command := '90F50000090112257581972D316000';
+  Result[5].Response := '0500F0EF02347427680484294D489100';
+  Result[6].Command := '90510000084895FFB41CAB99D900';
+  Result[6].Response := 'D9B0901C6551F4AA3FDEAD0728B8A455352D7CD5EEA8AF569100';
+  Result[7].Command := '90F5000009008428DE102013DFA700';
+  Result[7].Response := '04030000100000040000020000AE3C71A486F86E5F9100';
+  Result[8].Command := '90AB00000F00000000020000A0060CB4F081B95C00';
+  Result[8].Response := '9910BF0DCC7E5B12571A00D2AE236E3E9E2439C8B928A8BDCCCB0B139D40E51D282EFF525389E29D2DE685DB468432A04025E90BDE52DC8A9100';
+  Result[9].Command := '90F500000900E6C48DB58B3A4E5000';
+  Result[9].Response := '0403000010000004000002000065E84A1CD23671BC9100';
+  Result[10].Command := '90BA000030000100000000001000006D3639656961EBFE6801B130B0758AED0857991478780FE724ECD757E866E84307A08B17CF7C00';
+  Result[10].Response := '91AF';
+  Result[11].Command := '90AF000002F3D500';
+  Result[11].Response := 'DCF5C762E10055089100';
+  Result[12].Command := '90F500000901B9543631F9571ADD00';
+  Result[12].Response := '0500F0EF0234D77B7DD11D2F3DCA9100';
+  Result[13].Command := '90C7000009010A7D06B4709406E400';
+  Result[13].Response := '01000000A7DE10CA4D189AF04EF46662B01C38229100';
+  Result[14].Command := '90F5000009002F375AAD1953B61B00';
+  Result[14].Response := '0403000010000004000002000037C575CF7525F5DE9100';
+  Result[15].Command := '90AB00000F000000000200005C5F6527965D504300';
+  Result[15].Response := '4DD63E87EDDDBF9DD7FDC4D908269616580EFBE7069E6FA94617AC58559A5A7604EF5E4DE8721E2C80E5D05590DA5848CFCE3A7C45C20D329100';
+  Result[16].Command := '90F50000090009EC3F2BEDE4E96E00';
+  Result[16].Response := '0403000010000004000002000029F88EAF6473AB469100';
+end;
+function DfRecordTmacRepeat: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,20);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '906F000008B8A773BEDD5F982B00';
+  Result[3].Response := '0001DA8CC717E990CDDC9100';
+  Result[4].Command := '90F5000009001F9015C357E6E7C000';
+  Result[4].Response := '04030000100000040000020000AF3D60ED17D963C09100';
+  Result[5].Command := '90F50000090112257581972D316000';
+  Result[5].Response := '0500F0EF02347427680484294D489100';
+  Result[6].Command := '90510000084895FFB41CAB99D900';
+  Result[6].Response := 'D9B0901C6551F4AA3FDEAD0728B8A455352D7CD5EEA8AF569100';
+  Result[7].Command := '90F5000009008428DE102013DFA700';
+  Result[7].Response := '04030000100000040000020000AE3C71A486F86E5F9100';
+  Result[8].Command := '90AB00000F00000000020000A0060CB4F081B95C00';
+  Result[8].Response := '9910BF0DCC7E5B12571A00D2AE236E3E9E2439C8B928A8BDCCCB0B139D40E51D282EFF525389E29D2DE685DB468432A04025E90BDE52DC8A9100';
+  Result[9].Command := '90F500000900E6C48DB58B3A4E5000';
+  Result[9].Response := '0403000010000004000002000065E84A1CD23671BC9100';
+  Result[10].Command := '90BA000030000100000000001000006D3639656961EBFE6801B130B0758AED0857991478780FE724ECD757E866E84307A08B17CF7C00';
+  Result[10].Response := '91AF';
+  Result[11].Command := '90AF000002F3D500';
+  Result[11].Response := 'DCF5C762E10055089100';
+  Result[12].Command := '90F5000009007C50E2206F5996C200';
+  Result[12].Response := '04030000100000040000020000E780C72A5A9BBFA89100';
+  Result[13].Command := '90BA00003000010000000000100000F7A2B26E198AD70FD792E684FDB35FD6D09C47EF89C0F4FF2643DAC7579CE49FC09BA506661300';
+  Result[13].Response := '91AF';
+  Result[14].Command := '90AF000002199F00';
+  Result[14].Response := '90D066756C2BAE6C9100';
+  Result[15].Command := '90F500000901A709321D9022932200';
+  Result[15].Response := '0500F0EF0234A3DBCA3E22B5233C9100';
+  Result[16].Command := '90C70000090171635D463985581800';
+  Result[16].Response := '01000000F93D2AB36D39E56FE43D7C5A48B06A8B9100';
+  Result[17].Command := '90F50000090009EC3F2BEDE4E96E00';
+  Result[17].Response := '0403000010000004000002000029F88EAF6473AB469100';
+  Result[18].Command := '90AB00000F00000000020000A6BB30110F5BD01100';
+  Result[18].Response := 'D09D52DAC62E7B28E67DAEB7C83326B15F6AE05206DD3C8B55107DF8DAC24689013077EAE70D9CBB16C88AA5CB9C7CA5C4DA97590A8264869100';
+  Result[19].Command := '90F5000009006BF71ECCD1FEC69100';
+  Result[19].Response := '04030000100000040000020000050003D3AA86779F9100';
+end;
+function DfRecordTmacAbort: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,13);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '906F000008B8A773BEDD5F982B00';
+  Result[3].Response := '0001DA8CC717E990CDDC9100';
+  Result[4].Command := '90F5000009001F9015C357E6E7C000';
+  Result[4].Response := '04030000100000040000020000AF3D60ED17D963C09100';
+  Result[5].Command := '90F50000090112257581972D316000';
+  Result[5].Response := '0500F0EF02347427680484294D489100';
+  Result[6].Command := '90510000084895FFB41CAB99D900';
+  Result[6].Response := 'D9B0901C6551F4AA3FDEAD0728B8A455352D7CD5EEA8AF569100';
+  Result[7].Command := '90F5000009008428DE102013DFA700';
+  Result[7].Response := '04030000100000040000020000AE3C71A486F86E5F9100';
+  Result[8].Command := '90AB00000F00000000020000A0060CB4F081B95C00';
+  Result[8].Response := '9910BF0DCC7E5B12571A00D2AE236E3E9E2439C8B928A8BDCCCB0B139D40E51D282EFF525389E29D2DE685DB468432A04025E90BDE52DC8A9100';
+  Result[9].Command := '90F500000900E6C48DB58B3A4E5000';
+  Result[9].Response := '0403000010000004000002000065E84A1CD23671BC9100';
+  Result[10].Command := '90BA000030000100000000001000006D3639656961EBFE6801B130B0758AED0857991478780FE724ECD757E866E84307A08B17CF7C00';
+  Result[10].Response := '91AF';
+  Result[11].Command := '90AF000002F3D500';
+  Result[11].Response := 'DCF5C762E10055089100';
+  Result[12].Command := '90A7000008B09FF675403D9FBC00';
+  Result[12].Response := '0ACE7A1CA867FB5D9100';
+end;
+function DfRecordTmacNoop: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,15);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '906F000008B8A773BEDD5F982B00';
+  Result[3].Response := '0001DA8CC717E990CDDC9100';
+  Result[4].Command := '90F5000009001F9015C357E6E7C000';
+  Result[4].Response := '04030000100000040000020000AF3D60ED17D963C09100';
+  Result[5].Command := '90F50000090112257581972D316000';
+  Result[5].Response := '0500F0EF02347427680484294D489100';
+  Result[6].Command := '90510000084895FFB41CAB99D900';
+  Result[6].Response := 'D9B0901C6551F4AA3FDEAD0728B8A455352D7CD5EEA8AF569100';
+  Result[7].Command := '90F5000009008428DE102013DFA700';
+  Result[7].Response := '04030000100000040000020000AE3C71A486F86E5F9100';
+  Result[8].Command := '90AB00000F00000000020000A0060CB4F081B95C00';
+  Result[8].Response := '9910BF0DCC7E5B12571A00D2AE236E3E9E2439C8B928A8BDCCCB0B139D40E51D282EFF525389E29D2DE685DB468432A04025E90BDE52DC8A9100';
+  Result[9].Command := '90F500000900E6C48DB58B3A4E5000';
+  Result[9].Response := '0403000010000004000002000065E84A1CD23671BC9100';
+  Result[10].Command := '90F500000901BD9E1EE3DAE270A200';
+  Result[10].Response := '0500F0EF0234FEA7D038B648C7B99100';
+  Result[11].Command := '90C7000009017DBEC65F62F8F97800';
+  Result[11].Response := '0100000096013638351452F065CE98BBB9A1791F9100';
+  Result[12].Command := '90F50000090008B058DF21788E4A00';
+  Result[12].Response := '040300001000000400000200004E9BEDEC9A54F8B99100';
+  Result[13].Command := '90AB00000F00000000020000D87D9493D4F7592C00';
+  Result[13].Response := 'B7510CB2FC287C4CDB93869694B9F634EA8AE6D810A0E97F537B4DB5B456F68ED5469484EAAE201667C1C805C37D61723ECDBF0BA7E8E2FE9100';
+  Result[14].Command := '90F5000009002015F8825CE1C7FB00';
+  Result[14].Response := '04030000100000040000020000D344EE34284AC9E89100';
+end;
+function DfRecordTmacPreimage: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,10);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '906F000008B8A773BEDD5F982B00';
+  Result[3].Response := '0001DA8CC717E990CDDC9100';
+  Result[4].Command := '90F5000009001F9015C357E6E7C000';
+  Result[4].Response := '04030000100000040000020000AF3D60ED17D963C09100';
+  Result[5].Command := '90F50000090112257581972D316000';
+  Result[5].Response := '0500F0EF02347427680484294D489100';
+  Result[6].Command := '90510000084895FFB41CAB99D900';
+  Result[6].Response := 'D9B0901C6551F4AA3FDEAD0728B8A455352D7CD5EEA8AF569100';
+  Result[7].Command := '90F5000009008428DE102013DFA700';
+  Result[7].Response := '04030000100000040000020000AE3C71A486F86E5F9100';
+  Result[8].Command := '90AB00000F00000000020000A0060CB4F081B95C00';
+  Result[8].Response := '9910BF0DCC7E5B12571A00D2AE236E3E9E2439C8B928A8BDCCCB0B139D40E51D282EFF525389E29D2DE685DB468432A04025E90BDE52DC8A9100';
+  Result[9].Command := '90F500000900E6C48DB58B3A4E5000';
+  Result[9].Response := '0403000010000004000002000065E84A1CD23671BC9100';
+end;
+function DfRecordTmacAppendConflict: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,13);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '906F000008B8A773BEDD5F982B00';
+  Result[3].Response := '0001DA8CC717E990CDDC9100';
+  Result[4].Command := '90F5000009001F9015C357E6E7C000';
+  Result[4].Response := '04030000100000040000020000AF3D60ED17D963C09100';
+  Result[5].Command := '90F50000090112257581972D316000';
+  Result[5].Response := '0500F0EF02347427680484294D489100';
+  Result[6].Command := '90510000084895FFB41CAB99D900';
+  Result[6].Response := 'D9B0901C6551F4AA3FDEAD0728B8A455352D7CD5EEA8AF569100';
+  Result[7].Command := '90F5000009008428DE102013DFA700';
+  Result[7].Response := '04030000100000040000020000AE3C71A486F86E5F9100';
+  Result[8].Command := '90AB00000F00000000020000A0060CB4F081B95C00';
+  Result[8].Response := '9910BF0DCC7E5B12571A00D2AE236E3E9E2439C8B928A8BDCCCB0B139D40E51D282EFF525389E29D2DE685DB468432A04025E90BDE52DC8A9100';
+  Result[9].Command := '90F500000900E6C48DB58B3A4E5000';
+  Result[9].Response := '0403000010000004000002000065E84A1CD23671BC9100';
+  Result[10].Command := '90BA000030000100000000001000006D3639656961EBFE6801B130B0758AED0857991478780FE724ECD757E866E84307A08B17CF7C00';
+  Result[10].Response := '91AF';
+  Result[11].Command := '90AF000002F3D500';
+  Result[11].Response := 'DCF5C762E10055089100';
+  Result[12].Command := '90F5000009007C50E2206F5996C200';
+  Result[12].Response := '04030000100000040000020000E780C72A5A9BBFA89100';
+end;
+function DfRecordTmacClearConflict: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,13);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '906F000008B8A773BEDD5F982B00';
+  Result[3].Response := '0001DA8CC717E990CDDC9100';
+  Result[4].Command := '90F5000009001F9015C357E6E7C000';
+  Result[4].Response := '04030000100000040000020000AF3D60ED17D963C09100';
+  Result[5].Command := '90F50000090112257581972D316000';
+  Result[5].Response := '0500F0EF02347427680484294D489100';
+  Result[6].Command := '90510000084895FFB41CAB99D900';
+  Result[6].Response := 'D9B0901C6551F4AA3FDEAD0728B8A455352D7CD5EEA8AF569100';
+  Result[7].Command := '90F5000009008428DE102013DFA700';
+  Result[7].Response := '04030000100000040000020000AE3C71A486F86E5F9100';
+  Result[8].Command := '90AB00000F00000000020000A0060CB4F081B95C00';
+  Result[8].Response := '9910BF0DCC7E5B12571A00D2AE236E3E9E2439C8B928A8BDCCCB0B139D40E51D282EFF525389E29D2DE685DB468432A04025E90BDE52DC8A9100';
+  Result[9].Command := '90F500000900E6C48DB58B3A4E5000';
+  Result[9].Response := '0403000010000004000002000065E84A1CD23671BC9100';
+  Result[10].Command := '90BA000030000100000000001000006D3639656961EBFE6801B130B0758AED0857991478780FE724ECD757E866E84307A08B17CF7C00';
+  Result[10].Response := '91AF';
+  Result[11].Command := '90AF000002F3D500';
+  Result[11].Response := 'DCF5C762E10055089100';
+  Result[12].Command := '90F5000009007C50E2206F5996C200';
+  Result[12].Response := '04030000100000040000020000E780C72A5A9BBFA89100';
+end;
+function DfRecordTmacDifferentConflict: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,13);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '906F000008B8A773BEDD5F982B00';
+  Result[3].Response := '0001DA8CC717E990CDDC9100';
+  Result[4].Command := '90F5000009001F9015C357E6E7C000';
+  Result[4].Response := '04030000100000040000020000AF3D60ED17D963C09100';
+  Result[5].Command := '90F50000090112257581972D316000';
+  Result[5].Response := '0500F0EF02347427680484294D489100';
+  Result[6].Command := '90510000084895FFB41CAB99D900';
+  Result[6].Response := 'D9B0901C6551F4AA3FDEAD0728B8A455352D7CD5EEA8AF569100';
+  Result[7].Command := '90F5000009008428DE102013DFA700';
+  Result[7].Response := '04030000100000040000020000AE3C71A486F86E5F9100';
+  Result[8].Command := '90AB00000F00000000020000A0060CB4F081B95C00';
+  Result[8].Response := '9910BF0DCC7E5B12571A00D2AE236E3E9E2439C8B928A8BDCCCB0B139D40E51D282EFF525389E29D2DE685DB468432A04025E90BDE52DC8A9100';
+  Result[9].Command := '90F500000900E6C48DB58B3A4E5000';
+  Result[9].Response := '0403000010000004000002000065E84A1CD23671BC9100';
+  Result[10].Command := '90BA000030000100000000001000006D3639656961EBFE6801B130B0758AED0857991478780FE724ECD757E866E84307A08B17CF7C00';
+  Result[10].Response := '91AF';
+  Result[11].Command := '90AF000002F3D500';
+  Result[11].Response := 'DCF5C762E10055089100';
+  Result[12].Command := '90F5000009007C50E2206F5996C200';
+  Result[12].Response := '04030000100000040000020000E780C72A5A9BBFA89100';
+end;
+function DfRecordTmacWrongCommit: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,16);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '906F000008B8A773BEDD5F982B00';
+  Result[3].Response := '0001DA8CC717E990CDDC9100';
+  Result[4].Command := '90F5000009001F9015C357E6E7C000';
+  Result[4].Response := '04030000100000040000020000AF3D60ED17D963C09100';
+  Result[5].Command := '90F50000090112257581972D316000';
+  Result[5].Response := '0500F0EF02347427680484294D489100';
+  Result[6].Command := '90510000084895FFB41CAB99D900';
+  Result[6].Response := 'D9B0901C6551F4AA3FDEAD0728B8A455352D7CD5EEA8AF569100';
+  Result[7].Command := '90F5000009008428DE102013DFA700';
+  Result[7].Response := '04030000100000040000020000AE3C71A486F86E5F9100';
+  Result[8].Command := '90AB00000F00000000020000A0060CB4F081B95C00';
+  Result[8].Response := '9910BF0DCC7E5B12571A00D2AE236E3E9E2439C8B928A8BDCCCB0B139D40E51D282EFF525389E29D2DE685DB468432A04025E90BDE52DC8A9100';
+  Result[9].Command := '90F500000900E6C48DB58B3A4E5000';
+  Result[9].Response := '0403000010000004000002000065E84A1CD23671BC9100';
+  Result[10].Command := '90BA000030000100000000001000006D3639656961EBFE6801B130B0758AED0857991478780FE724ECD757E866E84307A08B17CF7C00';
+  Result[10].Response := '91AF';
+  Result[11].Command := '90AF000002F3D500';
+  Result[11].Response := 'DCF5C762E10055089100';
+  Result[12].Command := '90F500000901B9543631F9571ADD00';
+  Result[12].Response := '0500F0EF0234D77B7DD11D2F3DCA9100';
+  Result[13].Command := '90C7000009010A7D06B4709406E400';
+  Result[13].Response := '01000000A7DE10CA4D189AF04EF46662B01C38229100';
+  Result[14].Command := '90F5000009002F375AAD1953B61B00';
+  Result[14].Response := '0403000010000004000002000037C575CF7525F5DE9100';
+  Result[15].Command := '90AB00000F000000000200005C5F6527965D504300';
+  Result[15].Response := 'BDB9FAE5CF936BE12BE74B16C10128E1F579FFA0F6F7A3847DE0340CFBA2B76227F01343B9D9D8777F322643F51C6DCA7524B7D22EA3A9DF9100';
+end;
+function DfRecordTmacAppendFirstConflict: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,12);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '906F000008B8A773BEDD5F982B00';
+  Result[3].Response := '0001DA8CC717E990CDDC9100';
+  Result[4].Command := '90F5000009001F9015C357E6E7C000';
+  Result[4].Response := '04030000100000040000020000AF3D60ED17D963C09100';
+  Result[5].Command := '90F50000090112257581972D316000';
+  Result[5].Response := '0500F0EF02347427680484294D489100';
+  Result[6].Command := '90510000084895FFB41CAB99D900';
+  Result[6].Response := 'D9B0901C6551F4AA3FDEAD0728B8A455352D7CD5EEA8AF569100';
+  Result[7].Command := '90F5000009008428DE102013DFA700';
+  Result[7].Response := '04030000100000040000020000AE3C71A486F86E5F9100';
+  Result[8].Command := '90AB00000F00000000020000A0060CB4F081B95C00';
+  Result[8].Response := '9910BF0DCC7E5B12571A00D2AE236E3E9E2439C8B928A8BDCCCB0B139D40E51D282EFF525389E29D2DE685DB468432A04025E90BDE52DC8A9100';
+  Result[9].Command := '90F500000900E6C48DB58B3A4E5000';
+  Result[9].Response := '0403000010000004000002000065E84A1CD23671BC9100';
+  Result[10].Command := '908B00002F000000001000006D3639656961EBFE6801B130B0758AED0857991478780FE724ECD757E866E8438CCEB7600760E6BE00';
+  Result[10].Response := 'DCF5C762E10055089100';
+  Result[11].Command := '90F5000009007C50E2206F5996C200';
+  Result[11].Response := '04030000100000040000020000E780C72A5A9BBFA89100';
+end;
+function DfRecordTmacClearFirstConflict: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,12);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000002000000';
+  Result[1].Response := '659F2ABFC5BC0708FB96E7A44AF9D59591AF';
+  Result[2].Command := '90AF0000203B50445F21D21D77D500794DEB245E5AE06311AD0A25E1B100BA29D33DAF3F3500';
+  Result[2].Response := '79087FC6E02C870D256F0F54D097C887CA74FEEA1314CED1ABFCA97E950F631A9100';
+  Result[3].Command := '906F000008B8A773BEDD5F982B00';
+  Result[3].Response := '0001DA8CC717E990CDDC9100';
+  Result[4].Command := '90F5000009001F9015C357E6E7C000';
+  Result[4].Response := '04030000100000040000020000AF3D60ED17D963C09100';
+  Result[5].Command := '90F50000090112257581972D316000';
+  Result[5].Response := '0500F0EF02347427680484294D489100';
+  Result[6].Command := '90510000084895FFB41CAB99D900';
+  Result[6].Response := 'D9B0901C6551F4AA3FDEAD0728B8A455352D7CD5EEA8AF569100';
+  Result[7].Command := '90F5000009008428DE102013DFA700';
+  Result[7].Response := '04030000100000040000020000AE3C71A486F86E5F9100';
+  Result[8].Command := '90AB00000F00000000020000A0060CB4F081B95C00';
+  Result[8].Response := '9910BF0DCC7E5B12571A00D2AE236E3E9E2439C8B928A8BDCCCB0B139D40E51D282EFF525389E29D2DE685DB468432A04025E90BDE52DC8A9100';
+  Result[9].Command := '90F500000900E6C48DB58B3A4E5000';
+  Result[9].Response := '0403000010000004000002000065E84A1CD23671BC9100';
+  Result[10].Command := '90EB0000090015E4D019BF3B968800';
+  Result[10].Response := 'DCF5C762E10055089100';
+  Result[11].Command := '90F5000009007C50E2206F5996C200';
+  Result[11].Response := '04030000100000040000020000E780C72A5A9BBFA89100';
+end;
+function LrpPublishedEval: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,50);
+  Result[0].Command := '567826B8DA8E768432A9548DBE4AA3A0020101030509';
+  Result[0].Response := '1BA2C0C578996BC497DD181C6885A9DD';
+  Result[1].Command := 'B65557CE0E9B4C5886F232200113562B01000B0B040F0C0F02070C09040007060F0705060A0B0003000D';
+  Result[1].Response := '6FDFA8D2A6AA8476BF94E71F25637F96';
+  Result[2].Command := '88B95581002057A93E421EFE4076338B020107070209090D';
+  Result[2].Response := 'E9C04556A214AC3297B83E4BDF46F142';
+  Result[3].Command := 'C48A8E8B16571645A1557825AA66AC910301010F000B070C000D0B01020808090C0A0403060C0A0B0B07080B0E04020F09';
+  Result[3].Response := '51296B5E6D3B8DB8A1A7399760A19189';
+  Result[4].Command := 'CAF3750AFF93F9A0C8861BCCCCDF1A9D0300090207030B07';
+  Result[4].Response := '468C2BFCF993E7F112E150C17298A968';
+  Result[5].Command := '65024B14AA99E9CA93F51172E19EE00001010802060C0E080A02060D0F0E0706080D0901';
+  Result[5].Response := 'A3830865D52EAEBC6471CDBD3DFC0A89';
+  Result[6].Command := '1EDB9D253DF18D72BEEAE960B6FDF32503000F0D070B0B0C060C0E0801090F00040A0F000C030904040C090E';
+  Result[6].Response := 'B73B50D4BA439DF9D4AFB79FF10F1446';
+  Result[7].Command := '08CFACB758EB34F0106D42358F22B5EB01010403010B080F0105050E0B010F02080303040F0200010C0A0D0D07';
+  Result[7].Response := '40C01FC5DF4C142D9C9721F74A373BA5';
+  Result[8].Command := 'CC57E7503BCCCF260D6B4E2AB38ACE940300040D00090803080D0F0307010F0A0C050D050B0604010E0E0405';
+  Result[8].Response := 'C1A465936A097FF76FCAF18166E8DF60';
+  Result[9].Command := 'D0E9C3CACE9A747A74F582AA0F873FF902010F0C0B06090006080C08030E06040706050607060F0701080E04010E0205';
+  Result[9].Response := 'A944D5A19C5B86392CC3CFC58F57C321';
+  Result[10].Command := '59C9C703C66A9FD2948E0A48617285DC00010F02080E0F0F0607020108040606050704040F0D0803050B010006040804';
+  Result[10].Response := 'F078390B345FC6E22EE9A75B3D8BF490';
+  Result[11].Command := '2E763263979117BED33A331B15E3F01B0300020B09060B0F0F010A080402090C060E';
+  Result[11].Response := '9193DA3870AA345EB4FDFB5EE4A35E61';
+  Result[12].Command := 'A14E397DA6C410440FA9EC4C617740940001040B04020600000D';
+  Result[12].Response := '21C0B442BF41B7DDD80D4A99CD7B7B81';
+  Result[13].Command := '921038ED913CCEEFC6286B756F9ABC8D0001090F0E0107010D0C0B040C0A010F070E05';
+  Result[13].Response := '9FF1DBB5E8528E56370EB55919642AC0';
+  Result[14].Command := 'F2512BC694E7A66D6ED67E0841BA252303010D000F09020A0C030F03030E0C01020C0F050B06050C060E0C0E01020D0E00';
+  Result[14].Response := '6271F38386E7399D7FA1709A72B4F585';
+  Result[15].Command := '75FCA5E188F44F1E808597A0B7B690D4010106040906020F050D0E0D000406080F01';
+  Result[15].Response := 'EBD6F32ED75566E6756A14EC16715CBD';
+  Result[16].Command := '1000076C2934BDB02750204704DAA4720201080C030E00';
+  Result[16].Response := '581C3B057F9312FECF4A7B8070C83B8C';
+  Result[17].Command := '99B1647A76CD170EA07997043E1E791901010F';
+  Result[17].Response := 'BA5F895E8B57F7753EE5C7276E60B37F';
+  Result[18].Command := '6983FC665FBB8BEA35DADBB2EF44665601010B0D0F00090801080B000A070A0F0F0F090C08';
+  Result[18].Response := 'E0A4144033A1CACD1DBCE30F9883A1DB';
+  Result[19].Command := '9FBC2045FA6215B4FD1ABA412DD9C59D01010F090B07020301000B0D0A0E0008060C05010D0305040B06050F010F00050F01';
+  Result[19].Response := '3F410411D5ED704572D06EDE6AB45CA2';
+  Result[20].Command := '1EBB6DF4E251A10B9503AE6B3EEB0ACA03000C0D0D06080E0F0F0701030C08';
+  Result[20].Response := '28740D45D92737D6CF8F05D05B961424';
+  Result[21].Command := '415F46BA9A3C3C44A7E178211766810502000509000001020E08040A0E0C07';
+  Result[21].Response := '9852EFC35E53F2A4E8DA55770123C99D';
+  Result[22].Command := '371A061E4A3065D00F41C4DA68722FFA030005020C07080A0607050408080D';
+  Result[22].Response := 'FD2BDCC3EA26AF2069A4C536E3D6B33B';
+  Result[23].Command := 'E28DFE591559441D04213D889747BC4602010401040E04020E07';
+  Result[23].Response := '5E8BF483C2D6DA906EC58D1B63AC9887';
+  Result[24].Command := '18A4209AAEF2CFC67E48834ED7D2B62B0000040B060E000E0B0C0B0B0902000A000B040401010104040708';
+  Result[24].Response := 'D054F91224DAC4C9E46EDF7EFAB6D179';
+  Result[25].Command := 'FBBCE5B5F4BF962A345BBF3F13F9E47402010D060B080F0707080C0205';
+  Result[25].Response := '73C265CD18C9F909784DCFC4CAA5109D';
+  Result[26].Command := '8E90A2AEBEB136C000521AEC0037ACFF03000B030F0D070B070F010002060C0F07000F0F07010C0F08';
+  Result[26].Response := '7F519F9B9EAB01EF8DED79520C46770E';
+  Result[27].Command := 'FA89CC662EF47C75A9887F12A6C9879F00010B09';
+  Result[27].Response := '4973ECE66EEE903D4761EF3960210735';
+  Result[28].Command := '3F0E5E6D0F7F7BDE4DB2C4F074D020620301070D000A0A040C03000A07050F0C060C060A050D04070D0102020407';
+  Result[28].Response := '87F43A64DAF93DF744F54FECE1A480AB';
+  Result[29].Command := 'B443EC2B5E56AF789D27F6C38F9DD6A90000000C0A0C0A0E0302070B00040E0807000A030105010E090607';
+  Result[29].Response := '795553EBFA89AD541C0ED2E5F3C4611F';
+  Result[30].Command := '7DD9BF8D3337D57ACD92069B13B16CCE0001020206060106090A060808020C070E0804';
+  Result[30].Response := '49F4FFFEA580EC96D5DCACC9E10AA95E';
+  Result[31].Command := 'B39A5A07AB6746B5DE4875ED9492DF1B03000F00030700040D040800060A070301';
+  Result[31].Response := '635E39AEF94D050B5424E1D967027594';
+  Result[32].Command := 'E2703DC54BF4E7C63337FFF0AB6BB6F0010103050D0108030B0B040C05060E080F07000B';
+  Result[32].Response := '3E537D77DE31EA05C33CE70B4ECE65FA';
+  Result[33].Command := 'DF19EF9394EE6344A0832AF8ADCBABE4010104040C0B040D0E040305020D030E04050F05';
+  Result[33].Response := '80F1A5169142107FF0873BC4222E8173';
+  Result[34].Command := '24E6DD53E9FEE719486C5CBD07714FC8000102040B08000F0608020A0F090B0303';
+  Result[34].Response := '4FA0477728E34E1408D98643F8124035';
+  Result[35].Command := 'FAE4C2544FF93C20BAA6D60FAFE4919B000108070C040D0B';
+  Result[35].Response := 'FD2847D87ADC24C27FA042D1DCA1459B';
+  Result[36].Command := '6D1902203D17BCBCE3A0A961EC35851703010C0A050109050201030C020C07050D03070D0C0C060A0607';
+  Result[36].Response := '2EADE5706A4BCD7CAF844DE01B127CE0';
+  Result[37].Command := '7BC16676A8522EBC2564FEC235654DF800010A080805';
+  Result[37].Response := '9819FE9556933E1CFC4E99C8BF64ACFA';
+  Result[38].Command := 'F989FF4BDDD5AB6999EF517B742EA08500000C040D0E00070A050E';
+  Result[38].Response := 'D6FEE60DBC8BA533E320ED1D18076D82';
+  Result[39].Command := '5F07C727DA21B6C1E2688237672BCB7D0000080C07040A0C04070C0003070A0D0702090D03080E030A';
+  Result[39].Response := '6021FC212F818102027C61FCE28D382C';
+  Result[40].Command := '549C67ECD60E848F773990990CAC681E03010407050B0B04010807080E0B01070406080F070A06080804070D0D0D030B0A0C';
+  Result[40].Response := 'C3B5EE74A722E784887C4C9FDB497855';
+  Result[41].Command := '9AFF3EF56FFEC3153B1CADB48B4454090300040B0007030B0204070C0D04080F070E000A';
+  Result[41].Response := '909415E5C8BE77563050F2227E17C0E4';
+  Result[42].Command := 'F2BBB25D607ECD1E551CD75CF0033CCE0001000303050103070B050604010E0F0A040F0107060803060A06050F000F0409';
+  Result[42].Response := '87832A9AF79C6CE436EA4DB6CAB18203';
+  Result[43].Command := '806A50530D7735B40AC4EF1638E8AD6A03000D040103070706040701060D0B0C080C0507090B0E0A0B070E07060705040E';
+  Result[43].Response := 'CF991392F0369350A7E21BE52F748821';
+  Result[44].Command := '64193EF6BDDDC74C7C008DB98ED5FF67030108090A0B';
+  Result[44].Response := '4A828E35DBADF6A465321363717D0D27';
+  Result[45].Command := 'F9E29780209AC952DD87C2572C4950BF010103050A0F01080F04060C020F0D030C080C060E0B0500070104070C0A03050A';
+  Result[45].Response := '51F3482AB8880850390F4F6D775F5C1F';
+  Result[46].Command := '37A6769D43FEFA9F79CA61628BAFA7F100010F0B';
+  Result[46].Response := '81C84283D18071F08DE72AD51B5826B6';
+  Result[47].Command := '047568AC57D4DE026C40F7228BDD181903000F010B0101';
+  Result[47].Response := '9CE6BEC0F80FDF7D78B1C219130102E7';
+  Result[48].Command := 'F36472663A3BA87F3E76399C66C23EC90101010F0F07030303080D02030E0D060A0E090608';
+  Result[48].Response := '36DA0902796F4682034DB07D0FF58E28';
+  Result[49].Command := '906249E5AF810339F199A25AEC0281E8020105060D0A0404030208020901020602020B0B09020303080F080C0A';
+  Result[49].Response := '317600A76B5A7984A681D1D8855F86FC';
+end;
+function LrpPublishedCrypt: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,50);
+  Result[0].Command := 'E0C4935FF0C254CD2CEF8FDDC32460CF01C3315DBF012D7F1653CAF6503C6AB0C1010E8CB0';
+  Result[0].Response := 'FCBBACAA4F29182464F99DE41085266F480E863E487BAAF687B43ED1ECE0D623';
+  Result[1].Command := 'EFA5B7429CD153BF0086DEF900C0F235009036FFFFE7F61E012F4F3255312BA68B1D2FDABF';
+  Result[1].Response := 'EA6E09AC2FB97E102D8CA64C1CBC0C0C';
+  Result[2].Command := '15CDECFC507C777B31CA4D6562D809F2005B29FFFFAA8EC68E0519914D8F00CFD8EA226B7E';
+  Result[2].Response := 'C8FBD3842E69C8E2EBCA96CE28AB02F0';
+  Result[3].Command := 'A2D06401CDF35822B430F4457D1D1775015C35A6EDD2D83A1971077EDDFE2DF28DF9B736A4D9D4244BCF72E9597CB47B7DCDB5A4B245B52080E79BBFEDC69F1EE983CE';
+  Result[3].Response := '73B1BED57B59090BC496799FA9BFE9F5252A88350A8F48A4FF252B8E813F6D96CA8BA7C8162E4CB2DFE0D53800FF01DA';
+  Result[4].Command := '3CEEB70C13578D714860EEE19DBC8B0100104988FF3E1537842F53FFD5AD788DC6C0A14D25';
+  Result[4].Response := '0EFEEAE6249011EF6CD2D28980B93766';
+  Result[5].Command := 'D36CC09105FD0261C58FD5604486F7570001FFFFFFEF44FE3B50A73B1974D7D624B74012D5BEA07D9F91278035C470CD0BD0E753B2A2F90DBE638A3F2E252A112081DC98942F802D788F4F7AC8C3C876DFDA30498D842382BD32537134614F7A671660B4E8D738DB50B9DA23527F45FA9B145F54F4E0839C5D5ADA61DC0EF91740D513B263148E08A155F9D4A9002F3EED58D62002FA858692C3578DFDD7FE41BFC2E27D6C';
+  Result[5].Response := 'F72471266DE22E2C66A6B89F20CA00859B63A41E396A592EF6673E3A5220DF70B9E0D3EFF3503F81F203573871CD5006679A10071B861C3A71B02B86C766576F35DE0790913E7A429C28DB6C398FEA5F9E140F92F5C6729F7FFAD38DE456F1D6222569B461568091B305AB69F19930BC489D18B8C3D6FA7B3D37467E4F3A6C9577E8C285C375A0B73970016BDB288AE4';
+  Result[6].Command := '9397878556B29FE7AFF25C2A9C74833801D9154550CA56B814E61EB2D25AC14E9AAB48E59FE3D0FB6360637B09E6';
+  Result[6].Response := 'E1D03C38C92DDF5A7C5A3FC1AA52E74627192A01143D26E8F592EE5D3C335168';
+  Result[7].Command := 'AD9C2DDF73F7CA844BE8492F9A0C3D7700C9FFFFFFCEC19DAA67DAAE2E398185F2E6CA84155F5F9C7048C4BDEB9649B920A7429FC3F2372809E7A1816E806BD2BCF2D732F764290B9ECE7CF30A04B1131D218E87F6E2C2FFAFA17A2DBDDD2DF0DCF101F8BF';
+  Result[7].Response := 'AA8D27EFC3D3ABF80A487C6C3577B2AB6B2FAA4317C0B3EFBB8C9A301F21C5FD2FE0E2E27B6516B8678121091A411D8A08B7E1111E9DB13DB169B2D3052007679E84BE742D4AEABD11FAE5624D49EDE0';
+  Result[8].Command := '16C1BB7D3701F476431E05368D634DF200E4DCDA304DC0A08C161803B9540760D209BFE1CD896C8375F72F79E0FEF81527C8E8936BD182E94054EA2D05027D395CED1FDA1CF8634D16D274031E46C08E1D03DCF06C74F40187D6A0789F3F7D737AF51DF3DE1EF92E649A7C985D7ECAFA945C0F02268CCDE8F81D524558EAAED75500892829CCAFFF09AD8CD1F75CA4090CA5E4422F7B4DEE2835FAC0CBB3D579EBA4435CF5A1D1C7AC0FF878FFFCF09B794939B2066BA7D9B39A00F3D1EE3356D812E5521947146AD41D961F83D5EE2B445F47827A227380FD69A85AA1DDF5BEDBA29FED16';
+  Result[8].Response := 'B1CF729E877227D606F104827ED07334FBF1AA7782341C77BBEB31EFAB36B96344431098AB2658A5D7F7ADA4B60680C5727F418037DEF71DA1A12AD4C621C74CCD0C3923769798BF7B401C91AA23B060358B7BB3FA831B1D06A85ED5EA8B0A8B1747BCC6D64D3639F8D1B8EBB633C4A02279B59C7E250113080B0240C2947E73BC774B8A1A981F85FE9C18D1C9BA025954E803C08756FC1FD9B83E0CF56C41EC6D32C0EE1946CD6E80E541CC9A0A407C6D171855D0793080A0FE423A0D1B63C45C03F7789552F28E72849DCC42F31F91';
+  Result[9].Command := '9D813134CFDEE9D58755DEACD4AF72A701FFFFFFFF27';
+  Result[9].Response := 'F5833FC397356EA3D9ECADBB9F6FE440';
+  Result[10].Command := 'D744E1350115A7DD154DAA448AAA751300CAAECC2DE94EB047D1927A06E6C1FE4374A8AABE';
+  Result[10].Response := '5A00BAA47E1753668D605A1998843DC8';
+  Result[11].Command := '08949164317113BBE09CD40CFCC9A4C001191B4BB25EC9AC319F21030D25EE85C595783BF56635BE6E0A1C1D3E2A585CF859A8880E918C134A0EAFFCB208EEA3B53A5386D3';
+  Result[11].Response := 'AE617C37C4F55FD711DFD2E3025524C7CA08571CC556A3C85C3BFC9652916070D1CEF452A089F65BE4A981EA9694CCF1133087AB70D7FCC7EC9496F4F83ADEA5';
+  Result[12].Command := '7770F8D6C4639941AB6E0746C40AB47C00657734080B651B786704D6D28981E9B0B24A2EF2D19EA0A7B5EDFE3A274FC31F7E6D8689409DB8FD7EC8446A31743B89CBCCB32C';
+  Result[12].Response := '55BEB785703EDE175B4EA69054023EB3CF3996C55D3D0FD5D8ED757C397E066C1453ADC6879FF2F501765524CAE5AA27';
+  Result[13].Command := '061593514510831E67E1511741B6541C01FA5F6F157641B2746F5A9C961968DA3544301999969C762C297A1F1E8F6C5D9E9AD5A089F60F99416BF372F77BAA9DEB42C51B3EFBF899D7932E0DFB2193E502FCFEFB43C7503E3497D82EA32A7EB17EDD34DCC9511EA2A23CC9F6C8029D20D80D6FFA7CAE5923F187E6A723C9F6AC14';
+  Result[13].Response := 'B3CB99514F0AFE7151C3743FAF7DB17E622529CE16F3BB9203BA7DBE45DC89CB3AFDEF19F47CA9BEB54B46F0AB3347FC80BCE7BDF21A2DDB4EB6A425923977FD201A8163865E9BD73B4384702BAF33E7D693DE4D8F6DA00097133E3AA77E25BD5277A24DF1361B5F4725C9FE4CF89145';
+  Result[14].Command := '7C8E1EEDB71BB1DE5B5907FE5A7532F901B85695BB426A777FD8451CE14C737F3221F1BD1C';
+  Result[14].Response := '9B5C42B96086FB2A9A9AC0B280F020B4B4734EBAD2D6A73BE758B9C8CC7226E5';
+  Result[15].Command := '215551249711B3AE6B7361F19048BF9A00DCCCFFFF7929BF798535A3FE67127A32EC5330B7';
+  Result[15].Response := '6C4D5A30B3102D627721D19EDDCEC534';
+  Result[16].Command := 'C91464E42B5004B4E556541876B546D4018F421EFF354467EF78A8909DC61CDEB628250A94';
+  Result[16].Response := '0ADA577B841FC5CB112230336B33CDA72E17D303D05EC66CAECF892B0C282DF5';
+  Result[17].Command := '2EE08B87B1CCA5A2A93548C2952E2526013827CF6FB8B18B';
+  Result[17].Response := '29E99882A0DCED4E55FB3E61303DE275';
+  Result[18].Command := 'F5C3E99FB75E316B76689FC5464260CD010797F6B7';
+  Result[18].Response := '93DC3EE14B612BE6A3E9E2E8040CDFCB';
+  Result[19].Command := 'C7031CA1994DECF01D4084D8F577C6F501CDB066D0';
+  Result[19].Response := '3B1DAAC45010793FD592FB76827796A5';
+  Result[20].Command := '10E7C2FA0DF36D4E89F05B15C9DD1BB200D42802DBB150EFCB5EA66A0D8888652AF6104C17';
+  Result[20].Response := 'ACA71BCE7E9057EA8B834B37BF028D1C';
+  Result[21].Command := '896B876BDF03D34B1DE3F8973323FDC700FFFFFFFF4054B588DE18B6C46BA699C3E2AD7DA3AD7AADD3DA658A9D97BDB3A99805403D7BD7C27E959405E0E16EB7572ECF55AE25DBD5B09C1D2EDACA18F120640C2C66665C480BEAFF0D1975CDF26BAD336FC7';
+  Result[21].Response := '60801EEFA4D5506A73753F826F82EFE6B02E6579BB654256BAC5C7ED81E16A190BF8953A056FB869A9C5C10C87AE3FDE28CE32730B290F4EB0062E96AB29B40F764AD5D8ACE61997EC515BB69B24E6C0';
+  Result[22].Command := '680583BD2F90A05DA9E8B37DA2E47CD4014151F0D23BCE2BC22D96A92AB85E896F36D6BBEA6102';
+  Result[22].Response := '82A7917C5D9B16C8B01277F3E4FF6BD14BF404176F344188F7F8AB2D072C0F99';
+  Result[23].Command := '4B8F7691511E2A5C429C401D415CEE730155D131FFD2';
+  Result[23].Response := '83FF5F0382BC7EA5C795122C83D3B0C2';
+  Result[24].Command := '1B1A179CE9C0DB3E45A97D0D98D0530C00E9FFFFFF472DBAFE6434D357402785A3348081B02EAB54244EE9C9C88E91001C5158992DE36E79AD844645493940902C8746669B';
+  Result[24].Response := '397C9EFFD28C560411B934895C8DF60F082B9560778F8571B5C31A057B34C2352F11B5634788623499C6BDD5C490F5CB';
+  Result[25].Command := 'ABD094D694942C5E64F26FD333B705E7018E57BFC6';
+  Result[25].Response := 'C96E153DDBEC9B8CE23A142A34230CD1';
+  Result[26].Command := 'EA0D599D41482A647081C4C3994F411A0048FFFFFF86A093D7A4AC7089A91E04C7B127A8CE468423CABE6F84ED8B9A10F4F568D3B1FF11C18AD099DC18530FA6231681E0AFC8473CB585D371161CA64C0A9C7B94414B53C79F661EFDADA80B76AEC960D609B9602CAE2B1D2B2CA0AA6E2A4CD27BD87A65D8C3BA4149A9498F0D7A5CC24DBB';
+  Result[26].Response := '557D92979767DF003FAC2D865C5650FB00936AE565D4413A506E82DA0BADED4CCA98E0F82A602893AE2C8122F2757E3F20AB6AB5D66EED94F2C7908E3AB0F03F1B6FD87DF5FB347C0A8A8F8C8334B4A89D66D4ACA4D5E1AC398F9198723A54EAE62E52A331D18E2F252C2737DDA6A950';
+  Result[27].Command := 'D042503B4FE6152D279BFFBBB0D360D5018F9E3364649C0FB1CFDD5CB2590A814089944FAA';
+  Result[27].Response := '7BB7E3DA21CBCCEAAEDB71798114656C331C7D2DCD661C43F679FC50FA0239E5';
+  Result[28].Command := '9B1E418DF9752F37EBBD8EE833BDF2D70124FFFFFF55534E159F14DD7731368988EE6DD7C6114E747F9C17A91BBC12D68C26531F2FFCFC';
+  Result[28].Response := '158B3B9C6136FB715CCF435CA4CADE808D1F98431327061A9A64D52A5FE7B2746D7F5A633FC0CFE7855656AD3C6B94CF';
+  Result[29].Command := 'D9E39CA8EFD45645C1A19B44920B46AE01B9D3EA7D3D5050DD16598BF294F32A695F9F2956560880787FCB4677994C447F1F9B39694F629605F5E38A41B8A077528450734A5486E7A1B2E00D7209D943CA150CD3F9BAC119FD092361727E3FBFDF53F4F249';
+  Result[29].Response := '0241258DBBC6395735FE6F8B81BB958A3758FD7C772F801EA689A1B3DB83D711CC0E16CF08AEFB39E3DF50551AAB8293E16085B0B7805C2CCFB9A0D2E8FC73542C844A35A9B352F750F8E9344591E2BEC55C87E4AFDE1FA5FAB6AF09357EF28C';
+  Result[30].Command := 'D9F92A98B398B76E5523FC1B9FC02CAB00CC7E98C3752273212D1F14E6FAF01BE13A452109ABA7E52646D2BE121313D55C2F1262B8F9743D76434D2704E735A5CF10CA913876B98BCE5B0ADEA263600D1A49B7B6E78D63E7C607AAC65D7FE13E112DEF0249819CE57687945CEF959B13E33F0DBA307EBD41ADE2CA30CCF32D4E7ACBCD75745EC498ADD14060F906F8316C97E21E72260E936FAD5466B66B19825A45E224C8259E847B740D5E3D5D48A7EA99C334100EDC54BC3A06C60A5DE141B8BE06B323D36847F85DA3FD18B0551265AC7C1DA7E4714B698E678E1ED87A1E92CCA67E57';
+  Result[30].Response := '6CF4254823B6A182B155A4280F5DD9B86F83968BCA07ABB552077647446C5AE41584B964CB69C03B84BBA9CD181AF60848488B355B058FBEC74FFF11F5A4F05AD15138FA2C4C71BA0AB15C35EDEA9958F6C1904CEC673936554611A47BEDEC467387B99E4D3415C716AECA75039F4FBDB19BE15E042E81522CD819122D3B9D007B9D5DF4A11AFC4FEB58DE24821CE507B2B2B720355E3B23275B05AC543C61EC3905B01B1B3704A86577FE7B4204FC848AF94E612C2A168568D4F44326113AEB7F767E5B43A4B3B2987EDDBD279A8E37';
+  Result[31].Command := '948316307C3CB26BDE3B0CE4F4605DE000C4FFFFFF20E3846A4C09D7BAD12965EC2BA8BFDF';
+  Result[31].Response := 'BB1942D3E6F866ADD796B7EA85755D57';
+  Result[32].Command := '8A525AA92A771D3DCE32D2329C49EEAA015653FFFF33';
+  Result[32].Response := '352BBE318443FB9A095621256F9FB523';
+  Result[33].Command := '7BD86E2B8DDBBF431130FDA8C5479C190137A41E871762579CF1E8E9C1F6C4A7A5C089AB992555740A9FD7D5CB681A07F9C042969F9EE3A8E0B9940CC0DB85A5558FFF5EFE8F21708117E459408C8B33D7E0F001B42D0807DDE0CADF9149B32E1931803C69BC09699ED11587B98968532D6035DFEB84F12787F8801DC442DE3864B63F0F0C4FCA1AD78763E218814D537877B13114D443953F58B5703BEBA45BF2DD2303495946DE951A0763200E0F06AA2DA44D90AD238F72';
+  Result[33].Response := 'C1A48806D8F8A135B7A68636A21203D4A414AEEC663557BA029DB5665EB7BEB69A93E7812277279B501A8EB96EEC64E66874AE7EE33A80CD5D2C3C65B02BF125B989E6BB72BFBC6266A915EDFE05D12B967E8B5C29D37A8B5A4DEB0DB7CC32064EA95C802377C4C22AE5AECAE61EADB9062B8E88382A194ECEB7F08B211FA9E3B1A69D9B37C243D47C9AA56C969C3BA8E2ED668E83BC369CB5C423EBF9A226E7AF00721AFFEB7AE544C9BABD84E4EE3E';
+  Result[34].Command := 'AACFB49A5ADFECE208EF3B5D4A091F3001D3FFFFFF4657CA45B993909F8992433B3B1B81181ED4A85F23851CBD112AC292369E6BEB93D0A58A3DAA82C9BA6A959E8F60BDB15E5C12740667EAC13B0C338ED1FE69EB2758A76A75F7DA7452DEA5B9EF7D2EB16C1034D98BF7E42CE6E44E3076F3F7BB01A97636B8533B67819E2127C130D1BDDE8222C1CA8F6030737B8391A8AAFD5FE6E9B84606F7F819D4CD58EDD5BD6AB6129051F4D136F1714946C33DCFAABED7A0C240D7778AB7E78A09EDFD37725AB610CD7E1758088DB0F846FCBF33BA492A0E';
+  Result[34].Response := 'E55B18F8DF0546749E5637BDFB11460BAF0BAB9F8CF2D2344335BE43E4F624D434EA724407C9CCA1CB0719C0D508B2A79D9B2AD6552AF40412E1D835707542AFA91C764C32DBC18272C9E88BB2763974FF9C6AF1888459589FC4CF86157F311C3E96C252396FD0CA5E43F8746ABF6501A7141806A82B57BEB506EB9B6D0D6977C0F5859B4A5BB15484F350B6DB8ED144E3D9368B39E2295A180536D4AAC5D18002E277E9EF4D9E0D408CB0FE7D08F61292C2554E9AC18B1F94538E8904F66D2B7002231D3FB984365D4013061D963F63';
+  Result[35].Command := '814C137C933E88D96A69C849F43AD6EC000DFFFFFF308EF7B3CFBFC2EEB62647397D8FF63D';
+  Result[35].Response := 'B5D3F8560A4577820D2E839D8EF122A5';
+  Result[36].Command := 'EE9FC566040C26D3268D47FE6602B4DF01FFFFFFFFB0A5D3AF72356A90F86E29';
+  Result[36].Response := '38D1239AF8949B43101EF67CB1C6F211';
+  Result[37].Command := 'DB2467238C4278C488B371684DC981FC005A3705BD53DED4C9FB71BB70C2D8E992BF2A5790';
+  Result[37].Response := '77813088C92EE813F90A7F7FCC42F88C';
+  Result[38].Command := 'C17CD03E3D85E5F0380F59F3B149DC9C01F2F539648BF1986A9B0CAD2C1E81B736F1CEF8E3';
+  Result[38].Response := '5AD8ACC4AF8AFD1F5A5E269D53B592DF3E9965397F2CE7005BF6AECE35D1D39D';
+  Result[39].Command := '90EC18C8BF78FB4C9FC9F1F3EDC6F08F018845F9F42A5AE4BB036B6BBF6AA029ED3812F64BCAD11BB93F589127AEABD4048BC278CB813A4EA067E4C586872E5B4F669A0DE6';
+  Result[39].Response := '0EBF6D014252EA52C077B67AA2BEFAD20847A449B450B8CB1FDC3649E2C20FAD168A0F40D8982FEB2FB1A8CDE5504A1BFD4BE3A732272E049ECD5B78BEE385F9';
+  Result[40].Command := 'FD0C03A1318C45D2C8BD0D58966733A801275D6CFE31';
+  Result[40].Response := 'A126BB809FBA89EA9F656104F449BED6';
+  Result[41].Command := '10FC41C1139DED067FBED69AF5F47CD701AAD66DEF0F22A828';
+  Result[41].Response := 'D47A868705A125678D9B1B8FF67978B7';
+  Result[42].Command := '1D959B5A35D586FBFABAA961B4EA50C200760948FF4A19B8E48ECB5E56A040FF9ABFA650AFDCB246BE46C8D746B705DA2AEF0EF7F5481F8B6D42152CDE035E490FC3DC4AA12D8932EB6052CF8241722C88F0336692490951A01BE36DC68667BBE77EC883DB';
+  Result[42].Response := 'D9339BB44320E9A58113E928753A441C499E17B4289C7FA1ECF6F640C42618BE599A3C70E475325C3123FEA5E2C2B2C2E17046EA3610EBF3DD50FEC8EC131B9E52021A8A4B5826CD599C05C38E190358';
+  Result[43].Command := 'BB38FD66DB0B95F54F092BD0E9A3EDCF00F7B7C5B96B65F897E80379EF50CDB836FFB63E74';
+  Result[43].Response := '800B79783988A4B9C38B580DBD43B29F';
+  Result[44].Command := '5C5112B79CDDE37AECEFC602C95110B201B24A6FA698D5';
+  Result[44].Response := '98B5D3CAE67A2AE3C05455E5EC5FBFEB';
+  Result[45].Command := '3498F80187442E5974927F8E827DABF8013D7725FFD7';
+  Result[45].Response := 'CE6ECAEC9FBEAAF74C2AD5AFBE66B697';
+  Result[46].Command := 'FDEA0C05BB450D4553F7C47A8423B73D0120CBE12498192E1443BBEF6D306F678DC3487437';
+  Result[46].Response := 'B473762E32201AD37E60A64945A7D3123912F4280283876BD1672F62062A9254';
+  Result[47].Command := '570079FCA0DC05C863E96473B8497B4501CAFFADF3';
+  Result[47].Response := 'B23F34E57538504915DDA4479CFCA3FE';
+  Result[48].Command := '17F248D6920799AFE75B6E4E3E1BBC1401FFFFFFFF9B8020184B707288E9BCF1D1E2CBC4D0ED0DF78CE4F1DFB18D5BB20E630B54B5CF43FE2EC74222DECB93D25774E0768B';
+  Result[48].Response := '8C8F3AB5C6863E45D1DE3DBEB1CFF992510ABB95B44188B71EEBAA3E86655BA9A3F59795337F7E2299AE771D3428EC7C01AAB4432B046526A9641FB580613CBD';
+  Result[49].Command := 'B7E4F9E62A37DFAAA16F8BF0BD6325DE01683C01FF511E883CADE426577E126D8A9864548D58B73220686DF3EF37DED8BF20DC4EFB11768E8B1932DE0B970BA7CCFAB2693A7809B0F3B8F857E32B9904CE0C6736A2';
+  Result[49].Response := 'AE43CEB7586F6BB2848C623E01E26CE2575CE57EC97AB064E498A5D0D8831399E7D40471B5F7E984F679E0D8183D831D4230679D24A21FA47F8D9E6775B16C08B5367247F68ABDD4E6CF6196213BFA1F';
+end;
+function LrpPublishedCmac: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,50);
+  Result[0].Command := '63A0169B4D9FE42C72B2784C806EAC21';
+  Result[0].Response := '0E07C601970814A4176FDA633C6FC3DE';
+  Result[1].Command := '8195088CE6C393708EBBE6C7914ECB0BBBD5B85772C7';
+  Result[1].Response := 'AD8595E0B49C5C0DB18E77355F5AAFF6';
+  Result[2].Command := '59242F9365E79E5F155B1430D8BA2E56';
+  Result[2].Response := 'B8306666C22F9FF3B53A074C6004ABB5';
+  Result[3].Command := 'E7FEB463C2498E04EFC5BF503473FC3AF3EFB6B0D4A7';
+  Result[3].Response := 'C17AA38420EE2AA13087578CFBB0B7F3';
+  Result[4].Command := '7860B864632C6C8BC9A4C06D49D7E2AEDC7F';
+  Result[4].Response := '59D3D3A4307A3BBD8E8E5F4B8E75510D';
+  Result[5].Command := 'E2F84A0B0AF40EFEB3EEA215A436605C8BF1DDA9FE445560A4F4EB9CE0';
+  Result[5].Response := 'D04382DF71BC293FEC4BB10BDB13805F';
+  Result[6].Command := 'D66C19216297BAA60D7EA7C13E7839F956076C610CAFB99D0EFAB679C360F34202655178EE7E7236E8BFCC1C66BDDA17F2F67F65ADBF55E70009FE84F0477B1845B7E5B48231FBD89436794CE39D36511F9F86CCE08E95430F6977E57FEE45A044B3D7AFD72694C1FAA6D07645080363D2AC6451C1AE37B621A1';
+  Result[6].Response := 'EFFA1488A73FDBCE5B91BBF9B8D51775';
+  Result[7].Command := 'A418BA1658A6F0D90830C58679F80AC406';
+  Result[7].Response := 'FF9561CC6E45FFFD4388003AA5F61233';
+  Result[8].Command := '651312D289F4DE957C208D35827C07E4D39E4B336C46FCDCFDF803A49EB3A603851CFCFA72B3A5F843768EBDEDEB939891059275C79F1DADE2B97E288A91E3';
+  Result[8].Response := '9B1530F1AD35213EB8903D5610BFD7C4';
+  Result[9].Command := 'C960E0C80D89728D1FF952EFF5B83FEE21';
+  Result[9].Response := '4EBEE65E5DD0C30F89C8ED49A3D2BF32';
+  Result[10].Command := '313CE6FF4F18B9357C6EB292C55C0D227C74AF27F5A2CA6BC4207E4AA82FA3E20D3A59D4E97CE43D62F2E2E1EFDD5AF420AEB5C836D85975EECAB84D33481D2D694078D5C5A388FF9072C402C0E97CE6C6892AF97ADBAC35E0E4E61FC497091AD5B577AF64842F7D26B538C31357B5044ED187AA1D24B38E9343F5E0BC683BF868A92D0B71CC81415AADD2C4A3E821892FE1D1F2105FFDB101E91B21';
+  Result[10].Response := '74637ECB978422D4426F8F876A70E721';
+  Result[11].Command := '8F4EC0BE7A3F5B6A2AAA92814F454F706CB1DB9648E809AC7B0988B160B20BED144A648DB75E854E50A2CA0F8D5F13FE70FF229CE427315651BD';
+  Result[11].Response := 'CFF39D67CB2B1987DDE2841E4C7F6225';
+  Result[12].Command := 'AEA00AD0EF9243833DA4861D6A0D2C8C';
+  Result[12].Response := '954230A72692BAB4CE1A44473D081376';
+  Result[13].Command := 'F91F1CF58941608F6F08ED190D3BF9B0CB09216F785295157058E08B38579E91AB808E8E02D47A508A78E1705D4847C6F3E52E15FA8611EECB7AFEAF0C8ED5E45A1E38C4F02335F68ED1E4FF7024B72810199752298997246EA0C387D6CB43FCA3FD153E0F83D6CFB0378629A1127EA6C3D69EF3F683BAD18714565060AD20C38DE75C720F79188D43C8A1F2026E825B211CC4FF2C50061F4343B7FB2C856E0216C29BB9B60B9749BD11AF2DE1C7CF1991FA2F43E820973DE13C2FCBC11D60BE599FDB3FD2C9A516857A411BA0D93E7B749E6A32552B19F52B5ED879DBCC88A0B0F1D342EC8F46C85418BE6EDF7C9C08FEB45623B22E682E85E61474F02C3AB8F2A16AAF05FC8FE5';
+  Result[13].Response := '5D5E7B4182EBD50B31FFE52DE4AB5C11';
+  Result[14].Command := '57A2DD3D6DAB16AFC1D07B277664ED82D2D728DE057B3E';
+  Result[14].Response := 'DBDEC069CF2B46450CEFB34FFD80D840';
+  Result[15].Command := '11ED02022570CB10502BC1DACF64B21FE825603F896A85CAB45E6730D89DD4CE78010599';
+  Result[15].Response := '4A1577C366D53080D0DFD1CC47EE3CC7';
+  Result[16].Command := 'DD315EE3E236161FB777CAC2EC8A29C7469CCC';
+  Result[16].Response := 'E45A7903A8B9B0366309BB11A451E244';
+  Result[17].Command := '5AA9F6C6DE5138113DF5D6B6C77D5D52A4434D740C2CB665FE5396959189383F';
+  Result[17].Response := '8B43ADF767E46B692E8F24E837CB5EFC';
+  Result[18].Command := '4F41663FB985F7B47200246449B3DF3352D12581AC3FA13F2135F325130424AC';
+  Result[18].Response := 'D21C5F1F7881C84540373E4AF9C01714';
+  Result[19].Command := 'FDDA1F4B99010C07521C4B74633559D3BE';
+  Result[19].Response := 'D3C4EE477F4FA5092B1FE726C18C3D01';
+  Result[20].Command := '0D46557550CB313F36AFBA87625D961A90';
+  Result[20].Response := 'F7C8553DED574829E6EE68112CB3817B';
+  Result[21].Command := 'F32DDBECDB1F527C06B46B3FCDD8F6239CB9DCD3FB3DB886ACAB218F7D52289964EF11ECBAA8051B2290BD23EC9F84481CAA5773FF18E0E299F55A094AB05086CD894D51C3252BF4B3C0';
+  Result[21].Response := '9E1107B058A7C310F41AFEDB3C0E58CA';
+  Result[22].Command := 'B06A7F949A0D26D872D2FAB4994B0E2F7240375662513285F67F63C03E677562';
+  Result[22].Response := '4249F423B3137D3C5EF9A315C4BFD1D3';
+  Result[23].Command := '055A4CE2713D7D8B18EF014394D266A6';
+  Result[23].Response := '8D8FDCF864C745DF8ABAAFADA00F5074';
+  Result[24].Command := '2A473E38BBF4537C5397F45AE498CD4DC2AC3D7250EEF02318BC084F294B1AC72291EE1DC02AF424941CAAC685FCA59D9008679B00C56A0562583BDAEC0BBA';
+  Result[24].Response := '66DC2BCE269B793B4ACA1A4D04DDD668';
+  Result[25].Command := '4DB286486F2B417498B819DD33442A9EE37EC65C26E8BA67EF193889625C13FEB436724E93CFE3E7E836C138BA1EC3814C996A34C0EB4943860CA99EE154D1E7169F67E1F8708D149ADE74EF2782ADD056B63CC8F2DF3EC8EC2EC7872545069365D9221BB7E188DC0C5599E177591C045FD9472A1809F536609FF4CAA806EE55D8E08A4D5F911875';
+  Result[25].Response := '39D04705396D2ABD4CA96B693FC20B04';
+  Result[26].Command := '2E5FBC9C465D509212C3274CFEDC7B5CBE';
+  Result[26].Response := 'BE0A9F7E4F4C9C55A35D0F90DC0FF866';
+  Result[27].Command := '340567430897CFCEA4CEC0D2FBB84C58E5DEA257FC642D6A74D60187702BB635';
+  Result[27].Response := 'B9A019E7BB4A84929365B6414D84B849';
+  Result[28].Command := '0254B8C2431E598C2BE0C20F8AFBB8C7EC';
+  Result[28].Response := 'CC6D34A67B2E3F08221F1F23C498F3B8';
+  Result[29].Command := '0C32A26430F8BE4A8B8D9523EEAE969F1BA21EDF781D39FC69DC8F6F15488520DFEE60CDE1553579670D0A31EC9288A0AFC1F1908385B7DA854D21B106B3D866107E94D8254849C66CA4776B130810D753EEC05456F59C5936864893338473B334A3206DFDB07B66772A23DF0D4CC67C3D4A5D17F2840F1BE13AA19E00B693E830C4376FE8A2D9A2735ADC2CD2BD4CE9C0CB56E8265BC0AF94058CC20E';
+  Result[29].Response := '0C4222286E02A484217881644CD11A7E';
+  Result[30].Command := 'DD65C1973AAE481556949A70BBA498A8DE3560AAC2D50387DBE216179395F41B';
+  Result[30].Response := 'E19DA6375B7D44AC7EF2DC379E496775';
+  Result[31].Command := '94970E03D46936BB786BB72807B1BB67ED78D9458D';
+  Result[31].Response := 'E9779A2E7A2F713C3692E71D1704AA00';
+  Result[32].Command := '7BB18459270EA38C4EB115EAE374FEA42927AE423C96C4BAA61E34BE46EE8436';
+  Result[32].Response := 'B342A9697FC469EC29D554E24742936E';
+  Result[33].Command := '1E44A8857A620951EA738A31BBBB21BC17EA78DED1A793E12B9C86796D1312745605C71D5D58C90B92FEEBFC7855389CFA61075930A6A8BA7670BED604B84DA70F4713088A6D78BE20';
+  Result[33].Response := 'FF3D98D31F457AE0D957601ED44F3777';
+  Result[34].Command := '6D4BD3BC9668D663E97F0C0CB844AF5C06DAB144ED31412F118CE94838C25AD5FEE008E8721B';
+  Result[34].Response := '6BE23B4AFE1F608BCA215E94D7AADA51';
+  Result[35].Command := '38419B570263AC7EC78B252E66712277F323C37F8255860DC6E4B07FEBA16FA9';
+  Result[35].Response := 'C2D8DAC25EDC2FB9E9F2DCD010AFF945';
+  Result[36].Command := '952FDE8393C45D230A5BE9B38636D154D7800E257001A774AE7BCFB2CE1307B5B044';
+  Result[36].Response := '05F1CE30451A03A6E468B3A59033A554';
+  Result[37].Command := '2EC5A074266CD3868F125C40A85C51D2C3B6AE5BE019';
+  Result[37].Response := '003EB550D462D3E9A2ED9BD4B798C87F';
+  Result[38].Command := '01B823CA9E8EFE175836625AA152E97261';
+  Result[38].Response := '32A2D28599066AA0DDCD1DFB6C3373B0';
+  Result[39].Command := 'FC5558E552206A0FF2194552D1CE6B489B5B542E0A39512195ED0EA6A0BCCE71';
+  Result[39].Response := '2797A78D54BE757328F7A00C4B522B2C';
+  Result[40].Command := 'B93BDEAD484349154F801B064C5BBB29B647';
+  Result[40].Response := '0C808D5AE0364B41B122EDB487397BB9';
+  Result[41].Command := 'E718EE5C2C37AC31129DD60377CB97AF1E4BD43A31';
+  Result[41].Response := '7D45F28E5FAA0C2FA7379A3BBA4B2A6E';
+  Result[42].Command := 'E477385CD36D02F3F6945AE61DDDA24F5D96B808E8C5D7BDC8CD1922FA5234F9B5C9690184D4035571F3613C3A15E25FE2ED87E17F53EAA82A352EC7';
+  Result[42].Response := 'B7F4DB09E5C5A9133D60AAFC283D270D';
+  Result[43].Command := '41C4238B6E55539E0B55C089936396F5';
+  Result[43].Response := 'AA7032ED436E7B52808E2E703F8781A1';
+  Result[44].Command := 'B2EABA3F0CCB537962DEC1D64EA63B13C243538D2DFD4D1CBCF54490B27BDD878416C01ADCF0C0';
+  Result[44].Response := '0BC42ECAC57934BC09899693664C2FF5';
+  Result[45].Command := '4A7F71E3574FEA248ECC9EF0A667B2DF7D469C2A5E8C28BA15B308D183080DBB1AF6CDD2D1B6C3148B3620D236F2147F4BD7';
+  Result[45].Response := '82B9D1AF7643DE20A65117D1FBA48C7C';
+  Result[46].Command := 'CD38D5B8F8C3C26A7818951E225EA424C682889F28';
+  Result[46].Response := '093C98AFB1CA352477A296D97611BC72';
+  Result[47].Command := '6C5683229E8985AC3BD5E661FD0A1066C1';
+  Result[47].Response := '9F65E3937D6C9140FF9B02857ADAFB5B';
+  Result[48].Command := '2D113F05F079BF06B54D19D0566BE656CF';
+  Result[48].Response := '25938AC2F0F78B21416D5BA1D3642B63';
+  Result[49].Command := '3E521285C1B089D7083214AA2871E29999472DB3A480E63173D39E9F5D';
+  Result[49].Response := '132A1027AD89A5F26C200966D581554B';
+end;
+function LrpAuth: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,4);
+  Result[0].Command := '00000000000000000000000000000000B04D0787C93EE0CC8CACC8E86F16C6FE0102030405060708090A0B0C0D0E0F10';
+  Result[0].Response := '75FE26C7FC2CA632C6DB8C39815EE04B';
+  Result[1].Command := 'B04D0787C93EE0CC8CACC8E86F16C6FE0102030405060708090A0B0C0D0E0F10';
+  Result[1].Response := 'B04D0787C93EE0CC8CACC8E86F16C6FE3C29BBAED89DC54169734EE0DB0F7AB1';
+  Result[2].Command := '0102030405060708090A0B0C0D0E0F10B04D0787C93EE0CC8CACC8E86F16C6FE';
+  Result[2].Response := 'EB5A4FEC8610C9038BDC14940D0EDB35ED8EE556B4CA938345A98841873FAB7A';
+  Result[3].Command := '0102030405060708090A0B0C0D0E0F10B04D0787C93EE0CC8CACC8E86F16C6FE';
+  Result[3].Response := 'A9C2E7278A785B8EFC8C9A01714C931B';
+end;
+function LrpAuthBadCapability: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,1);
+  Result[0].Command := '';
+  Result[0].Response := '6077B0621AD4F439A827156E28F69E0DCC0B95B0BECA482DF99E9527C4FC9FB9';
+end;
+function LrpPlainRead: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,1);
+  Result[0].Command := '00000000100000';
+  Result[0].Response := '000102030405060708090A0B0C0D0E0F';
+end;
+function LrpPlainWrite: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,1);
+  Result[0].Command := '00000000100000101112131415161718191A1B1C1D1E1F';
+  Result[0].Response := '';
+end;
+function LrpMacRead: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,1);
+  Result[0].Command := '000000001000003E73B1F4E99A35F0';
+  Result[0].Response := '000102030405060708090A0B0C0D0E0F21C7B9D4DCECEA42';
+end;
+function LrpMacWrite: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,1);
+  Result[0].Command := '00000000100000101112131415161718191A1B1C1D1E1F7973FB50DA484165';
+  Result[0].Response := '6DE82A0D9CFE09B0';
+end;
+function LrpFullRead: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,1);
+  Result[0].Command := '000000001000003E73B1F4E99A35F0';
+  Result[0].Response := '909217E119ECDAF47E171BD3AEACDA570161AE1C3CFA230A9B657AEBE7EC69C3F1DB560845E1762E';
+end;
+function LrpFullWrite: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,1);
+  Result[0].Command := '000000001000006FBD5F220B77D28324FA1925375AEA8A0161AE1C3CFA230A9B657AEBE7EC69C330AEF93B00FE1B83';
+  Result[0].Response := '6DE82A0D9CFE09B0';
+end;
+function LrpBadPadding: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,1);
+  Result[0].Command := '';
+  Result[0].Response := '56EAB92568910194DDDF369299FA9EE7D5819F9759B6A6D9';
+end;
+function LrpBadLength: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,1);
+  Result[0].Command := '';
+  Result[0].Response := '909217E119ECDAF47E171BD3AEACDA57A1B233C6453A5E519AE6F3CB849D021612184616E4227781742A0C827BCD2E7DD7A3883FD179A239';
 end;
 end.

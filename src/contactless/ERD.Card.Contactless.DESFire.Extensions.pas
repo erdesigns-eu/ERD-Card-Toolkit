@@ -111,6 +111,17 @@ type
     /// <summary>True only after offline MAC verification with the supplied transaction key, UID and canonical input.</summary>
     KeyVerified: Boolean;
   end;
+  /// <summary>Owned standard-file settings combining conditional SDM and primary/additional access-right tuples.</summary>
+  /// <remarks>Ordinary record assignment shares dynamic arrays. Sdm.FileOption excludes the multi-access flag.</remarks>
+  TDesfireSdmAccessSettings = record
+    /// <summary>Exact acquired or encoded native bytes, including combined option flags.</summary>
+    RawBytes: TBytes;
+    /// <summary>Validated ordinary geometry and all conditional SDM fields; RawBytes excludes additional rights.</summary>
+    Sdm: TDesfireSdmSettings;
+    /// <summary>Primary tuple followed by zero through seven additional native wire-order tuples.</summary>
+    Rights: TDesfireAccessRightSets;
+  end;
+
   /// <summary>Strict bounded extended settings and native creation codecs; no I/O.</summary>
   TDesfireExtensionCodec = class
   public
@@ -143,6 +154,16 @@ type
     /// <summary>Validates an explicit ISO FID, excluding reserved null/MF/current-directory identifiers.</summary>
     /// <param name="AFid">Explicit FID to create or acquire.</param>
     class procedure ValidateIsoFid(const AFid: Word); static;
+    /// <summary>Decodes complete standard-file settings with independently optional SDM and multiple access rights.</summary>
+    /// <param name="ABytes">Exact bounded native type-zero settings; no response MAC or native status.</param>
+    /// <returns>Owned exact settings, typed SDM configuration and every right tuple.</returns>
+    class function DecodeSdmAccessSettings(const ABytes: TBytes): TDesfireSdmAccessSettings; static;
+    /// <summary>Builds a validated combined standard-file settings layout.</summary>
+    /// <param name="ASdm">Ordinary/SDM configuration without the multi-access flag.</param>
+    /// <param name="ARights">One through eight tuples; primary must equal ASdm.AccessRights.</param>
+    /// <returns>Independent exact native settings with rights before conditional SDM fields.</returns>
+    class function EncodeSdmAccessSettings(const ASdm: TDesfireSdmSettings;
+      const ARights: TDesfireAccessRightSets): TBytes; static;
     /// <summary>Validates ordinary or explicit key-set-enabled GetKeySettings framing.</summary>
     /// <param name="ABytes">Exact two, three or seven native bytes; no ISO VC/capability data is inferred.</param>
     /// <exception cref="EDesfireExtensionError">Key count/type, flags or key-set geometry is invalid.</exception>
@@ -404,6 +425,81 @@ begin
   Result.Mac := Copy(ABytes, 4, 8);
 end;
 
+class function TDesfireExtensionCodec.EncodeSdmAccessSettings(const ASdm: TDesfireSdmSettings;
+  const ARights: TDesfireAccessRightSets): TBytes;
+var
+  Base, Extra: TBytes;
+  I, Count: Integer;
+begin
+  Result := nil;
+  Base := nil;
+  Extra := nil;
+  if (Length(ARights) < 1) or (Length(ARights) > 8) or
+    (ARights[0] <> ASdm.AccessRights) then Invalid;
+  try
+    Base := EncodeSdmSettings(ASdm);
+    Count := Length(ARights) - 1;
+    if Count = 0 then Result := CopyBytes(Base)
+    else
+    begin
+      SetLength(Extra, 1 + Count * 2);
+      Extra[0] := Count;
+      for I := 0 to Count - 1 do
+      begin
+        Extra[1 + I * 2] := Byte(ARights[I + 1] and $FF);
+        Extra[2 + I * 2] := Byte(ARights[I + 1] shr 8);
+      end;
+      SetLength(Result, Length(Base) + Length(Extra));
+      Move(Base[0], Result[0], 7);
+      Result[1] := Result[1] or $80;
+      Move(Extra[0], Result[7], Length(Extra));
+      if Length(Base) > 7 then Move(Base[7], Result[7 + Length(Extra)], Length(Base) - 7);
+    end;
+  finally
+    TCardCrypto.Clear(Base);
+    TCardCrypto.Clear(Extra);
+  end;
+end;
+
+class function TDesfireExtensionCodec.DecodeSdmAccessSettings(const ABytes: TBytes): TDesfireSdmAccessSettings;
+var
+  Base, Encoded: TBytes;
+  Count, Extra, I: Integer;
+begin
+  Result := Default(TDesfireSdmAccessSettings);
+  if (Length(ABytes) < 7) or (Length(ABytes) > 64) or (ABytes[0] <> 0) then Invalid;
+  Count := 0;
+  Extra := 0;
+  if (ABytes[1] and $80) <> 0 then
+  begin
+    if Length(ABytes) < 8 then Invalid;
+    Count := ABytes[7];
+    if (Count < 1) or (Count > 7) then Invalid;
+    Extra := 1 + Count * 2;
+    if Length(ABytes) < 7 + Extra then Invalid;
+  end;
+  Base := nil;
+  Encoded := nil;
+  try
+    SetLength(Base, Length(ABytes) - Extra);
+    Move(ABytes[0], Base[0], 7);
+    Base[1] := Base[1] and $7F;
+    if Length(ABytes) > 7 + Extra then
+      Move(ABytes[7 + Extra], Base[7], Length(ABytes) - 7 - Extra);
+    Result.Sdm := DecodeSdmSettings(Base);
+    SetLength(Result.Rights, Count + 1);
+    Result.Rights[0] := Result.Sdm.AccessRights;
+    for I := 0 to Count - 1 do
+      Result.Rights[I + 1] := Word(ABytes[8 + I * 2]) or (Word(ABytes[9 + I * 2]) shl 8);
+    Encoded := EncodeSdmAccessSettings(Result.Sdm, Result.Rights);
+    if not BytesEqual(Encoded, ABytes) then Invalid;
+    Result.RawBytes := CopyBytes(ABytes);
+  finally
+    TCardCrypto.Clear(Base);
+    TCardCrypto.Clear(Encoded);
+  end;
+end;
+
 class procedure TDesfireExtensionCodec.ValidateApplicationSettings(const ABytes: TBytes);
 var N: Integer;
 begin
@@ -645,6 +741,16 @@ begin
           SetLength(Body, Prefix + Length(AData));
           Move(AData[0], Body[Prefix], Length(AData));
           FinishBlock;
+        end;
+      $BA:
+        begin
+          if (Length(AHeader) <> 10) or (Length(AData) <> 16) or (AHeader[0] > 31) then Invalid;
+          if (AHeader[4] <> 0) or (AHeader[5] <> 0) or (AHeader[6] <> 0) or
+            (AHeader[7] <> 16) or (AHeader[8] <> 0) or (AHeader[9] <> 0) then Invalid;
+          SetLength(Body, 32);
+          Body[0] := ACommand;
+          Move(AHeader[0], Body[1], 10);
+          Move(AData[0], Body[16], 16);
         end;
       $6C, $0C, $DC, $1C:
         begin

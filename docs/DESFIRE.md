@@ -507,8 +507,8 @@ is redistributed or linked into this library:
   and [OpenSSL EVP](https://docs.openssl.org/3.5/man3/EVP_EncryptInit/).
 
 Next security/access additions are
-LRP and further generation-specific/combined-layout extensions, additional
-configuration, originality and hardware profiles. ISO/multi-access/AES TMAC are documented separately. Basic AES key policy,
+Automatic LRP retained sessions and further generation-specific/combined-data extensions, additional
+configuration, originality and hardware profiles. ISO/multi-access/AES TMAC and record updates are documented separately; native LRP codecs are available in [DESFIRE_LRP.md](DESFIRE_LRP.md). Basic AES key policy,
 rotation and ordinary access administration are implemented. Broad support is built per implemented/tested operation, never inferred
 from one successful AES session or PC/SC connection.
 

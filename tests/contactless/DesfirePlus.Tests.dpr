@@ -6,7 +6,7 @@ uses
   ERD.Card.Bytes, ERD.Card.Crypto, ERD.Card.Transport,
 {$IFDEF MSWINDOWS}ERD.Card.Crypto.Windows,{$ELSE}ERD.Card.Crypto.OpenSSL,{$ENDIF}
   ERD.Card.Contactless, ERD.Card.Contactless.DESFire, ERD.Card.Contactless.DESFire.EV2,
-  ERD.Card.Contactless.DESFire.Extensions, ERD.Card.Contactless.Plus,
+  ERD.Card.Contactless.DESFire.Extensions, ERD.Card.Contactless.DESFire.LRP, ERD.Card.Contactless.Plus,
   ERD.Card.Contactless.Plus.ACR122, ERD.Card.Contactless.Plus.Workflow,
   ERD.Card.Contactless.Plus.Levels, ERD.Card.Contactless.Raw,
   ERD.Card.Workflow, ERD.Card.Contactless.Workflow.Password, DesfirePlus.Vectors;
@@ -17,7 +17,7 @@ type
     function RandomBytes(const N: Integer): TBytes;
   end;
   TWire = class(TInterfacedObject,ICardTransport,ICardTransaction,IMifarePlusSession)
-    Pairs: TExtendedPairs; Borrowed: TBytes; MutateCall: Integer;
+    Pairs: TExtendedPairs; Borrowed: TBytes; BorrowedRights: TDesfireAccessRightSets; MutateCall: Integer;
     Calls,Begins,Ends,Writes,FailCall,CorruptCall,CorruptByte,CorruptBit: Integer;
     Active,EndFails,WrongUid,RepairRawCrc: Boolean;
     BeginFailure, EndFailure, ChangedUidBegin: Integer;
@@ -45,12 +45,21 @@ type
     function GetKey(const ABlock: Integer; const AWriting: Boolean; out AKeyNumber: Word): TBytes;
   end;
 var Checks: Integer; Base: ICardAesProvider;
+  LrpEncryptCalls, LrpDecryptCalls, LrpFailEncrypt, LrpFailDecrypt: Integer;
 procedure Check(const V: Boolean; const Text: string);
 begin Inc(Checks); if not V then raise Exception.Create(Text); end;
 function TFixed.EncryptCbc(const K,V,D: TBytes): TBytes;
-begin Result:=Base.EncryptCbc(K,V,D); end;
+begin
+  Inc(LrpEncryptCalls);
+  if LrpEncryptCalls=LrpFailEncrypt then raise ECardCryptoError.Create('Synthetic LRP AES failure');
+  Result:=Base.EncryptCbc(K,V,D);
+end;
 function TFixed.DecryptCbc(const K,V,D: TBytes): TBytes;
-begin Result:=Base.DecryptCbc(K,V,D); end;
+begin
+  Inc(LrpDecryptCalls);
+  if LrpDecryptCalls=LrpFailDecrypt then raise ECardCryptoError.Create('Synthetic LRP AES failure');
+  Result:=Base.DecryptCbc(K,V,D);
+end;
 function TFixed.RandomBytes(const N: Integer): TBytes;
 begin Check(N=16,'Bounded fresh nonce request'); Result:=HexToBytes('B04D0787C93EE0CC8CACC8E86F16C6FE'); end;
 procedure TWire.BeginTransaction;
@@ -72,9 +81,10 @@ function TWire.Exchange(const B: TBytes): TBytes;
 begin
   Check(Active,'Exclusive exchange'); Inc(Calls); Check(Calls<=Length(Pairs),'No fallback or replay');
   Check(BytesEqual(B,HexToBytes(Pairs[Calls-1].Command)),'Independent native command '+IntToStr(Calls));
-  if (B[0] in [$A1,$A3,$B5,$B7,$B9]) or ((B[0]=$90) and (B[1] in [$CA,$CD,$CB,$C1,$C0,$CE,$DF,$8D,$C7,$C8,$A7,$56,$C6,$57,$55,$5C,$5F])) then Inc(Writes);
+  if (B[0] in [$A1,$A3,$B5,$B7,$B9]) or ((B[0]=$90) and (B[1] in [$CA,$CD,$CB,$C1,$C0,$CE,$DF,$8D,$8B,$EB,$C7,$C8,$A7,$BA,$56,$C6,$57,$55,$5C,$5F])) then Inc(Writes);
   if Calls=FailCall then raise ECardTransportError.Create('Synthetic response lost');
   if (Calls=MutateCall) and (Length(Borrowed)>0) then Borrowed[0]:=Borrowed[0] xor $FF;
+  if (Calls=MutateCall) and (Length(BorrowedRights)>1) then BorrowedRights[1]:=$0202;
   Result:=HexToBytes(Pairs[Calls-1].Response);
   if Calls=CorruptCall then Result[CorruptByte]:=Result[CorruptByte] xor (1 shl CorruptBit);
 end;
@@ -1809,10 +1819,548 @@ begin
   end;
 end;
 
+function JoinedBytes(const A, B: TBytes): TBytes;
+begin
+  Result := nil;
+  SetLength(Result,Length(A)+Length(B));
+  if Length(A)>0 then Move(A[0],Result[0],Length(A));
+  if Length(B)>0 then Move(B[0],Result[Length(A)],Length(B));
+end;
+
+procedure TestLrpPublishedVectors;
+var
+  Pairs: TExtendedPairs;
+  Packet, Key, Input, Actual, Counter, Saved, Cipher: TBytes;
+  I, J, Blocks: Integer;
+  Next: UInt64;
+  Failed: Boolean;
+begin
+  Pairs := LrpPublishedEval;
+  Check(Length(Pairs)=50,'All fifty official LRP evaluation vectors retained');
+  for I := 0 to High(Pairs) do
+  begin
+    Packet := HexToBytes(Pairs[I].Command);
+    Key := Copy(Packet,0,16);
+    Input := Copy(Packet,18,Length(Packet)-18);
+    Actual := TDesfireLrpCodec.Evaluate(Base,Key,Input,Packet[16],Packet[17]<>0);
+    Check(BytesEqual(Actual,HexToBytes(Pairs[I].Response)),'Official LRP nibble/updated-key/whitening vector '+IntToStr(I));
+    TCardCrypto.Clear(Actual);
+  end;
+  Pairs := LrpPublishedCmac;
+  Check(Length(Pairs)=50,'All fifty official LRP-CMAC vectors retained');
+  for I := 0 to High(Pairs) do
+  begin
+    Packet := HexToBytes(Pairs[I].Command);
+    Key := Copy(Packet,0,16);
+    Input := Copy(Packet,16,Length(Packet)-16);
+    Actual := TDesfireLrpCodec.Cmac(Base,Key,Input);
+    Check(BytesEqual(Actual,HexToBytes(Pairs[I].Response)),'Official LRP-CMAC vector '+IntToStr(I));
+    TCardCrypto.Clear(Actual);
+  end;
+  Pairs := LrpPublishedCrypt;
+  Check(Length(Pairs)=50,'All fifty official LRICB vectors retained');
+  for I := 0 to High(Pairs) do
+  begin
+    Packet := HexToBytes(Pairs[I].Command);
+    Key := Copy(Packet,0,16);
+    Counter := Copy(Packet,17,4);
+    Saved := CopyBytes(Counter);
+    Input := Copy(Packet,21,Length(Packet)-21);
+    Cipher := HexToBytes(Pairs[I].Response);
+    Next := 0;
+    for J := 0 to 3 do Next := (Next shl 8) or Counter[J];
+    Blocks := Length(Cipher) div 16;
+    Next := Next + Cardinal(Blocks);
+    Failed := False;
+    try Actual := TDesfireLrpCodec.Crypt(Base,Key,Input,Counter,0,True,Packet[16]<>0);
+    except on E: ECardCryptoError do Failed := True; end;
+    if Next > $FFFFFFFF then
+      Check(Failed and BytesEqual(Counter,Saved),'Published wrapping counter deliberately refused without returning ciphertext')
+    else
+    begin
+      Check(not Failed and BytesEqual(Actual,Cipher),'Official LRICB encryption vector '+IntToStr(I));
+      Check(BytesToHex(Counter)=IntToHex(Next,8),'Big-endian fixed-width LRICB counter advancement');
+      TCardCrypto.Clear(Actual);
+      TCardCrypto.Clear(Counter);
+      Counter := CopyBytes(Saved);
+      Actual := TDesfireLrpCodec.Crypt(Base,Key,Cipher,Counter,0,False,Packet[16]<>0);
+      Check(BytesEqual(Actual,Input),'Official LRICB decryption vector '+IntToStr(I));
+      TCardCrypto.Clear(Actual);
+    end;
+  end;
+  TCardCrypto.Clear(Packet); TCardCrypto.Clear(Key); TCardCrypto.Clear(Input);
+  TCardCrypto.Clear(Actual); TCardCrypto.Clear(Counter); TCardCrypto.Clear(Saved); TCardCrypto.Clear(Cipher);
+end;
+
+function LrpModePairs(const Kind: Integer): TExtendedPairs;
+begin
+  case Kind of
+    0: Result := LrpPlainRead;
+    1: Result := LrpPlainWrite;
+    2: Result := LrpMacRead;
+    3: Result := LrpMacWrite;
+    4: Result := LrpFullRead;
+  else Result := LrpFullWrite;
+  end;
+end;
+
+procedure TestLrpNativeCodec;
+var
+  Pairs, Auth: TExtendedPairs;
+  Key, A, B, Master, Counter, Saved, Input, Output, Response, Cap: TBytes;
+  Kind, I, J: Integer;
+  Mode: TDesfireCommunication;
+  Failed: Boolean;
+begin
+  Auth := LrpAuth;
+  Input := HexToBytes(Auth[0].Command);
+  Key := Copy(Input,0,16);
+  A := Copy(Input,16,16);
+  B := Copy(Input,32,16);
+  Cap := HexToBytes('020000000000');
+  try
+    Check(BytesToHex(TDesfireLrpCodec.FirstCommand(0,Cap))='0006020000000000','Explicit LRP mode/capability request');
+    Check(BytesEqual(TDesfireLrpCodec.FirstChallenge(JoinedBytes(HexToBytes('01'),B)),B),'Native AuthMode 01 challenge framing');
+    Master := TDesfireLrpCodec.DeriveSessionKey(Base,Key,A,B);
+    Check(BytesEqual(Master,HexToBytes(Auth[0].Response)),'Independent native LRP nonce/master derivation');
+    Output := TDesfireLrpCodec.ReaderResponse(Base,Master,A,B);
+    Check(BytesEqual(Output,HexToBytes(Auth[1].Response)),'Independent native first/nonfirst reader nonce MAC');
+    TCardCrypto.Clear(Output);
+    Response := HexToBytes(Auth[2].Response);
+    Output := TDesfireLrpCodec.VerifyFirstResponse(Base,Master,A,B,Response,Cap);
+    Check(BytesToHex(Output)='11223344000000000000020000000000','Native first response verifies TI and capability echo');
+    TDesfireLrpCodec.VerifyNonFirstResponse(Base,Master,A,B,HexToBytes(Auth[3].Response));
+    for I := 0 to Length(Response)*8-1 do
+    begin
+      Input := CopyBytes(Response);
+      Input[I div 8] := Input[I div 8] xor (1 shl (I mod 8));
+      Failed := False;
+      try TDesfireLrpCodec.VerifyFirstResponse(Base,Master,A,B,Input,Cap);
+      except on E: ECardCryptoError do Failed := True; end;
+      Check(Failed,'Every first-authentication ciphertext/MAC bit refused');
+      TCardCrypto.Clear(Input);
+    end;
+    Pairs := LrpAuthBadCapability;
+    Failed := False;
+    try TDesfireLrpCodec.VerifyFirstResponse(Base,Master,A,B,HexToBytes(Pairs[0].Response),Cap);
+    except on E: ECardCryptoError do Failed := True; end;
+    Check(Failed,'Correct-MAC wrong first-authentication capability echo refused');
+    for Kind := 0 to 5 do
+    begin
+      Pairs := LrpModePairs(Kind);
+      Mode := TDesfireCommunication(Kind div 2);
+      Counter := HexToBytes('00000001');
+      Input := nil;
+      if Kind mod 2<>0 then Input := HexToBytes('101112131415161718191A1B1C1D1E1F');
+      if Kind mod 2=0 then
+        Output := TDesfireLrpCodec.EncodeCommand(Base,Master,HexToBytes('11223344'),0,$AD,
+          HexToBytes('00000000100000'),Input,Mode,Counter)
+      else
+        Output := TDesfireLrpCodec.EncodeCommand(Base,Master,HexToBytes('11223344'),0,$8D,
+          HexToBytes('00000000100000'),Input,Mode,Counter);
+      Check(BytesEqual(Output,HexToBytes(Pairs[0].Command)),'Independent LRP command framing '+IntToStr(Kind));
+      TCardCrypto.Clear(Output);
+      Saved := CopyBytes(Counter);
+      Response := HexToBytes(Pairs[0].Response);
+      I := 16;
+      if Kind mod 2<>0 then I := 0;
+      Output := TDesfireLrpCodec.DecodeResponse(Base,Master,HexToBytes('11223344'),1,Response,Mode,I,Counter);
+      Check(Length(Output)=I,'LRP response exact plaintext length');
+      if I>0 then Check(BytesToHex(Output)='000102030405060708090A0B0C0D0E0F','LRP response owned plaintext');
+      if Kind>=4 then Check(BytesToHex(Counter)='00000003','Full LRP counter includes method-two padding block')
+      else Check(BytesToHex(Counter)='00000001','Plain/MAC mode preserves encryption counter');
+      if Kind>=2 then
+        for J := 0 to Length(Response)*8-1 do
+        begin
+          TCardCrypto.Clear(Counter);
+          Counter := CopyBytes(Saved);
+          Input := CopyBytes(Response);
+          Input[J div 8] := Input[J div 8] xor (1 shl (J mod 8));
+          Failed := False;
+          try TDesfireLrpCodec.DecodeResponse(Base,Master,HexToBytes('11223344'),1,Input,Mode,I,Counter);
+          except on E: ECardCryptoError do Failed := True; end;
+          Check(Failed and BytesEqual(Counter,Saved),'Every secure response bit fails with encryption counter preserved');
+        end;
+      TCardCrypto.Clear(Counter); TCardCrypto.Clear(Output); TCardCrypto.Clear(Saved); TCardCrypto.Clear(Input);
+    end;
+    for Kind := 0 to 1 do
+    begin
+      if Kind=0 then Pairs := LrpBadPadding else Pairs := LrpBadLength;
+      Counter := HexToBytes('00000001');
+      Saved := CopyBytes(Counter);
+      Failed := False;
+      try TDesfireLrpCodec.DecodeResponse(Base,Master,HexToBytes('11223344'),1,
+        HexToBytes(Pairs[0].Response),dfcFull,16,Counter);
+      except on E: ECardCryptoError do Failed := True; end;
+      Check(Failed and BytesEqual(Counter,Saved),'Valid MAC with bad padding/length preserves encryption counter');
+    end;
+    for I := 0 to 5 do
+    begin
+      Failed := False;
+      try
+        case I of
+          0: TDesfireLrpCodec.FirstChallenge(JoinedBytes(HexToBytes('02'),B));
+          1: TDesfireLrpCodec.FirstCommand(14,Cap);
+          2: TDesfireLrpCodec.Evaluate(Base,Key,HexToBytes('10'),0,True);
+          3: TDesfireLrpCodec.Evaluate(Base,Key,nil,4,True);
+          4: TDesfireLrpCodec.EncodeCommand(Base,Master,HexToBytes('11223344'),65535,$AD,nil,nil,dfcMac,Counter);
+          5: TDesfireLrpCodec.DecodeResponse(Base,Master,HexToBytes('11223344'),0,nil,dfcMac,0,Counter);
+        end;
+      except on E: ECardCryptoError do Failed := True; end;
+      Check(Failed,'LRP mode/key/nibble/counter guards');
+    end;
+  finally
+    TCardCrypto.Clear(Key); TCardCrypto.Clear(A); TCardCrypto.Clear(B); TCardCrypto.Clear(Master);
+    TCardCrypto.Clear(Counter); TCardCrypto.Clear(Saved); TCardCrypto.Clear(Input);
+    TCardCrypto.Clear(Output); TCardCrypto.Clear(Response); TCardCrypto.Clear(Cap);
+  end;
+end;
+
+procedure TestLrpProviderFailures;
+var
+  Provider: ICardAesProvider;
+  Master, Counter, Saved, Data, Packet, Reply: TBytes;
+  Auth, Pairs: TExtendedPairs;
+  I, Count: Integer;
+  Failed: Boolean;
+begin
+  Provider := TFixed.Create;
+  Auth := LrpAuth;
+  Master := HexToBytes(Auth[0].Response);
+  Data := HexToBytes('101112131415161718191A1B1C1D1E1F');
+  Saved := HexToBytes('00000001');
+  try
+    Counter := CopyBytes(Saved);
+    LrpEncryptCalls := 0;
+    Packet := TDesfireLrpCodec.EncodeCommand(Provider,Master,HexToBytes('11223344'),0,$8D,
+      HexToBytes('00000000100000'),Data,dfcFull,Counter);
+    Count := LrpEncryptCalls;
+    TCardCrypto.Clear(Packet);
+    for I := 1 to Count do
+    begin
+      TCardCrypto.Clear(Counter);
+      Counter := CopyBytes(Saved);
+      LrpEncryptCalls := 0;
+      LrpFailEncrypt := I;
+      Failed := False;
+      try TDesfireLrpCodec.EncodeCommand(Provider,Master,HexToBytes('11223344'),0,$8D,
+        HexToBytes('00000000100000'),Data,dfcFull,Counter);
+      except on E: ECardCryptoError do Failed := True; end;
+      Check(Failed and BytesEqual(Counter,Saved),'Every LRP command provider failure preserves encryption counter');
+    end;
+    LrpFailEncrypt := 0;
+    Pairs := LrpFullRead;
+    Reply := HexToBytes(Pairs[0].Response);
+    Reply[0] := Reply[0] xor $01;
+    Counter := CopyBytes(Saved);
+    LrpDecryptCalls := 0;
+    Failed := False;
+    try TDesfireLrpCodec.DecodeResponse(Provider,Master,HexToBytes('11223344'),1,Reply,dfcFull,16,Counter);
+    except on E: ECardCryptoError do Failed := True; end;
+    Check(Failed and (LrpDecryptCalls=0) and BytesEqual(Counter,Saved),'LRP response MAC is checked before any AES decryption');
+    Reply := HexToBytes(Pairs[0].Response);
+    Counter := CopyBytes(Saved);
+    LrpEncryptCalls := 0;
+    Packet := TDesfireLrpCodec.DecodeResponse(Provider,Master,HexToBytes('11223344'),1,Reply,dfcFull,16,Counter);
+    Count := LrpEncryptCalls;
+    TCardCrypto.Clear(Packet);
+    for I := 1 to Count do
+    begin
+      TCardCrypto.Clear(Counter);
+      Counter := CopyBytes(Saved);
+      LrpEncryptCalls := 0;
+      LrpFailEncrypt := I;
+      Failed := False;
+      try TDesfireLrpCodec.DecodeResponse(Provider,Master,HexToBytes('11223344'),1,Reply,dfcFull,16,Counter);
+      except on E: ECardCryptoError do Failed := True; end;
+      Check(Failed and BytesEqual(Counter,Saved),'Every LRP response provider encryption failure preserves counter');
+    end;
+    LrpFailEncrypt := 0;
+    for I := 1 to 2 do
+    begin
+      TCardCrypto.Clear(Counter);
+      Counter := CopyBytes(Saved);
+      LrpDecryptCalls := 0;
+      LrpFailDecrypt := I;
+      Failed := False;
+      try TDesfireLrpCodec.DecodeResponse(Provider,Master,HexToBytes('11223344'),1,Reply,dfcFull,16,Counter);
+      except on E: ECardCryptoError do Failed := True; end;
+      Check(Failed and BytesEqual(Counter,Saved),'Every full-response block decryption failure preserves counter');
+    end;
+  finally
+    LrpFailEncrypt := 0;
+    LrpFailDecrypt := 0;
+    TCardCrypto.Clear(Master); TCardCrypto.Clear(Counter); TCardCrypto.Clear(Saved);
+    TCardCrypto.Clear(Data); TCardCrypto.Clear(Packet); TCardCrypto.Clear(Reply);
+  end;
+end;
+
+function SdmAccessPairs(const Kind: Integer): TExtendedPairs;
+begin
+  case Kind of
+    0: Result := DfSdmAccessRead;
+    1: Result := DfSdmAccessEnable;
+    2: Result := DfSdmAccessDisableSdm;
+    3: Result := DfSdmAccessRemoveRights;
+    4: Result := DfSdmAccessRemoveBoth;
+    5: Result := DfSdmAccessNoop;
+    6: Result := DfSdmAccessBadPreimage;
+  else Result := DfSdmAccessBadPostimage;
+  end;
+end;
+
+procedure RunSdmAccess(const Kind, Fail, Corrupt, ByteIndex, BitIndex, Freeze: Integer);
+var
+  Wire: TWire;
+  Hold: ICardTransport;
+  Reader: TDesfireCardReader;
+  Session: IDesfireSdmAccessManagement;
+  Prior: TBytes;
+  Settings: TDesfireSdmAccessSettings;
+  Failed, Uncertain: Boolean;
+begin
+  Wire := TWire.Create;
+  Hold := Wire;
+  Wire.Pairs := SdmAccessPairs(Kind);
+  Wire.FailCall := Fail;
+  Wire.CorruptCall := Corrupt;
+  Wire.CorruptByte := ByteIndex;
+  Wire.CorruptBit := BitIndex;
+  Prior := HexToBytes('00C000E0000100010101C1F121200000430000430000');
+  if Kind in [1,7] then Prior := HexToBytes('000000E0000100');
+  case Kind of
+    2: Settings := TDesfireExtensionCodec.DecodeSdmAccessSettings(HexToBytes('008000E0000100010101'));
+    3: Settings := TDesfireExtensionCodec.DecodeSdmAccessSettings(HexToBytes('004000E0000100C1F121200000430000430000'));
+    4: Settings := TDesfireExtensionCodec.DecodeSdmAccessSettings(HexToBytes('000000E0000100'));
+  else Settings := TDesfireExtensionCodec.DecodeSdmAccessSettings(HexToBytes('00C000E0000100010101C1F121200000430000430000'));
+  end;
+  if Kind=6 then Prior[8] := $02;
+  if Freeze>0 then
+  begin
+    Wire.MutateCall := 4;
+    if Freeze=1 then Wire.Borrowed := Prior else Wire.BorrowedRights := Settings.Rights;
+  end;
+  Reader := TDesfireCardReader.Create(nil);
+  Failed := False;
+  Uncertain := False;
+  try
+    Reader.Transport := Hold;
+    Reader.CryptoProvider := TFixed.Create;
+    Reader.Security := dfsEv2Aes;
+    Reader.AuthenticationKey := HexToBytes('00000000000000000000000000000000');
+    try
+      Session := Reader.OpenSdmAccessManagementSession(1);
+      if Kind=0 then
+      begin
+        Settings := Session.ReadSdmAccessSettings(0);
+        Check((Length(Settings.Rights)=2) and (Settings.Rights[1]=$0101) and
+          (Settings.Sdm.PiccOffset=32) and (Settings.Sdm.MacOffset=67),'Complete combined rights and SDM fields acquired');
+      end
+      else Session.ChangeSdmAccessSettingsVerified(0,Prior,Settings);
+      Session.Close;
+    except
+      on E: Exception do
+      begin
+        Failed := True;
+        Uncertain := E is EContactlessWriteUncertain;
+        if (Kind<6) and (Fail=0) and (Corrupt=0) then
+          Writeln('Combined SDM diagnostic: ',E.ClassName,': ',E.Message,' calls=',Wire.Calls);
+      end;
+    end;
+    if (Kind<6) and (Fail=0) and (Corrupt=0) then
+    begin
+      Check(not Failed,'Independent combined SDM lifecycle '+IntToStr(Kind));
+      Check(Wire.Calls=Length(Wire.Pairs),'Exact combined settings/native lifecycle proofs');
+    end
+    else
+    begin
+      Check(Failed,'Combined SDM preimage/postimage/native fault observed');
+      Check(Uncertain=(Wire.Writes>0),'Combined policy dispatch uncertainty retained');
+    end;
+  finally
+    Session := nil;
+    Reader.Free;
+    TCardCrypto.Clear(Prior);
+    Check(not Wire.Active and (Wire.Begins=Wire.Ends),'Combined SDM owner always released');
+  end;
+end;
+
+function RecordUpdatePairs(const Kind: Integer; const Tmac: Boolean): TExtendedPairs;
+begin
+  if Tmac then
+    case Kind of
+      0: Result := DfRecordTmacWrite;
+      1: Result := DfRecordTmacRepeat;
+      2: Result := DfRecordTmacAbort;
+      3: Result := DfRecordTmacNoop;
+      4: Result := DfRecordTmacPreimage;
+      5: Result := DfRecordTmacAppendConflict;
+      6: Result := DfRecordTmacClearConflict;
+      7: Result := DfRecordTmacDifferentConflict;
+      8: Result := DfRecordTmacWrongCommit;
+      9: Result := DfRecordTmacAppendFirstConflict;
+    else Result := DfRecordTmacClearFirstConflict;
+    end
+  else
+    case Kind of
+      0: Result := DfRecordWrite;
+      1: Result := DfRecordRepeat;
+      2: Result := DfRecordAbort;
+      3: Result := DfRecordNoop;
+      4: Result := DfRecordPreimage;
+      5: Result := DfRecordAppendConflict;
+      6: Result := DfRecordClearConflict;
+      7: Result := DfRecordDifferentConflict;
+      8: Result := DfRecordWrongCommit;
+      9: Result := DfRecordAppendFirstConflict;
+    else Result := DfRecordClearFirstConflict;
+    end;
+end;
+
+procedure RunRecordUpdate(const Kind, Fail, Corrupt, ByteIndex, BitIndex, Freeze: Integer;
+  const Tmac, ReleaseFails: Boolean);
+var
+  Wire: TWire;
+  Hold: ICardTransport;
+  Reader: TDesfireCardReader;
+  Session: IDesfireRecordUpdateSession;
+  Transaction: IDesfireTransactionMacSession;
+  Expected, Data: TBytes;
+  Receipt: TDesfireTmacRecord;
+  Failed, Uncertain: Boolean;
+begin
+  Wire := TWire.Create;
+  Hold := Wire;
+  Wire.Pairs := RecordUpdatePairs(Kind,Tmac);
+  Wire.FailCall := Fail;
+  Wire.CorruptCall := Corrupt;
+  Wire.CorruptByte := ByteIndex;
+  Wire.CorruptBit := BitIndex;
+  Wire.EndFails := ReleaseFails;
+  Expected := HexToBytes('101112131415161718191A1B1C1D1E1F');
+  Data := HexToBytes('112233445566778899AABBCCDDEEFF00');
+  if Kind=3 then Data := CopyBytes(Expected);
+  if Kind=4 then Expected[0] := $FF;
+  if Freeze>0 then
+  begin
+    Wire.MutateCall := 6;
+    if Tmac then Wire.MutateCall := 8;
+    if Freeze=1 then Wire.Borrowed := Expected else Wire.Borrowed := Data;
+  end;
+  Reader := TDesfireCardReader.Create(nil);
+  Failed := False;
+  Uncertain := False;
+  try
+    Reader.Transport := Hold;
+    Reader.CryptoProvider := TFixed.Create;
+    Reader.Security := dfsEv2Aes;
+    Reader.AuthenticationKey := HexToBytes('00000000000000000000000000000000');
+    try
+      if Tmac then
+      begin
+        Transaction := Reader.OpenTransactionMacSession(1,1,HexToBytes('04112233445566'),
+          HexToBytes('112233445566778899AABBCCDDEEFF00'),0,True);
+        Check(Supports(Transaction,IDesfireRecordUpdateSession,Session),'TMAC owner exposes optional record-update interface');
+      end
+      else Session := Reader.OpenRecordUpdateSession(1,True);
+      if Kind=9 then Session.AppendRecord(0,Data)
+      else if Kind=10 then Session.ClearRecords(0);
+      Session.StageCyclicRecordUpdate(0,1,Expected,Data);
+      case Kind of
+        1: Session.StageCyclicRecordUpdate(0,1,HexToBytes('112233445566778899AABBCCDDEEFF00'),HexToBytes('000102030405060708090A0B0C0D0E0F'));
+        5: Session.AppendRecord(0,Data);
+        6: Session.ClearRecords(0);
+        7: Session.StageCyclicRecordUpdate(0,0,HexToBytes('000102030405060708090A0B0C0D0E0F'),Data);
+      end;
+      if (Kind=2) or ((Kind=3) and not Tmac) then Session.Abort
+      else if Tmac then
+      begin
+        Receipt := Transaction.CommitTransactionMacVerified;
+        Check(Receipt.KeyVerified and Receipt.SessionProtected,'Native BA canonical TMI participates in independent receipt proof');
+      end
+      else Session.Commit;
+      if (Kind<>2) and ((Kind<>3) or Tmac) then Check(Session.VerificationSucceeded,'All final cyclic records proved after commit');
+    except
+      on E: Exception do
+      begin
+        Failed := True;
+        Uncertain := E is EContactlessWriteUncertain;
+        if (Kind<4) and (Fail=0) and (Corrupt=0) and not ReleaseFails then
+          Writeln('Record update diagnostic: ',E.ClassName,': ',E.Message,' calls=',Wire.Calls);
+      end;
+    end;
+    if (Kind<4) and (Fail=0) and (Corrupt=0) and not ReleaseFails then
+    begin
+      Check(not Failed,'Independent native cyclic update '+IntToStr(Kind));
+      Check(Wire.Calls=Length(Wire.Pairs),'Complete owned record update/receipt/journal chain');
+    end
+    else
+    begin
+      Check(Failed,'Record preimage/conflict/native/journal/release fault observed');
+      Check(Uncertain=(Wire.Writes>0),'Record dispatch uncertainty retained Kind='+IntToStr(Kind)+' Fail='+IntToStr(Fail)+' Corrupt='+IntToStr(Corrupt)+' Calls='+IntToStr(Wire.Calls)+' Writes='+IntToStr(Wire.Writes)+' Tmac='+BoolToStr(Tmac,True));
+    end;
+  finally
+    Transaction := nil;
+    Session := nil;
+    Reader.Free;
+    TCardCrypto.Clear(Expected); TCardCrypto.Clear(Data);
+    Check(not Wire.Active and (Wire.Begins=Wire.Ends),'Record update acquisition released');
+  end;
+end;
+
+procedure TestCombinedSdmAndRecords;
+var
+  Kind, I, J, Mode: Integer;
+  Pairs: TExtendedPairs;
+  Raw, Encoded: TBytes;
+  Settings: TDesfireSdmAccessSettings;
+  Failed: Boolean;
+begin
+  for Kind := 0 to 7 do RunSdmAccess(Kind,0,0,0,0,0);
+  RunSdmAccess(1,0,0,0,0,1);
+  RunSdmAccess(1,0,0,0,0,2);
+  for Kind := 0 to 5 do
+  begin
+    Pairs := SdmAccessPairs(Kind);
+    for I := 1 to Length(Pairs) do RunSdmAccess(Kind,I,0,0,0,0);
+    for I := 4 to Length(Pairs) do
+      for J := 0 to Length(HexToBytes(Pairs[I-1].Response))*8-17 do
+        RunSdmAccess(Kind,0,I,J div 8,J mod 8,0);
+  end;
+  Raw := HexToBytes('00C000E0000100010101C1F121200000430000430000');
+  Settings := TDesfireExtensionCodec.DecodeSdmAccessSettings(Raw);
+  Encoded := TDesfireExtensionCodec.EncodeSdmAccessSettings(Settings.Sdm,Settings.Rights);
+  Check(BytesEqual(Encoded,Raw),'Combined layout codec roundtrip preserves exact native ordering');
+  for I := 0 to 19 do
+  begin
+    Raw := Copy(Encoded,0,I);
+    Failed := False;
+    try TDesfireExtensionCodec.DecodeSdmAccessSettings(Raw);
+    except on E: EDesfireExtensionError do Failed := True; end;
+    Check(Failed,'Truncated combined SDM/rights layout rejected');
+  end;
+  TCardCrypto.Clear(Raw); TCardCrypto.Clear(Encoded);
+  for Mode := 0 to 1 do
+  begin
+    for Kind := 0 to 10 do RunRecordUpdate(Kind,0,0,0,0,0,Mode=1,False);
+    for Kind := 0 to 3 do
+    begin
+      Pairs := RecordUpdatePairs(Kind,Mode=1);
+      RunRecordUpdate(Kind,0,0,0,0,1,Mode=1,False);
+      RunRecordUpdate(Kind,0,0,0,0,2,Mode=1,False);
+      RunRecordUpdate(Kind,0,0,0,0,0,Mode=1,True);
+      for I := 1 to Length(Pairs) do RunRecordUpdate(Kind,I,0,0,0,0,Mode=1,False);
+      for I := 4 to Length(Pairs) do
+        for J := 0 to Length(HexToBytes(Pairs[I-1].Response))*8-17 do
+          RunRecordUpdate(Kind,0,I,J div 8,J mod 8,0,Mode=1,False);
+    end;
+  end;
+end;
+
 begin
   try
 {$IFDEF MSWINDOWS} Base:=TCardWindowsAesProvider.Create; {$ELSE} Base:=TCardOpenSslAesProvider.Create; {$ENDIF}
-    TestCodecs; TestDf; TestPlus; TestPlusWorkflow; TestAcr; TestPlus4K; TestFrozenInputs; TestPlusManagement; TestPlusLevels; TestPlusValues; TestNativeValues; TestFileManagement; TestTmacTransactions; TestIsoKeySetsAndStandardTmac; TestIsoAndRangeInputGuards;
+    TestCodecs; TestDf; TestPlus; TestPlusWorkflow; TestAcr; TestPlus4K; TestFrozenInputs; TestPlusManagement; TestPlusLevels; TestPlusValues; TestNativeValues; TestFileManagement; TestTmacTransactions; TestIsoKeySetsAndStandardTmac; TestIsoAndRangeInputGuards; TestLrpPublishedVectors; TestLrpNativeCodec; TestLrpProviderFailures; TestCombinedSdmAndRecords;
     Writeln('PASS: ',Checks,' DESFire extension/Plus assertions.');
   except on E: Exception do begin Writeln(E.ClassName,': ',E.Message); ExitCode:=1; end; end;
 end.

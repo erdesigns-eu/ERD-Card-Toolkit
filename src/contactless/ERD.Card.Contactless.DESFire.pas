@@ -571,6 +571,38 @@ type
       const AExpected, AData: TBytes);
   end;
 
+  /// <summary>Optional combined standard-file SDM and multiple-access-right management.</summary>
+  /// <remarks>Preserves existing interfaces and requires explicit EV2 AES management credentials.</remarks>
+  IDesfireSdmAccessManagement = interface(IDesfireFileManagement)
+    ['{776383E4-2312-47B5-9D8F-9E49AFC25369}']
+    /// <summary>Acquires all primary/additional rights and conditional SDM fields without discarding combined flags.</summary>
+    /// <param name="AFile">Existing standard-file number zero through thirty-one.</param>
+    /// <returns>Owned validated settings; original ordinary getters still reject combined layouts.</returns>
+    function ReadSdmAccessSettings(const AFile: Byte): TDesfireSdmAccessSettings;
+    /// <summary>Changes combined settings against an exact frozen preimage and verifies the complete resulting layout.</summary>
+    /// <param name="AFile">Existing ordinary or SDM standard-file number.</param>
+    /// <param name="AExpected">Exact prior native settings bytes, frozen before I/O.</param>
+    /// <param name="ADesired">Typed SDM and complete right tuples; RawBytes is ignored, geometry must remain unchanged.</param>
+    /// <remarks>Validates every application key reference and primary change authority. Can remove SDM or additional tuples.</remarks>
+    procedure ChangeSdmAccessSettingsVerified(const AFile: Byte; const AExpected: TBytes;
+      const ADesired: TDesfireSdmAccessSettings);
+  end;
+
+  /// <summary>Optional owned EV2 AES full-record updates for the native sixteen-byte cyclic-record profile.</summary>
+  /// <remarks>Also available through Supports on an owned AES TMAC session. Existing interfaces and IIDs are unchanged.</remarks>
+  IDesfireRecordUpdateSession = interface(IDesfireSession)
+    ['{A75C630D-C03D-427A-AC32-4793A9891569}']
+    /// <summary>Stages one complete cyclic-record update against an exact owned-journal preimage.</summary>
+    /// <param name="AFile">Existing sixteen-byte cyclic-record file number.</param>
+    /// <param name="ARecord">Zero-based record number, newest first, within acquired record count.</param>
+    /// <param name="AExpected">Exactly sixteen current owned-journal bytes, frozen before I/O.</param>
+    /// <param name="AData">Exactly sixteen replacement bytes, frozen before I/O; equal data skips mutation.</param>
+    /// <remarks>Native UpdateRecord requires read/write authority. Updates may repeat for the same record,
+    /// but cannot mix append/clear or a different record within the same file transaction. Commit proves all journaled records.</remarks>
+    procedure StageCyclicRecordUpdate(const AFile: Byte; const ARecord: Integer;
+      const AExpected, AData: TBytes);
+  end;
+
   /// <summary>Pure strict codecs for wrapped ordinary DESFire native commands and settings.</summary>
   TDesfireCodec = class
   public
@@ -757,6 +789,16 @@ type
     /// <param name="AAid">Exact PICC zero or native application AID.</param>
     /// <returns>Owned optional file-management interface; no transaction ownership is inferred.</returns>
     function OpenFileManagementSession(const AAid: Cardinal): IDesfireFileManagement;
+    /// <summary>Opens an owned fresh EV2 AES transaction with native sixteen-byte cyclic-record updates.</summary>
+    /// <param name="AAid">Explicit nonzero native application identifier.</param>
+    /// <param name="AAcknowledgeFresh">Required assertion that no external transaction is pending.</param>
+    /// <returns>Owned optional record-update interface; use explicit Commit or Abort.</returns>
+    function OpenRecordUpdateSession(const AAid: Cardinal;
+      const AAcknowledgeFresh: Boolean): IDesfireRecordUpdateSession;
+    /// <summary>Opens native combined SDM and multiple-access standard-file management.</summary>
+    /// <param name="AAid">Nonzero exact native application identifier.</param>
+    /// <returns>Owned optional management interface; no data-template writes are inferred.</returns>
+    function OpenSdmAccessManagementSession(const AAid: Cardinal): IDesfireSdmAccessManagement;
     /// <summary>Opens explicit PICC AES management including ISO creation with multiple key sets.</summary>
     /// <returns>Owned optional management interface, independent of component lifetime.</returns>
     function OpenIsoKeySetManagementSession: IDesfireIsoKeySetManagement;
@@ -831,10 +873,11 @@ type
     Offset: Integer;
     Expected: TBytes;
     UsedLimitedCredit: Boolean;
+    RecordOperation, UpdatedRecord: Integer;
   end;
 
   TDesfireSession = class(TInterfacedObject, IDesfireSession,
-    IDesfireManagement, IDesfireApplicationManagement, IDesfireDesManagement, IDesfireExtendedManagement, IDesfireFileManagement, IDesfireTransactionMacSession, IDesfireIsoKeySetManagement, IDesfireTransactionMacDataSession)
+    IDesfireManagement, IDesfireApplicationManagement, IDesfireDesManagement, IDesfireExtendedManagement, IDesfireFileManagement, IDesfireTransactionMacSession, IDesfireIsoKeySetManagement, IDesfireTransactionMacDataSession, IDesfireSdmAccessManagement, IDesfireRecordUpdateSession)
   private
     FEngine: TDesfireCardReader;
     FAid: Cardinal;
@@ -963,6 +1006,11 @@ type
     procedure CreateIsoApplicationWithKeySetsVerified(const AAid: Cardinal;
       const APolicy, AKeyCount, ASetCount, ASetVersion, ARollKey: Byte;
       const AIsoFid: Word; const ADfName: TBytes);
+    procedure StageCyclicRecordUpdate(const AFile: Byte; const ARecord: Integer;
+      const AExpected, AData: TBytes);
+    function ReadSdmAccessSettings(const AFile: Byte): TDesfireSdmAccessSettings;
+    procedure ChangeSdmAccessSettingsVerified(const AFile: Byte; const AExpected: TBytes;
+      const ADesired: TDesfireSdmAccessSettings);
     procedure WriteStandardDataVerified(const AFile: Byte; const AOffset: Integer;
       const AExpected, AData: TBytes);
     function GetOutcome: TDesfireSessionOutcome;
@@ -3080,6 +3128,70 @@ begin
   AdjustValue(AFile, AAmount, $1C);
 end;
 
+procedure TDesfireSession.StageCyclicRecordUpdate(const AFile: Byte; const ARecord: Integer;
+  const AExpected, AData: TBytes);
+var
+  Before, Index, Position: Integer;
+  S: TDesfireFileSettings;
+  Expected, Data, Header, Reply, Current: TBytes;
+begin
+  Before := Enter;
+  try
+    try
+      RequireOwner;
+      if (FEngine.FSecurity <> dfsEv2Aes) or (FMutations >= 256) or (AFile > 31) or
+        (ARecord < 0) or (Length(AExpected) <> 16) or (Length(AData) <> 16) then InvalidDesfire;
+      Expected := CopyBytes(AExpected);
+      Data := CopyBytes(AData);
+      S := FEngine.Settings(AFile);
+      if (S.FileType <> dftCyclicRecords) or (S.RecordBytes <> 16) or
+        (ARecord >= S.CurrentRecords) or not Granted(S.ReadWriteKey) then InvalidDesfire;
+      FEngine.CheckAccess(S, True);
+      Index := Journal(S);
+      if not (FJournal[Index].RecordOperation in [0, 3]) or
+        ((FJournal[Index].RecordOperation = 3) and (FJournal[Index].UpdatedRecord <> ARecord)) then InvalidDesfire;
+      Position := ARecord * 16;
+      Current := Copy(FJournal[Index].Expected, Position, 16);
+      if not BytesEqual(Current, Expected) then InvalidDesfire;
+      if BytesEqual(Current, Data) then Exit;
+      Header := TDesfireCodec.RangeHeader(AFile, ARecord, 16);
+      SetLength(Header, 10);
+      Header[4] := 0;
+      Header[7] := 16;
+      Reply := FEngine.Send($BA, Header, Data, S.Communication, 0, True);
+      if Length(Reply) <> 0 then InvalidDesfire;
+      Move(Data[0], FJournal[Index].Expected[Position], 16);
+      FJournal[Index].RecordOperation := 3;
+      FJournal[Index].UpdatedRecord := ARecord;
+      FPending := True;
+      Inc(FMutations);
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    TCardCrypto.Clear(Expected);
+    TCardCrypto.Clear(Data);
+    TCardCrypto.Clear(Header);
+    TCardCrypto.Clear(Reply);
+    TCardCrypto.Clear(Current);
+    FInCall := False;
+  end;
+end;
+
+function TDesfireCardReader.OpenRecordUpdateSession(const AAid: Cardinal;
+  const AAcknowledgeFresh: Boolean): IDesfireRecordUpdateSession;
+var
+  Session: IDesfireSession;
+begin
+  if (FSecurity <> dfsEv2Aes) or not AAcknowledgeFresh or (AAid = 0) then InvalidDesfire;
+  Session := OpenSession(AAid, dsaFreshTransaction);
+  Result := Session as IDesfireRecordUpdateSession;
+end;
+
 procedure TDesfireSession.AppendRecord(const AFile: Byte; const AData: TBytes);
 var
   Before: Integer;
@@ -3104,6 +3216,7 @@ begin
         InvalidDesfire;
       FEngine.CheckAccess(S, True);
       Index := Journal(S);
+      if FJournal[Index].RecordOperation = 3 then InvalidDesfire;
       Count := Length(FJournal[Index].Expected) div S.RecordBytes;
       if (S.FileType = dftLinearRecords) and (Count >= S.MaxRecords) then
         InvalidDesfire;
@@ -3128,6 +3241,7 @@ begin
       TCardCrypto.Clear(FJournal[Index].Expected);
       FJournal[Index].Expected := Expected;
       Expected := nil;
+      FJournal[Index].RecordOperation := 1;
       FPending := True;
       Inc(FMutations);
     except
@@ -3165,12 +3279,14 @@ begin
         InvalidDesfire;
       FEngine.CheckAccess(S, True);
       Index := Journal(S);
+      if FJournal[Index].RecordOperation = 3 then InvalidDesfire;
       if Length(FJournal[Index].Expected) > 0 then
       begin
         Reply := FEngine.Metadata($EB, OneByte(AFile), 0, True);
         if Length(Reply) <> 0 then
           InvalidDesfire;
         TCardCrypto.Clear(FJournal[Index].Expected);
+        FJournal[Index].RecordOperation := 2;
         FPending := True;
         Inc(FMutations);
       end;
@@ -3860,6 +3976,95 @@ begin
   finally
     FInCall := False;
   end;
+end;
+
+function TDesfireSession.ReadSdmAccessSettings(const AFile: Byte): TDesfireSdmAccessSettings;
+var
+  Before: Integer;
+  Raw: TBytes;
+begin
+  Before := Enter;
+  try
+    try
+      RequireFileManagement;
+      if (FAid = 0) or (AFile > 31) then InvalidDesfire;
+      Raw := FEngine.Metadata($F5, OneByte(AFile), 64, False);
+      Result := TDesfireExtensionCodec.DecodeSdmAccessSettings(Raw);
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    TCardCrypto.Clear(Raw);
+    FInCall := False;
+  end;
+end;
+
+procedure TDesfireSession.ChangeSdmAccessSettingsVerified(const AFile: Byte; const AExpected: TBytes;
+  const ADesired: TDesfireSdmAccessSettings);
+var
+  Before, I, Key, Count: Integer;
+  Original, Chosen: TDesfireSdmAccessSettings;
+  App: TDesfireApplicationSettings;
+  Expected, Desired, Acquired, Body, Reply: TBytes;
+begin
+  Before := Enter;
+  try
+    try
+      Expected := CopyBytes(AExpected);
+      Desired := TDesfireExtensionCodec.EncodeSdmAccessSettings(ADesired.Sdm, ADesired.Rights);
+      Original := TDesfireExtensionCodec.DecodeSdmAccessSettings(Expected);
+      Chosen := TDesfireExtensionCodec.DecodeSdmAccessSettings(Desired);
+      if (FAid = 0) or (AFile > 31) or (Original.Sdm.FileBytes <> Chosen.Sdm.FileBytes) or
+        not Granted(Original.Sdm.AccessRights and $F) then InvalidDesfire;
+      RequireFileManagement;
+      ValidateRightKeys(Chosen.Rights);
+      App := AppSettings;
+      Count := App.KeyConfiguration and $F;
+      if (Chosen.Sdm.FileOption and $40) <> 0 then
+        for I := 0 to 3 do
+          if I <> 1 then
+          begin
+            Key := (Chosen.Sdm.SdmAccessRights shr (I * 4)) and $F;
+            if (Key < 14) and (Key >= Count) then InvalidDesfire;
+          end;
+      Acquired := FEngine.Metadata($F5, OneByte(AFile), 64, False);
+      if not BytesEqual(Acquired, Expected) then InvalidDesfire;
+      if BytesEqual(Acquired, Desired) then Exit;
+      Body := Joined(Copy(Desired, 1, 3), Copy(Desired, 7, Length(Desired) - 7));
+      Reply := FEngine.Send($5F, OneByte(AFile), Body, dfcFull, 0, True);
+      if Length(Reply) <> 0 then InvalidDesfire;
+      TCardCrypto.Clear(Acquired);
+      Acquired := FEngine.Metadata($F5, OneByte(AFile), 64, False);
+      if not BytesEqual(Acquired, Desired) then InvalidDesfire;
+      FEngine.FWriteAttempt := False;
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    TCardCrypto.Clear(Expected);
+    TCardCrypto.Clear(Desired);
+    TCardCrypto.Clear(Acquired);
+    TCardCrypto.Clear(Body);
+    TCardCrypto.Clear(Reply);
+    FInCall := False;
+  end;
+end;
+
+function TDesfireCardReader.OpenSdmAccessManagementSession(const AAid: Cardinal): IDesfireSdmAccessManagement;
+var
+  Session: IDesfireFileManagement;
+begin
+  if AAid = 0 then InvalidDesfire;
+  Session := OpenFileManagementSession(AAid);
+  Result := Session as IDesfireSdmAccessManagement;
 end;
 
 procedure TDesfireSession.RequireAesManagement;
@@ -4962,11 +5167,12 @@ procedure TDesfireCardReader.ReserveTmac(const ACommand: Byte;
 var
   Required: Integer;
 begin
-  if not FTmacCapture or not (ACommand in [$AD, $8D, $AB, $8B, $6C, $0C, $DC, $1C, $EB, $C8]) then Exit;
+  if not FTmacCapture or not (ACommand in [$AD, $8D, $AB, $8B, $6C, $0C, $DC, $1C, $EB, $C8, $BA]) then Exit;
   if (ACommand <> $C8) and (Length(AHeader) > 0) and (AHeader[0] = FTmacExcludedFile) then Exit;
   Required := 16;
   case ACommand of
     $AD, $8D: Required := 16 + ((ADataLength + 15) div 16) * 16;
+    $BA: Required := 32;
     $AB, $8B:
       begin
         if ADataLength mod 16 <> 0 then InvalidDesfire;
@@ -4981,7 +5187,7 @@ procedure TDesfireCardReader.TrackTmac(const ACommand: Byte; const AHeader, ADat
 var
   Updated: TBytes;
 begin
-  if not FTmacCapture or not (ACommand in [$AD, $8D, $AB, $8B, $6C, $0C, $DC, $1C, $EB, $C8]) then Exit;
+  if not FTmacCapture or not (ACommand in [$AD, $8D, $AB, $8B, $6C, $0C, $DC, $1C, $EB, $C8, $BA]) then Exit;
   if (ACommand <> $C8) and (Length(AHeader) > 0) and (AHeader[0] = FTmacExcludedFile) then Exit;
   Updated := TDesfireTmacCrypto.AppendInput(FTmacInput, ACommand, AHeader, AData);
   TCardCrypto.Clear(FTmacInput);

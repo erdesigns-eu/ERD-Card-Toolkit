@@ -77,9 +77,31 @@ data. Ordinary getters continue to reject extended layouts rather than silently
 losing additional rights.
 
 These management operations require readable application/file metadata. Extended
-backup/value/record transaction workflows, SDM combined with multiple access
-rights and profiles that cannot expose the metadata remain separate. Backup data
+backup/value/record transaction workflows and profiles that cannot expose the
+metadata remain separate. Combined SDM/right settings are now managed through the dedicated API described below. Backup data
 is readable here; writes use the existing transaction APIs for ordinary layouts.
+
+## Combined SDM and multiple-access settings
+
+`OpenSdmAccessManagementSession(Aid)` exposes `IDesfireSdmAccessManagement`.
+`ReadSdmAccessSettings(File)` preserves ordinary geometry, every right tuple and
+all conditional SDM fields. `ChangeSdmAccessSettingsVerified(File, Expected,
+Desired)` freezes the complete desired encoding and exact preimage before I/O,
+validates every ordinary/SDM application-key reference and primary change authority,
+sends encrypted native `5F` and verifies the complete resulting raw settings.
+
+Native additional tuples follow ordinary file geometry and precede conditional
+SDM fields. `TDesfireExtensionCodec.EncodeSdmAccessSettings` and
+`DecodeSdmAccessSettings` validate this combined framing without changing the
+existing ordinary/SDM codecs. The primary tuple must agree with typed SDM rights;
+file size remains unchanged. SDM still requires Plain file communication and
+valid, nonoverlapping mirror regions. Enabling/removing SDM and adding/removing
+additional tuples can be combined in one change. Equal settings skip mutation.
+
+The API changes policy/settings only; it does not write templates or define an
+automatic combined-layout data/migration workflow. Original getters continue to
+refuse layouts they cannot preserve. Returned arrays are owned but shared by
+ordinary record assignment. See [SDM fields/crypto](DESFIRE_EXTENDED.md).
 
 ## TMAC file management
 
@@ -193,6 +215,31 @@ A caller needing rollback-capable file updates must use backup files and the
 existing transaction operations. Unverified write/receipt/read-back/release after
 mutation raises `EContactlessWriteUncertain`, even if the write itself was
 acknowledged. Never retry such a write solely because commit proof failed.
+
+## Native cyclic-record updates
+
+`OpenRecordUpdateSession(Aid, True)` exposes `IDesfireRecordUpdateSession` under
+fresh, exclusively owned EV2 AES transaction state. The same optional interface
+is available through `Supports` on `IDesfireTransactionMacSession`.
+
+`StageCyclicRecordUpdate(File, Record, Expected, Data)` implements native `BA` for
+an existing sixteen-byte cyclic record. The explicit index is newest-first.
+It freezes both complete sixteen-byte buffers, checks acquired geometry and
+native read/write authority, and compares the current owned-journal preimage.
+A first update acquires all existing records; a repeated update uses the owned
+staged expectation. Equal data skips native mutation.
+
+The update is staged. Ordinary `Commit` or TMAC `CommitTransactionMacVerified`
+proves all final records/settings. TMAC captures `BA`, its complete ten-byte
+header with five zero padding bytes and the complete record data exactly once,
+independent of outbound `AF` chaining. Explicit Abort cancels staged updates.
+
+A file cannot mix record update with append/clear within the same transaction;
+updates may repeat only for the same record index. Conflicts in either order
+are refused before another mutation. Failures after staging retain uncertainty.
+The published Light profile defines the aligned sixteen-byte case; partial or
+unaligned TMAC record updates are not inferred. Other card generations must
+support the explicitly selected native command profile.
 
 ## Offline tools and references
 

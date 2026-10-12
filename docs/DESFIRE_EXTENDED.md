@@ -81,6 +81,11 @@ also disable SDM with verified ordinary settings.
 This supports SDM on an existing compatible file. Native ISO application/FID creation is now available through [file management](DESFIRE_FILES_TMAC.md); automatic end-to-end phone-readable NDEF template provisioning remains separate.
 Ordinary DESFire settings APIs still reject SDM layouts; select the extended API.
 
+Combined SDM and additional access-right tuples are now available through
+`IDesfireSdmAccessManagement`, with complete conditional framing and exact-preimage
+change/read-back. See [combined settings](DESFIRE_FILES_TMAC.md). The original
+SDM interface layout and codecs retain their strict ordinary-right profile.
+
 ## Offline SDM verification and decryption
 
 `TDesfireSdmCrypto` provides:
@@ -108,4 +113,4 @@ No external project source is compiled into the library.
 
 Failure tests include every exchange boundary, corrupted protected responses,
 cleanup uncertainty and caller-input mutation during I/O. See [VALIDATION.md](VALIDATION.md).
-ISO identifiers, multi-access settings/data and AES TMAC file/transaction/receipt APIs are supplied by the new optional interfaces in [DESFIRE_FILES_TMAC.md](DESFIRE_FILES_TMAC.md). LRP, originality and combined SDM/multi-access layouts remain separate profiles.
+ISO identifiers, multi-access settings/data and AES TMAC file/transaction/receipt APIs are supplied by the new optional interfaces in [DESFIRE_FILES_TMAC.md](DESFIRE_FILES_TMAC.md). Combined SDM/multi-access settings are implemented. Native LRP authentication/secure-message codecs are available in [DESFIRE_LRP.md](DESFIRE_LRP.md); automatic LRP sessions, originality and combined-layout data transactions remain separate profiles.

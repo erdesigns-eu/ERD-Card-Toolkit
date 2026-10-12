@@ -207,6 +207,7 @@
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.DESFire.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.DESFire.EV1.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.DESFire.EV2.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.DESFire.LRP.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.ISO15693.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Raw.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Type2.pas"/>

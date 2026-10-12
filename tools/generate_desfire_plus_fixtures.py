@@ -33,7 +33,8 @@ class DF:
    padded=body+b'\x80'+bytes((15-len(body))%16);iv=enc(self.e,Z,bytes.fromhex('A55A')+TI+le(self.ctr)+bytes(8));body=enc(self.e,iv,padded)
   data=h+body;packet=data+mac(self.m,bytes([c])+le(self.ctr)+TI+data)
   self.ctr+=1;response=reply+mac(self.m,b'\0'+le(self.ctr)+TI+reply)+bytes.fromhex('9100')
-  self.p.append((apdu(c,packet),response))
+  chunks=[packet[i:i+48] for i in range(0,len(packet),48)] or [b'']
+  for i,chunk in enumerate(chunks):self.p.append((apdu(c if i==0 else 0xAF,chunk),response if i==len(chunks)-1 else bytes.fromhex('91AF')))
  def settings(self):self.cmd(0x45,reply=bytes.fromhex('0F930101021000'))
  def fresh(self,key=NEW):auth(self.p,key);self.e,self.m=evkeys(key);self.ctr=0
 vectors={}
@@ -354,6 +355,116 @@ for name,metadata in [('DeniedWrite','0003F00F080000'),('DeniedRead','0003F0F008
  f.cmd(0xF5,b'\0',reply=settings);f.cmd(0xF5,b'\x01',reply=tmsettings)
  iv=enc(f.e,Z,bytes.fromhex('5AA5')+TI+le(f.ctr+1)+bytes(8));f.cmd(0x51,reply=enc(f.e,iv,UID+b'\x80'+bytes(8)))
  f.cmd(0xF5,b'\0',reply=settings);vectors['DfTmacStandard'+name]=f.p
+# Combined GetFileSettings puts additional tuples after ordinary geometry, before SDM fields.
+plain_sdm=bytes.fromhex('000000E0000100')
+sdm_only=bytes.fromhex('004000E0000100C1F121200000430000430000')
+combined_sdm=bytes.fromhex('00C000E0000100010101C1F121200000430000430000')
+combined_plain=bytes.fromhex('008000E0000100010101')
+f=DF();f.settings();f.cmd(0xF5,b'\0',reply=combined_sdm);vectors['DfSdmAccessRead']=f.p
+for name,old_settings,new_settings in [('Enable',plain_sdm,combined_sdm),('DisableSdm',combined_sdm,combined_plain),('RemoveRights',combined_sdm,sdm_only),('RemoveBoth',combined_sdm,plain_sdm),('Noop',combined_sdm,combined_sdm),('BadPreimage',combined_sdm,combined_sdm),('BadPostimage',plain_sdm,combined_sdm)]:
+ f=DF();f.settings();f.settings();f.settings();f.cmd(0xF5,b'\0',reply=old_settings)
+ if name not in ['Noop','BadPreimage']:
+  f.cmd(0x5F,b'\0',new_settings[1:4]+new_settings[7:],full=True)
+  post=new_settings
+  if name=='BadPostimage':post=new_settings[:8]+bytes.fromhex('0202')+new_settings[10:]
+  f.cmd(0xF5,b'\0',reply=post)
+ vectors['DfSdmAccess'+name]=f.p
+# Full-record native BA update within one owned cyclic-record transaction.
+for with_tmac in [False,True]:
+ for action in ['Write','Repeat','Abort','Noop','Preimage','AppendConflict','ClearConflict','DifferentConflict','WrongCommit','AppendFirstConflict','ClearFirstConflict']:
+  f=DF();settings=bytes.fromhex('04030000100000040000020000');tmsettings=bytes.fromhex('0500F0EF0234');records=OLD+DATA
+  f.cmd(0x6F,reply=bytes.fromhex('0001') if with_tmac else b'\0');f.cmd(0xF5,b'\0',reply=settings)
+  if with_tmac:
+   f.cmd(0xF5,b'\x01',reply=tmsettings);iv=enc(f.e,Z,bytes.fromhex('5AA5')+TI+le(f.ctr+1)+bytes(8));f.cmd(0x51,reply=enc(f.e,iv,UID+b'\x80'+bytes(8)))
+  tmi=b'';f.cmd(0xF5,b'\0',reply=settings)
+  h=b'\0'+le(0,3)+le(2,3);iv=enc(f.e,Z,bytes.fromhex('5AA5')+TI+le(f.ctr+1)+bytes(8));f.cmd(0xAB,h,reply=enc(f.e,iv,records+b'\x80'+bytes(15)));tmi+=align(b'\xAB'+h)+records
+  f.cmd(0xF5,b'\0',reply=settings)
+  if action=='Preimage':vectors['DfRecord'+('Tmac' if with_tmac else '')+action]=f.p;continue
+  if action in ['AppendFirstConflict','ClearFirstConflict']:
+   if action=='AppendFirstConflict':
+    h=b'\0'+le(0,3)+le(16,3);f.cmd(0x8B,h,NEW,full=True)
+   else:f.cmd(0xEB,b'\0')
+   f.cmd(0xF5,b'\0',reply=settings)
+   vectors['DfRecord'+('Tmac' if with_tmac else '')+action]=f.p;continue
+  changed=action!='Noop'
+  if changed:
+   h=b'\0'+le(1,3)+le(0,3)+le(16,3);f.cmd(0xBA,h,NEW,full=True);tmi+=align(b'\xBA'+h)+NEW;records=OLD+NEW
+  if action=='Repeat':
+   f.cmd(0xF5,b'\0',reply=settings);f.cmd(0xBA,h,OLD,full=True);tmi+=align(b'\xBA'+h)+OLD;records=OLD+OLD
+  if action in ['AppendConflict','ClearConflict','DifferentConflict']:
+   f.cmd(0xF5,b'\0',reply=settings);vectors['DfRecord'+('Tmac' if with_tmac else '')+action]=f.p;continue
+  if action=='Abort' or (action=='Noop' and not with_tmac):
+   if changed or with_tmac:f.cmd(0xA7)
+  else:
+   if with_tmac:f.cmd(0xF5,b'\x01',reply=tmsettings)
+   f.cmd(0xC7,b'\x01' if with_tmac else b'\0',reply=le(1,4)+mac(TM_MAC,tmi) if with_tmac else b'')
+   f.cmd(0xF5,b'\0',reply=settings);h=b'\0'+le(0,3)+le(2,3);iv=enc(f.e,Z,bytes.fromhex('5AA5')+TI+le(f.ctr+1)+bytes(8));proof=bytes(32) if action=='WrongCommit' else records
+   f.cmd(0xAB,h,reply=enc(f.e,iv,proof+b'\x80'+bytes(15)))
+   if action!='WrongCommit':f.cmd(0xF5,b'\0',reply=settings)
+  vectors['DfRecord'+('Tmac' if with_tmac else '')+action]=f.p
+# Independent LRP implementation using the published AN12304 algorithms.
+# No Pascal implementation is called to generate or verify these values.
+import json
+class LRP:
+ def __init__(self,key,index=0):
+  seed=enc(key,Z,b'\x55'*16);self.pt=[]
+  for _ in range(16):self.pt.append(enc(seed,Z,b'\xAA'*16));seed=enc(seed,Z,b'\x55'*16)
+  seed=enc(key,Z,b'\xAA'*16)
+  for _ in range(index+1):self.uk=enc(seed,Z,b'\xAA'*16);seed=enc(seed,Z,b'\x55'*16)
+ def evaluate(self,nibbles,final=True):
+  current=self.uk
+  for nibble in nibbles:current=enc(current,Z,self.pt[nibble])
+  return enc(current,Z,Z) if final else current
+ def block(self,data):return self.evaluate([int(x,16) for x in data.hex()])
+ def cmac(self,data):
+  def double(x):n=int.from_bytes(x,'big');return (((n<<1)&((1<<128)-1))^(0x87 if n>>127 else 0)).to_bytes(16,'big')
+  k1=double(self.block(Z));k2=double(k1);whole=len(data)>0 and len(data)%16==0
+  data=data if whole else data+b'\x80'+bytes((-len(data)-1)%16)
+  data=data[:-16]+bytes(x^y for x,y in zip(data[-16:],k1 if whole else k2));state=Z
+  for i in range(0,len(data),16):state=self.block(bytes(x^y for x,y in zip(state,data[i:i+16])))
+  return state
+ def crypt(self,data,counter,padding=True):
+  if padding:data=data+b'\x80'+bytes((-len(data)-1)%16)
+  out=b'';width=len(counter);n=int.from_bytes(counter,'big')
+  for i in range(0,len(data),16):out+=enc(self.block((n%(1<<(width*8))).to_bytes(width,'big')),Z,data[i:i+16]);n+=1
+  return out,n
+published=json.loads((r/'tests/contactless/fixtures/lrp-nxp.json').read_text())['vectors']
+vectors['LrpPublishedEval']=[]
+for v in published['eval']:
+ key=bytes.fromhex(v['KEY']);nibbles=bytes(int(x,16) for x in v['IV']);expected=bytes.fromhex(v['RES']);index=int(v['UPDATEDKEY']);final=v['FINALIZE']=='1'
+ assert LRP(key,index).evaluate(nibbles,final)==expected
+ vectors['LrpPublishedEval'].append((key+bytes([index,int(final)])+nibbles,expected))
+vectors['LrpPublishedCrypt']=[]
+for v in published['crypt']:
+ key=bytes.fromhex(v['KEY']);counter=bytes.fromhex(v['IV']);plain=bytes.fromhex(v['PT']);cipher=bytes.fromhex(v['CT']);padding=v['USEPADDING']=='1'
+ assert LRP(key).crypt(plain,counter,padding)[0]==cipher
+ vectors['LrpPublishedCrypt'].append((key+bytes([int(padding)])+counter+plain,cipher))
+vectors['LrpPublishedCmac']=[]
+for v in published['cmac']:
+ key=bytes.fromhex(v['KEY']);message=bytes.fromhex(v['MSG']);expected=bytes.fromhex(v['MAC']);assert LRP(key).cmac(message)==expected
+ vectors['LrpPublishedCmac'].append((key+message,expected))
+sv=bytes.fromhex('00010080')+A[:2]+bytes(x^y for x,y in zip(A[2:8],B[:6]))+B[6:]+A[8:]+bytes.fromhex('9669')
+master=LRP(K).cmac(sv);lm=LRP(master);lecrypt=LRP(master,1)
+cap=bytes.fromhex('020000000000');authcipher=lecrypt.crypt(TI+bytes(6)+cap,bytes(4),False)[0]
+vectors['LrpAuth']=[(K+A+B,master),(A+B,A+lm.cmac(A+B)),(B+A,authcipher+lm.cmac(B+A+authcipher)),(B+A,lm.cmac(B+A))]
+# Correct-MAC wrong capability echo must fail after MAC verification.
+wrongcipher=lecrypt.crypt(TI+bytes(6)+bytes(6),bytes(4),False)[0]
+vectors['LrpAuthBadCapability']=[(b'',wrongcipher+lm.cmac(B+A+wrongcipher))]
+for mode in [0,1,2]:
+ for writing in [False,True]:
+  h=bytes.fromhex('00000000100000');counter=1
+  payload=DATA if writing else b''
+  if mode==2 and writing:payload,counter=lecrypt.crypt(DATA,counter.to_bytes(4,'big'))
+  packet=h+payload
+  if mode:packet+=lm.cmac(b'\x8D'+le(0)+TI+packet)[1::2] if writing else lm.cmac(b'\xAD'+le(0)+TI+packet)[1::2]
+  response=b'' if writing else OLD
+  if mode==2 and not writing:response,counter=lecrypt.crypt(OLD,counter.to_bytes(4,'big'))
+  if mode:response+=lm.cmac(b'\0'+le(1)+TI+response)[1::2]
+  vectors['Lrp'+['Plain','Mac','Full'][mode]+('Write' if writing else 'Read')]=[(packet,response)]
+# Correct MAC with invalid method-two padding, and authentic but wrong plaintext length.
+for name,plain in [('BadPadding',bytes(16)),('BadLength',OLD+DATA+b'\x80'+bytes(15))]:
+ response=lecrypt.crypt(plain,(1).to_bytes(4,'big'),False)[0]
+ vectors['Lrp'+name]=[(b'',response+lm.cmac(b'\0'+le(1)+TI+response)[1::2])]
 s='''unit DesfirePlus.Vectors;
 {$IFDEF FPC}{$MODE DELPHI}{$ENDIF}
 interface
