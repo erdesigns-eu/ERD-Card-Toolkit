@@ -10,6 +10,7 @@ requires
   rtl;
 
 contains
+  ERD.Card.Inspection in '..\..\src\core\ERD.Card.Inspection.pas',
   ERD.Card.Workflow.Batch in '..\..\src\core\ERD.Card.Workflow.Batch.pas',
   ERD.Card.Workflow in '..\..\src\core\ERD.Card.Workflow.pas',
   ERD.Card.Workflow.Archive in '..\..\src\core\ERD.Card.Workflow.Archive.pas',

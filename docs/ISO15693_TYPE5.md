@@ -384,3 +384,11 @@ Additional protocol references: NXP SL2S2602 Rev.4.2 sections 9.5.3.3, 9.5.3.6
 and 9.5.3.18; ST DS10925 Rev.11 sections 5.6, 7.6.26/27, 7.6.28 (EH_CTRL_Dyn)
 and 7.6.35/36. The RF snapshot covers user-area policy, not a dump of every system
 register or I²C setting.
+
+## Native workflow adapters
+
+See [CARD_WORKFLOW_ADAPTERS.md](CARD_WORKFLOW_ADAPTERS.md) for Ultralight C
+user-memory/security operations, protected Type 2/Type 5 NDEF transfer and TWN4
+Classic/Type 2 memory adapters. Type 5 proprietary CC access code two is permitted
+only with an explicitly authenticated session profile; the flag does not perform
+authentication, and read-only code three still prohibits writes.

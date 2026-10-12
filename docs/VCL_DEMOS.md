@@ -1,7 +1,6 @@
 # VCL read/write demos
 
-Thirty applications demonstrate implemented APIs: SmartCardDemo,
-MagStripeDemo, twenty-five family projects and three independent offline-tool demos. Each application owns a direct TForm
+Forty-eight independent applications demonstrate card, toolkit and workflow APIs. Each application owns a direct TForm
 class and its own designer-editable Main.dfm, including all action inputs and a
 reader dropdown where hardware is involved. EmvCalculatorDemo is fully offline;
 CardCatalogDemo uses native reader/card snapshots rather than card commands.
@@ -47,6 +46,8 @@ that byte-buffer wiping guarantee. Errors display their class, never backend tex
 
 | Project | Actual actions |
 | --- | --- |
+| `protectedtype2workflow/ProtectedType2WorkflowDemo.dproj` | Native PWD_AUTH/PACK user-memory workflows and offline-reviewed password/protection changes, own DFM and reader events |
+| `protectediso15693workflow/ProtectedIso15693WorkflowDemo.dproj` | SLIX2/ST25DV supplied-password memory workflows and reviewed native credential/protection changes, own DFM and reader events |
 | `sle4404workflow/Sle4404WorkflowDemo.dproj` | Public SLE4404 snapshots, offline one-way plan generation/comparison, explicit program/scratchpad/application erase plans and checked prefix resume |
 | `slecounterworkflow/SleCounterWorkflowDemo.dproj` | Complete declared counter windows, offline one-way plans, explicit carry/backup transitions and checked prefix resume |
 | `desfirepersonalization/DesfirePersonalizationDemo.dproj` | Ordered application/file creation, content population, supplied-key rotation and access/policy profiles with checked resume |
@@ -730,3 +731,32 @@ Review per-step results and retained child evidence after a partial failure. No
 automatic key guessing, rollback or retry is performed; keep the same card under
 exclusive connection ownership. Templates exclude key material; masked UI fields
 are cleared after worker submission.
+
+## Inspection report demos
+
+`eidinspection/EidInspectionDemo.dproj`, `emvinspection/EmvInspectionDemo.dproj`
+and `mobibinspection/MobibInspectionDemo.dproj` each own a TForm and Main.dfm.
+All provide an available-reader dropdown, native hot-plug/card events, explicit
+profile selection, background acquisition, separate readable/JSON views and
+UTF-8 save buttons. Privacy checkboxes apply to both views and exports. Progress
+is available as component events and shown as a phase log on worker completion.
+Acquisition inputs are editable key=value lines; unknown and duplicate options
+are refused.
+
+The eID demo selects Belgian contact eID, ICAO BAC/MRZ or PACE/CAN with either
+supported curve. `library=` optionally names the OpenSSL 3 library. The EMV demo
+can discover PPSE first, then inspect explicitly chosen semicolon-separated
+`aids=` with `pdol.TAG=HEX` inputs. `counters`, `log` and `scan` are Boolean 0/1
+options; scan bounds and maximum records are explicit. The MOBIB demo uses the
+inventory plan with explicit raw/legacy layout, dialect, record bound/size and
+operator context.
+
+See [INSPECTION_REPORTS.md](INSPECTION_REPORTS.md) for API and evidence semantics.
+
+## Protected memory and reviewed security workflows
+
+The two independent DFM demos cover nine actions: current configuration capture, backup, copy, compare, restore,
+credential preview/apply and protection preview/apply. Reader selection and events
+are built into both. Exact options and credential formats are documented in
+[PROTECTED_WORKFLOWS.md](PROTECTED_WORKFLOWS.md). No hardware I/O occurs in preview
+or input validation; apply executes on the existing background worker.

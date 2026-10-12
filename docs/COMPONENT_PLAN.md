@@ -97,8 +97,8 @@ are not compatibility requirements.
    verification, protected directories and basic AES application/ordinary-file create/delete.
    AES management also reads free memory/key versions and changes key policy/file
    access; rotation proves the new key through fresh authentication/version reads.
-   See [native DESFire](DESFIRE.md). D40/3DES, LRP, TMAC receipts, key sets/extended
-   configuration, originality and physical validation remain pending.
+   See [native DESFire](DESFIRE.md). D40/EV1 DES/2K3DES/3K3DES are implemented.
+   EV2 AES key sets, documented configuration options and SDM settings/crypto are implemented. Native ISO creation/directories including key-set creation, multi-access settings/data and AES TMAC file/transactions/receipts including immediate standard-range writes are implemented. Native LRP crypto/authentication/message codecs, combined SDM/right policy and sixteen-byte cyclic-record updates are implemented. Automatic LRP First/NonFirst data sessions and LRP TMAC with explicit/acquired counters and deferred ReaderID proof are implemented. Native DESFire Light LRP key/configuration management is implemented. Owned EV2 multiple-access backup/value/record transactions are implemented. Broader LRP provisioning, originality and combined SDM/TMAC data transactions remain pending.
    **TMemoryCardReaderWriter** implements the eight SLE4432/4442/5532/5542 and
    SLE4418/4428/5518/5528 models plus I2C 1–1024-kilobit geometries through explicit
    ACR38 CCID/ACR39 profiles. It reads snapshots/retry/protection state, verifies
@@ -148,11 +148,10 @@ documentation. Use the same complete scope for upcoming batches:
    and native MagTek capture,
    then YL160/MSR DLL bindings with verified SDK headers and buffer lengths.
    Physical/firmware coverage and status-versus-read-back evidence stay explicit.
-3. **DESFire expansion and additional chip families:** D40 and EV1 DES/2K3DES/3K3DES security,
-   EV2 key sets, LRP, TMAC receipts and extended configuration/SDM/rights, followed by
+3. **DESFire expansion and additional chip families:** D40 and EV1 DES/2K3DES/3K3DES security are implemented. EV2 AES key sets, configuration subset and SDM settings/crypto are implemented. Native ISO creation/directories including key-set creation, multi-access settings/data and AES TMAC file/transactions/receipts including immediate standard-range writes are implemented. Native LRP codecs, combined SDM/right settings and cyclic-record updates are implemented. Automatic LRP sessions and LRP TMAC are implemented. Native DESFire Light LRP key/configuration management is implemented. Remaining extensions include broader LRP provisioning and combined SDM/TMAC data transactions, followed by
    originality and physical card profiles. Owned ordinary transactions and basic create/delete
    management and verified AES key/policy/access administration are implemented. EV1/EV2 AES secure
-   file access and EV2 NonFirst through maintained providers are implemented. Then Plus profiles,
+   file access and EV2 NonFirst through maintained providers are implemented. Plus SL3 AES ordinary-memory profiles and ACR122/workflow adapters are implemented. Explicit SL0 personalization/commit with selected SL3 proofs and sector AES key replacement are implemented. Raw SL1 authentication, acknowledged SL1→SL2 and verified SL1→SL3 are implemented, together with signed value-block codecs and ordinary verified value writes. Verified SL2→SL3 and native Plus X-compatible increment/decrement/restore/transfer workflows are implemented. SL2 sector data sessions and trailer/configuration programming remain separate, alongside
    additional ISO 15693 authentication/reader backends,
    then authenticated AT88SC/CryptoMemory and additional reader backends.
    SLE4404 code access/programming/explicit erases are implemented through ACS38 CCID;
@@ -197,10 +196,10 @@ Linux core tests and XML well-formedness do not substitute for Delphi or Help In
 
 ## Application workflows
 
-Eighteen palette components implement Classic/Type 2/ISO15693 memory copy,
+Twenty-four palette components implement Classic/Type 2/ISO15693 memory copy,
 backup/compare/restore, programmable UID, Classic credentials, Type 1-5 NDEF,
 magstripe, contact-memory, DESFire application migration/provisioning and batch
-personalization, SIM contact/SMS planning and inspection. Thirteen independent workflow demos have their own forms/DFMs.
+personalization, SIM contact/SMS planning and inspection. Eighteen independent workflow demos have their own forms/DFMs.
 
 Contact-memory workflows cover ordinary SLE/I2C data with explicit PIN retry
 budgets and protection preflight. DESFire supports complete ordinary application
@@ -209,7 +208,19 @@ ownership and application/file provisioning. Both can be prepared as batch
 children through the existing factory contract. SLE4404/counterchip snapshot,
 comparison, explicit programming/erase plans and checked resume, plus ordered
 DESFire creation/content/key/access-policy personalization are implemented.
-Cross-family eID/EMV/MOBIB report pipelines remain extensions.
+eID/EMV/MOBIB structured inspection and privacy-aware report pipelines are implemented;
+see [INSPECTION_REPORTS.md](INSPECTION_REPORTS.md). Supplied-password Type 2/ISO15693
+memory workflows and reviewed credential/protection plans are implemented; see
+[PROTECTED_WORKFLOWS.md](PROTECTED_WORKFLOWS.md).
 SIM/USIM now includes complete record snapshots, reviewed restore/apply, free-slot
 ADN/EXT/EMAIL/ANR and SMS import plans, explicit multipart groups and inspection.
 See [WORKFLOWS.md](WORKFLOWS.md) for exact contracts and evidence.
+
+Ultralight C user-memory and reviewed security workflows, protected Type 2/Type 5
+NDEF transfer, and TWN4 Classic/Type 2 memory workflow adapters are implemented;
+see [CARD_WORKFLOW_ADAPTERS.md](CARD_WORKFLOW_ADAPTERS.md). New work focuses on
+components. Demo redesign is deferred until the component set is ready.
+
+## Native Plus and DESFire extensions
+
+[Plus SL3](MIFARE_PLUS.md) now supports explicit 2K/4K ordinary-memory reading/writing and protected-memory workflows. [DESFire extended management](DESFIRE_EXTENDED.md) adds AES key-set lifecycle, configuration acknowledgement, SDM settings read-back and offline SDM crypto. This increment adds no demo changes.

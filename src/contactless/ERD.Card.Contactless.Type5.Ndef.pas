@@ -1,4 +1,4 @@
-unit ERD.Card.Contactless.Type5.Ndef;
+﻿unit ERD.Card.Contactless.Type5.Ndef;
 
 {$IFDEF FPC}
 {$MODE DELPHI}
@@ -19,7 +19,7 @@ const
   Type5MaxMessageBytes = 65535;
 
 type
-  /// <summary>Invalid or unsupported Type 5 CC, contiguous TLV mapping or public access.</summary>
+  /// <summary>Invalid or unsupported Type 5 CC, contiguous TLV mapping or selected access profile.</summary>
   EType5NdefError = class(EContactlessError);
 
   /// <summary>Strict NFC Forum Type 5 mapping 1.0 capability container.</summary>
@@ -75,17 +75,18 @@ type
     /// <exception cref="EContactlessError">Magic, version, access, RFU, feature or capacity is unsupported.</exception>
     class function DecodeCapabilities(const ABytes: TBytes;
       const AInfo: TIso15693SystemInfo): TType5CapabilityContainer; static;
-    /// <summary>Decodes acquired mapped memory and the single existing public NDEF message.</summary>
+    /// <summary>Decodes acquired mapped memory and the single existing NDEF message under the selected access profile.</summary>
     /// <param name="AInfo">Acquired system information; not modified.</param>
+    /// <param name="AAllowProprietaryAccess">Explicit known authenticated profile permits CC access code two; no authentication is performed by the codec.</param>
     /// <param name="AMemory">Complete physical blocks covering CC plus advertised data area, bounded by geometry.</param>
     /// <returns>Independent snapshot, retaining opaque prefix and block-tail bytes.</returns>
     /// <exception cref="EContactlessError">Mapping, access, TLV or acquired memory is invalid.</exception>
     /// <exception cref="ENdefError">Nonempty NDEF payload is malformed.</exception>
     class function DecodeSnapshot(const AInfo: TIso15693SystemInfo;
-      const AMemory: TBytes): TType5NdefSnapshot; static;
+      const AMemory: TBytes; const AAllowProprietaryAccess: Boolean = False): TType5NdefSnapshot; static;
   end;
 
-  /// <summary>Nonvisual public Type 5 NDEF reader and verified length-last updater.</summary>
+  /// <summary>Nonvisual Type 5 NDEF reader and verified length-last updater; public access by default.</summary>
   /// <remarks>Inactive constructor, existing initialized tags only. Single exclusive ISO 15693 session;
   /// no auto-format, permanent lock, AFI/DSFID/UID update, authentication, replay or rollback.
   /// Writes preserve CC, preceding proprietary TLVs and every byte outside the changed message region.
@@ -93,7 +94,8 @@ type
   TType5NdefCardReader = class(TComponent)
   private
     FSession, FActiveSession: IIso15693Session;
-    FBusy: Boolean;
+    FBusy, FAllowProprietaryAccess: Boolean;
+    procedure SetAllowProprietaryAccess(const AValue: Boolean);
     procedure SetSession(const AValue: IIso15693Session);
     function BeginOperation: TIso15693SystemInfo;
     procedure EndOperation(const ASucceeded: Boolean);
@@ -102,12 +104,12 @@ type
     function Discover(const AInfo: TIso15693SystemInfo): TType5NdefSnapshot;
     procedure Replace(const AMessageBytes: TBytes);
   public
-    /// <summary>Reads an existing public NDEF message and confirms CC/header coherence before release.</summary>
+    /// <summary>Reads an existing NDEF message under the selected access profile and confirms CC/header coherence before release.</summary>
     /// <returns>Independent complete snapshot only after successful release.</returns>
     /// <exception cref="EContactlessError">Session, geometry, mapping, access or coherence fails.</exception>
     /// <exception cref="ENdefError">Acquired nonempty message is malformed.</exception>
     function ReadMessage: TType5NdefSnapshot;
-    /// <summary>Replaces a publicly writable existing NDEF TLV and publishes its length last.</summary>
+    /// <summary>Replaces a writable existing NDEF TLV under the selected access profile and publishes its length last.</summary>
     /// <param name="AMessage">Nonempty logical records; encoded before hardware acquisition.</param>
     /// <exception cref="EContactlessError">Existing mapping, access, capacity or block-security preflight fails.</exception>
     /// <exception cref="ENdefError">Requested or existing NDEF framing is invalid.</exception>
@@ -122,6 +124,9 @@ type
     procedure ClearMessage;
     /// <summary>Retained ISO 15693 backend; cannot change while an operation is busy.</summary>
     property Session: IIso15693Session read FSession write SetSession;
+    /// <summary>Explicit authenticated-session profile allows proprietary CC access code two; false by default.</summary>
+    /// <remarks>Caller must supply authenticated Session; read-only code three remains rejected for writes.</remarks>
+    property AllowProprietaryAccess: Boolean read FAllowProprietaryAccess write SetAllowProprietaryAccess;
     /// <summary>True throughout acquisition, protocol I/O and cleanup; nested calls are refused.</summary>
     property Busy: Boolean read FBusy;
   end;
@@ -182,7 +187,7 @@ begin
 end;
 
 class function TType5NdefCodec.DecodeSnapshot(const AInfo: TIso15693SystemInfo;
-  const AMemory: TBytes): TType5NdefSnapshot;
+  const AMemory: TBytes; const AAllowProprietaryAccess: Boolean): TType5NdefSnapshot;
 var
   CcSize, P, Limit, N, Header: Integer;
   Tag: Byte;
@@ -217,7 +222,7 @@ begin
   if AMemory[2] = 0 then
     CcSize := 8;
   Result.Capabilities := DecodeCapabilities(Copy(AMemory, 0, CcSize), AInfo);
-  if Result.Capabilities.ReadAccess <> 0 then
+  if (Result.Capabilities.ReadAccess <> 0) and not AAllowProprietaryAccess then
     InvalidType5;
   Limit := CcSize + Result.Capabilities.DataAreaBytes;
   if Limit > Length(AMemory) then
@@ -250,6 +255,12 @@ begin
     Exit;
   end;
   InvalidType5;
+end;
+
+procedure TType5NdefCardReader.SetAllowProprietaryAccess(const AValue: Boolean);
+begin
+  if FBusy then InvalidType5;
+  FAllowProprietaryAccess := AValue;
 end;
 
 procedure TType5NdefCardReader.SetSession(const AValue: IIso15693Session);
@@ -331,12 +342,12 @@ begin
   if Head[2] = 0 then
     N := 8;
   Cc := TType5NdefCodec.DecodeCapabilities(Copy(Head, 0, N), AInfo);
-  if Cc.ReadAccess <> 0 then
+  if (Cc.ReadAccess <> 0) and not FAllowProprietaryAccess then
     InvalidType5;
   N := Cc.HeaderBytes + Cc.DataAreaBytes;
   N := ((N + AInfo.BlockSize - 1) div AInfo.BlockSize) * AInfo.BlockSize;
   Memory := ReadRange(AInfo, 0, N);
-  Result := TType5NdefCodec.DecodeSnapshot(AInfo, Memory);
+  Result := TType5NdefCodec.DecodeSnapshot(AInfo, Memory, FAllowProprietaryAccess);
   if not BytesEqual(Result.Capabilities.RawBytes, Cc.RawBytes) or
     not BytesEqual(ReadRange(AInfo, 0, Cc.HeaderBytes), Cc.RawBytes) or
     not BytesEqual(ReadRange(AInfo, Result.TlvOffset, Result.TlvHeaderBytes),
@@ -399,7 +410,8 @@ begin
   try
     try
       Old := Discover(Info);
-      if Old.Capabilities.WriteAccess <> 0 then
+      if (Old.Capabilities.WriteAccess <> 0) and
+        not (FAllowProprietaryAccess and (Old.Capabilities.WriteAccess = 2)) then
         InvalidType5;
       if not BytesEqual(Old.MessageBytes, AMessageBytes) then
       begin

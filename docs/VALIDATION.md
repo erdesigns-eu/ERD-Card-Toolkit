@@ -894,3 +894,323 @@ These are compiler/protocol/backend/script results, not Delphi IDE or physical
 card/firmware qualification. A tag's final accepted password may remain active
 until a later RF reset; verified replacement is not cryptographic card authenticity.
 ST RF exclusivity does not lock an external I²C host or guarantee its power supply.
+
+## eID / EMV / MOBIB inspection workflows
+
+The common report engine and three native family adapters add independently owned
+section evidence, authentication/partial-read events, and explicit personal/raw
+text and JSON export policies. Three independent inspection DFM applications,
+package references and 54 registered palette classes are included.
+
+The full FPC/native runner passed, including 38 Python checks and 55 inactive
+palette/RTL streaming assertions. Final focused inspection tests passed 1,097
+assertions with zero heap leaks, covering cancellation, primary/cleanup failure,
+observer isolation, consumed requests, privacy combinations, Unicode, synthetic
+native EMV/eID/MOBIB transcripts and hardware-free demo validation. All 21 common
+Pascal source readers passed on the new sources; distribution checks reported
+60 projects, two groups and 46 DFM forms with zero findings. FPC reports the
+pre-existing TLV constructor visibility warning. No Delphi/VCL build was executed
+in the Linux environment.
+
+## Protected memory and reviewed security workflow extension
+
+The focused `ProtectedWorkflow.Tests` program passes 8,462 assertions with zero
+heap leaks. It exercises every password-capable Type 2 model, both ISO password
+profiles, backup/archive restore, copy/compare, static/dynamic locks, mirror
+refusal, cancellation, wrong passwords, pre-authentication UID/geometry changes,
+known pre-dispatch refusals, post-dispatch loss/read-back mismatch and credential
+cleanup. Security changes exercise Type 2 password/PACK and AUTH0/PROT/AUTHLIM,
+SLIX2 password/protection and ST25DV password/area policy with fresh RF proof.
+Injected demo transports throw on every hardware operation: validation and
+credential previews pass without I/O or secret exports. Native ACR122/ACR1552
+transport fixtures also exercise in-demo configuration capture, same-card UID
+guards, exact configuration artifacts and password-free ISO public reads.
+
+The complete FPC/native runner passed before this final capture action; the final
+focused suite covers the added path with zero leaks. The regression run includes
+38 Python tests and 57 inactive component registration/streaming checks.
+
+All 21 selected-source checkers pass. Distribution readers report 62 projects,
+two groups and 48 DFM forms without findings; registration includes 56 palette
+components. These are Linux FPC/RTL/static checks; they do not establish Delphi
+IDE rendering, Windows ABI or physical-reader/card behavior.
+
+## Ultralight C, protected NDEF and TWN4 workflow adapters
+
+The complete FPC/native regression runner passed after integration, including
+38 Python tests, all 21 source checkers and 58 inactive registration/RTL streaming
+assertions. The final focused `CardAdapterWorkflow.Tests` suite passes 5,092
+assertions with range/overflow checking and zero heap leaks.
+
+It uses real OpenSSL 3DES and random nonces for Ultralight C authentication,
+user-memory restore, key rotation and AUTH0/AUTH1 changes. Type 2 and Type 5 NDEF
+fixtures cover native password access, length-last writes, logical transfer,
+comparison/no-op/clear/cancellation, identity and lock refusals, lost writes,
+read-back mismatch and credential cleanup. Proprietary Type 5 access requires an
+explicit profile, reserved access codes and read-only writes are refused, and
+SLIX2 counter overlap stops before length invalidation. Unknown post-dispatch
+backend errors remain uncertain. TWN4 transcripts cover Type 2 and Classic 1K/4K
+restores/comparisons, literal high-block/sector encoding, frozen reader lifetime,
+wrong-family/UID checks before login, lost write responses and balanced close.
+
+The final boundary tests were rerun separately after the full regression pass.
+Distribution checks cover 62 projects, two groups and 48 DFM forms with zero
+findings. Registration includes 57 palette components. No demo files changed in
+this increment. These Linux/static tests do not substitute for the Delphi compiler
+or physical reader/card validation; the pre-existing TLV constructor visibility
+warning remains outside this change.
+
+## DESFire key sets, configuration/SDM and native MIFARE Plus (2026-10-11)
+
+The full `tools/run_core_tests.py` regression run passed. The new suite passed **48,029 assertions** with range/overflow checks and no heap leaks. Seventeen independently generated literal transcripts cover native Plus MACed/Full authentication, reads, writes, 4K high sectors, the ACR122 ISO14443-4 chain and DESFire key-set/configuration/SDM management. Failure injection covers every transcript I/O boundary and protected response bits, UID/preimage refusal, frozen input buffers and cleanup uncertainty. Published NXP AN12196 SDM PICC, session-key, MAC and encrypted-file vectors also pass. Plus backup/compare/restore exercises the existing protected-memory engine.
+
+The reproducible generator is `tools/generate_desfire_plus_fixtures.py --check`. All 21 source checkers passed. Palette registration covers **58 components** and inactive registration/streaming covers **59 cases**. Distribution validation reports **62 projects, 2 groups and 48 DFM files**, with no findings. No demo files were changed in this increment. These results establish synthetic protocol/ABI behavior, not physical device certification. Existing unrelated compiler notes/warnings have not been suppressed.
+
+## Plus SL0 personalization and SL3 sector key replacement (2026-10-11)
+
+The extended DESFire/Plus suite passes **117,396 assertions** (69,367 added in
+this increment), with range/overflow checking and zero heap leaks. Four additional
+independently generated literal transcripts bring the fixture set to **21**:
+self-key and same-sector A/B replacement, 4K high-sector key replacement, and SL0
+WritePerso/CommitPerso followed by fresh sector/master/configuration authentication
+and encrypted ordinary-data read-back. Replacement uses encrypted messaging even
+when the caller selects MACed ordinary communication.
+
+Failure injection covers every exchange, every acquisition/release stage,
+identity changes between fresh sessions, acknowledgement/MAC bits and encrypted
+nonce proof corruption. Tests verify frozen caller key/plan buffers, restored
+component configuration, invalid/duplicate/manufacturer/trailer/model-mismatched
+plans before acquisition, and persistent uncertainty after any mutation dispatch.
+Switch-key personalization has acknowledgement only, as documented; there is no
+invented secret-memory read-back or SL1/SL2 fallback.
+
+The complete FPC/native regression runner and all **21 source checkers** passed.
+Fixture reproducibility and distribution checks passed: **62 projects, 2 groups,
+48 DFM forms**, no findings. No demo/package format changes were required. Existing
+unrelated FPC notes/warnings remain unsuppressed. These are synthetic protocol
+results; the exact direct-SL3 commit profile is an explicit caller prerequisite.
+
+## Plus SL1 level management and signed value blocks (2026-10-11)
+
+The focused DESFire/Plus suite passed **149,648 assertions** (32,252 added here)
+with range/overflow checks and zero heap leaks. The independent fixture generator
+now produces **28 literal transcripts**. Added vectors cover raw CRC-A 76/72 SL1
+card authentication, the SL2 switch key, the SL3 switch plus fresh protected data
+proof, a complete no-RATS ACR122 raw chain with register/parameter restoration,
+and signed value-block reads and ordinary secure writes.
+
+Level tests inject every native I/O boundary, CRC/status/nonce bits, partial-bit
+responses, explicit timeouts, acquisition/release failures and UID changes between
+raw and ISO14443-4 sessions. Borrowed switch/proof-key and expected-data mutation
+during raw I/O cannot change frozen inputs. Invalid profiles fail before activation.
+SL2 results are authenticated acknowledgement only; SL3 also proves acquired data.
+
+Value tests cover both signed endpoints, all 256 logical addresses, every bit of
+value/address redundancy, checked arithmetic overflow, preimage refusal, no-op
+writes and every protected write/read-back response bit. These are ordinary secure
+memory writes, not native increment/decrement/restore/transfer commands.
+
+The full FPC/native regression runner and all **21 source checkers** passed.
+Inactive palette/RTL streaming now covers **60 cases** for **59 registered
+components**. Distribution checks report **62 projects, 2 groups, 48 DFM forms**
+and no findings; fixture reproducibility and BOM/CRLF checks pass. No demo files
+changed. Existing unrelated compiler notes/warnings remain unsuppressed.
+
+## Plus native value workflows and SL2→SL3 (2026-10-12)
+
+The complete FPC/native regression runner passed. Final focused verification passed
+**331,970 assertions** (182,322 added in this increment) with range/overflow checks
+and zero heap leaks. The independent fixture generator now produces **43 literal
+transcripts**, adding explicit raw first-authentication SL2→SL3 with fresh SL3 data
+proof, all five staged/combined native value workflows, same/separate-block paths,
+4K high addresses and full unsigned amounts spanning both signed endpoints.
+
+Tests inject every native I/O boundary and protected response bit, preimage errors,
+signed overflow, malformed value/address redundancy, and caller buffer mutation.
+They distinguish volatile-buffer failure from persistent-transfer dispatch and
+verify unchanged distinct sources. Two additional transcripts carry valid response
+MACs with wrong destination or changed source data; both fail at the precise proof
+boundary. Authentication tests also corrupt nonces/status with recomputed valid
+CRC-A, exercising nonce/capability checks independently of RF CRC rejection.
+
+All **21 source checkers**, fixture reproducibility and distribution checks pass.
+Distribution remains **62 projects, 2 groups and 48 DFM forms**, with no findings;
+registration/streaming remains **60 cases** for **59 palette components**. Pascal
+BOM/CRLF is preserved and no demos changed. Native value support is explicitly the
+Plus X-compatible command profile, within one authenticated sector. SL2 sector
+data sessions/key modifiers remain separate. Existing unrelated compiler notes
+and warnings have not been suppressed.
+
+## DESFire ISO, multiple rights and AES TMAC (2026-10-12)
+
+The focused DESFire/Plus suite passes **695,388 assertions** with range/overflow
+checks and zero heap leaks. The independent generator now produces **71 literal
+transcripts**, including variable-length ISO directory frames, ISO application and
+four file types, additional access-right authority, TMAC lifecycle/settings and
+counter limits, plain/MAC/full record reads, owned transactions and CommitReaderID.
+
+Transaction tests cover read-only calculations, backup changes, abort, every I/O
+boundary, protected response corruption, wrong static keys/UIDs/counters and
+release failures. Two receipts have valid session MACs but an invalid transaction
+MAC or counter; neither is accepted as independent proof. Offline AES key
+vectors and canonical transaction inputs are checked against separate generated
+cryptographic results and the official NXP specification. CommitReaderID uses
+MAC communication with transaction-key-encrypted previous ReaderID, without an
+additional session-CBC layer.
+
+All **21 source checkers**, fixture reproducibility and distribution checks pass.
+Distribution remains **62 projects, 2 groups and 48 DFM forms**, with no findings;
+registration/streaming remains **60 cases** for **59 palette components**. Existing
+Pascal source encoding and CRLF are retained; no demos changed. The complete
+FPC/native regression runner passed. Existing unrelated compiler notes/warnings
+remain unsuppressed. LRP, combined extended transaction layouts and ISO creation
+combined with new key sets are separate remaining profiles.
+
+## Combined DESFire ISO key sets and TMAC standard ranges (2026-10-12)
+
+The focused DESFire/Plus suite passes **1,451,063 assertions** with range/overflow
+checks and zero heap leaks. The independently generated fixture set now contains
+**88 transcripts**. New vectors cover combined native ISO/key-set creation,
+public seven-byte key-settings proof, PICC reauthentication and subsequent
+protected directory use, plus standard-data immediate/range/commit verification.
+
+Tests cover repeated, overlapping and disjoint writes, no-op data, explicit abort,
+wrong preimages, acquired read/write denial, wrong file type and out-of-file bounds.
+All exchange boundaries and every protected response data/MAC bit are injected.
+Additional vectors carry valid MACs with wrong ISO FID/name, key-set geometry or
+immediate/post-commit range contents. Caller buffers are mutated during I/O to
+prove that frozen inputs control dispatch. Invalid local parameters and policies
+that cannot expose new key-set settings are rejected without additional I/O.
+
+The complete FPC/native regression runner, all **21 source checkers**, independent
+fixture reproducibility and distribution checks pass. Distribution remains
+**62 projects, 2 groups, 48 DFM forms** with no findings; **59 registered components**
+and **60 inactive registration/RTL streaming cases**. Existing source encoding,
+CRLF and formatting are retained; no demos changed. Existing unrelated compiler
+notes/warnings remain unsuppressed. Abort semantics are explicit: cancellation of
+a TMAC calculation does not undo immediate standard writes.
+
+## Native LRP, combined SDM rights and cyclic-record updates (2026-10-12)
+
+The focused DESFire/Plus suite passes **2,123,006 assertions** with range/overflow
+checks and zero heap leaks. The independent generator now emits **131 literal
+fixture sets**, including **150 published NXP AN12304 known answers** for
+LRP evaluation, LRICB and CMAC. The published wrapping-counter case is explicitly
+refused by the library's nonwrapping counter contract; other LRICB cases execute
+both encryption and decryption.
+
+Independent native LRP fixtures cover master-key derivation, first/NonFirst MACs,
+TI/capability verification and Plain/MAC/Full command/response framing. Tests
+corrupt every protected response bit, accept no correct-MAC wrong capability or
+padding/length, inject every provider encryption/decryption call boundary and
+prove that MAC rejection occurs before any AES decryption. Failed codec operations
+preserve caller-owned encryption counters.
+
+Combined SDM tests cover enable/disable, additional-right removal, no-op changes,
+strict conditional framing, wrong preimage and valid-MAC wrong postimage, every
+I/O/response boundary, and mutation of caller rights/preimages during I/O. Record
+tests cover ordinary and TMAC owners, native BA outbound AF chaining, repeated
+updates, abort, no-op, wrong preimages, append/clear conflicts in both orders,
+different-record conflicts, every native boundary/response bit and valid-MAC wrong
+post-commit record content. Owned dispatch uncertainty and release are checked.
+
+The complete FPC/native regression runner, **21 source checkers**, fixture
+reproducibility and distribution checks pass. Distribution remains **62 projects,
+2 groups, 48 DFM forms**, no findings; **59 components** and **60 inactive streaming
+cases**. Runtime/design packages include the new LRP unit with native BOM/CRLF;
+existing source formatting is preserved and no demos changed. Existing unrelated
+compiler notes/warnings remain unsuppressed. Automatic LRP card-reader sessions,
+LRP TMAC and partial/unaligned-record TMAC profiles are not claimed by these tests.
+
+## Automatic LRP sessions, owned TMAC and inspection (2026-10-12)
+
+The focused DESFire/Plus suite passes **3,332,287 assertions** with range/overflow
+checks and zero heap leaks. The independent generator now emits **174 literal
+fixture sets**, retaining all **150 published AN12304 vectors**. New fixtures
+exercise automatic native LRP Plain/MAC/Full reads and verified standard writes,
+NonFirst nonce proof with retained TI/command count and reset encryption count,
+owned backup/value/cyclic-record commit/abort, and BA outbound additional frames.
+
+Owned TMAC tests cover fixed expected and acquired hidden-session counters,
+unsigned sixteen-bit limits, actual-count wrap refusal, counters 1/7/FFFF, real UID
+proof, frozen keys/UIDs, reader commitment and deferred previous-ID release.
+Correct session MACs with wrong receipt MAC, actual/session counts or final data
+are refused. Deferred IDs remain unavailable before commit and after any failed
+receipt, read-back or ownership release. Returned ID copies do not share storage.
+Tests inject every native exchange boundary and protected response bit, plus
+CSPRNG/provider failure before authentication part two. The AES TMAC entry refuses
+LRP before acquisition; both allowed profiles remain separately exercised.
+
+Reader inspection adds protected real UID under EV2 AES/LRP and stored LRP TMAC
+under Plain/MAC/Full modes, with exact metadata and release checks. It does not
+mutate or invent static transaction-key proof; Plain requires explicit minimum.
+The stored session count is not used to guess the next hidden counter.
+
+The complete FPC/native regression runner, **21 source checkers**, fixture
+reproducibility and distribution checks pass. Distribution remains **62 projects,
+2 groups, 48 DFM forms**, no findings; **59 registered components**, **60 inactive
+streaming cases**. Existing security enum ordinals and interface layouts/IIDs are
+preserved; source encoding/CRLF is retained and no demos changed. Existing unrelated
+compiler notes/warnings remain unsuppressed. LRP provisioning, originality and
+combined/partial/unaligned transaction layouts remain separate profiles.
+
+After the final AES/LRP entry guard, an additional focused build of the latest
+sources passed **333 assertions**, covering the guard, allowed AES TMAC, known and
+acquired-counter LRP TMAC, and both UID/stored-record inspection paths. No new
+compiler hints/warnings were introduced in the changed units/tests.
+
+
+## 2026-10-12 — native DESFire Light LRP management
+
+Added an explicit optional Light application management interface without changing
+any of the **11 existing interface layouts/IIDs**. Light uses a fixed five-key
+application profile and does not issue unsupported GetKeySettings. Independent
+literal transcripts cover key 0, 1 and 4 rotation, XOR/CRC data, bare master-key
+acknowledgement, fresh LRP authentication, protected version proof and a
+valid-response-MAC wrong-version failure. Ten persistent configuration options use
+Light-specific lengths, RFU checks, LRP ATS timing, explicit ISO identifiers,
+signed value geometry and failed-authentication counter validation. Persistent
+acknowledgement is required; no generic configuration readback is claimed.
+
+Focused native management tests pass **126,905 assertions**, including every
+exchange boundary and response-data bit, caller-buffer mutation and exclusive
+release failures. Focused local-input tests pass **106 assertions**, including
+all truncated configuration inputs and no-dispatch profile/context/authority/
+acknowledgement guards; valid commands remain usable after local input errors.
+The separate generator reproduces **188 literal fixture sets**. Both **21 source
+checkers** over the library and the contactless tests pass. Distribution remains
+**62 projects, 2 groups, 48 DFM forms**, with zero findings. Source BOM/CRLF is
+retained; no demo, form, package or registered component has changed.
+
+The full native DESFire/Plus regression suite passes **3,459,299 assertions** with
+zero unfreed heap blocks. This includes the earlier AES/DES/3DES, ISO, multiple
+rights, SDM, TMAC and LRP profiles alongside the new Light administration paths.
+
+
+## 2026-10-12 — owned multiple-access DESFire transactions
+
+Added explicit EV2 AES multiple-access transaction ownership without changing
+any of the **12 existing interface layouts/IIDs**. The new entry preserves every
+primary/additional access tuple through acquisition, journal static checks and
+post-commit proof; ordinary OpenSession keeps its strict profile. Backup writes,
+Credit/Debit/LimitedCredit, linear/cyclic record append and clearing reuse bounded
+journal/commit/abort behavior. Credit does not acquire authority from a Read grant.
+SDM, TMAC, malformed rights counts and unknown layouts reject before any mutation.
+
+Independent fixtures exercise Plain/MACed/Full, a denied primary tuple with an
+extra key-zero grant, maximum cyclic replacement order, abort, fresh-context/profile
+preflight, frozen write buffers, every exchange boundary and protected-response
+bit, valid-MAC wrong data and changed extra-right tuples after commit. Explicit
+Plain tests distinguish final content equality from unauthenticated preimage data;
+replacing a complete file cannot prove its original Plain bytes.
+
+Focused new suites pass **503,590 assertions**, zero heap leaks. The independent
+generator reproduces **205 fixture sets**. Library and contactless tests pass all
+**21 source checkers**; distribution remains **62 projects, 2 groups, 48 DFM forms**,
+zero findings. Existing source BOM/CRLF is preserved; no demos, forms or packages
+were changed. Component/studio readiness is documented in
+[STATUS_CARDSTUDIO.md](STATUS_CARDSTUDIO.md).
+
+The full native DESFire/Plus suite passes **3,962,935 assertions**, zero unfreed
+heap blocks, including an explicit test showing the unauthenticated Plain preimage
+case and the previously implemented Light/AES/LRP/ISO/SDM/TMAC behavior.

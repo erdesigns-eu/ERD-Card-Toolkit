@@ -14,6 +14,10 @@ uses
 {$ELSE}
   System.Classes,
 {$ENDIF}
+  ERD.Card.EID.Inspection, ERD.Card.EMV.Inspection, ERD.Card.MOBIB.Inspection,
+  ERD.Card.Contactless.Plus, ERD.Card.Contactless.Plus.Levels,
+  ERD.Card.Contactless.Workflow.Ndef.Protected,
+  ERD.Card.Contactless.Workflow.Password, ERD.Card.Contactless.Workflow.Security,
   ERD.Card.GlobalPlatform, ERD.Card.EMV.Calculator, ERD.Card.PCSC.Monitor, ERD.Card.HID.Monitor, ERD.Card.SIM.Reader, ERD.Card.SIM.Workflow, ERD.Card.SIM.Inspection,
   ERD.Card.Reader.TWN4, ERD.Card.RFID.Input, ERD.Card.RFID.HID, ERD.Card.HID,
   DesignIntf, ERD.Card.Memory, ERD.Card.Memory.Counter, ERD.Card.Memory.Sle4404,
@@ -39,14 +43,14 @@ begin
     TBelgianEIDReader, TICAODocumentReader, TSimCardReaderWriter,
     TEmvCalculator, TEMVCardReader, TMagStripeReaderWriter, TMemoryCardReaderWriter,
     TSleCounterCardReaderWriter, TSle4404CardReaderWriter]);
-  RegisterComponents('ERD Workflows', [TSle4404Workflow, TSleCounterWorkflow, TDesfirePersonalizationWorkflow, TSimPhonebookWorkflow, TSimSmsWorkflow, TSimInspectionWorkflow, TContactMemoryWorkflow, TDesfireApplicationWorkflow,
+  RegisterComponents('ERD Workflows', [TProtectedNdefWorkflow, TProtectedMemoryWorkflow, TCardSecurityWorkflow, TEidInspectionWorkflow, TEmvInspectionWorkflow, TMobibInspectionWorkflow, TSle4404Workflow, TSleCounterWorkflow, TDesfirePersonalizationWorkflow, TSimPhonebookWorkflow, TSimSmsWorkflow, TSimInspectionWorkflow, TContactMemoryWorkflow, TDesfireApplicationWorkflow,
     TDesfireProvisionWorkflow, TCardBatchWorkflow, TIso15693MemoryWorkflow, TCardMemoryCopyWorkflow, TMifareClassicCopyWorkflow,
     TType2MemoryWorkflow, TUidProgrammingWorkflow, TClassicCredentialWorkflow,
     TNdefTransferWorkflow, TMagStripeCopyWorkflow]);
   RegisterComponents('ERD Input', [THidDeviceMonitor, TUsbHidInputMonitor,
     TRfidKeyboardReader, TRfidHidReportReader, TUsbHidReaderWriter,
     TTwn4CardReaderWriter]);
-  RegisterComponents('ERD Contactless', [TTopazCardReader, TType1NdefCardReader,
+  RegisterComponents('ERD Contactless', [TMifarePlusLevelManager, TMifarePlusCardReaderWriter, TTopazCardReader, TType1NdefCardReader,
     TFelicaCardReader, TType3NdefCardReader, TUltralightCCardReaderWriter,
     TCalypsoCardReader, TContactlessCardReader, TType2NdefCardReader,
     TType4NdefCardReader, TIso15693CardReader, TIso15693SecurityManager,

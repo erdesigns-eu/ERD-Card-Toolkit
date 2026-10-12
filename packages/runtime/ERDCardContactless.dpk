@@ -11,6 +11,16 @@ requires
   ERDCardCore;
 
 contains
+  ERD.Card.Contactless.DESFire.Extensions in '..\..\src\contactless\ERD.Card.Contactless.DESFire.Extensions.pas',
+  ERD.Card.Contactless.Plus in '..\..\src\contactless\ERD.Card.Contactless.Plus.pas',
+  ERD.Card.Contactless.Plus.Levels in '..\..\src\contactless\ERD.Card.Contactless.Plus.Levels.pas',
+  ERD.Card.Contactless.Plus.ACR122 in '..\..\src\contactless\ERD.Card.Contactless.Plus.ACR122.pas',
+  ERD.Card.Contactless.Plus.Workflow in '..\..\src\contactless\ERD.Card.Contactless.Plus.Workflow.pas',
+  ERD.Card.Contactless.Workflow.Ndef.Protected in '..\..\src\contactless\ERD.Card.Contactless.Workflow.Ndef.Protected.pas',
+  ERD.Card.Contactless.Workflow.UltralightC in '..\..\src\contactless\ERD.Card.Contactless.Workflow.UltralightC.pas',
+  ERD.Card.Contactless.Workflow.Security in '..\..\src\contactless\ERD.Card.Contactless.Workflow.Security.pas',
+  ERD.Card.Contactless.Workflow.Password in '..\..\src\contactless\ERD.Card.Contactless.Workflow.Password.pas',
+  ERD.Card.MOBIB.Inspection in '..\..\src\contactless\ERD.Card.MOBIB.Inspection.pas',
   ERD.Card.Contactless.Workflow.Personalization in '..\..\src\contactless\ERD.Card.Contactless.Workflow.Personalization.pas',
   ERD.Card.Contactless.Workflow.DESFire in '..\..\src\contactless\ERD.Card.Contactless.Workflow.DESFire.pas',
   ERD.Card.Contactless.Workflow.ISO15693 in '..\..\src\contactless\ERD.Card.Contactless.Workflow.ISO15693.pas',
@@ -41,6 +51,7 @@ contains
   ERD.Card.Contactless.DESFire.EV1 in '..\..\src\contactless\ERD.Card.Contactless.DESFire.EV1.pas',
   ERD.Card.Contactless.DESFire in '..\..\src\contactless\ERD.Card.Contactless.DESFire.pas',
   ERD.Card.Contactless.DESFire.EV2 in '..\..\src\contactless\ERD.Card.Contactless.DESFire.EV2.pas',
+  ERD.Card.Contactless.DESFire.LRP in '..\..\src\contactless\ERD.Card.Contactless.DESFire.LRP.pas',
   ERD.Card.Contactless.ISO15693 in '..\..\src\contactless\ERD.Card.Contactless.ISO15693.pas',
   ERD.Card.Contactless.Type5.Ndef in '..\..\src\contactless\ERD.Card.Contactless.Type5.Ndef.pas',
   ERD.Card.Contactless.Type4.Ndef in '..\..\src\contactless\ERD.Card.Contactless.Type4.Ndef.pas',

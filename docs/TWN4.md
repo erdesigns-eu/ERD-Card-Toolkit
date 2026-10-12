@@ -107,3 +107,10 @@ Delphi/IDE and physical card compatibility remain pending.
 - [Independent ELATEC.NET key enum](https://github.com/c3rebro/Elatec.NET/blob/master/src/Api/Cards/Mifare/MifareKey.cs)
   and reader implementations corroborate A/B = 0/1; its reader notes describe the
   separate 4K-sector mapping issue. No third-party implementation was copied.
+
+## Native workflow adapters
+
+[CreateTwn4ClassicWorkflowMemory and CreateTwn4Type2WorkflowMemory](CARD_WORKFLOW_ADAPTERS.md#twn4-memory)
+freeze reader settings and adapt the verified native operations to memory
+backup/copy/compare/restore. Classic 4K requires an explicit high-block sector
+map. They add no password, Ultralight C or UID-programming TWN4 protocol.

@@ -6,6 +6,12 @@ no card I/O; the caller supplies configured readers, profiles and credentials.
 
 | Component | Implemented workflows |
 | --- | --- |
+| `TProtectedNdefWorkflow` | Logical NDEF backup/copy/compare/template/explicit clear through supplied-password Type 2/SLIX2/original ST25DV backends |
+| `TProtectedMemoryWorkflow` | Supplied-key Ultralight C and supplied-password Type 2/SLIX2/original ST25DV selected-memory backup/copy/compare/restore with pre-authentication identity guards and credential cleanup |
+| `TCardSecurityWorkflow` | Offline secret-free credential/policy review; exact same-card verified Ultralight C/Type 2/SLIX2/ST25DV native change with fresh RF proof |
+| `TEidInspectionWorkflow` | Belgian identity/address/photo/signatures/certificates or one explicit BAC/PACE ICAO LDS acquisition, structured section evidence and exports |
+| `TEmvInspectionWorkflow` | Explicit AIDs and PDOL values, directory/AFL acquisition, optional extra record rectangle, counters and transaction logs |
+| `TMobibInspectionWorkflow` | Explicit native Calypso read plan, parsed MOBIB report with operator context/confidence, exact gaps and privacy policy |
 | `TMifareClassicCopyWorkflow` | Selected/all ordinary data-block copy, backup, comparison and restore for Mini/1K/4K |
 | `TType2MemoryWorkflow` | Selected/all user-page copy, backup, comparison and restore for supported Ultralight/NTAG models |
 | `TUidProgrammingWorkflow` | Explicit UID programming or copying a source UID using Gen2/CUID, factory FUID, raw Gen1a/Gen1b/unsealed UFUID, Type 2 DirectWrite, Gen3, Gen4, USCUID/GDM or documented partial UID profiles |
@@ -353,8 +359,8 @@ sends SMS or performs network authentication.
 
 These are future workflows, not shipped workflow components yet:
 
-- SLE counter/4404-specific workflows and explicit irreversible chip operations.
-- Broader SIM PBR schemas, extended ANR allocation and cross-family eID/EMV/MOBIB acquisition/report pipelines.
+- Broader SIM PBR schemas and additional operator-specific allocation rules.
+- Additional authenticated chip families and reader adapters with documented native protocols.
 
 Existing low-level components already support much of this work. These extensions
 need family-specific workflow contracts; they are not implied by the generic
@@ -441,3 +447,117 @@ semantics. UID comparison detects accidental swaps; it is not issuer authenticit
 
 The three independent workflow demos and their text grammar are documented in
 [VCL_DEMOS.md](VCL_DEMOS.md#sle-and-desfire-personalization-demos).
+
+## Inspection and report workflows
+
+The three read-only family workflows and common report API are described in
+[INSPECTION_REPORTS.md](INSPECTION_REPORTS.md). Workflow completion is separate
+from report completeness: a finished inspection can include absent or restricted
+sections. Partial data survives later errors; exports omit personal and raw values
+unless explicitly selected.
+
+## Protected memory and security plans
+
+See [PROTECTED_WORKFLOWS.md](PROTECTED_WORKFLOWS.md) for native profiles, credential
+ownership, exact preimage requirements, independent DFM demos and partial-write
+evidence. These workflows extend compatible memory snapshots without implicitly
+copying credentials or access policies.
+
+## Additional native adapters
+
+[Ultralight C, protected NDEF and TWN4 adapters](CARD_WORKFLOW_ADAPTERS.md)
+extend the existing nonvisual workflow engines. This increment adds no demos;
+the existing VCL projects remain unchanged.
+
+## MIFARE Plus SL3 ordinary memory
+
+`CreatePlusWorkflowMemory` provides an owned `ICardWorkflowMemory` backend for `TProtectedMemoryWorkflow` backup, copy, compare and restore. Supply an `IMifarePlusSession`, AES/CSPRNG provider, explicit 2K/4K model and `IPlusWorkflowKeys`. Keys are requested per sector/direction and never serialized into archives. Full secure messaging, expected-UID checks, preimage checks and read-back verification apply. Block zero and trailers are excluded; this copies ordinary content rather than card keys/security state. See [MIFARE_PLUS.md](MIFARE_PLUS.md).
+
+
+## Plus personalization and credential replacement
+
+Alongside the protected-memory adapter, `TMifarePlusCardReaderWriter` exposes
+`RotateSectorKeyVerified` and `PersonalizeAndCommitSl3Verified` as complete native
+pipelines for application workers. They freeze caller inputs before I/O, retain
+identity across fresh sessions, require explicit mutation acknowledgement and
+report post-dispatch uncertainty. Personalization returns credential-free counts
+only after all selected key/data proofs. The supplied personalization entries contain caller-owned secrets; returned evidence
+and ordinary memory archives contain no keys.
+See [MIFARE_PLUS.md](MIFARE_PLUS.md) for the direct-SL3 commit profile and
+acknowledgement-versus-verification contract. These calls do not add automatic
+resume or batch serialization of secret plans.
+
+
+## Plus SL1 transitions and value-block operations
+
+`TMifarePlusLevelManager` supplies native SL1 mutual authentication, an acknowledged
+SL1→SL2 pipeline and an SL1→SL3 pipeline with fresh same-card protected data proof.
+Assign an explicit no-RATS raw backend and, for SL3 proof, a separate ISO14443-4
+backend for the same reader. Transition dispatch uncertainty is retained across
+both acquisitions. These worker-callable operations require supplied keys and
+explicit one-way-change acknowledgement; they do not infer levels or replay.
+
+`ReadValueBlock` and `WriteValueBlockVerified` add integrity-checked signed ordinary
+value-block access to the Plus component. They retain logical addresses and check
+exact prior content; native increment/decrement/transfer permissions are separate.
+See [MIFARE_PLUS.md](MIFARE_PLUS.md) for exact API and evidence contracts.
+
+
+## Native Plus value and SL2→SL3 pipelines
+
+`ExecuteNativeValueVerified` performs native staged increment/decrement or restore
+followed by transfer, or native combined increment/decrement-transfer. It pins
+both exact ordinary-value preimages, checks signed arithmetic, keeps volatile
+buffer state inside one exclusive session and verifies target/source content.
+Persistent-transfer uncertainty is distinct from a failed volatile-buffer step;
+there is no retry or exposed pending transfer buffer. Source/target must fit the
+same authenticated sector and the selected Plus X-compatible command profile.
+
+`SwitchSl2ToSl3Verified` adds explicit raw first authentication with the supplied
+L3 switch key, then a separate fresh same-card protected SL3 data proof. SL2 sector
+data sessions/key modifiers remain separate. See [MIFARE_PLUS.md](MIFARE_PLUS.md).
+
+
+## DESFire ISO/multi-access and AES TMAC native pipelines
+
+Optional file-management sessions provide verified ISO application/file creation,
+exact multi-access policy changes, additional-key standard-data read/write and
+TMAC file/communication/access/counter-limit management. They retain frozen
+preimages and stop on unresolved dispatch without replay.
+
+The dedicated `IDesfireTransactionMacSession` reuses ordinary backup/value/record
+journals while capturing exact canonical plaintext operations. It requires real
+UID, supplied static TMAC key, trusted previous counter and an explicit fresh-state
+assertion. ReaderID, read-only commit, abort and offline-verified counter/MAC
+receipts are supported; commit also verifies journaled files and release. Default
+ordinary sessions do not silently adopt the profile. See
+[DESFIRE_FILES_TMAC.md](DESFIRE_FILES_TMAC.md). This extends native pipelines;
+existing workflow archives do not yet serialize ISO mappings or combined extended
+layouts, and no CardStudio/demo layer has been added.
+
+## DESFire ISO key sets and immediate TMAC standard ranges
+
+The native optional interfaces now combine ISO application creation with AES key
+sets and support exact-preimage standard-data range writes in an owned TMAC
+calculation. ISO creation verifies the tuple and public key settings and restores
+PICC authentication. Standard writes verify immediately, update overlapping range
+proofs and verify all final ranges after the authenticated/offline-verified receipt.
+
+These APIs do not change ordinary application archives or add an automatic
+application migration profile. Standard writes are immediate: aborting the
+calculation does not restore them. See [native profile contracts](DESFIRE_FILES_TMAC.md).
+
+## Combined SDM rights, record updates and native LRP codec
+
+Native optional APIs now preserve combined SDM/additional-right settings through
+exact-preimage change and full read-back, and stage full sixteen-byte cyclic
+record updates with owned journal/commit/abort and optional TMAC receipt proof.
+Record update cannot mix append/clear or a different record index in one file
+transaction. These APIs do not silently extend the ordinary archive format.
+
+The native [LRP codec](DESFIRE_LRP.md) includes published primitive, authentication
+and Plain/MAC/Full framing. The codec itself performs no I/O. `TDesfireCardReader` now adds explicit LRP
+First/NonFirst retained sessions with native chaining and fail-closed cleanup.
+Owned LRP TMAC verifies split counters, offline receipt and journal content, with
+deferred previous ReaderID available only after complete success. LRP provisioning
+and combined-layout application archives remain separate profiles.

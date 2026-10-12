@@ -37,7 +37,7 @@ out of scope (see [Not supported](#not-supported)).
 
 | Area | Components | What you can do |
 | --- | --- | --- |
-| **Application workflows** | `TSle4404Workflow`, `TSleCounterWorkflow`, `TDesfirePersonalizationWorkflow`, `TSimPhonebookWorkflow`, `TSimSmsWorkflow`, `TSimInspectionWorkflow`, `TContactMemoryWorkflow`, `TDesfireApplicationWorkflow`, `TDesfireProvisionWorkflow`, `TCardBatchWorkflow`, `TIso15693MemoryWorkflow`, `TMifareClassicCopyWorkflow`, `TType2MemoryWorkflow`, `TUidProgrammingWorkflow`, `TClassicCredentialWorkflow`, `TNdefTransferWorkflow`, `TMagStripeCopyWorkflow` | Data/UID/stripe copy, backup/restore/compare, ISO15693 selected-memory restore, contact-memory restore, SLE4404/counterchip reviewed program/erase plans, ordered DESFire creation/content/key/access-policy personalization with checked resume, DESFire application provisioning/migration, SIM/USIM contact/SMS import/restore plans and inspection, batch personalization, explicit credential migration and NDEF transfer; progress/card-request events, verified results and partial-write evidence. See [Workflows](docs/WORKFLOWS.md). |
+| **Application workflows** | `TProtectedNdefWorkflow`, `TProtectedMemoryWorkflow`, `TCardSecurityWorkflow`, `TEidInspectionWorkflow`, `TEmvInspectionWorkflow`, `TMobibInspectionWorkflow`, `TSle4404Workflow`, `TSleCounterWorkflow`, `TDesfirePersonalizationWorkflow`, `TSimPhonebookWorkflow`, `TSimSmsWorkflow`, `TSimInspectionWorkflow`, `TContactMemoryWorkflow`, `TDesfireApplicationWorkflow`, `TDesfireProvisionWorkflow`, `TCardBatchWorkflow`, `TIso15693MemoryWorkflow`, `TMifareClassicCopyWorkflow`, `TType2MemoryWorkflow`, `TUidProgrammingWorkflow`, `TClassicCredentialWorkflow`, `TNdefTransferWorkflow`, `TMagStripeCopyWorkflow` | Data/UID/stripe copy, backup/restore/compare, ISO15693 selected-memory restore, contact-memory restore, SLE4404/counterchip reviewed program/erase plans, ordered DESFire creation/content/key/access-policy personalization with checked resume, DESFire application provisioning/migration, SIM/USIM contact/SMS import/restore plans and inspection, batch personalization, explicit credential migration and NDEF transfer; progress/card-request events, verified results and partial-write evidence. Also includes supplied-key Ultralight C and supplied-password Type 2/ISO15693 memory workflows, protected NDEF copy/compare/template/clear workflows, TWN4 Classic/Type 2 memory adapters and reviewed credential/protection changes, plus eID/EMV/MOBIB inspection with retained partial results and privacy-aware text/JSON export. See [Workflows](docs/WORKFLOWS.md), [Inspection reports](docs/INSPECTION_REPORTS.md) and [Protected workflows](docs/PROTECTED_WORKFLOWS.md) and [Workflow adapters](docs/CARD_WORKFLOW_ADAPTERS.md). |
 | **PC/SC readers** | `TSmartCardReader`, `TSmartCardMonitor` | List readers, connect (shared/exclusive, T=0/T=1), read the ATR, exchange APDUs through `ICardTransport` and use explicit PC/SC transactions. Event-driven reader hot-plug and card insertion/removal without polling. |
 | **Protocol toolkit** | Codecs (no component) | ISO 7816 APDU encode/decode (short and extended), ATR parsing with TCK validation, BER-TLV decode/encode with configurable limits, hex/byte helpers, a curated ATR hint catalog and EMV tag metadata. |
 | **Belgian eID** | `TBelgianEIDReader` | Read identity, address, JPEG photo, certificates (RAW/DER) and raw signature files from Belpic 1.7/1.8 contact cards. |
@@ -47,13 +47,14 @@ out of scope (see [Not supported](#not-supported)).
 | **Offline EMV calculations** | `TEmvCalculator` | UDK Option A/B, common/ATC/Mastercard/Visa-script/EMV-2000-tree keys, DES parity and DES/AES KCV, ISO 9797 Retail MAC, ARQC/TC/AAC generation and verification, ARPC methods 1/2 and verification, AES-128 CMAC, script MAC/encryption and PIN-block formatting. Explicit Visa 10/18/22, Mastercard 16/17/20/21 and Interac 133 calculation profiles; no card commands or payment processing. |
 | **GlobalPlatform / JavaCard** | `TGlobalPlatformCardManager` | Explicit domain selection, CPLC, tagged/legacy registry; SCP02 i=15 and SCP03 AES-128 S8/S16 (random or verified pseudo-random challenge), command protection and SCP03 response protection. Structurally checked CAP loading, applet installation, explicit deletion/status, LOAD progress, DEK-protected key provision/replacement, RSA/AES issuer tokens, DAP blocks and verified DES/AES receipts. Native Delphi protocol code; no GlobalPlatform DLL. |
 | **MIFARE Classic** | `TContactlessCardReader` | Classic Mini/1K/4K layouts. Read blocks with supplied key A/B, write data blocks, and explicitly migrate sector keys/access bits with fresh-key verification. Ordinary data writes still exclude block 0 and trailers. |
+| **MIFARE Plus** | `TMifarePlusCardReaderWriter`, `TMifarePlusLevelManager` | Explicit 2K/4K cards already in SL3: supplied-key AES mutual authentication, MACed/encrypted ordinary-block reads and preimage-checked writes with MAC and read-back proof. ACR122/PN532 ISO14443-4 adapter and protected-memory backup/copy/compare/restore backend. Explicit sector AES key replacement with fresh new-key proof; frozen SL0 personalization plans, commit and fresh selected SL3 key/data proofs. Raw SL1 AES authentication, acknowledged SL1→SL2 and verified SL1/SL2→SL3 transitions. Signed value-block integrity/arithmetic, ordinary writes and native Plus X-compatible increment/decrement/restore/transfer workflows with exact preimages and read-back. See [MIFARE Plus](docs/MIFARE_PLUS.md). |
 | **Ultralight / NTAG (Type 2)** | `TContactlessCardReader`, `TType2PasswordCardReader` | Ultralight, Ultralight EV1 (48/128), NTAG210/212/213/215/216 page reads, user-memory snapshots and user-page writes. PWD_AUTH/PACK access, verified AUTH0/PROT/AUTHLIM configuration and password/PACK replacement, supported counter reads, and protected NDEF through an ACR122U adapter. |
-| **Ultralight C** | `TUltralightCCardReaderWriter` | Supplied-key 2K3DES mutual authentication, exact user-page reads, a 144-byte user-memory snapshot and verified four-byte user-page writes through raw RF (ACR122U adapter). Read authentication configuration; verified AUTH0/AUTH1 updates and key replacement with same-UID fresh RF authentication. Manufacturer, OTP, lock and counter writes remain excluded. |
-| **NDEF** | `TType1NdefCardReader`, `TType2NdefCardReader`, `TType3NdefCardReader`, `TType4NdefCardReader`, `TType5NdefCardReader` | Complete NDEF message codec with chunk reassembly, plus Text, URI, MIME, external and Smart Poster record helpers. Read, replace and clear public NDEF messages on Topaz Type 1 (mapping 1.0), Type 2, Type 3 (mapping 1.0), Type 4 (mapping 1.0/2.0) and Type 5 tags, with read-back verification. Type 2 also supports NDEF within supplied-password sessions. |
+| **Ultralight C** | `TUltralightCCardReaderWriter` | Supplied-key 2K3DES mutual authentication, exact user-page reads, a 144-byte user-memory snapshot and verified four-byte user-page writes through raw RF (ACR122U adapter). User-memory backup/copy/compare/restore and reviewed security workflows. Read authentication configuration; verified AUTH0/AUTH1 updates and key replacement with same-UID fresh RF authentication. Manufacturer, OTP, lock and counter writes remain excluded. |
+| **NDEF** | `TType1NdefCardReader`, `TType2NdefCardReader`, `TType3NdefCardReader`, `TType4NdefCardReader`, `TType5NdefCardReader` | Complete NDEF message codec with chunk reassembly, plus Text, URI, MIME, external and Smart Poster record helpers. Read, replace and clear public NDEF messages on Topaz Type 1 (mapping 1.0), Type 2, Type 3 (mapping 1.0), Type 4 (mapping 1.0/2.0) and Type 5 tags, with read-back verification. Type 2 and Type 5 also support NDEF within supplied-password sessions and protected transfer workflows; initialized mappings only. |
 | **Topaz / NFC Forum Type 1** | `TTopazCardReader`, `TType1NdefCardReader` | Topaz 96/512 identity, complete physical memory/locks, preimage-checked user writes and initialized NDEF read/parse/replace/clear via explicit ACR122U/PN532 Jewel and CIU commands. No formatting or lock/OTP programming. |
 | **FeliCa / NFC Forum Type 3** | `TFelicaCardReader`, `TType3NdefCardReader` | Fresh explicit-system polling, IDm/PMm, unencrypted service block reads and preimage-checked verified writes, including 16-bit block addresses. Type 3 attribute parsing and verified NDEF read/replace/clear through an ACR122U/PN532 adapter at explicit 212/424 kbit/s. |
 | **ISO 15693 / NFC-V** | `TIso15693CardReader` | Ordinary/extended addressing, system information, single or explicit native multiple-block reads and verified data writes through ACS ACR1552 FF FB. `TIso15693PasswordSession` adds supplied-password user-memory access for ICODE SLIX2 and original ST25DV04K/16K/64K, including Type 5 NDEF. `TIso15693SecurityManager` adds decoded protection snapshots, RF password replacement with fresh RF proof, SLIX2 page protection and ST25DV RF area policy updates. |
-| **MIFARE DESFire** | `TDesfireCardReader` | Public, EV1/EV2 AES, EV1 2K3DES/3K3DES and explicit D40 DES/2K3DES (Plain, MACed, Full) access. Discover applications/files, read standard/backup/value/record files and write standard data. Transactions with commit/abort; application and ordinary-file create/delete across the explicit profiles, including selectable DES/2K3DES, 3K3DES or AES application storage. AES/DES/3DES key rotation, key-policy and ordinary-file access administration. EV2 NonFirst re-authentication. |
+| **MIFARE DESFire** | `TDesfireCardReader` | Public, EV1/EV2 AES, EV1 2K3DES/3K3DES and explicit D40 DES/2K3DES (Plain, MACed, Full) access. Discover applications/files, read standard/backup/value/record files and write standard data. Transactions with commit/abort; application and ordinary-file create/delete across the explicit profiles, including selectable DES/2K3DES, 3K3DES or AES application storage. AES/DES/3DES key rotation, key-policy and ordinary-file access administration. EV2 NonFirst re-authentication. Optional EV2 extended management adds AES key sets, acknowledged configuration and verified SDM settings; offline SDM PICC/file decrypt and MAC verification. Native ISO directories/application/file creation including combined AES key-set provisioning, multi-access settings and standard-data access, combined SDM/multi-access policy management, AES TMAC file/limit management, explicit owned TMAC transactions with ReaderID and offline receipt verification, plus immediate standard-data range writes with preimage, immediate and post-commit proofs and native sixteen-byte cyclic-record updates. Protected real-UID acquisition and stored LRP TMAC inspection; explicit native LRP First/NonFirst reader sessions, Plain/MAC/Full data access and owned LRP TMAC with verified counter subparts and deferred ReaderID proof are implemented; native DESFire Light LRP management adds verified five-key rotation and explicitly acknowledged persistent configuration; explicit EV2 multiple-access backup/value/record transactions retain every right tuple through commit verification; low-level codecs remain available. See [LRP](docs/DESFIRE_LRP.md). See [extended DESFire](docs/DESFIRE_EXTENDED.md). |
 | **Programmable (“magic”) UIDs** | `TRawUidProgrammer`, UID methods of `TContactlessCardReader` | Explicit profiles for Gen1a/Gen1b, unsealed UFUID, Gen2/CUID, factory FUID (one-time), Gen3, Gen4 UMC (4/7/10-byte), USCUID/GDM, partial UFUID/ZUID/PFUID and Type 2 DirectWrite. Raw RF access uses an ACS ACR122U/PN532 adapter. |
 | **Calypso / MOBIB** | `TCalypsoCardReader` | Read Calypso files and records (legacy CLA 94 or ISO CLA 00) using the built-in MOBIB plan or your own FID plan. Decode holder, events, contracts (versions 0–4) and counters. Native Calypso secure sessions through a provisioned SAM (revisions 1, 2, 3 and 3.2) or a custom provider. Offline activation/validity/zone checks with `TMobibRuleEngine` and caller-supplied operator profiles. |
 | **SIM / USIM** | `TSimCardReaderWriter` | Classic GSM SIM and UICC/USIM profiles. Read ICCID, IMSI, SPN, service tables and EF.DIR applications; inspect, read and verified-write transparent, linear-fixed and cyclic files. PIN/PUK status, verify, change and unblock with attempt budgets. Read, write and delete ADN contacts; read linked USIM contacts (PBR/IAP/EXT/EMAIL/ANR); verified linked write plans; SMS record and text/UDH codecs. |
@@ -63,7 +64,7 @@ out of scope (see [Not supported](#not-supported)).
 | **Magnetic stripe** | `TMagStripeReaderWriter` | Track 1–3 codecs (parity, LRC, financial Track 1 format B/Track 2 parsing). MSR206/MSR605 read and status-only programming; MSR206-7HL read and verified write; read-only MagTek keyboard and HID adapters. |
 | **RFID keyboard/HID input** | `TRfidKeyboardReader`, `TRfidHidReportReader` | Decode identifiers from keyboard-wedge readers or from host-supplied HID boot-keyboard (8/9-byte) and fixed ASCII-field reports. ASCII, hexadecimal and decimal profiles with prefix/suffix/terminator framing. |
 | **Native USB-HID** | `TUsbHidReaderWriter`, `THidDeviceMonitor`, `TUsbHidInputMonitor` | Enumerate Windows HID collections (VID/PID/usage/report lengths), open an exact interface, read/send input, output and feature reports with timeouts. Hot-plug notifications and continuous input-report events. |
-| **ELATEC TWN4** | `TTwn4CardReaderWriter` | Simple Protocol over PRS/USB-CDC: firmware version, tag search, supplied-key Classic block reads/writes and public Type 2 user-page reads/writes with expected-ID and read-back checks. Requires suitable PRS firmware. |
+| **ELATEC TWN4** | `TTwn4CardReaderWriter` | Simple Protocol over PRS/USB-CDC: firmware version, tag search, supplied-key Classic block reads/writes and public Type 2 user-page reads/writes with expected-ID and read-back checks. Workflow adapters add selected-memory backup/copy/compare/restore with frozen reader settings; Classic 4K requires an explicit high-block reader-sector map. Requires suitable PRS firmware. |
 
 Card support and reader support are separate: an operation needs both the correct
 card profile **and** a reader that supports the required commands. The linked
@@ -100,7 +101,7 @@ These rules apply to every component and are worth knowing before you start:
 | `src/eid` | Belgian eID, ICAO document reader, MRZ, LDS, BAC/PACE access and secure messaging |
 | `src/emv` | EMV reader, offline calculators, semantic codecs, CVN profiles, data model and tag/AID catalogs |
 | `src/globalplatform` | Native secure channels, registry/CPLC, CAP parsing and card management |
-| `src/contactless` | MIFARE Classic, Type 1/2/3/4/5, FeliCa, NDEF, ISO 15693, DESFire, UID programming, Calypso/MOBIB |
+| `src/contactless` | MIFARE Classic/Plus, Type 1/2/3/4/5, FeliCa, NDEF, ISO 15693, DESFire, UID programming, Calypso/MOBIB |
 | `src/memory` | SLE/I²C memory chips, SLE counter chips, SLE4404, ACS capability catalog |
 | `src/sim` | SIM/USIM reader/writer, codecs, record workflows and inspection |
 | `src/magstripe` | Track codecs, serial port, MSR206/MSR605, MSR206-7HL, MagTek adapters |
@@ -153,7 +154,7 @@ Output goes to `dist/packages/<Platform>/<Config>`.
 | `ERDCardEID` | Belgian eID and ICAO documents | `ERDCardCore` |
 | `ERDCardGlobalPlatform` | GlobalPlatform secure channels, CAP and JavaCard management | `ERDCardCore` |
 | `ERDCardEMV` | EMV reader and tag catalog | `ERDCardCore` |
-| `ERDCardContactless` | Classic, Type 1/2/3/4/5, FeliCa, NDEF, ISO 15693, DESFire, UID, Calypso/MOBIB | `ERDCardCore` |
+| `ERDCardContactless` | Classic/Plus, Type 1/2/3/4/5, FeliCa, NDEF, ISO 15693, DESFire, UID, Calypso/MOBIB | `ERDCardCore` |
 | `ERDCardMemory` | Memory, counter and SLE4404 chips | `ERDCardCore` |
 | `ERDCardSIM` | SIM/USIM | `ERDCardCore` |
 | `ERDCardInput` | USB-HID, HID monitors, RFID input | `ERDCardCore` |
@@ -174,14 +175,14 @@ tools\build-packages.cmd dcc32 design
 ```
 
 Then use **Component > Install Packages > Add** and select `ERDCardDesign.bpl`.
-It registers 51 components:
+It registers 59 components:
 
 | Palette page | Components |
 | --- | --- |
 | **ERD Cards** | `TSmartCardMonitor`, `TSmartCardReader`, `TBelgianEIDReader`, `TICAODocumentReader`, `TSimCardReaderWriter`, `TEMVCardReader`, `TGlobalPlatformCardManager`, `TEmvCalculator`, `TMagStripeReaderWriter`, `TMemoryCardReaderWriter`, `TSleCounterCardReaderWriter`, `TSle4404CardReaderWriter` |
-| **ERD Workflows** | `TSle4404Workflow`, `TSleCounterWorkflow`, `TDesfirePersonalizationWorkflow`, `TSimPhonebookWorkflow`, `TSimSmsWorkflow`, `TSimInspectionWorkflow`, `TContactMemoryWorkflow`, `TDesfireApplicationWorkflow`, `TDesfireProvisionWorkflow`, `TCardBatchWorkflow`, `TIso15693MemoryWorkflow`, `TCardMemoryCopyWorkflow`, `TMifareClassicCopyWorkflow`, `TType2MemoryWorkflow`, `TUidProgrammingWorkflow`, `TClassicCredentialWorkflow`, `TNdefTransferWorkflow`, `TMagStripeCopyWorkflow` |
+| **ERD Workflows** | `TProtectedNdefWorkflow`, `TProtectedMemoryWorkflow`, `TCardSecurityWorkflow`, `TEidInspectionWorkflow`, `TEmvInspectionWorkflow`, `TMobibInspectionWorkflow`, `TSle4404Workflow`, `TSleCounterWorkflow`, `TDesfirePersonalizationWorkflow`, `TSimPhonebookWorkflow`, `TSimSmsWorkflow`, `TSimInspectionWorkflow`, `TContactMemoryWorkflow`, `TDesfireApplicationWorkflow`, `TDesfireProvisionWorkflow`, `TCardBatchWorkflow`, `TIso15693MemoryWorkflow`, `TCardMemoryCopyWorkflow`, `TMifareClassicCopyWorkflow`, `TType2MemoryWorkflow`, `TUidProgrammingWorkflow`, `TClassicCredentialWorkflow`, `TNdefTransferWorkflow`, `TMagStripeCopyWorkflow` |
 | **ERD Input** | `THidDeviceMonitor`, `TUsbHidInputMonitor`, `TRfidKeyboardReader`, `TRfidHidReportReader`, `TUsbHidReaderWriter`, `TTwn4CardReaderWriter` |
-| **ERD Contactless** | `TTopazCardReader`, `TType1NdefCardReader`, `TFelicaCardReader`, `TType3NdefCardReader`, `TUltralightCCardReaderWriter`, `TCalypsoCardReader`, `TContactlessCardReader`, `TType2NdefCardReader`, `TType4NdefCardReader`, `TIso15693CardReader`, `TIso15693SecurityManager`, `TType5NdefCardReader`, `TDesfireCardReader`, `TType2PasswordCardReader`, `TRawUidProgrammer` |
+| **ERD Contactless** | `TMifarePlusLevelManager`, `TMifarePlusCardReaderWriter`, `TTopazCardReader`, `TType1NdefCardReader`, `TFelicaCardReader`, `TType3NdefCardReader`, `TUltralightCCardReaderWriter`, `TCalypsoCardReader`, `TContactlessCardReader`, `TType2NdefCardReader`, `TType4NdefCardReader`, `TIso15693CardReader`, `TIso15693SecurityManager`, `TType5NdefCardReader`, `TDesfireCardReader`, `TType2PasswordCardReader`, `TRawUidProgrammer` |
 
 Scalar settings are stored in the DFM. Interface properties such as `Transport`,
 `Profile`, `Device`, `Session`, `Channel` and `CryptoProvider` must be assigned at
@@ -303,7 +304,7 @@ needs no hardware. Run them with `--help` to see their arguments.
 
 ### VCL demos
 
-`examples/vcl/CardDemos.groupproj` contains 43 Windows VCL applications. Each owns
+`examples/vcl/CardDemos.groupproj` contains 48 Windows VCL applications. Each owns
 its own form and DFM. Hardware demos have an in-app reader/HID/COM-port picker and
 run card work on a background thread. The offline calculator requires no reader;
 the catalog demo receives reader/card snapshots through native events. Write, PIN and management actions require
@@ -318,6 +319,8 @@ and show card offered/removed notifications without running a card operation.
 | `GlobalPlatformDemo` | Domain/CPLC/registry, authentication, CAP/DAP load, install/delete/status/extradition, key management and token/receipt policies; offline CAP preview, live acknowledged LOAD bytes/blocks, own DFM, native reader/card events and background worker |
 | `Iso15693WorkflowDemo`, `BatchWorkflowDemo` | Selected ISO15693 backup/compare/restore and per-card NDEF text personalization batches |
 | `ClassicWorkflowDemo`, `Type2WorkflowDemo` | Data backup/copy/compare/restore, snapshot files and source/target selection |
+| `ProtectedType2WorkflowDemo`, `ProtectedIso15693WorkflowDemo` | Supplied-password memory backup/copy/compare/restore, offline security previews and verified credential/protection apply; independent forms/DFMs, reader selectors and native reader/card events |
+| `EidInspectionDemo`, `EmvInspectionDemo`, `MobibInspectionDemo` | Structured inspection, section/progress outcomes and text/JSON exports with explicit personal/raw policy; each owns its form/DFM and native reader events |
 | `ContactMemoryWorkflowDemo`, `DesfireWorkflowDemo` | SLE/I2C backup/copy/compare/restore; complete ordinary DESFire application backup/migration and explicit application/file provisioning, each with its own form/DFM |
 | `Sle4404WorkflowDemo`, `SleCounterWorkflowDemo`, `DesfirePersonalizationDemo` | Public-memory snapshots, offline one-way plans, explicit erases/carry, checked prefix resume and ordered DESFire creation/content/key/access-policy steps; each owns its form/DFM |
 | `UidWorkflowDemo`, `NdefWorkflowDemo`, `MagStripeWorkflowDemo` | UID, NDEF and stripe capture/copy/template programming through workflow components |
@@ -404,8 +407,7 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 - **Other European eIDs:** Dutch, Luxembourg and German documents and their national
   online services are not validated; extra PACE/EAC profiles are missing
   ([docs/EUROPEAN_EID.md](docs/EUROPEAN_EID.md)).
-- **MIFARE/DESFire variants:** MIFARE Plus, DESFire LRP,
-  TMAC, SDM and extended key-set/configuration management. Ultralight C irreversible lock/counter/OTP programming. Encrypted FeliCa services and FeliCa formatting/key provisioning.
+- **MIFARE/DESFire variants:** Plus SL2 sector data sessions and trailer/configuration programming; SL0 commit support requires an explicit card profile that commits directly to ISO14443-4 SL3; DESFire LRP originality verification and provisioning for profiles beyond the explicit Light application subset, combined SDM/TMAC data/migration and extended TMAC transactions, unaligned/partial-record TMAC profiles. Configuration options beyond the documented native subset remain unsupported. Ultralight C irreversible lock/counter/OTP programming. Encrypted FeliCa services and FeliCa formatting/key provisioning.
 - **Topaz / Type 1:** formatting, arbitrary chips/control layouts, permanent locks/OTP/UID writes and other native reader protocols; [exact supported scope](docs/TOPAZ_TYPE1.md).
 - **ISO 15693 vendor management:** no irreversible lock programming, SLIX2
   privacy/destroy, ST25DV area resizing/mailbox/I²C or ST25TV/KC password dialects.
@@ -433,7 +435,7 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 ## Unit reference
 
 <details>
-<summary>All 92 source units</summary>
+<summary>Source unit reference</summary>
 
 | Unit | Purpose |
 | --- | --- |
@@ -445,6 +447,15 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 | `ERD.Card.APDU.Catalog` | 35 instruction labels, 205 historical status explanations and dynamic standard statuses |
 | `ERD.Card.TLV` | Bounded BER-TLV tree decoder/encoder |
 | `ERD.Card.Transport` | `ICardTransport` and `ICardTransaction` contracts |
+| `ERD.Card.Contactless.Workflow.Password` | Supplied-password memory workflows and pre-authentication UID/geometry guards |
+| `ERD.Card.Contactless.Workflow.UltralightC` | Supplied-3DES-key Ultralight C user-memory backend with static/dynamic lock preflight |
+| `ERD.Card.Contactless.Workflow.Ndef.Protected` | Protected logical NDEF backup/copy/compare/template/clear with Type 2 and Type 5 password backends |
+| `ERD.Card.Reader.TWN4.Workflow` | Owned TWN4 Classic/Type 2 memory adapters; explicit 4K reader-sector mapping |
+| `ERD.Card.Contactless.Workflow.Security` | Reviewed same-card credential/protection changes with fresh RF proof |
+| `ERD.Card.Inspection` | Structured inspection lifecycle, section evidence, personal/raw export policy and text/JSON output |
+| `ERD.Card.EID.Inspection` | Belgian contact-eID and explicit ICAO BAC/PACE report workflows |
+| `ERD.Card.EMV.Inspection` | Exact-AID inspection, optional bounded extra records, logs and counters |
+| `ERD.Card.MOBIB.Inspection` | Native plan acquisition, parsed MOBIB/operator report and exact missing/restricted file evidence |
 | `ERD.Card.Workflow` | Memory copy/backup/compare/restore, lifecycle events and write evidence |
 | `ERD.Card.Workflow.Archive` | Bounded selected-memory snapshot format |
 | `ERD.Card.Workflow.Batch` | Prepared per-card templates and retained child outcomes |
@@ -505,6 +516,12 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 | `ERD.Card.Contactless.DESFire` | `TDesfireCardReader`, sessions and management |
 | `ERD.Card.Contactless.DESFire.EV1` | EV1 AES secure-messaging codec |
 | `ERD.Card.Contactless.DESFire.EV2` | EV2 AES secure-messaging codec |
+| `ERD.Card.Contactless.DESFire.LRP` | Native LRP primitive, authentication, secure-message and transaction-key/receipt crypto |
+| `ERD.Card.Contactless.DESFire.Extensions` | Extended key-set/ISO/multi-access/TMAC codecs, configuration validation, SDM and AES TMAC crypto |
+| `ERD.Card.Contactless.Plus` | Native SL3 AES component, signed/native value workflows, geometry, IV and MAC codecs |
+| `ERD.Card.Contactless.Plus.ACR122` | Exclusive PN532 ISO14443-4 session and explicit no-RATS raw SL1 reader factory |
+| `ERD.Card.Contactless.Plus.Levels` | Inactive SL1 authentication and acknowledged SL1→SL2 / verified SL1/SL2→SL3 transitions |
+| `ERD.Card.Contactless.Plus.Workflow` | Supplied-key ordinary-memory workflow backend |
 | `ERD.Card.Contactless.Raw` | `TRawUidProgrammer`, raw Type A codec |
 | `ERD.Card.Contactless.ACR122` | ACR122U/PN532 raw-frame adapter |
 | `ERD.Card.Contactless.UID` | Gen2/CUID UID codec |
@@ -576,7 +593,10 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 - [Topaz / Type 1](docs/TOPAZ_TYPE1.md)
 - [FeliCa / Type 3](docs/FELICA_TYPE3.md) · [Type 2 management and protected NDEF](docs/TYPE2_MANAGEMENT.md)
 - [Contactless / MIFARE](docs/CONTACTLESS.md) · [NDEF](docs/NDEF.md) · [Type 2 passwords](docs/TYPE2_PASSWORD.md) · [Ultralight C / DES security](docs/LEGACY_MIFARE_SECURITY.md) · [NTAG210/212](docs/NTAG210_212.md) · [Type 4 NDEF](docs/TYPE4_NDEF.md) · [ISO 15693 / Type 5](docs/ISO15693_TYPE5.md)
+- [MIFARE Plus](docs/MIFARE_PLUS.md) · [DESFire extensions](docs/DESFIRE_EXTENDED.md) · [ISO/multi-access/TMAC](docs/DESFIRE_FILES_TMAC.md)
 - [DESFire](docs/DESFIRE.md) · [DESFire application/file management](docs/DESFIRE_APPLICATIONS.md) · [MOBIB / Calypso](docs/MOBIB_CALYPSO.md)
 - [Programmable UIDs](docs/PROGRAMMABLE_UID.md) · [Raw UID](docs/RAW_UID.md) · [Gen3/Gen4](docs/GEN3_GEN4_UID.md) · [USCUID/FUID](docs/USCUID_FUID.md) · [Gen1b/partial](docs/GEN1B_PARTIAL_UID.md)
 - [Contact memory cards](docs/MEMORY_CARDS.md) · [SLE4404](docs/SLE4404.md) · [SIM / USIM](docs/SIM.md)
 - [Magnetic stripe](docs/MAGSTRIPE.md) · [MSR206/MSR605](docs/MSR206.md) · [MSR206-7HL](docs/MSR206_7HL.md)
+
+Current implementation and remaining CardStudio work: [component/studio status](docs/STATUS_CARDSTUDIO.md).

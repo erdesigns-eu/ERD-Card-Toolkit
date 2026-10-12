@@ -1,4 +1,4 @@
-unit ERD.Card.Contactless.Type2.Password;
+﻿unit ERD.Card.Contactless.Type2.Password;
 
 {$IFDEF FPC}
 {$MODE DELPHI}
@@ -137,6 +137,14 @@ type
     /// Enabled mirror features can affect reader-visible bytes; this is not an NDEF or backing-EEPROM interpretation.</remarks>
     function ReadUserMemory(const AModel: TType2TagModel;
       const APassword, AExpectedPack: TBytes): TType2UserMemory;
+    /// <summary>Authenticates once and checks mirror/static/dynamic user-lock configuration without programming.</summary>
+    /// <param name="AModel">Explicit supported password-capable tag.</param>
+    /// <param name="APassword">Four supplied current bytes.</param>
+    /// <param name="AExpectedPack">Two mandatory expected PACK bytes.</param>
+    /// <remarks>Conservatively rejects any user-memory lock, including locks outside a selected range.
+    /// Does not require an NDEF layout or change AUTH0/PROT/AUTHLIM, lock bits or credentials.</remarks>
+    procedure CheckUserMemoryWritable(const AModel: TType2TagModel;
+      const APassword, AExpectedPack: TBytes);
     /// <summary>Authenticates once, writes one user page once, and verifies all four bytes in the retained session.</summary>
     /// <param name="AModel">Explicit supported PWD_AUTH model.</param>
     /// <param name="APage">User page; every manufacturer, lock, OTP/CC and configuration page is rejected before I/O.</param>
@@ -616,6 +624,42 @@ begin
     ReleaseSession(Succeeded);
   end;
   Result := C;
+end;
+
+procedure TType2PasswordCardReader.CheckUserMemoryWritable
+  (const AModel: TType2TagModel; const APassword, AExpectedPack: TBytes);
+var
+  P, K, Locks: TBytes;
+  C: TType2AuthenticationConfiguration;
+  Success: Boolean;
+begin
+  TType2PasswordCodec.ValidateCredentials(AModel, APassword, AExpectedPack);
+  P := CopyBytes(APassword);
+  K := CopyBytes(AExpectedPack);
+  try
+    AcquireAndAuthenticate(P, K);
+    Success := False;
+    try
+      C := Configuration(AModel);
+      if C.MirrorConfigured then
+        Fail('mirrored memory');
+      Locks := RawPages(AModel, 2, 1);
+      if ((Locks[2] and $F0) <> 0) or (Locks[3] <> 0) then
+        Fail('static user locks');
+      if not (AModel in [ttmUltralightEv1_48, ttmNtag210]) then
+      begin
+        Locks := RawPages(AModel, LastUserPage(AModel) + 1, 1);
+        if (Locks[0] <> 0) or (Locks[1] <> 0) or (Locks[2] <> 0) then
+          Fail('dynamic user locks');
+      end;
+      Success := True;
+    finally
+      ReleaseSession(Success);
+    end;
+  finally
+    FillChar(P[0], Length(P), 0);
+    FillChar(K[0], Length(K), 0);
+  end;
 end;
 
 function TType2PasswordCardReader.ConfigureAuthenticationVerified
