@@ -436,6 +436,105 @@ type
       const ADesired: TDesfireSdmSettings);
   end;
 
+  /// <summary>Optional EV2 ISO identifiers, multi-access data and transaction-MAC file management.</summary>
+  /// <remarks>Existing interface layouts/IIDs remain unchanged. TMAC file/record metadata is separate from transaction receipt generation.</remarks>
+  IDesfireFileManagement = interface(IDesfireExtendedManagement)
+    ['{681D2C6B-4567-43BD-A6F7-824B1E733512}']
+    /// <summary>Acquires frame-preserved authenticated ISO application directory entries.</summary>
+    /// <returns>Owned bounded AID/FID/DF-name tuples; current selection must be PICC.</returns>
+    function ReadIsoApplications: TDesfireIsoApplications;
+    /// <summary>Acquires unique native ISO file identifiers in the selected application.</summary>
+    /// <returns>Owned FID list, independent of native file-number order.</returns>
+    function ReadIsoFileIds: TDesfireIsoFileIds;
+    /// <summary>Creates an AES ISO application and verifies the exact acquired directory tuple.</summary>
+    /// <param name="AAid">Explicit unused nonzero native 24-bit AID; current selection PICC.</param>
+    /// <param name="APolicy">Explicit native application key policy.</param>
+    /// <param name="AKeyCount">One-through-fourteen AES keys; no default secret keys are used.</param>
+    /// <param name="AIsoFid">Explicit unused nonreserved ISO FID.</param>
+    /// <param name="ADfName">Explicit unique one-through-sixteen-byte ISO DF name; frozen before I/O.</param>
+    procedure CreateIsoApplicationVerified(const AAid: Cardinal;
+      const APolicy, AKeyCount: Byte; const AIsoFid: Word; const ADfName: TBytes);
+    /// <summary>Creates one ordinary ISO data/record file and verifies geometry and acquired FID presence.</summary>
+    /// <param name="ADefinition">Explicit ordinary standard/backup/linear/cyclic file definition; value files have no ISO FID.</param>
+    /// <param name="AIsoFid">Explicit unused nonreserved ISO FID in an ISO-enabled application.</param>
+    procedure CreateIsoFileVerified(const ADefinition: TDesfireFileDefinition;
+      const AIsoFid: Word);
+    /// <summary>Reads complete ordinary/multi-access settings and validates geometry.</summary>
+    /// <param name="AFile">Explicit native ordinary file number zero-through-thirty-one.</param>
+    /// <returns>Owned exact raw/base bytes and all native access-right tuples.</returns>
+    function ReadMultiAccessSettings(const AFile: Byte): TDesfireMultiAccessSettings;
+    /// <summary>Changes ordinary/multiple access tuples against exact frozen settings and verifies complete read-back.</summary>
+    /// <param name="AFile">Existing ordinary file number.</param>
+    /// <param name="AExpected">Exact acquired complete prior settings, frozen before I/O.</param>
+    /// <param name="ACommunication">Native Plain=0, MACed=1 or Full=3.</param>
+    /// <param name="ARights">One-through-eight explicit primary/additional wire-order rights.</param>
+    procedure ChangeMultiAccessVerified(const AFile: Byte; const AExpected: TBytes;
+      const ACommunication: Byte; const ARights: TDesfireAccessRightSets);
+    /// <summary>Reads ordinary data using any acquired valid primary/additional read authority and verifies unchanged settings.</summary>
+    /// <param name="AFile">Explicit standard/backup file number.</param>
+    /// <param name="AOffset">Explicit nonnegative byte offset.</param>
+    /// <param name="ACount">Positive bounded exact byte count.</param>
+    /// <returns>Owned acquired data under the file's communication mode.</returns>
+    function ReadMultiAccessData(const AFile: Byte; const AOffset, ACount: Integer): TBytes;
+    /// <summary>Writes standard data against an exact frozen preimage using any valid acquired write authority.</summary>
+    /// <param name="AFile">Explicit standard-data file number; backup transactions are separate.</param>
+    /// <param name="AOffset">Nonnegative byte offset.</param>
+    /// <param name="AExpected">Exact previously acquired nonempty byte range.</param>
+    /// <param name="AData">Same-sized replacement data; frozen before I/O.</param>
+    procedure WriteMultiAccessDataVerified(const AFile: Byte; const AOffset: Integer;
+      const AExpected, AData: TBytes);
+    /// <summary>Reads acquired AES transaction-MAC file metadata with protected native settings exchange.</summary>
+    /// <param name="AFile">Explicit type-05 native file number.</param>
+    /// <returns>Owned metadata, not secret-key possession proof.</returns>
+    function ReadTransactionMacSettings(const AFile: Byte): TDesfireTmacSettings;
+    /// <summary>Creates one AES transaction-MAC file with encrypted supplied key and verifies exact metadata.</summary>
+    /// <param name="AFile">Unused native file number zero-through-thirty-one.</param>
+    /// <param name="AFileOption">Native communication 0/1/3 and optional exclude-unauthenticated flag 10 hex.</param>
+    /// <param name="AAccessRights">Explicit CommitReaderID/change/read/write native tuples; write nibble must F.</param>
+    /// <param name="AKeyVersion">Explicit supplied AES TMAC key version.</param>
+    /// <param name="AKey">Exactly sixteen supplied AES bytes, frozen and temporarily wiped.</param>
+    /// <remarks>Metadata/version verification is not offline TMAC validation. Ordinary transaction profiles still reject TMAC-enabled applications.</remarks>
+    procedure CreateTransactionMacFileVerified(const AFile, AFileOption: Byte;
+      const AAccessRights: Word; const AKeyVersion: Byte; const AKey: TBytes);
+    /// <summary>Changes TMAC communication/access/exclusion/counter-limit settings against an exact preimage and verifies metadata.</summary>
+    /// <param name="AFile">Existing AES TMAC file number.</param>
+    /// <param name="AExpected">Exact six/ten-byte acquired settings, frozen before I/O.</param>
+    /// <param name="AFileOption">Native communication plus exclude-unauthenticated/limit flags.</param>
+    /// <param name="AAccessRights">Explicit CommitReaderID/change/read/write tuple, write nibble F.</param>
+    /// <param name="ACounterLimit">One-through-FFFFFFFF when flag 20 hex is set, otherwise zero.</param>
+    /// <remarks>Current change-key authority is required; key option/version are preserved. Card enforces current-counter/lifecycle restrictions.</remarks>
+    procedure ChangeTransactionMacSettingsVerified(const AFile: Byte; const AExpected: TBytes;
+      const AFileOption: Byte; const AAccessRights: Word; const ACounterLimit: Cardinal);
+    /// <summary>Deletes one explicit TMAC file against exact metadata and verifies directory absence.</summary>
+    /// <param name="AFile">Explicit existing native TMAC file number.</param>
+    /// <param name="AExpected">Exact acquired metadata, frozen before I/O.</param>
+    /// <remarks>Requires explicit management and selected application key zero; no transaction reset, retry or replacement is inferred.</remarks>
+    procedure DeleteTransactionMacFileVerified(const AFile: Byte; const AExpected: TBytes);
+    /// <summary>Reads a complete TMAC counter/tag record with acquired access/mode and unchanged settings.</summary>
+    /// <param name="AFile">Explicit AES transaction-MAC file number.</param>
+    /// <returns>Owned counter/MAC; Plain mode bytes need offline TMAC validation and are not authenticated by secure-session framing.</returns>
+    function ReadTransactionMacRecord(const AFile: Byte): TDesfireTmacRecord;
+  end;
+
+  /// <summary>Explicit AES TMAC-owned transaction with canonical input tracking and offline receipt-key verification.</summary>
+  /// <remarks>Existing ordinary transaction interfaces/IIDs retain their behavior. This profile supplies a real UID,
+  /// trusted previous counter and TMAC key, accepts ordinary files plus one explicit TMAC file, and block-aligned records.</remarks>
+  IDesfireTransactionMacSession = interface(IDesfireSession)
+    ['{C64D0EC8-D935-40B5-87DF-A051842DB2D4}']
+    /// <summary>Commits one explicit reader ID, verifies its secure-session response and decrypts the previous reader ID.</summary>
+    /// <param name="AReaderId">Exactly sixteen caller-supplied bytes, frozen before dispatch.</param>
+    /// <returns>Owned sixteen-byte previous reader ID decrypted with the supplied transaction key.</returns>
+    /// <remarks>Only once per transaction; requires the acquired CommitReaderID access key. No default IDs.</remarks>
+    function CommitReaderId(const AReaderId: TBytes): TBytes;
+    /// <summary>Returns a copy of captured canonical plaintext transaction input, including successful reads.</summary>
+    /// <returns>Independent personal-data-bearing input, bounded to 1048560 bytes; caller must clear it.</returns>
+    function ReadTransactionMacInput: TBytes;
+    /// <summary>Commits once, verifies exact next counter and TMAC under the supplied static key/UID, then verifies journaled file state and release.</summary>
+    /// <returns>Owned protected counter/MAC receipt only after offline MAC and native journal proofs succeed.</returns>
+    /// <exception cref="EContactlessWriteUncertain">Commit dispatch, offline receipt proof, file verification or release cannot be established.</exception>
+    function CommitTransactionMacVerified: TDesfireTmacRecord;
+  end;
+
   /// <summary>Pure strict codecs for wrapped ordinary DESFire native commands and settings.</summary>
   TDesfireCodec = class
   public
@@ -507,6 +606,13 @@ type
     FKeys: TDesfireEv2Keys;
     FTi: TBytes;
     FCounter, FAttempts: Integer;
+    FCaptureFrames: Boolean;
+    FResponseSizes: array of Integer;
+    FTmacCapture: Boolean;
+    FTmacExcludedFile: Integer;
+    FTmacInput: TBytes;
+    procedure ReserveTmac(const ACommand: Byte; const AHeader: TBytes; const ADataLength: Integer);
+    procedure TrackTmac(const ACommand: Byte; const AHeader, AData: TBytes);
     function Metadata(const AInstruction: Byte; const AHeader: TBytes;
       const AMaxBytes: Integer; const AMutation: Boolean): TBytes;
     procedure SetTransport(const AValue: ICardTransport);
@@ -611,6 +717,21 @@ type
     /// <param name="AAid">Explicit 24-bit context; zero selects PICC.</param>
     /// <returns>Retained exclusive management session; callers must Close.</returns>
     function OpenExtendedManagementSession(const AAid: Cardinal): IDesfireExtendedManagement;
+    /// <summary>Opens an explicit EV2 AES management session for ISO/multi-access/TMAC file APIs.</summary>
+    /// <param name="AAid">Exact PICC zero or native application AID.</param>
+    /// <returns>Owned optional file-management interface; no transaction ownership is inferred.</returns>
+    function OpenFileManagementSession(const AAid: Cardinal): IDesfireFileManagement;
+    /// <summary>Opens one explicit fresh AES TMAC transaction, verifies real card UID and captures canonical data operations.</summary>
+    /// <param name="AAid">Nonzero native application AID.</param>
+    /// <param name="ATmacFile">Exact existing type-05 AES TMAC file number.</param>
+    /// <param name="AUid">Exactly seven trusted real card UID bytes, verified by protected GetCardUID.</param>
+    /// <param name="ATmacKey">Exactly sixteen supplied static transaction key bytes, owned copy cleared on completion.</param>
+    /// <param name="APreviousCounter">Trusted previously accepted counter, below FFFFFFFF; no counter guessing or rollover.</param>
+    /// <param name="AAcknowledgeFresh">Explicit assertion that no external pending transaction exists.</param>
+    /// <returns>Owned optional transaction interface; LRP, extended file layouts and unaligned record files are refused.</returns>
+    function OpenTransactionMacSession(const AAid: Cardinal; const ATmacFile: Byte;
+      const AUid, ATmacKey: TBytes; const APreviousCounter: Cardinal;
+      const AAcknowledgeFresh: Boolean): IDesfireTransactionMacSession;
     /// <summary>Opens retained native management with an optional explicit application key-type creation API.</summary>
     /// <param name="AAid">Zero for PICC application management, nonzero for ordinary file management.</param>
     /// <returns>Owned session; close explicitly. Authentication uses this component's selected profile.</returns>
@@ -662,7 +783,7 @@ type
   end;
 
   TDesfireSession = class(TInterfacedObject, IDesfireSession,
-    IDesfireManagement, IDesfireApplicationManagement, IDesfireDesManagement, IDesfireExtendedManagement)
+    IDesfireManagement, IDesfireApplicationManagement, IDesfireDesManagement, IDesfireExtendedManagement, IDesfireFileManagement, IDesfireTransactionMacSession)
   private
     FEngine: TDesfireCardReader;
     FAid: Cardinal;
@@ -671,7 +792,13 @@ type
     FPending, FVerified, FInCall: Boolean;
     FThread: NativeUInt;
     FJournal: array of TDesfireJournalEntry;
+    FTmacFile: Integer;
+    FTmacPreviousCounter: Cardinal;
+    FTmacKey, FTmacUid: TBytes;
+    FTmacSettings: TDesfireTmacSettings;
+    FReaderIdCommitted: Boolean;
     FMutations: Integer;
+    function CommitInternal(const ATmac: Boolean): TDesfireTmacRecord;
     function Enter: Integer;
     function Poison(const ABefore: Integer): Boolean;
     procedure RequireOwner;
@@ -692,12 +819,22 @@ type
     procedure RequireEv2Management;
     procedure RequireKeySet(const ASet, AKeyNumber: Byte);
     function KeySetVersion(const ASet, AKeyNumber: Byte): Byte;
+    procedure RequireFileManagement(const ACreation: Boolean = False);
+    function IsoDirectory: TDesfireIsoApplications;
+    function IsoIds: TDesfireIsoFileIds;
+    function MultiSettings(const AFile: Byte): TDesfireMultiAccessSettings;
+    procedure ValidateRightKeys(const ARights: TDesfireAccessRightSets);
+    function MultiRead(const AFile: Byte; const S: TDesfireMultiAccessSettings;
+      const AOffset, ACount: Integer; const AWriting: Boolean): TBytes;
+    function TmacMetadata(const AFile: Byte): TDesfireTmacSettings;
     procedure RequireAesManagement;
     procedure RequireNativeManagement;
     function KeyVersion(const AKeyNumber: Byte): Byte;
   public
     constructor Create(const AReader: TDesfireCardReader; const AAid: Cardinal;
-      const AAccess: TDesfireSessionAccess);
+      const AAccess: TDesfireSessionAccess; const ATmacFile: Integer = -1;
+      const ATmacUid: TBytes = nil; const ATmacKey: TBytes = nil;
+      const APreviousCounter: Cardinal = 0);
     destructor Destroy; override;
     function ReadApplicationIds: TDesfireApplicationIds;
     function ReadApplicationSettings: TDesfireApplicationSettings;
@@ -747,6 +884,27 @@ type
       const AVerifyKey: TBytes);
     procedure SetConfigurationAcknowledged(const AOption: Byte; const AData: TBytes);
     function ReadSdmSettings(const AFile: Byte): TDesfireSdmSettings;
+    function ReadIsoApplications: TDesfireIsoApplications;
+    function ReadIsoFileIds: TDesfireIsoFileIds;
+    procedure CreateIsoApplicationVerified(const AAid: Cardinal;
+      const APolicy, AKeyCount: Byte; const AIsoFid: Word; const ADfName: TBytes);
+    procedure CreateIsoFileVerified(const ADefinition: TDesfireFileDefinition; const AIsoFid: Word);
+    function ReadMultiAccessSettings(const AFile: Byte): TDesfireMultiAccessSettings;
+    procedure ChangeMultiAccessVerified(const AFile: Byte; const AExpected: TBytes;
+      const ACommunication: Byte; const ARights: TDesfireAccessRightSets);
+    function ReadMultiAccessData(const AFile: Byte; const AOffset, ACount: Integer): TBytes;
+    procedure WriteMultiAccessDataVerified(const AFile: Byte; const AOffset: Integer;
+      const AExpected, AData: TBytes);
+    function ReadTransactionMacSettings(const AFile: Byte): TDesfireTmacSettings;
+    procedure CreateTransactionMacFileVerified(const AFile, AFileOption: Byte;
+      const AAccessRights: Word; const AKeyVersion: Byte; const AKey: TBytes);
+    function ReadTransactionMacRecord(const AFile: Byte): TDesfireTmacRecord;
+    procedure ChangeTransactionMacSettingsVerified(const AFile: Byte; const AExpected: TBytes;
+      const AFileOption: Byte; const AAccessRights: Word; const ACounterLimit: Cardinal);
+    procedure DeleteTransactionMacFileVerified(const AFile: Byte; const AExpected: TBytes);
+    function CommitReaderId(const AReaderId: TBytes): TBytes;
+    function ReadTransactionMacInput: TBytes;
+    function CommitTransactionMacVerified: TDesfireTmacRecord;
     procedure ChangeSdmSettingsVerified(const AFile: Byte; const AExpected: TBytes;
       const ADesired: TDesfireSdmSettings);
     function GetOutcome: TDesfireSessionOutcome;
@@ -1100,6 +1258,7 @@ begin
     Position := 0;
     Received := 0;
     Frames := 0;
+    if FCaptureFrames then FResponseSizes := nil;
     Instruction := AInstruction;
     repeat
       Inc(Frames);
@@ -1124,6 +1283,11 @@ begin
         if Length(Part) > 0 then
           Move(Part[0], Buffer[Received], Length(Part));
         Inc(Received, Length(Part));
+        if FCaptureFrames then
+        begin
+          SetLength(FResponseSizes, Length(FResponseSizes) + 1);
+          FResponseSizes[High(FResponseSizes)] := Length(Part);
+        end;
         if (Status = $AF) and (Length(Part) = 0) then
           InvalidDesfire;
       end;
@@ -1439,6 +1603,8 @@ begin
   finally
     TDesfireEv2Codec.ClearKeys(FKeys);
     TCardCrypto.Clear(FTi);
+    TCardCrypto.Clear(FTmacInput);
+    FTmacCapture := False;
     TCardCrypto.Clear(FSessionIv);
     FCounter := 0;
     FAuthenticated := False;
@@ -1457,7 +1623,11 @@ var
   Packet, Wire: TBytes;
   Limit: Integer;
   ResponseMode: TDesfireCommunication;
+  TmacLength: Integer;
 begin
+  TmacLength := AExpected;
+  if Length(AData) > 0 then TmacLength := Length(AData);
+  ReserveTmac(AInstruction, AHeader, TmacLength);
   Result := nil;
   Packet := nil;
   Wire := nil;
@@ -1533,6 +1703,8 @@ begin
       if Length(Result) <> AExpected then
         InvalidDesfire;
     end;
+    if Length(AData) > 0 then TrackTmac(AInstruction, AHeader, AData)
+    else TrackTmac(AInstruction, AHeader, Result);
   finally
     TCardCrypto.Clear(Packet);
     TCardCrypto.Clear(Wire);
@@ -2016,6 +2188,7 @@ function TDesfireCardReader.Metadata(const AInstruction: Byte;
 var
   Packet, Wire: TBytes;
 begin
+  if AInstruction = $EB then ReserveTmac(AInstruction, AHeader, 0);
   Result := nil;
   Packet := nil;
   Wire := nil;
@@ -2059,6 +2232,7 @@ begin
     end
     else
       Result := Exchange(AInstruction, AHeader, AMaxBytes, AMutation);
+    if AInstruction = $EB then TrackTmac(AInstruction, AHeader, nil);
   finally
     TCardCrypto.Clear(Packet);
     TCardCrypto.Clear(Wire);
@@ -2107,11 +2281,14 @@ begin
 end;
 
 constructor TDesfireSession.Create(const AReader: TDesfireCardReader;
-  const AAid: Cardinal; const AAccess: TDesfireSessionAccess);
+  const AAid: Cardinal; const AAccess: TDesfireSessionAccess; const ATmacFile: Integer;
+  const ATmacUid, ATmacKey: TBytes; const APreviousCounter: Cardinal);
 var
   Ids, Reply: TBytes;
   I: Integer;
   S: TDesfireFileSettings;
+  TmacFound: Boolean;
+  Uid: TBytes;
 begin
   inherited Create;
   if (AAid > $FFFFFF) or (Ord(AAccess) < 0) or (Ord(AAccess) > 3) or
@@ -2119,6 +2296,16 @@ begin
     ((AAid = 0) and ((AReader.FKeyNumber <> 0) or (Length(AReader.FRekey) > 0)))
   then
     InvalidDesfire;
+  FTmacFile := ATmacFile;
+  if (ATmacFile < -1) or (ATmacFile > 31) then InvalidDesfire;
+  if ATmacFile >= 0 then
+  begin
+    if (AAccess <> dsaFreshTransaction) or (AAid = 0) or (AReader.FSecurity <> dfsEv2Aes) or
+      (Length(ATmacUid) <> 7) or (Length(ATmacKey) <> 16) or (APreviousCounter = High(Cardinal)) then InvalidDesfire;
+    FTmacUid := CopyBytes(ATmacUid);
+    FTmacKey := CopyBytes(ATmacKey);
+    FTmacPreviousCounter := APreviousCounter;
+  end;
   FEngine := TDesfireCardReader.Create(nil);
   FThread := NativeUInt(TThread.CurrentThread.ThreadID);
   FAid := AAid;
@@ -2142,12 +2329,32 @@ begin
       begin
         // Reject TMAC/extended files before changing the application's pending state.
         Ids := FileIds;
+        TmacFound := False;
         for I := 0 to High(Ids) do
         begin
-          S := FEngine.Settings(Ids[I]);
-          if not(S.FileType in [dftStandard, dftBackup, dftValue,
-            dftLinearRecords, dftCyclicRecords]) then
-            InvalidDesfire;
+          if Ids[I] = FTmacFile then
+          begin
+            FTmacSettings := TmacMetadata(Ids[I]);
+            TmacFound := True;
+          end
+          else
+          begin
+            S := FEngine.Settings(Ids[I]);
+            if not(S.FileType in [dftStandard, dftBackup, dftValue,
+              dftLinearRecords, dftCyclicRecords]) then InvalidDesfire;
+            if (FTmacFile >= 0) and (S.FileType in [dftLinearRecords, dftCyclicRecords]) and
+              (S.RecordBytes mod 16 <> 0) then InvalidDesfire;
+          end;
+        end;
+        if FTmacFile >= 0 then
+        begin
+          if not TmacFound then InvalidDesfire;
+          if FTmacSettings.CounterLimitEnabled and
+            (FTmacPreviousCounter >= FTmacSettings.CounterLimit) then InvalidDesfire;
+          Uid := FEngine.Send($51, nil, nil, dfcFull, 7, False);
+          if not BytesEqual(Uid, FTmacUid) then InvalidDesfire;
+          FEngine.FTmacExcludedFile := FTmacFile;
+          FEngine.FTmacCapture := True;
         end;
         if FAccess = dsaDiscardPending then
         begin
@@ -2168,6 +2375,7 @@ begin
   finally
     TCardCrypto.Clear(Ids);
     TCardCrypto.Clear(Reply);
+    TCardCrypto.Clear(Uid);
   end;
 end;
 
@@ -2190,6 +2398,8 @@ begin
   for I := 0 to High(FJournal) do
     TCardCrypto.Clear(FJournal[I].Expected);
   FJournal := nil;
+  TCardCrypto.Clear(FTmacKey);
+  TCardCrypto.Clear(FTmacUid);
 end;
 
 function TDesfireSession.Enter: Integer;
@@ -2438,7 +2648,7 @@ end;
 
 function TDesfireSession.GetPendingChanges: Boolean;
 begin
-  Result := FPending;
+  Result := FPending or ((FTmacFile >= 0) and (Length(FEngine.FTmacInput) > 0));
 end;
 
 procedure TDesfireSession.Close;
@@ -2447,7 +2657,7 @@ begin
     Exit;
   if FInCall or (NativeUInt(TThread.CurrentThread.ThreadID) <> FThread) then
     InvalidDesfire;
-  if FPending then
+  if GetPendingChanges then
     FOutcome := dsoUncertain
   else
     FOutcome := dsoClosed;
@@ -2852,24 +3062,60 @@ begin
 end;
 
 procedure TDesfireSession.Commit;
+begin
+  CommitInternal(False);
+end;
+
+function TDesfireSession.CommitTransactionMacVerified: TDesfireTmacRecord;
+begin
+  if FTmacFile < 0 then InvalidDesfire;
+  Result := CommitInternal(True);
+end;
+
+function TDesfireSession.CommitInternal(const ATmac: Boolean): TDesfireTmacRecord;
 var
   Before: Integer;
-  Reply, Header, Actual: TBytes;
+  Reply, Header, Actual, Input, Mac: TBytes;
+  TmacNow: TDesfireTmacSettings;
+  ResponseLength: Integer;
   I, Count: Integer;
   S: TDesfireFileSettings;
 begin
+  Result := Default(TDesfireTmacRecord);
   Before := Enter;
   try
     try
       RequireOwner;
-      if not FPending then
+      if not GetPendingChanges then
         InvalidDesfire;
       Header := nil;
       if FEngine.FSecurity = dfsEv2Aes then
         Header := OneByte(0);
-      Reply := FEngine.Metadata($C7, Header, 0, True);
-      if Length(Reply) <> 0 then
-        InvalidDesfire;
+      ResponseLength := 0;
+      if ATmac then
+      begin
+        if (FTmacFile < 0) or (Length(FEngine.FTmacInput) < 1) or
+          (Length(FTmacKey) <> 16) then InvalidDesfire;
+        TmacNow := TmacMetadata(FTmacFile);
+        if not BytesEqual(TmacNow.RawBytes, FTmacSettings.RawBytes) then InvalidDesfire;
+        if ((FTmacSettings.AccessRights shr 4) and $F <> $F) and not FReaderIdCommitted then InvalidDesfire;
+        Header := OneByte(1);
+        ResponseLength := 12;
+        Input := CopyBytes(FEngine.FTmacInput);
+        FEngine.FTmacCapture := False;
+      end
+      else if FTmacFile >= 0 then InvalidDesfire;
+      Reply := FEngine.Metadata($C7, Header, ResponseLength, True);
+      if ATmac then
+      begin
+        Result := TDesfireExtensionCodec.TmacRecord(Reply);
+        Result.SessionProtected := True;
+        if Result.Counter <> FTmacPreviousCounter + 1 then InvalidDesfire;
+        Mac := TDesfireTmacCrypto.Mac(FEngine.FProvider, FTmacKey, FTmacUid, Result.Counter, Input);
+        if not TCardCrypto.EqualSecret(Mac, Result.Mac) then InvalidDesfire;
+        Result.KeyVerified := True;
+      end
+      else if Length(Reply) <> 0 then InvalidDesfire;
       FOutcome := dsoCommitted;
       FPending := False;
       for I := 0 to High(FJournal) do
@@ -2909,6 +3155,9 @@ begin
     end;
   finally
     TCardCrypto.Clear(Actual);
+    TCardCrypto.Clear(Input);
+    TCardCrypto.Clear(Mac);
+    TCardCrypto.Clear(Reply);
     FInCall := False;
   end;
 end;
@@ -2922,7 +3171,7 @@ begin
   try
     try
       RequireOwner;
-      if FPending then
+      if GetPendingChanges then
       begin
         Reply := FEngine.Metadata($A7, nil, 0, True);
         if Length(Reply) <> 0 then
@@ -3963,6 +4212,723 @@ begin
     TCardCrypto.Clear(Crc);
     TCardCrypto.Clear(Vector);
     TCardCrypto.Clear(NextIv);
+    FInCall := False;
+  end;
+end;
+
+
+function TDesfireCardReader.OpenFileManagementSession(const AAid: Cardinal): IDesfireFileManagement;
+var
+  Session: IDesfireExtendedManagement;
+begin
+  Session := OpenExtendedManagementSession(AAid);
+  if not Supports(Session, IDesfireFileManagement, Result) then
+    InvalidDesfire;
+end;
+
+procedure TDesfireSession.RequireFileManagement(const ACreation: Boolean);
+begin
+  RequireEv2Management;
+  if ACreation then RequireManagement
+  else AppSettings;
+end;
+
+function TDesfireSession.IsoDirectory: TDesfireIsoApplications;
+var
+  Data: TBytes;
+  Item: TDesfireIsoApplication;
+  I, J, P, N: Integer;
+begin
+  Result := nil;
+  if FAid <> 0 then InvalidDesfire;
+  FEngine.FCaptureFrames := True;
+  try
+    Data := FEngine.Metadata($6D, nil, 21504, False);
+    P := 0;
+    for I := 0 to High(FEngine.FResponseSizes) do
+    begin
+      N := FEngine.FResponseSizes[I];
+      if I = High(FEngine.FResponseSizes) then Dec(N, 8);
+      if N = 0 then Continue;
+      if (N < 5) or (N > 21) or (P > Length(Data) - N) then InvalidDesfire;
+      Item := TDesfireExtensionCodec.IsoApplication(Copy(Data, P, N));
+      for J := 0 to High(Result) do
+        if (Result[J].Aid = Item.Aid) or (Result[J].IsoFid = Item.IsoFid) or
+          ((Length(Item.DfName) > 0) and BytesEqual(Result[J].DfName, Item.DfName)) then InvalidDesfire;
+      SetLength(Result, Length(Result) + 1);
+      Result[High(Result)] := Item;
+      Inc(P, N);
+    end;
+    if P <> Length(Data) then InvalidDesfire;
+  finally
+    FEngine.FCaptureFrames := False;
+    FEngine.FResponseSizes := nil;
+    TCardCrypto.Clear(Data);
+  end;
+end;
+
+function TDesfireSession.IsoIds: TDesfireIsoFileIds;
+begin
+  if FAid = 0 then InvalidDesfire;
+  Result := TDesfireExtensionCodec.IsoFileIds(FEngine.Metadata($61, nil, 64, False));
+end;
+
+procedure TDesfireSession.ValidateRightKeys(const ARights: TDesfireAccessRightSets);
+var
+  Settings: TDesfireApplicationSettings;
+  I, J, Key: Integer;
+begin
+  Settings := AppSettings;
+  for I := 0 to High(ARights) do
+    for J := 0 to 3 do
+    begin
+      Key := (ARights[I] shr (J * 4)) and $F;
+      if (Key < 14) and (Key >= (Settings.KeyConfiguration and $F)) then InvalidDesfire;
+    end;
+end;
+
+function TDesfireSession.MultiSettings(const AFile: Byte): TDesfireMultiAccessSettings;
+var
+  Base: TDesfireFileSettings;
+begin
+  if (FAid = 0) or (AFile > 31) then InvalidDesfire;
+  Result := TDesfireExtensionCodec.MultiAccessSettings(FEngine.Metadata($F5, OneByte(AFile), 32, False));
+  Base := TDesfireCodec.FileSettings(AFile, Result.BaseBytes);
+  if Length(Base.RawBytes) <> Length(Result.BaseBytes) then InvalidDesfire;
+end;
+
+function TDesfireSession.MultiRead(const AFile: Byte; const S: TDesfireMultiAccessSettings;
+  const AOffset, ACount: Integer; const AWriting: Boolean): TBytes;
+var
+  Base: TDesfireFileSettings;
+  I: Integer;
+  ReadAllowed, WriteAllowed: Boolean;
+begin
+  Base := TDesfireCodec.FileSettings(AFile, S.BaseBytes);
+  if not (Base.FileType in [dftStandard, dftBackup]) or (AOffset < 0) or
+    (ACount < 1) or (ACount > FEngine.FMaxTransfer) or (AOffset > Base.FileBytes - ACount) or
+    (Base.Communication < FEngine.FMinimum) then InvalidDesfire;
+  if AWriting and (Base.FileType <> dftStandard) then InvalidDesfire;
+  ReadAllowed := False;
+  WriteAllowed := False;
+  for I := 0 to High(S.Rights) do
+  begin
+    ReadAllowed := ReadAllowed or Granted((S.Rights[I] shr 12) and $F) or Granted((S.Rights[I] shr 4) and $F);
+    WriteAllowed := WriteAllowed or Granted((S.Rights[I] shr 8) and $F) or Granted((S.Rights[I] shr 4) and $F);
+  end;
+  if not ReadAllowed or (AWriting and not WriteAllowed) then InvalidDesfire;
+  Result := FEngine.Send($AD, TDesfireCodec.RangeHeader(AFile, AOffset, ACount), nil,
+    Base.Communication, ACount, False);
+end;
+
+function TDesfireSession.TmacMetadata(const AFile: Byte): TDesfireTmacSettings;
+begin
+  if (FAid = 0) or (AFile > 31) then InvalidDesfire;
+  Result := TDesfireExtensionCodec.TmacSettings(FEngine.Metadata($F5, OneByte(AFile), 10, False));
+end;
+
+function TDesfireSession.ReadIsoApplications: TDesfireIsoApplications;
+var
+  Before: Integer;
+
+begin
+  Before := Enter;
+  try
+    try
+      RequireFileManagement;
+      Result := IsoDirectory;
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then
+          raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    FInCall := False;
+  end;
+end;
+
+function TDesfireSession.ReadIsoFileIds: TDesfireIsoFileIds;
+var
+  Before: Integer;
+
+begin
+  Before := Enter;
+  try
+    try
+      RequireFileManagement;
+      Result := IsoIds;
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then
+          raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    FInCall := False;
+  end;
+end;
+
+procedure TDesfireSession.CreateIsoApplicationVerified(const AAid: Cardinal;
+  const APolicy, AKeyCount: Byte; const AIsoFid: Word; const ADfName: TBytes);
+var
+  Before: Integer;
+  Header, Name, Reply: TBytes;
+  Directory: TDesfireIsoApplications;
+  Ids: TDesfireApplicationIds;
+  I: Integer;
+  Found: Boolean;
+begin
+  Before := Enter;
+  try
+    try
+      if (FAid <> 0) or (AAid = 0) or (AAid > $FFFFFF) or (AKeyCount < 1) or (AKeyCount > 14) or
+        (((APolicy shr 4) < 14) and ((APolicy shr 4) >= AKeyCount)) or
+        (Length(ADfName) < 1) or (Length(ADfName) > 16) then InvalidDesfire;
+      TDesfireExtensionCodec.ValidateIsoFid(AIsoFid);
+      Name := CopyBytes(ADfName);
+      Header := Joined(TDesfireCodec.ApplicationBytes(AAid), HexToBytes('00A00000'));
+      Header[3] := APolicy;
+      Header[4] := $A0 or AKeyCount;
+      Header[5] := Byte(AIsoFid and $FF);
+      Header[6] := Byte(AIsoFid shr 8);
+      Header := Joined(Header, Name);
+      RequireFileManagement(True);
+      Ids := TDesfireCodec.ApplicationIds(FEngine.Metadata($6A, nil, 3072, False));
+      for I := 0 to High(Ids) do if Ids[I] = AAid then InvalidDesfire;
+      Directory := IsoDirectory;
+      for I := 0 to High(Directory) do
+        if (Directory[I].IsoFid = AIsoFid) or BytesEqual(Directory[I].DfName, Name) then InvalidDesfire;
+      Reply := FEngine.Metadata($CA, Header, 0, True);
+      if Length(Reply) <> 0 then InvalidDesfire;
+      Directory := IsoDirectory;
+      Found := False;
+      for I := 0 to High(Directory) do
+        if Directory[I].Aid = AAid then
+          Found := (Directory[I].IsoFid = AIsoFid) and BytesEqual(Directory[I].DfName, Name);
+      if not Found then InvalidDesfire;
+      FEngine.FWriteAttempt := False;
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then
+          raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    TCardCrypto.Clear(Header);
+    TCardCrypto.Clear(Name);
+    TCardCrypto.Clear(Reply);
+    FInCall := False;
+  end;
+end;
+
+procedure TDesfireSession.CreateIsoFileVerified(const ADefinition: TDesfireFileDefinition;
+  const AIsoFid: Word);
+var
+  Before: Integer;
+  D: TDesfireFileDefinition;
+  Header, OrdinaryHeader, Expected, Ids, Reply: TBytes;
+  Fids: TDesfireIsoFileIds;
+  S: TDesfireFileSettings;
+  App: TDesfireApplicationSettings;
+  Command: Byte;
+  I: Integer;
+  Found: Boolean;
+begin
+  Before := Enter;
+  try
+    try
+      D := ADefinition;
+      if D.FileType = dftValue then InvalidDesfire;
+      TDesfireExtensionCodec.ValidateIsoFid(AIsoFid);
+      OrdinaryHeader := DefinitionHeader(D, Command);
+      Header := nil;
+      SetLength(Header, 3);
+      Header[0] := D.FileNumber;
+      Header[1] := Byte(AIsoFid and $FF);
+      Header[2] := Byte(AIsoFid shr 8);
+      Header := Joined(Header, Copy(OrdinaryHeader, 1, Length(OrdinaryHeader) - 1));
+      Expected := Joined(OneByte(Ord(D.FileType)), Copy(OrdinaryHeader, 1, Length(OrdinaryHeader) - 1));
+      if D.FileType in [dftLinearRecords, dftCyclicRecords] then Expected := Joined(Expected, HexToBytes('000000'));
+      RequireFileManagement(True);
+      App := AppSettings;
+      if (App.KeyConfiguration and $20) = 0 then InvalidDesfire;
+      Ids := FileIds;
+      for I := 0 to High(Ids) do if Ids[I] = D.FileNumber then InvalidDesfire;
+      Fids := IsoIds;
+      for I := 0 to High(Fids) do if Fids[I] = AIsoFid then InvalidDesfire;
+      Reply := FEngine.Metadata(Command, Header, 0, True);
+      if Length(Reply) <> 0 then InvalidDesfire;
+      S := FEngine.Settings(D.FileNumber);
+      if not BytesEqual(S.RawBytes, Expected) then InvalidDesfire;
+      Fids := IsoIds;
+      Found := False;
+      for I := 0 to High(Fids) do Found := Found or (Fids[I] = AIsoFid);
+      if not Found then InvalidDesfire;
+      FEngine.FWriteAttempt := False;
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then
+          raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    TCardCrypto.Clear(Header);
+    TCardCrypto.Clear(OrdinaryHeader);
+    TCardCrypto.Clear(Expected);
+    TCardCrypto.Clear(Reply);
+    FInCall := False;
+  end;
+end;
+
+function TDesfireSession.ReadMultiAccessSettings(const AFile: Byte): TDesfireMultiAccessSettings;
+var
+  Before: Integer;
+
+begin
+  Before := Enter;
+  try
+    try
+      RequireFileManagement;
+      Result := MultiSettings(AFile);
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then
+          raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    FInCall := False;
+  end;
+end;
+
+procedure TDesfireSession.ChangeMultiAccessVerified(const AFile: Byte; const AExpected: TBytes;
+  const ACommunication: Byte; const ARights: TDesfireAccessRightSets);
+var
+  Before: Integer;
+  Prior, Current, After: TDesfireMultiAccessSettings;
+  Rights: TDesfireAccessRightSets;
+  Body, Desired, Reply: TBytes;
+  Base: TDesfireFileSettings;
+  Prefix: Integer;
+begin
+  Before := Enter;
+  try
+    try
+      Rights := Copy(ARights, 0, Length(ARights));
+      Body := TDesfireExtensionCodec.AccessChange(ACommunication, Rights);
+      Prior := TDesfireExtensionCodec.MultiAccessSettings(AExpected);
+      Base := TDesfireCodec.FileSettings(AFile, Prior.BaseBytes);
+      Prefix := Length(Prior.BaseBytes);
+      Desired := CopyBytes(Prior.BaseBytes);
+      Desired[1] := Body[0]; Desired[2] := Body[1]; Desired[3] := Body[2];
+      if Length(Body) > 3 then Desired := Joined(Desired, Copy(Body, 3, Length(Body) - 3));
+      if Length(Desired) < Prefix then InvalidDesfire;
+      RequireFileManagement;
+      if not Granted(Base.ChangeKey) then InvalidDesfire;
+      ValidateRightKeys(Rights);
+      Current := MultiSettings(AFile);
+      if not BytesEqual(Current.RawBytes, Prior.RawBytes) then InvalidDesfire;
+      if not BytesEqual(Current.RawBytes, Desired) then
+      begin
+        Reply := FEngine.Send($5F, OneByte(AFile), Body, dfcFull, 0, True);
+        if Length(Reply) <> 0 then InvalidDesfire;
+        After := MultiSettings(AFile);
+        if not BytesEqual(After.RawBytes, Desired) then InvalidDesfire;
+        FEngine.FWriteAttempt := False;
+      end;
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then
+          raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    TCardCrypto.Clear(Body);
+    TCardCrypto.Clear(Desired);
+    TCardCrypto.Clear(Reply);
+    FInCall := False;
+  end;
+end;
+
+function TDesfireSession.ReadMultiAccessData(const AFile: Byte; const AOffset, ACount: Integer): TBytes;
+var
+  Before: Integer;
+  S, After: TDesfireMultiAccessSettings;
+begin
+  Before := Enter;
+  try
+    try
+      RequireFileManagement;
+      S := MultiSettings(AFile);
+      ValidateRightKeys(S.Rights);
+      Result := MultiRead(AFile, S, AOffset, ACount, False);
+      After := MultiSettings(AFile);
+      if not BytesEqual(S.RawBytes, After.RawBytes) then InvalidDesfire;
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then
+          raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    FInCall := False;
+  end;
+end;
+
+procedure TDesfireSession.WriteMultiAccessDataVerified(const AFile: Byte; const AOffset: Integer;
+  const AExpected, AData: TBytes);
+var
+  Before: Integer;
+  S, After: TDesfireMultiAccessSettings;
+  Base: TDesfireFileSettings;
+  Expected, Data, Actual, Reply: TBytes;
+begin
+  Before := Enter;
+  try
+    try
+      Expected := CopyBytes(AExpected);
+      Data := CopyBytes(AData);
+      if (Length(Data) < 1) or (Length(Data) <> Length(Expected)) then InvalidDesfire;
+      RequireFileManagement;
+      S := MultiSettings(AFile);
+      ValidateRightKeys(S.Rights);
+      Base := TDesfireCodec.FileSettings(AFile, S.BaseBytes);
+      Actual := MultiRead(AFile, S, AOffset, Length(Data), True);
+      if not BytesEqual(Actual, Expected) then InvalidDesfire;
+      After := MultiSettings(AFile);
+      if not BytesEqual(S.RawBytes, After.RawBytes) then InvalidDesfire;
+      if not BytesEqual(Expected, Data) then
+      begin
+        Reply := FEngine.Send($8D, TDesfireCodec.RangeHeader(AFile, AOffset, Length(Data)),
+          Data, Base.Communication, 0, True);
+        if Length(Reply) <> 0 then InvalidDesfire;
+        Actual := MultiRead(AFile, S, AOffset, Length(Data), False);
+        if not BytesEqual(Actual, Data) then InvalidDesfire;
+        After := MultiSettings(AFile);
+        if not BytesEqual(S.RawBytes, After.RawBytes) then InvalidDesfire;
+        FEngine.FWriteAttempt := False;
+      end;
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then
+          raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    TCardCrypto.Clear(Expected);
+    TCardCrypto.Clear(Data);
+    TCardCrypto.Clear(Actual);
+    TCardCrypto.Clear(Reply);
+    FInCall := False;
+  end;
+end;
+
+function TDesfireSession.ReadTransactionMacSettings(const AFile: Byte): TDesfireTmacSettings;
+var
+  Before: Integer;
+
+begin
+  Before := Enter;
+  try
+    try
+      RequireFileManagement;
+      Result := TmacMetadata(AFile);
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then
+          raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    FInCall := False;
+  end;
+end;
+
+procedure TDesfireSession.CreateTransactionMacFileVerified(const AFile, AFileOption: Byte;
+  const AAccessRights: Word; const AKeyVersion: Byte; const AKey: TBytes);
+var
+  Before: Integer;
+  Header, Body, Expected, Reply, Ids: TBytes;
+  Settings: TDesfireTmacSettings;
+  Rights: TDesfireAccessRightSets;
+  I: Integer;
+begin
+  Before := Enter;
+  try
+    try
+      if (AFile > 31) or (Length(AKey) <> 16) then InvalidDesfire;
+      Expected := HexToBytes('050000000200');
+      Expected[1] := AFileOption;
+      Expected[2] := Byte(AAccessRights and $FF); Expected[3] := Byte(AAccessRights shr 8);
+      Expected[5] := AKeyVersion;
+      Settings := TDesfireExtensionCodec.TmacSettings(Expected);
+      Body := nil;
+      SetLength(Body, 17);
+      Move(AKey[0], Body[0], 16);
+      Body[16] := AKeyVersion;
+      Header := Joined(OneByte(AFile), Copy(Expected, 1, 4));
+      RequireFileManagement(True);
+      if FEngine.FSessionKeyNumber <> 0 then InvalidDesfire;
+      Rights := nil; SetLength(Rights, 1); Rights[0] := AAccessRights;
+      ValidateRightKeys(Rights);
+      Ids := FileIds;
+      for I := 0 to High(Ids) do if Ids[I] = AFile then InvalidDesfire;
+      Reply := FEngine.Send($CE, Header, Body, dfcFull, 0, True);
+      if Length(Reply) <> 0 then InvalidDesfire;
+      Settings := TmacMetadata(AFile);
+      if not BytesEqual(Settings.RawBytes, Expected) then InvalidDesfire;
+      FEngine.FWriteAttempt := False;
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then
+          raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    TCardCrypto.Clear(Body);
+    TCardCrypto.Clear(Header);
+    TCardCrypto.Clear(Reply);
+    FInCall := False;
+  end;
+end;
+
+function TDesfireSession.ReadTransactionMacRecord(const AFile: Byte): TDesfireTmacRecord;
+var
+  Before: Integer;
+  S, After: TDesfireTmacSettings;
+  Mode: TDesfireCommunication;
+  Data: TBytes;
+begin
+  Before := Enter;
+  try
+    try
+      RequireFileManagement;
+      S := TmacMetadata(AFile);
+      if not Granted((S.AccessRights shr 12) and $F) then InvalidDesfire;
+      Mode := dfcPlain;
+      case S.FileOption and 3 of
+        1: Mode := dfcMac;
+        3: Mode := dfcFull;
+      end;
+      if Mode < FEngine.FMinimum then InvalidDesfire;
+      Data := FEngine.Send($AD, TDesfireCodec.RangeHeader(AFile, 0, 12), nil, Mode, 12, False);
+      Result := TDesfireExtensionCodec.TmacRecord(Data);
+      Result.SessionProtected := Mode <> dfcPlain;
+      After := TmacMetadata(AFile);
+      if not BytesEqual(S.RawBytes, After.RawBytes) then InvalidDesfire;
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then
+          raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    TCardCrypto.Clear(Data);
+    FInCall := False;
+  end;
+end;
+
+
+function TDesfireCardReader.OpenTransactionMacSession(const AAid: Cardinal; const ATmacFile: Byte;
+  const AUid, ATmacKey: TBytes; const APreviousCounter: Cardinal;
+  const AAcknowledgeFresh: Boolean): IDesfireTransactionMacSession;
+begin
+  if FBusy or not AAcknowledgeFresh then InvalidDesfire;
+  Result := TDesfireSession.Create(Self, AAid, dsaFreshTransaction, ATmacFile,
+    AUid, ATmacKey, APreviousCounter);
+end;
+
+procedure TDesfireCardReader.ReserveTmac(const ACommand: Byte;
+  const AHeader: TBytes; const ADataLength: Integer);
+var
+  Required: Integer;
+begin
+  if not FTmacCapture or not (ACommand in [$AD, $8D, $AB, $8B, $6C, $0C, $DC, $1C, $EB, $C8]) then Exit;
+  if (ACommand <> $C8) and (Length(AHeader) > 0) and (AHeader[0] = FTmacExcludedFile) then Exit;
+  Required := 16;
+  case ACommand of
+    $AD, $8D: Required := 16 + ((ADataLength + 15) div 16) * 16;
+    $AB, $8B:
+      begin
+        if ADataLength mod 16 <> 0 then InvalidDesfire;
+        Required := 16 + ADataLength;
+      end;
+    $C8: Required := 48;
+  end;
+  if (Required > 1048560) or (Length(FTmacInput) > 1048560 - Required) then InvalidDesfire;
+end;
+
+procedure TDesfireCardReader.TrackTmac(const ACommand: Byte; const AHeader, AData: TBytes);
+var
+  Updated: TBytes;
+begin
+  if not FTmacCapture or not (ACommand in [$AD, $8D, $AB, $8B, $6C, $0C, $DC, $1C, $EB, $C8]) then Exit;
+  if (ACommand <> $C8) and (Length(AHeader) > 0) and (AHeader[0] = FTmacExcludedFile) then Exit;
+  Updated := TDesfireTmacCrypto.AppendInput(FTmacInput, ACommand, AHeader, AData);
+  TCardCrypto.Clear(FTmacInput);
+  FTmacInput := Updated;
+end;
+
+function TDesfireSession.ReadTransactionMacInput: TBytes;
+var
+  Before: Integer;
+begin
+  Before := Enter;
+  try
+    if FTmacFile < 0 then InvalidDesfire;
+    Result := CopyBytes(FEngine.FTmacInput);
+    if FEngine.FAttempts <> Before then InvalidDesfire;
+  finally
+    FInCall := False;
+  end;
+end;
+
+function TDesfireSession.CommitReaderId(const AReaderId: TBytes): TBytes;
+var
+  Before: Integer;
+  Id, Cipher: TBytes;
+  Key: Byte;
+begin
+  Before := Enter;
+  try
+    Id := CopyBytes(AReaderId);
+    try
+      RequireOwner;
+      if (FTmacFile < 0) or (Length(Id) <> 16) or FReaderIdCommitted then InvalidDesfire;
+      Key := (FTmacSettings.AccessRights shr 4) and $F;
+      if not Granted(Key) then InvalidDesfire;
+      FEngine.ReserveTmac($C8, Id, 16);
+      Cipher := FEngine.Metadata($C8, Id, 16, True);
+      if Length(Cipher) <> 16 then InvalidDesfire;
+      FEngine.TrackTmac($C8, Id, Cipher);
+      Result := TDesfireTmacCrypto.DecryptReaderId(FEngine.FProvider, FTmacKey, FTmacUid,
+        FTmacPreviousCounter + 1, Cipher);
+      FReaderIdCommitted := True;
+      FPending := True;
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    TCardCrypto.Clear(Id);
+    TCardCrypto.Clear(Cipher);
+    FInCall := False;
+  end;
+end;
+
+
+procedure TDesfireSession.ChangeTransactionMacSettingsVerified(const AFile: Byte;
+  const AExpected: TBytes; const AFileOption: Byte;
+  const AAccessRights: Word; const ACounterLimit: Cardinal);
+var
+  Before, I: Integer;
+  Prior, Current, DesiredSettings: TDesfireTmacSettings;
+  Desired, Body, Reply: TBytes;
+  Rights: TDesfireAccessRightSets;
+begin
+  Before := Enter;
+  try
+    try
+      Prior := TDesfireExtensionCodec.TmacSettings(AExpected);
+      Desired := Copy(Prior.RawBytes, 0, 6);
+      Desired[1] := AFileOption;
+      Desired[2] := Byte(AAccessRights and $FF);
+      Desired[3] := Byte(AAccessRights shr 8);
+      if (AFileOption and $20) <> 0 then
+      begin
+        SetLength(Desired, 10);
+        for I := 0 to 3 do Desired[6 + I] := Byte((ACounterLimit shr (I * 8)) and $FF);
+      end
+      else if ACounterLimit <> 0 then InvalidDesfire;
+      DesiredSettings := TDesfireExtensionCodec.TmacSettings(Desired);
+      if DesiredSettings.KeyVersion <> Prior.KeyVersion then InvalidDesfire;
+      Body := Copy(Desired, 1, 3);
+      if Length(Desired) > 6 then Body := Joined(Body, Copy(Desired, 6, 4));
+      RequireFileManagement;
+      if not Granted(Prior.AccessRights and $F) then InvalidDesfire;
+      Rights := nil; SetLength(Rights, 1); Rights[0] := AAccessRights;
+      ValidateRightKeys(Rights);
+      Current := TmacMetadata(AFile);
+      if not BytesEqual(Current.RawBytes, Prior.RawBytes) then InvalidDesfire;
+      if not BytesEqual(Current.RawBytes, Desired) then
+      begin
+        Reply := FEngine.Send($5F, OneByte(AFile), Body, dfcFull, 0, True);
+        if Length(Reply) <> 0 then InvalidDesfire;
+        Current := TmacMetadata(AFile);
+        if not BytesEqual(Current.RawBytes, Desired) then InvalidDesfire;
+        FEngine.FWriteAttempt := False;
+      end;
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    TCardCrypto.Clear(Desired);
+    TCardCrypto.Clear(Body);
+    TCardCrypto.Clear(Reply);
+    FInCall := False;
+  end;
+end;
+
+procedure TDesfireSession.DeleteTransactionMacFileVerified(const AFile: Byte;
+  const AExpected: TBytes);
+var
+  Before, I: Integer;
+  Prior, Current: TDesfireTmacSettings;
+  Reply, Ids: TBytes;
+begin
+  Before := Enter;
+  try
+    try
+      Prior := TDesfireExtensionCodec.TmacSettings(AExpected);
+      RequireFileManagement(True);
+      if FEngine.FSessionKeyNumber <> 0 then InvalidDesfire;
+      Current := TmacMetadata(AFile);
+      if not BytesEqual(Current.RawBytes, Prior.RawBytes) then InvalidDesfire;
+      Reply := FEngine.Metadata($DF, OneByte(AFile), 0, True);
+      if Length(Reply) <> 0 then InvalidDesfire;
+      Ids := FileIds;
+      for I := 0 to High(Ids) do if Ids[I] = AFile then InvalidDesfire;
+      FEngine.FWriteAttempt := False;
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    TCardCrypto.Clear(Reply);
+    TCardCrypto.Clear(Ids);
     FInCall := False;
   end;
 end;

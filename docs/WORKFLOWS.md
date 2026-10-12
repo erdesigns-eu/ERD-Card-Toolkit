@@ -516,3 +516,21 @@ same authenticated sector and the selected Plus X-compatible command profile.
 `SwitchSl2ToSl3Verified` adds explicit raw first authentication with the supplied
 L3 switch key, then a separate fresh same-card protected SL3 data proof. SL2 sector
 data sessions/key modifiers remain separate. See [MIFARE_PLUS.md](MIFARE_PLUS.md).
+
+
+## DESFire ISO/multi-access and AES TMAC native pipelines
+
+Optional file-management sessions provide verified ISO application/file creation,
+exact multi-access policy changes, additional-key standard-data read/write and
+TMAC file/communication/access/counter-limit management. They retain frozen
+preimages and stop on unresolved dispatch without replay.
+
+The dedicated `IDesfireTransactionMacSession` reuses ordinary backup/value/record
+journals while capturing exact canonical plaintext operations. It requires real
+UID, supplied static TMAC key, trusted previous counter and an explicit fresh-state
+assertion. ReaderID, read-only commit, abort and offline-verified counter/MAC
+receipts are supported; commit also verifies journaled files and release. Default
+ordinary sessions do not silently adopt the profile. See
+[DESFIRE_FILES_TMAC.md](DESFIRE_FILES_TMAC.md). This extends native pipelines;
+existing workflow archives do not yet serialize ISO mappings or combined extended
+layouts, and no CardStudio/demo layer has been added.

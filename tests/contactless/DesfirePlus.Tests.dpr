@@ -72,7 +72,7 @@ function TWire.Exchange(const B: TBytes): TBytes;
 begin
   Check(Active,'Exclusive exchange'); Inc(Calls); Check(Calls<=Length(Pairs),'No fallback or replay');
   Check(BytesEqual(B,HexToBytes(Pairs[Calls-1].Command)),'Independent native command '+IntToStr(Calls));
-  if (B[0] in [$A1,$A3,$B5,$B7,$B9]) or ((B[0]=$90) and (B[1] in [$CA,$56,$C6,$57,$55,$5C,$5F])) then Inc(Writes);
+  if (B[0] in [$A1,$A3,$B5,$B7,$B9]) or ((B[0]=$90) and (B[1] in [$CA,$CD,$CB,$C1,$C0,$CE,$DF,$8D,$C7,$C8,$A7,$56,$C6,$57,$55,$5C,$5F])) then Inc(Writes);
   if Calls=FailCall then raise ECardTransportError.Create('Synthetic response lost');
   if (Calls=MutateCall) and (Length(Borrowed)>0) then Borrowed[0]:=Borrowed[0] xor $FF;
   Result:=HexToBytes(Pairs[Calls-1].Response);
@@ -1146,10 +1146,380 @@ begin
   end;
 end;
 
+function FilePairs(const Kind: Integer): TExtendedPairs;
+begin
+  case Kind of
+    0: Result := DfIsoDirectory;
+    1: Result := DfIsoCreateApplication;
+    2: Result := DfIsoFileIds;
+    3: Result := DfIsoCreateFile0;
+    4: Result := DfIsoCreateFile1;
+    5: Result := DfIsoCreateFile3;
+    6: Result := DfIsoCreateFile4;
+    7: Result := DfMultiSettings;
+    8: Result := DfMultiChange;
+    9: Result := DfMultiRead;
+    10: Result := DfMultiWrite;
+    11: Result := DfTmacCreate;
+    12: Result := DfTmacSettings;
+    14: Result := DfTmacRecordMac;
+    15: Result := DfTmacRecordFull;
+    16: Result := DfTmacLimitChange;
+    17: Result := DfTmacDelete;
+    18: Result := DfMultiNonMasterRead;
+  else Result := DfTmacRecord;
+  end;
+end;
+
+procedure FileOperation(const S: IDesfireFileManagement; const Kind: Integer;
+  const Frozen: TBytes);
+var
+  Directory: TDesfireIsoApplications;
+  Fids: TDesfireIsoFileIds;
+  D: TDesfireFileDefinition;
+  Settings: TDesfireMultiAccessSettings;
+  Rights: TDesfireAccessRightSets;
+  Tmac: TDesfireTmacSettings;
+  RecordData: TDesfireTmacRecord;
+begin
+  case Kind of
+    0: begin
+      Directory := S.ReadIsoApplications;
+      Check(Length(Directory)=3,'Frame-preserved ISO directory entries');
+      Check((Directory[1].Aid=$123456) and (Directory[1].IsoFid=$E105), 'Native ISO FID uses little-endian');
+      Check(Length(Directory[2].DfName)=16,'Maximum ISO DF name retained without concatenating adjacent entries');
+    end;
+    1: S.CreateIsoApplicationVerified($123456,$0F,3,$E105,Frozen);
+    2: begin
+      Fids := S.ReadIsoFileIds;
+      Check((Length(Fids)=2) and (Fids[0]=$E103) and (Fids[1]=$E104), 'Exact native ISO FID list');
+    end;
+    3,4,5,6: begin
+      D := Default(TDesfireFileDefinition);
+      D.Communication := dfcFull;
+      case Kind of
+        3: D.FileType := dftStandard;
+        4: D.FileType := dftBackup;
+        5: D.FileType := dftLinearRecords;
+        6: D.FileType := dftCyclicRecords;
+      end;
+      if Kind<5 then D.FileBytes := 4
+      else begin D.RecordBytes := 4; D.MaxRecords := 2; end;
+      S.CreateIsoFileVerified(D,$E104);
+    end;
+    7: begin
+      Settings := S.ReadMultiAccessSettings(0);
+      Check((Length(Settings.Rights)=2) and (Settings.Rights[1]=$000F), 'Additional acquired access tuple');
+      Check(BytesToHex(Settings.BaseBytes)='0003F0FF040000','Ordinary geometry is independent of multi-access suffix');
+    end;
+    8: begin
+      SetLength(Rights,2); Rights[0] := $FFF0; Rights[1] := $000F;
+      S.ChangeMultiAccessVerified(0,Frozen,3,Rights);
+    end;
+    9,18: Check(BytesToHex(S.ReadMultiAccessData(0,0,4))='01020304','Additional-key authority enables protected data read');
+    10: S.WriteMultiAccessDataVerified(0,0,HexToBytes('01020304'),Frozen);
+    11: S.CreateTransactionMacFileVerified(1,0,$EFF0,$34,Frozen);
+    12: begin
+      Tmac := S.ReadTransactionMacSettings(1);
+      Check((Tmac.KeyVersion=$34) and (Tmac.AccessRights=$EFF0), 'Acquired AES TMAC metadata');
+    end;
+    14,15: begin
+      RecordData := S.ReadTransactionMacRecord(1);
+      Check((RecordData.Counter=1) and RecordData.SessionProtected and not RecordData.KeyVerified,
+        'Secure-session TMAC record is distinct from offline key verification');
+    end;
+    16: S.ChangeTransactionMacSettingsVerified(1,Frozen,$33,$EFF0,1000);
+    17: S.DeleteTransactionMacFileVerified(1,Frozen);
+    13: begin
+      RecordData := S.ReadTransactionMacRecord(1);
+      Check((RecordData.Counter=High(Cardinal)) and (BytesToHex(RecordData.Mac)='1122334455667788'), 'Unsigned counter and complete stored TMAC record');
+      Check(not RecordData.SessionProtected and not RecordData.KeyVerified,'Plain stored TMAC bytes are not claimed as verified');
+    end;
+  end;
+end;
+
+procedure RunFileManagement(const Kind, Fail, Corrupt, ByteIndex, BitIndex: Integer;
+  const Freeze: Boolean);
+var
+  Wire: TWire;
+  Hold: ICardTransport;
+  Reader: TDesfireCardReader;
+  Session: IDesfireFileManagement;
+  Frozen: TBytes;
+  Aid: Cardinal;
+  Failed, Uncertain: Boolean;
+begin
+  Wire := TWire.Create;
+  Hold := Wire;
+  Wire.Pairs := FilePairs(Kind);
+  Wire.FailCall := Fail;
+  Wire.CorruptCall := Corrupt;
+  Wire.CorruptByte := ByteIndex;
+  Wire.CorruptBit := BitIndex;
+  case Kind of
+    1: Frozen := HexToBytes('D276000085010100');
+    8: Frozen := HexToBytes('0003F0FF040000');
+    10: Frozen := HexToBytes('AABBCCDD');
+    11: Frozen := HexToBytes('112233445566778899AABBCCDDEEFF00');
+    16,17: Frozen := HexToBytes('0500F0EF0234');
+  else Frozen := nil;
+  end;
+  if Freeze then
+  begin
+    Wire.MutateCall := 4;
+    Wire.Borrowed := Frozen;
+  end;
+  Reader := TDesfireCardReader.Create(nil);
+  Failed := False;
+  Uncertain := False;
+  try
+    Reader.Transport := Hold;
+    Reader.CryptoProvider := TFixed.Create;
+    Reader.Security := dfsEv2Aes;
+    Reader.AuthenticationKey := HexToBytes('00000000000000000000000000000000');
+    Aid := 1;
+    if Kind in [0,1] then Aid := 0;
+    if Kind=13 then Reader.MinimumCommunication := dfcPlain;
+    if Kind=18 then Reader.KeyNumber := 1;
+    try
+      Session := Reader.OpenFileManagementSession(Aid);
+      FileOperation(Session,Kind,Frozen);
+      Session.Close;
+    except
+      on E: Exception do
+      begin
+        Failed := True;
+        Uncertain := E is EContactlessWriteUncertain;
+      end;
+    end;
+    if (Fail=0) and (Corrupt=0) then
+    begin
+      Check(not Failed,'Independent ISO/multi-access/TMAC transcript '+IntToStr(Kind));
+      Check(Wire.Calls=Length(Wire.Pairs),'Complete native file-management postconditions');
+    end
+    else
+    begin
+      Check(Failed,'Every native file-management fault observable');
+      Check(Uncertain=(Wire.Writes>0),'Native file mutation uncertainty begins at dispatch Kind='+IntToStr(Kind)+' Fail='+IntToStr(Fail)+' Corrupt='+IntToStr(Corrupt)+' Calls='+IntToStr(Wire.Calls)+' Writes='+IntToStr(Wire.Writes));
+    end;
+  finally
+    Session := nil;
+    Reader.Free;
+    Check(not Wire.Active and (Wire.Begins=Wire.Ends),'Native file-management lifetime always released');
+    TCardCrypto.Clear(Frozen);
+  end;
+end;
+
+procedure TestFileManagement;
+var
+  Kind, I, J: Integer;
+  Pairs: TExtendedPairs;
+  Settings: TDesfireMultiAccessSettings;
+  Tmac: TDesfireTmacSettings;
+  Directory: TDesfireIsoApplication;
+  Fids: TDesfireIsoFileIds;
+  Raw: TBytes;
+  Failed: Boolean;
+begin
+  for Kind := 0 to 18 do
+  begin
+    Pairs := FilePairs(Kind);
+    RunFileManagement(Kind,0,0,0,0,False);
+    if Kind in [1,8,10,11,16,17] then RunFileManagement(Kind,0,0,0,0,True);
+    for I := 1 to Length(Pairs) do RunFileManagement(Kind,I,0,0,0,False);
+    // Every protected final response bit; directory frames are checked after aggregate MAC verification.
+    for J := 0 to Length(HexToBytes(Pairs[High(Pairs)].Response))*8-17 do
+      RunFileManagement(Kind,0,Length(Pairs),J div 8,J mod 8,False);
+  end;
+  for I := 0 to 31 do
+  begin
+    Raw := HexToBytes('0083F0FF040000010F00');
+    SetLength(Raw,I);
+    Failed := False;
+    try Settings := TDesfireExtensionCodec.MultiAccessSettings(Raw);
+    except on E: EDesfireExtensionError do Failed := True; end;
+    Check(Failed=(I<>10),'Exact multi-access conditional length enforced');
+    if not Failed then Check(Length(Settings.Rights)=2,'Decoded additional tuple count');
+  end;
+  Directory := TDesfireExtensionCodec.IsoApplication(HexToBytes('56341205E1D276000085010100'));
+  Check((Directory.Aid=$123456) and (Directory.IsoFid=$E105),'Independent ISO application tuple codec');
+  Failed := False;
+  try
+    Fids := TDesfireExtensionCodec.IsoFileIds(HexToBytes('04E104E1'));
+    Check(Length(Fids)=2,'Invalid duplicate cannot produce a different list');
+  except on E: EDesfireExtensionError do Failed := True; end;
+  Check(Failed,'Duplicate ISO FIDs rejected');
+  Failed := False;
+  try TDesfireExtensionCodec.ValidateIsoFid($3F00);
+  except on E: EDesfireExtensionError do Failed := True; end;
+  Check(Failed,'ISO MF identifier not used as an application/file FID');
+  Tmac := TDesfireExtensionCodec.TmacSettings(HexToBytes('0500F0EF0234'));
+  Check(Tmac.KeyVersion=$34,'Exact AES TMAC key version decoded');
+  Tmac := TDesfireExtensionCodec.TmacSettings(HexToBytes('0533F0EF0234FFFFFFFF'));
+  Check(Tmac.CounterLimitEnabled and (Tmac.CounterLimit=High(Cardinal)), 'Full unsigned AES TMAC limit preserved');
+  Directory := TDesfireExtensionCodec.IsoApplication(HexToBytes('02000000E2'));
+  Check(Length(Directory.DfName)=0,'Existing unnamed ISO application retained');
+
+end;
+
+function TmacTransactionPairs(const Kind: Integer): TExtendedPairs;
+begin
+  case Kind of
+    0: Result := DfTmacWrite;
+    1: Result := DfTmacRead;
+    2: Result := DfTmacAbort;
+    3: Result := DfTmacReaderWrite;
+    4: Result := DfTmacReaderRead;
+    5: Result := DfTmacReaderAbort;
+    6: Result := DfTmacBadMac;
+  else Result := DfTmacBadCounter;
+  end;
+end;
+
+procedure RunTmacTransaction(const Kind, Fail, Corrupt, ByteIndex, BitIndex: Integer;
+  const WrongKey, WrongUid, ReleaseFails: Boolean);
+var
+  Wire: TWire;
+  Hold: ICardTransport;
+  Reader: TDesfireCardReader;
+  Session: IDesfireTransactionMacSession;
+  Receipt: TDesfireTmacRecord;
+  Key, Uid, Previous, Input: TBytes;
+  Failed, Uncertain: Boolean;
+begin
+  Wire := TWire.Create;
+  Hold := Wire;
+  Wire.Pairs := TmacTransactionPairs(Kind);
+  Wire.FailCall := Fail;
+  Wire.CorruptCall := Corrupt;
+  Wire.CorruptByte := ByteIndex;
+  Wire.CorruptBit := BitIndex;
+  Wire.EndFails := ReleaseFails;
+  Reader := TDesfireCardReader.Create(nil);
+  Key := HexToBytes('112233445566778899AABBCCDDEEFF00');
+  Uid := HexToBytes('04112233445566');
+  if WrongKey then Key[0] := Key[0] xor $FF;
+  if WrongUid then Uid[0] := Uid[0] xor $FF;
+  Failed := False;
+  Uncertain := False;
+  try
+    Reader.Transport := Hold;
+    Reader.CryptoProvider := TFixed.Create;
+    Reader.Security := dfsEv2Aes;
+    Reader.AuthenticationKey := HexToBytes('00000000000000000000000000000000');
+    try
+      Session := Reader.OpenTransactionMacSession(1,1,Uid,Key,0,True);
+      if Kind in [3,4,5] then
+      begin
+        Previous := Session.CommitReaderId(HexToBytes('102132435465768798A9BACBDCEDFE0F'));
+        if not WrongKey then Check(BytesToHex(Previous)='00000000000000000000000000000000','MAC-protected transaction-key reader ID decryption');
+      end;
+      if Kind in [0,3,6,7] then Session.WriteBackup(0,0,HexToBytes('AABBCCDD'))
+      else Check(BytesToHex(Session.ReadData(0,0,4))='01020304','Read-only TMAC transaction data');
+      Input := Session.ReadTransactionMacInput;
+      Check((Length(Input)>0) and (Length(Input) mod 16=0),'Canonical TMI captures complete successful operations');
+      Check(Session.PendingChanges,'Reads create an owned pending TMAC calculation');
+      if Kind in [2,5] then Session.Abort
+      else
+      begin
+        Receipt := Session.CommitTransactionMacVerified;
+        Check((Receipt.Counter=1) and Receipt.SessionProtected, 'Protected TMAC receipt accepted only with exact counter');
+        Check(Session.VerificationSucceeded and Receipt.KeyVerified,'Offline TMAC and native journal verification complete');
+      end;
+    except
+      on E: Exception do
+      begin
+        Failed := True;
+        Uncertain := E is EContactlessWriteUncertain;
+        if (Kind<6) and (Fail=0) and (Corrupt=0) and not WrongKey and not WrongUid and not ReleaseFails then
+          Writeln('TMAC diagnostic: ',E.ClassName,': ',E.Message,' calls=',Wire.Calls);
+      end;
+    end;
+    if (Kind<6) and (Fail=0) and (Corrupt=0) and not WrongKey and not WrongUid and not ReleaseFails then
+    begin
+      Check(not Failed,'Independent TMAC transaction succeeds '+IntToStr(Kind));
+      Check(Wire.Calls=Length(Wire.Pairs),'Complete TMAC transaction/journal/release chain');
+    end
+    else
+    begin
+      Check(Failed,'TMAC native/offline/identity/release fault observed');
+      Check(Uncertain=(Wire.Writes>0),'TMAC mutation uncertainty survives receipt/journal/release failures');
+    end;
+  finally
+    Session := nil;
+    Reader.Free;
+    Check(not Wire.Active and (Wire.Begins=Wire.Ends),'TMAC profile acquisition always released');
+    TCardCrypto.Clear(Key);
+    TCardCrypto.Clear(Uid);
+    TCardCrypto.Clear(Previous);
+    TCardCrypto.Clear(Input);
+  end;
+end;
+
+procedure TestTmacTransactions;
+var
+  Kind, I, J: Integer;
+  Pairs, Crypto: TExtendedPairs;
+  Key, Uid, Derived, Input, Block, Mac, Previous: TBytes;
+  Failed: Boolean;
+begin
+  for Kind := 0 to 5 do
+  begin
+    Pairs := TmacTransactionPairs(Kind);
+    RunTmacTransaction(Kind,0,0,0,0,False,False,False);
+    RunTmacTransaction(Kind,0,0,0,0,False,True,False);
+    RunTmacTransaction(Kind,0,0,0,0,False,False,True);
+    if Kind in [0,1,3,4] then RunTmacTransaction(Kind,0,0,0,0,True,False,False);
+    for I := 1 to Length(Pairs) do RunTmacTransaction(Kind,I,0,0,0,False,False,False);
+    for I := 4 to Length(Pairs) do
+      for J := 0 to Length(HexToBytes(Pairs[I-1].Response))*8-17 do
+        RunTmacTransaction(Kind,0,I,J div 8,J mod 8,False,False,False);
+  end;
+  RunTmacTransaction(6,0,0,0,0,False,False,False);
+  RunTmacTransaction(7,0,0,0,0,False,False,False);
+  Crypto := DfTmacCrypto;
+  Key := HexToBytes('112233445566778899AABBCCDDEEFF00');
+  Uid := HexToBytes('04112233445566');
+  try
+    Derived := TDesfireTmacCrypto.DeriveKey(Base,Key,Uid,1,False);
+    Check(BytesEqual(Derived,HexToBytes(Crypto[0].Response)),'Independent published-vector-layout MAC key');
+    TCardCrypto.Clear(Derived);
+    Derived := TDesfireTmacCrypto.DeriveKey(Base,Key,Uid,1,True);
+    Check(BytesEqual(Derived,HexToBytes(Crypto[1].Response)),'Independent published-vector-layout reader encryption key');
+    Input := TDesfireTmacCrypto.AppendInput(nil,$AD,HexToBytes('00000000040000'),HexToBytes('01020304'));
+    Block := TDesfireTmacCrypto.AppendInput(Input,$8D,HexToBytes('00000000040000'),HexToBytes('AABBCCDD'));
+    Check(BytesEqual(Block,HexToBytes(Crypto[2].Command)),'Independent aligned read/write canonical input');
+    Mac := TDesfireTmacCrypto.Mac(Base,Key,Uid,1,Block);
+    Check(BytesEqual(Mac,HexToBytes(Crypto[2].Response)),'Independent offline transaction MAC');
+    Previous := TDesfireTmacCrypto.DecryptReaderId(Base,Key,Uid,1,HexToBytes(Crypto[3].Response));
+    Check(BytesEqual(Previous,HexToBytes(Crypto[3].Command)),'Independent previous reader ID AES vector');
+    for I := 0 to 7 do
+    begin
+      Failed := False;
+      try
+        case I of
+          0: TDesfireTmacCrypto.DeriveKey(Base,Key,Uid,0,False);
+          1: TDesfireTmacCrypto.AppendInput(nil,$00,nil,nil);
+          2: TDesfireTmacCrypto.AppendInput(nil,$AB,HexToBytes('00000000010000'),HexToBytes('0102'));
+          3: TDesfireTmacCrypto.AppendInput(nil,$6C,HexToBytes('00'),HexToBytes('0102'));
+          4: TDesfireTmacCrypto.AppendInput(nil,$EB,HexToBytes('00'),HexToBytes('01'));
+          5: TDesfireTmacCrypto.AppendInput(nil,$C8,HexToBytes('01'),HexToBytes('02'));
+          6: TDesfireTmacCrypto.Mac(Base,Key,Uid,1,HexToBytes('01'));
+          7: TDesfireTmacCrypto.DecryptReaderId(Base,Key,Uid,1,HexToBytes('01'));
+        end;
+      except on E: EDesfireExtensionError do Failed := True; end;
+      Check(Failed,'Malformed TMAC vector/input rejected');
+    end;
+  finally
+    TCardCrypto.Clear(Key); TCardCrypto.Clear(Uid); TCardCrypto.Clear(Derived);
+    TCardCrypto.Clear(Input); TCardCrypto.Clear(Block); TCardCrypto.Clear(Mac); TCardCrypto.Clear(Previous);
+  end;
+end;
+
 begin
   try
 {$IFDEF MSWINDOWS} Base:=TCardWindowsAesProvider.Create; {$ELSE} Base:=TCardOpenSslAesProvider.Create; {$ENDIF}
-    TestCodecs; TestDf; TestPlus; TestPlusWorkflow; TestAcr; TestPlus4K; TestFrozenInputs; TestPlusManagement; TestPlusLevels; TestPlusValues; TestNativeValues;
+    TestCodecs; TestDf; TestPlus; TestPlusWorkflow; TestAcr; TestPlus4K; TestFrozenInputs; TestPlusManagement; TestPlusLevels; TestPlusValues; TestNativeValues; TestFileManagement; TestTmacTransactions;
     Writeln('PASS: ',Checks,' DESFire extension/Plus assertions.');
   except on E: Exception do begin Writeln(E.ClassName,': ',E.Message); ExitCode:=1; end; end;
 end.

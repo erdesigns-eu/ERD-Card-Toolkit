@@ -73,8 +73,7 @@ not guess offsets from a URI. Provision/write the template before enabling dynam
 mirrors. This API changes settings only and does not write template data. It can
 also disable SDM with verified ordinary settings.
 
-This supports SDM on an existing compatible file. ISO application/FID creation
-and automatic end-to-end phone-readable NDEF provisioning remain separate.
+This supports SDM on an existing compatible file. Native ISO application/FID creation is now available through [file management](DESFIRE_FILES_TMAC.md); automatic end-to-end phone-readable NDEF template provisioning remains separate.
 Ordinary DESFire settings APIs still reject SDM layouts; select the extended API.
 
 ## Offline SDM verification and decryption
@@ -104,5 +103,4 @@ No external project source is compiled into the library.
 
 Failure tests include every exchange boundary, corrupted protected responses,
 cleanup uncertainty and caller-input mutation during I/O. See [VALIDATION.md](VALIDATION.md).
-LRP, TMAC receipts, multi-access-right settings, originality verification and
-ISO application/file creation remain outside these APIs.
+ISO identifiers, multi-access settings/data and AES TMAC file/transaction/receipt APIs are supplied by the new optional interfaces in [DESFIRE_FILES_TMAC.md](DESFIRE_FILES_TMAC.md). LRP, originality and combined SDM/multi-access layouts remain separate profiles.

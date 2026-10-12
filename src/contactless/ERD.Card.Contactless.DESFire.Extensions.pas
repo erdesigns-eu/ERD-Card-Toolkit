@@ -61,9 +61,88 @@ type
     ReadCounter: Integer;
   end;
 
+  /// <summary>One independently owned native ISO application directory frame.</summary>
+  TDesfireIsoApplication = record
+    /// <summary>Native nonzero 24-bit AID.</summary>
+    Aid: Cardinal;
+    /// <summary>Native little-endian ISO directory file identifier.</summary>
+    IsoFid: Word;
+    /// <summary>Independent zero-through-sixteen-byte ISO DF name; empty for an existing unnamed application.</summary>
+    DfName: TBytes;
+  end;
+  /// <summary>Owned bounded ISO application directory; names are independent arrays.</summary>
+  TDesfireIsoApplications = array of TDesfireIsoApplication;
+  /// <summary>Explicit native ISO file identifiers, independent of native file numbers.</summary>
+  TDesfireIsoFileIds = array of Word;
+  /// <summary>Native access-right tuples in wire-byte order; first tuple governs ordinary change rights.</summary>
+  TDesfireAccessRightSets = array of Word;
+  /// <summary>Owned ordinary geometry with optional multiple access-right tuples.</summary>
+  TDesfireMultiAccessSettings = record
+    /// <summary>Exact acquired native settings bytes.</summary>
+    RawBytes: TBytes;
+    /// <summary>Independent ordinary settings with the multi-access flag stripped for strict geometry decoding.</summary>
+    BaseBytes: TBytes;
+    /// <summary>Primary plus zero-through-seven additional native right tuples.</summary>
+    Rights: TDesfireAccessRightSets;
+  end;
+  /// <summary>Owned AES transaction-MAC file metadata; no secret key material.</summary>
+  TDesfireTmacSettings = record
+    /// <summary>Exact acquired native type-05 settings.</summary>
+    RawBytes: TBytes;
+    /// <summary>Supported communication, exclude-unauthenticated and optional AES counter-limit flags.</summary>
+    FileOption: Byte;
+    /// <summary>CommitReaderID/change/read/write nibbles in native wire-byte order.</summary>
+    AccessRights: Word;
+    /// <summary>Acquired AES TMAC key version; metadata does not prove key possession.</summary>
+    KeyVersion: Byte;
+    /// <summary>True when the native optional AES thirty-two-bit counter limit is present.</summary>
+    CounterLimitEnabled: Boolean;
+    /// <summary>Explicit one-through-FFFFFFFF limit when enabled, otherwise zero.</summary>
+    CounterLimit: Cardinal;
+  end;
+  /// <summary>Owned transaction-MAC record; Plain acquisition requires separate offline authenticity verification.</summary>
+  TDesfireTmacRecord = record
+    /// <summary>Acquired unsigned thirty-two-bit transaction counter.</summary>
+    Counter: Cardinal;
+    /// <summary>Independent eight-byte transaction MAC; offline verification requires the TMAC key and transaction input.</summary>
+    Mac: TBytes;
+    /// <summary>True only when acquisition verified a secure-session response MAC; not offline TMAC key validation.</summary>
+    SessionProtected: Boolean;
+    /// <summary>True only after offline MAC verification with the supplied transaction key, UID and canonical input.</summary>
+    KeyVerified: Boolean;
+  end;
   /// <summary>Strict bounded extended settings and native creation codecs; no I/O.</summary>
   TDesfireExtensionCodec = class
   public
+    /// <summary>Decodes one frame-preserved AID/FID/DF-name directory entry.</summary>
+    /// <param name="AFrame">Exact five-byte native identifiers followed by zero-through-sixteen-byte DF name.</param>
+    /// <returns>Independent typed directory entry.</returns>
+    class function IsoApplication(const AFrame: TBytes): TDesfireIsoApplication; static;
+    /// <summary>Decodes unique native little-endian ISO file identifiers.</summary>
+    /// <param name="ABytes">Zero-through-sixty-four exact native bytes, without status/MAC.</param>
+    /// <returns>Owned explicit FID list.</returns>
+    class function IsoFileIds(const ABytes: TBytes): TDesfireIsoFileIds; static;
+    /// <summary>Decodes ordinary or multi-access ordinary file settings with exact conditional length.</summary>
+    /// <param name="ABytes">Native type 00..04 settings; SDM/TMAC combined layouts are refused.</param>
+    /// <returns>Owned raw/base settings and one-through-eight right tuples.</returns>
+    class function MultiAccessSettings(const ABytes: TBytes): TDesfireMultiAccessSettings; static;
+    /// <summary>Encodes native ordinary/multi-access ChangeFileSettings payload.</summary>
+    /// <param name="ACommunication">Native Plain=0, MACed=1 or Full=3 byte.</param>
+    /// <param name="ARights">One-through-eight explicit native wire-order tuples.</param>
+    /// <returns>Independent complete settings-change body.</returns>
+    class function AccessChange(const ACommunication: Byte;
+      const ARights: TDesfireAccessRightSets): TBytes; static;
+    /// <summary>Decodes exact type-05 AES TMAC settings with an optional thirty-two-bit counter limit.</summary>
+    /// <param name="ABytes">Exact six-byte base or ten-byte AES counter-limit settings.</param>
+    /// <returns>Owned validated metadata; no key-possession claim.</returns>
+    class function TmacSettings(const ABytes: TBytes): TDesfireTmacSettings; static;
+    /// <summary>Decodes one complete native transaction counter and MAC.</summary>
+    /// <param name="ABytes">Exactly twelve bytes, counter little-endian then eight MAC bytes.</param>
+    /// <returns>Owned acquired record; offline TMAC validation is separate.</returns>
+    class function TmacRecord(const ABytes: TBytes): TDesfireTmacRecord; static;
+    /// <summary>Validates an explicit ISO FID, excluding reserved null/MF/current-directory identifiers.</summary>
+    /// <param name="AFid">Explicit FID to create or acquire.</param>
+    class procedure ValidateIsoFid(const AFid: Word); static;
     /// <summary>Validates ordinary or explicit key-set-enabled GetKeySettings framing.</summary>
     /// <param name="ABytes">Exact two, three or seven native bytes; no ISO VC/capability data is inferred.</param>
     /// <exception cref="EDesfireExtensionError">Key count/type, flags or key-set geometry is invalid.</exception>
@@ -90,6 +169,48 @@ type
     /// <param name="AOption">Explicit PICC 00, ATS 02, SAK 03, secure-messaging 04 or value-file 09.</param>
     /// <param name="AData">Exact native option data; no implicit irreversible bit changes.</param>
     class procedure ValidateConfiguration(const AOption: Byte; const AData: TBytes); static;
+  end;
+
+  /// <summary>AES transaction-MAC derivation, aligned command input and receipt verification; no I/O.</summary>
+  /// <remarks>Uses the published AES vectors and TMI rules of MF2DLHX0 section 10.3, with actual command opcodes.
+  /// LRP and records whose complete data are not AES-block-aligned require a separate profile.</remarks>
+  TDesfireTmacCrypto = class
+  public
+    /// <summary>Derives AES transaction MAC/encryption keys from the committed next counter and seven-byte UID.</summary>
+    /// <param name="AProvider">Maintained AES backend.</param>
+    /// <param name="AKey">Exactly sixteen supplied transaction-MAC key bytes.</param>
+    /// <param name="AUid">Exactly seven explicit real card UID bytes.</param>
+    /// <param name="ANextCounter">One-through-FFFFFFFF resulting committed counter; already incremented.</param>
+    /// <param name="AEncryption">False uses published 5A MAC vector, true A5 reader-ID encryption vector.</param>
+    /// <returns>Independent sixteen-byte derived key; caller must clear it.</returns>
+    class function DeriveKey(const AProvider: ICardAesProvider; const AKey, AUid: TBytes;
+      const ANextCounter: Cardinal; const AEncryption: Boolean): TBytes; static;
+    /// <summary>Appends one supported authenticated data/reader-ID operation to exact aligned transaction input.</summary>
+    /// <param name="AInput">Owned-or-borrowed existing aligned canonical input; never changed.</param>
+    /// <param name="ACommand">AD/8D data, AB/8B records, 6C/0C/DC/1C values, EB clear or C8 reader ID.</param>
+    /// <param name="AHeader">Exact explicit nonzero-count native parameters, excluding command/MAC; implicit all-record/data counts are refused.</param>
+    /// <param name="AData">Complete plaintext request/response data; for C8, sixteen transaction-key-encrypted TMRI bytes.</param>
+    /// <returns>Independent complete canonical input, bounded to 1048560 bytes.</returns>
+    class function AppendInput(const AInput: TBytes; const ACommand: Byte;
+      const AHeader, AData: TBytes): TBytes; static;
+    /// <summary>Calculates an odd-index truncated AES transaction MAC over exact canonical input.</summary>
+    /// <param name="AProvider">Maintained AES backend.</param>
+    /// <param name="AKey">Exactly sixteen transaction-MAC secret bytes.</param>
+    /// <param name="AUid">Exactly seven real UID bytes.</param>
+    /// <param name="ANextCounter">Explicit resulting counter, not the previous value.</param>
+    /// <param name="AInput">Exact nonempty AES-aligned transaction input.</param>
+    /// <returns>Independent eight-byte transaction MAC.</returns>
+    class function Mac(const AProvider: ICardAesProvider; const AKey, AUid: TBytes;
+      const ANextCounter: Cardinal; const AInput: TBytes): TBytes; static;
+    /// <summary>Decrypts the previous reader ID from its transaction-key-encrypted TMRI.</summary>
+    /// <param name="AProvider">Maintained AES backend.</param>
+    /// <param name="AKey">Exactly sixteen transaction-MAC key bytes.</param>
+    /// <param name="AUid">Exactly seven real UID bytes.</param>
+    /// <param name="ANextCounter">Counter for the current transaction, already incremented.</param>
+    /// <param name="AEncryptedReaderId">Exactly sixteen transaction-key-encrypted TMRI bytes after secure-session MAC verification.</param>
+    /// <returns>Independent sixteen-byte previous reader ID; caller owns and clears it.</returns>
+    class function DecryptReaderId(const AProvider: ICardAesProvider; const AKey, AUid: TBytes;
+      const ANextCounter: Cardinal; const AEncryptedReaderId: TBytes): TBytes; static;
   end;
 
   /// <summary>AES-128 SDM calculations shared by the explicit EV3 AES SDM profile.</summary>
@@ -160,6 +281,129 @@ begin
   if (P < 0) or (P > Length(B)-3) then Invalid;
   Result := Integer(B[P]) or (Integer(B[P+1]) shl 8) or (Integer(B[P+2]) shl 16); Inc(P,3);
 end;
+class procedure TDesfireExtensionCodec.ValidateIsoFid(const AFid: Word);
+begin
+  if (AFid = 0) or (AFid = $FFFF) or (AFid = $3F00) or (AFid = $3FFF) then
+    Invalid;
+end;
+
+class function TDesfireExtensionCodec.IsoApplication(const AFrame: TBytes): TDesfireIsoApplication;
+begin
+  Result := Default(TDesfireIsoApplication);
+  if (Length(AFrame) < 5) or (Length(AFrame) > 21) then
+    Invalid;
+  Result.Aid := Cardinal(AFrame[0]) or (Cardinal(AFrame[1]) shl 8) or (Cardinal(AFrame[2]) shl 16);
+  if Result.Aid = 0 then
+    Invalid;
+  Result.IsoFid := Word(AFrame[3]) or (Word(AFrame[4]) shl 8);
+  ValidateIsoFid(Result.IsoFid);
+  Result.DfName := Copy(AFrame, 5, Length(AFrame) - 5);
+end;
+
+class function TDesfireExtensionCodec.IsoFileIds(const ABytes: TBytes): TDesfireIsoFileIds;
+var
+  I, J: Integer;
+begin
+  Result := nil;
+  if (Length(ABytes) > 64) or (Length(ABytes) mod 2 <> 0) then
+    Invalid;
+  SetLength(Result, Length(ABytes) div 2);
+  for I := 0 to High(Result) do
+  begin
+    Result[I] := Word(ABytes[I * 2]) or (Word(ABytes[I * 2 + 1]) shl 8);
+    ValidateIsoFid(Result[I]);
+    for J := 0 to I - 1 do
+      if Result[J] = Result[I] then
+        Invalid;
+  end;
+end;
+
+class function TDesfireExtensionCodec.MultiAccessSettings(const ABytes: TBytes): TDesfireMultiAccessSettings;
+var
+  Base, Count, I: Integer;
+begin
+  Result := Default(TDesfireMultiAccessSettings);
+  if (Length(ABytes) < 7) or (ABytes[0] > 4) or
+    not ((ABytes[1] and $7F) in [0, 1, 3]) then
+    Invalid;
+  Base := 7;
+  if ABytes[0] = 2 then Base := 17;
+  if ABytes[0] in [3, 4] then Base := 13;
+  Count := 0;
+  if (ABytes[1] and $80) <> 0 then
+  begin
+    if Length(ABytes) <= Base then Invalid;
+    Count := ABytes[Base];
+    if (Count < 1) or (Count > 7) then Invalid;
+    if Length(ABytes) <> Base + 1 + Count * 2 then Invalid;
+  end
+  else if Length(ABytes) <> Base then Invalid;
+  Result.RawBytes := CopyBytes(ABytes);
+  Result.BaseBytes := Copy(ABytes, 0, Base);
+  Result.BaseBytes[1] := Result.BaseBytes[1] and $7F;
+  SetLength(Result.Rights, Count + 1);
+  Result.Rights[0] := Word(ABytes[2]) or (Word(ABytes[3]) shl 8);
+  for I := 0 to Count - 1 do
+    Result.Rights[I + 1] := Word(ABytes[Base + 1 + I * 2]) or
+      (Word(ABytes[Base + 2 + I * 2]) shl 8);
+end;
+
+class function TDesfireExtensionCodec.AccessChange(const ACommunication: Byte;
+  const ARights: TDesfireAccessRightSets): TBytes;
+var
+  I, P: Integer;
+begin
+  Result := nil;
+  if not (ACommunication in [0, 1, 3]) or (Length(ARights) < 1) or
+    (Length(ARights) > 8) then Invalid;
+  SetLength(Result, 3);
+  Result[0] := ACommunication;
+  Result[1] := Byte(ARights[0] and $FF);
+  Result[2] := Byte(ARights[0] shr 8);
+  if Length(ARights) > 1 then
+  begin
+    Result[0] := Result[0] or $80;
+    SetLength(Result, 4 + (Length(ARights) - 1) * 2);
+    Result[3] := Byte(Length(ARights) - 1);
+    for I := 1 to High(ARights) do
+    begin
+      P := 4 + (I - 1) * 2;
+      Result[P] := Byte(ARights[I] and $FF);
+      Result[P + 1] := Byte(ARights[I] shr 8);
+    end;
+  end;
+end;
+
+class function TDesfireExtensionCodec.TmacSettings(const ABytes: TBytes): TDesfireTmacSettings;
+begin
+  Result := Default(TDesfireTmacSettings);
+  if not (Length(ABytes) in [6, 10]) or (ABytes[0] <> 5) or
+    not ((ABytes[1] and $CF) in [0, 1, 3]) or (ABytes[4] <> 2) or
+    ((ABytes[3] and $F) <> $F) then Invalid;
+  Result.CounterLimitEnabled := (ABytes[1] and $20) <> 0;
+  if Result.CounterLimitEnabled then
+  begin
+    if Length(ABytes) <> 10 then Invalid;
+    Result.CounterLimit := Cardinal(ABytes[6]) or (Cardinal(ABytes[7]) shl 8) or
+      (Cardinal(ABytes[8]) shl 16) or (Cardinal(ABytes[9]) shl 24);
+    if Result.CounterLimit = 0 then Invalid;
+  end
+  else if Length(ABytes) <> 6 then Invalid;
+  Result.RawBytes := CopyBytes(ABytes);
+  Result.FileOption := ABytes[1];
+  Result.AccessRights := Word(ABytes[2]) or (Word(ABytes[3]) shl 8);
+  Result.KeyVersion := ABytes[5];
+end;
+
+class function TDesfireExtensionCodec.TmacRecord(const ABytes: TBytes): TDesfireTmacRecord;
+begin
+  Result := Default(TDesfireTmacRecord);
+  if Length(ABytes) <> 12 then Invalid;
+  Result.Counter := Cardinal(ABytes[0]) or (Cardinal(ABytes[1]) shl 8) or
+    (Cardinal(ABytes[2]) shl 16) or (Cardinal(ABytes[3]) shl 24);
+  Result.Mac := Copy(ABytes, 4, 8);
+end;
+
 class procedure TDesfireExtensionCodec.ValidateApplicationSettings(const ABytes: TBytes);
 var N: Integer;
 begin
@@ -345,6 +589,134 @@ begin
     Iv := AProvider.EncryptCbc(Key,Zero,V); Result := AProvider.DecryptCbc(Key,Iv,ACipher);
     if Length(Result) <> Length(ACipher) then Invalid;
   finally TCardCrypto.Clear(Key); TCardCrypto.Clear(Iv); end;
+end;
+
+
+class function TDesfireTmacCrypto.DeriveKey(const AProvider: ICardAesProvider;
+  const AKey, AUid: TBytes; const ANextCounter: Cardinal; const AEncryption: Boolean): TBytes;
+var
+  Vector: TBytes;
+  I: Integer;
+begin
+  if (AProvider = nil) or (Length(AKey) <> 16) or (Length(AUid) <> 7) or
+    (ANextCounter = 0) then Invalid;
+  Vector := nil;
+  SetLength(Vector, 16);
+  Vector[0] := $5A;
+  Vector[2] := 1;
+  Vector[4] := $80;
+  try
+    if AEncryption then Vector[0] := $A5;
+    for I := 0 to 3 do Vector[5 + I] := Byte((ANextCounter shr (I * 8)) and $FF);
+    Move(AUid[0], Vector[9], 7);
+    Result := TCardCrypto.Cmac(AProvider, AKey, Vector);
+  finally
+    TCardCrypto.Clear(Vector);
+  end;
+end;
+
+class function TDesfireTmacCrypto.AppendInput(const AInput: TBytes;
+  const ACommand: Byte; const AHeader, AData: TBytes): TBytes;
+var
+  Body: TBytes;
+  Prefix, Size, Count: Integer;
+  procedure FinishBlock;
+  begin
+    SetLength(Body, ((Length(Body) + 15) div 16) * 16);
+  end;
+begin
+  Result := nil;
+  Body := nil;
+  if (Length(AInput) mod 16 <> 0) or (Length(AInput) > 1048560) then Invalid;
+  try
+    case ACommand of
+      $AD, $8D, $AB, $8B:
+        begin
+          if (Length(AHeader) <> 7) or (Length(AData) < 1) or (AHeader[0] > 31) then Invalid;
+          Count := Integer(AHeader[4]) or (Integer(AHeader[5]) shl 8) or (Integer(AHeader[6]) shl 16);
+          if Count = 0 then Invalid;
+          if (ACommand in [$AD, $8D, $8B]) and (Count <> Length(AData)) then Invalid;
+          if (ACommand = $AB) and ((Length(AData) mod Count <> 0) or (Length(AData) div Count < 16)) then Invalid;
+          if (ACommand in [$AB, $8B]) and (Length(AData) mod 16 <> 0) then Invalid;
+          SetLength(Body, 16);
+          Body[0] := ACommand;
+          Move(AHeader[0], Body[1], 7);
+          Prefix := Length(Body);
+          SetLength(Body, Prefix + Length(AData));
+          Move(AData[0], Body[Prefix], Length(AData));
+          FinishBlock;
+        end;
+      $6C, $0C, $DC, $1C:
+        begin
+          if (Length(AHeader) <> 1) or (Length(AData) <> 4) then Invalid;
+          if AHeader[0] > 31 then Invalid;
+          SetLength(Body, 16);
+          Body[0] := ACommand; Body[1] := AHeader[0];
+          Move(AData[0], Body[2], 4);
+        end;
+      $EB:
+        begin
+          if (Length(AHeader) <> 1) or (Length(AData) <> 0) then Invalid;
+          if AHeader[0] > 31 then Invalid;
+          SetLength(Body, 16);
+          Body[0] := ACommand; Body[1] := AHeader[0];
+        end;
+      $C8:
+        begin
+          if (Length(AHeader) <> 16) or (Length(AData) <> 16) then Invalid;
+          SetLength(Body, 48);
+          Body[0] := ACommand;
+          Move(AHeader[0], Body[1], 16);
+          Move(AData[0], Body[17], 16);
+        end;
+    else Invalid;
+    end;
+    Size := Length(AInput) + Length(Body);
+    if Size > 1048560 then Invalid;
+    SetLength(Result, Size);
+    if Length(AInput) > 0 then Move(AInput[0], Result[0], Length(AInput));
+    Move(Body[0], Result[Length(AInput)], Length(Body));
+  finally
+    TCardCrypto.Clear(Body);
+  end;
+end;
+
+class function TDesfireTmacCrypto.Mac(const AProvider: ICardAesProvider;
+  const AKey, AUid: TBytes; const ANextCounter: Cardinal; const AInput: TBytes): TBytes;
+var
+  Key, Full: TBytes;
+  I: Integer;
+begin
+  if (Length(AInput) < 16) or (Length(AInput) mod 16 <> 0) or (Length(AInput) > 1048560) then Invalid;
+  Key := DeriveKey(AProvider, AKey, AUid, ANextCounter, False);
+  Full := nil;
+  try
+    Full := TCardCrypto.Cmac(AProvider, Key, AInput);
+    Result := nil;
+    SetLength(Result, 8);
+    for I := 0 to 7 do Result[I] := Full[I * 2 + 1];
+  finally
+    TCardCrypto.Clear(Key);
+    TCardCrypto.Clear(Full);
+  end;
+end;
+
+class function TDesfireTmacCrypto.DecryptReaderId(const AProvider: ICardAesProvider;
+  const AKey, AUid: TBytes; const ANextCounter: Cardinal; const AEncryptedReaderId: TBytes): TBytes;
+var
+  Key, Iv: TBytes;
+begin
+  if Length(AEncryptedReaderId) <> 16 then Invalid;
+  Key := DeriveKey(AProvider, AKey, AUid, ANextCounter, True);
+  Iv := nil;
+  try
+    SetLength(Iv, 16);
+    Result := AProvider.DecryptCbc(Key, Iv, AEncryptedReaderId);
+    if Length(Result) <> 16 then Invalid;
+  finally
+    TCardCrypto.Clear(Key);
+    TCardCrypto.Clear(Iv);
+  end;
 end;
 
 end.

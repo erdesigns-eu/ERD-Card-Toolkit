@@ -1040,3 +1040,28 @@ BOM/CRLF is preserved and no demos changed. Native value support is explicitly t
 Plus X-compatible command profile, within one authenticated sector. SL2 sector
 data sessions/key modifiers remain separate. Existing unrelated compiler notes
 and warnings have not been suppressed.
+
+## DESFire ISO, multiple rights and AES TMAC (2026-10-12)
+
+The focused DESFire/Plus suite passes **695,388 assertions** with range/overflow
+checks and zero heap leaks. The independent generator now produces **71 literal
+transcripts**, including variable-length ISO directory frames, ISO application and
+four file types, additional access-right authority, TMAC lifecycle/settings and
+counter limits, plain/MAC/full record reads, owned transactions and CommitReaderID.
+
+Transaction tests cover read-only calculations, backup changes, abort, every I/O
+boundary, protected response corruption, wrong static keys/UIDs/counters and
+release failures. Two receipts have valid session MACs but an invalid transaction
+MAC or counter; neither is accepted as independent proof. Offline AES key
+vectors and canonical transaction inputs are checked against separate generated
+cryptographic results and the official NXP specification. CommitReaderID uses
+MAC communication with transaction-key-encrypted previous ReaderID, without an
+additional session-CBC layer.
+
+All **21 source checkers**, fixture reproducibility and distribution checks pass.
+Distribution remains **62 projects, 2 groups and 48 DFM forms**, with no findings;
+registration/streaming remains **60 cases** for **59 palette components**. Existing
+Pascal source encoding and CRLF are retained; no demos changed. The complete
+FPC/native regression runner passed. Existing unrelated compiler notes/warnings
+remain unsuppressed. LRP, combined extended transaction layouts and ISO creation
+combined with new key sets are separate remaining profiles.

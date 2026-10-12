@@ -203,6 +203,89 @@ for source_changed in [False,True]:
  response=b'\x90'+payload+mac(PM,b'\x90'+le(rc)+TI+h[1:]+payload)
  index=-1 if source_changed else -2;p[index]=(p[index][0],response)
  vectors['PlusNativeBad'+('Source' if source_changed else 'Target')]=p
+# ISO and EV2 file-management transcripts, independent AES/MAC and frame-preserved directories.
+old_iso=bytes.fromhex('02000000E2')+b'OLD';new_iso=bytes.fromhex('56341205E1D276000085010100')
+def df_directory(f,entries):
+ before=len(f.p);f.cmd(0x6D,reply=b''.join(entries));command,response=f.p.pop()
+ if not entries:f.p.append((command,response));return
+ for index,entry in enumerate(entries):
+  final=index==len(entries)-1
+  f.p.append((command if index==0 else apdu(0xAF),entry+(response[-10:] if final else bytes.fromhex('91AF'))))
+f=DF(0);f.cmd(0x45,reply=bytes.fromhex('0F81'));df_directory(f,[old_iso,new_iso,bytes.fromhex('03000002E2')+b'abcdefghijklmnop']);vectors['DfIsoDirectory']=f.p
+f=DF(0);f.cmd(0x45,reply=bytes.fromhex('0F81'));f.cmd(0x6A,reply=bytes.fromhex('020000'));df_directory(f,[old_iso]);
+f.cmd(0xCA,bytes.fromhex('5634120FA305E1D276000085010100'));df_directory(f,[old_iso,new_iso]);vectors['DfIsoCreateApplication']=f.p
+f=DF();f.settings();f.cmd(0x61,reply=bytes.fromhex('03E104E1'));vectors['DfIsoFileIds']=f.p
+for kind,command,tail in [(0,0xCD,bytes.fromhex('040000')),(1,0xCB,bytes.fromhex('040000')),(3,0xC1,bytes.fromhex('040000020000')),(4,0xC0,bytes.fromhex('040000020000'))]:
+ f=DF();f.cmd(0x45,reply=bytes.fromhex('0FA3'));f.cmd(0x45,reply=bytes.fromhex('0FA3'));f.cmd(0x6F);f.cmd(0x61)
+ f.cmd(command,bytes.fromhex('0004E1030000')+tail)
+ settings=bytes([kind])+bytes.fromhex('030000')+tail+(bytes(3) if kind in [3,4] else b'')
+ f.cmd(0xF5,b'\0',reply=settings);f.cmd(0x61,reply=bytes.fromhex('04E1'));vectors['DfIsoCreateFile'+str(kind)]=f.p
+multi_old=bytes.fromhex('0003F0FF040000');multi_new=bytes.fromhex('0083F0FF040000010F00');data=bytes.fromhex('01020304');newdata=bytes.fromhex('AABBCCDD')
+f=DF();f.settings();f.cmd(0xF5,b'\0',reply=multi_new);vectors['DfMultiSettings']=f.p
+f=DF();f.settings();f.settings();f.cmd(0xF5,b'\0',reply=multi_old);f.cmd(0x5F,b'\0',bytes.fromhex('83F0FF010F00'),full=True);f.cmd(0xF5,b'\0',reply=multi_new);vectors['DfMultiChange']=f.p
+def df_read_full(f,file,data):
+ iv=enc(f.e,Z,bytes.fromhex('5AA5')+TI+le(f.ctr+1)+bytes(8));padded=data+b'\x80'+bytes((15-len(data))%16)
+ f.cmd(0xAD,bytes([file])+le(0,3)+le(len(data),3),reply=enc(f.e,iv,padded))
+for writing in [False,True]:
+ f=DF();f.settings();f.cmd(0xF5,b'\0',reply=multi_new);f.settings();df_read_full(f,0,data);f.cmd(0xF5,b'\0',reply=multi_new)
+ if writing:
+  f.cmd(0x8D,bytes.fromhex('00000000040000'),newdata,full=True);df_read_full(f,0,newdata);f.cmd(0xF5,b'\0',reply=multi_new)
+ vectors['DfMulti'+('Write' if writing else 'Read')]=f.p
+tmac=bytes.fromhex('0500F0EF0234')
+f=DF();f.settings();f.settings();f.cmd(0x6F);f.cmd(0xCE,bytes.fromhex('0100F0EF02'),NEW+b'\x34',full=True);f.cmd(0xF5,b'\x01',reply=tmac);vectors['DfTmacCreate']=f.p
+f=DF();f.settings();f.cmd(0xF5,b'\x01',reply=tmac);vectors['DfTmacSettings']=f.p
+f=DF();f.settings();f.cmd(0xF5,b'\x01',reply=tmac);f.p.append((apdu(0xAD,bytes.fromhex('010000000C0000')),bytes.fromhex('FFFFFFFF11223344556677889100')));f.ctr+=1;f.cmd(0xF5,b'\x01',reply=tmac);vectors['DfTmacRecord']=f.p
+# AES TMAC transaction profile follows public MF2DLHX0 section 10.3 canonical TMI.
+UID=bytes.fromhex('04112233445566');READER=bytes.fromhex('102132435465768798A9BACBDCEDFE0F')
+TM_MAC=cmac(NEW,bytes.fromhex('5A00010080')+le(1,4)+UID)
+TM_ENC=cmac(NEW,bytes.fromhex('A500010080')+le(1,4)+UID)
+def align(data):return data+bytes((-len(data))%16)
+def tmi_data(command,file,value):return align(bytes([command,file])+le(0,3)+le(len(value),3))+align(value)
+for reader_id in [False,True]:
+ for action in ['write','read','abort']:
+  f=DF();f.cmd(0x6F,reply=bytes.fromhex('0001'));backup=bytes.fromhex('01030000040000');tmsettings=bytes.fromhex('050000EF0234') if reader_id else bytes.fromhex('0500F0EF0234')
+  f.cmd(0xF5,b'\0',reply=backup);f.cmd(0xF5,b'\x01',reply=tmsettings)
+  iv=enc(f.e,Z,bytes.fromhex('5AA5')+TI+le(f.ctr+1)+bytes(8));f.cmd(0x51,reply=enc(f.e,iv,UID+b'\x80'+bytes(8)))
+  tmi=b''
+  if reader_id:
+   enc_tmri=enc(TM_ENC,Z,bytes(16));iv=enc(f.e,Z,bytes.fromhex('5AA5')+TI+le(f.ctr+1)+bytes(8))
+   f.cmd(0xC8,READER,reply=enc_tmri);tmi+=align(b'\xC8'+READER+enc_tmri)
+  old=bytes.fromhex('01020304');new=bytes.fromhex('AABBCCDD')
+  f.cmd(0xF5,b'\0',reply=backup)
+  df_read_full(f,0,old);tmi+=tmi_data(0xAD,0,old);f.cmd(0xF5,b'\0',reply=backup)
+  if action=='write':
+   f.cmd(0x8D,bytes.fromhex('00000000040000'),new,full=True);tmi+=tmi_data(0x8D,0,new)
+  if action=='abort':f.cmd(0xA7)
+  else:
+   f.cmd(0xF5,b'\x01',reply=tmsettings);receipt=le(1,4)+mac(TM_MAC,tmi);f.cmd(0xC7,b'\x01',reply=receipt)
+   if action=='write':
+    f.cmd(0xF5,b'\0',reply=backup);df_read_full(f,0,new);f.cmd(0xF5,b'\0',reply=backup)
+  vectors['DfTmac'+('Reader' if reader_id else '')+action.title()]=f.p
+# Valid secure-session MAC with incorrect transaction MAC or counter must fail offline receipt validation.
+for bad_counter in [False,True]:
+ p=list(vectors['DfTmacWrite']);index=next(i for i,(c,resp) in enumerate(p) if c[1]==0xC7)
+ command,response=p[index];data=response[:12];ctr=8 # 6F,F5,F5,51,F5,AD,8D,F5,C7 -> response counter 9
+ ctr=index-2
+ if bad_counter:data=le(2,4)+data[4:]
+ else:data=data[:4]+bytes([data[4]^1])+data[5:]
+ p[index]=(command,data+mac(evkeys(K)[1],b'\0'+le(ctr)+TI+data)+bytes.fromhex('9100'))
+ vectors['DfTmacBad'+('Counter' if bad_counter else 'Mac')]=p
+# Independent literal cryptographic helpers, encoded as value pairs rather than APDU exchanges.
+vectors['DfTmacCrypto']=[(bytes.fromhex('5A00010080')+le(1,4)+UID,TM_MAC),
+ (bytes.fromhex('A500010080')+le(1,4)+UID,TM_ENC),
+ (tmi_data(0xAD,0,bytes.fromhex('01020304'))+tmi_data(0x8D,0,bytes.fromhex('AABBCCDD')),mac(TM_MAC,tmi_data(0xAD,0,bytes.fromhex('01020304'))+tmi_data(0x8D,0,bytes.fromhex('AABBCCDD')))),
+ (READER,enc(TM_ENC,Z,READER))]
+# TMAC communication modes, AES counter-limit update/deletion and nonmaster multi-access.
+for mode in [1,3]:
+ f=DF();metadata=bytes([5,mode])+bytes.fromhex('F0EF0234');f.settings();f.cmd(0xF5,b'\x01',reply=metadata)
+ record=bytes.fromhex('010000001122334455667788')
+ if mode==3:df_read_full(f,1,record)
+ else:f.cmd(0xAD,bytes.fromhex('010000000C0000'),reply=record)
+ f.cmd(0xF5,b'\x01',reply=metadata);vectors['DfTmacRecord'+('Mac' if mode==1 else 'Full')]=f.p
+f=DF();f.settings();f.settings();f.cmd(0xF5,b'\x01',reply=tmac);f.cmd(0x5F,b'\x01',bytes.fromhex('33F0EFE8030000'),full=True);f.cmd(0xF5,b'\x01',reply=bytes.fromhex('0533F0EF0234E8030000'));vectors['DfTmacLimitChange']=f.p
+f=DF();f.settings();f.cmd(0xF5,b'\x01',reply=tmac);f.cmd(0xDF,b'\x01');f.cmd(0x6F,reply=b'\0');vectors['DfTmacDelete']=f.p
+f=DF();f.p[1]=(apdu(0x71,b'\x01\x00'),f.p[1][1]);settings=bytes.fromhex('0B930101021000');rights=bytes.fromhex('0083F0FF040000011F11')
+f.cmd(0x45,reply=settings);f.cmd(0xF5,b'\0',reply=rights);f.cmd(0x45,reply=settings);df_read_full(f,0,bytes.fromhex('01020304'));f.cmd(0xF5,b'\0',reply=rights);vectors['DfMultiNonMasterRead']=f.p
 s='''unit DesfirePlus.Vectors;
 {$IFDEF FPC}{$MODE DELPHI}{$ENDIF}
 interface

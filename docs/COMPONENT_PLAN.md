@@ -98,7 +98,7 @@ are not compatibility requirements.
    AES management also reads free memory/key versions and changes key policy/file
    access; rotation proves the new key through fresh authentication/version reads.
    See [native DESFire](DESFIRE.md). D40/EV1 DES/2K3DES/3K3DES are implemented.
-   EV2 AES key sets, documented configuration options and SDM settings/crypto are implemented. LRP, TMAC receipts, multi-access rights and originality remain pending.
+   EV2 AES key sets, documented configuration options and SDM settings/crypto are implemented. Native ISO creation/directories, multi-access settings/data and AES TMAC file/transactions/receipts are implemented. LRP, originality and combined extended layouts remain pending.
    **TMemoryCardReaderWriter** implements the eight SLE4432/4442/5532/5542 and
    SLE4418/4428/5518/5528 models plus I2C 1–1024-kilobit geometries through explicit
    ACR38 CCID/ACR39 profiles. It reads snapshots/retry/protection state, verifies
@@ -148,7 +148,7 @@ documentation. Use the same complete scope for upcoming batches:
    and native MagTek capture,
    then YL160/MSR DLL bindings with verified SDK headers and buffer lengths.
    Physical/firmware coverage and status-versus-read-back evidence stay explicit.
-3. **DESFire expansion and additional chip families:** D40 and EV1 DES/2K3DES/3K3DES security are implemented. EV2 AES key sets, configuration subset and SDM settings/crypto are implemented. Remaining extensions include LRP, TMAC receipts and multi-access rights, followed by
+3. **DESFire expansion and additional chip families:** D40 and EV1 DES/2K3DES/3K3DES security are implemented. EV2 AES key sets, configuration subset and SDM settings/crypto are implemented. Native ISO creation/directories, multi-access settings/data and AES TMAC file/transactions/receipts are implemented. Remaining extensions include LRP and combined extended layouts, followed by
    originality and physical card profiles. Owned ordinary transactions and basic create/delete
    management and verified AES key/policy/access administration are implemented. EV1/EV2 AES secure
    file access and EV2 NonFirst through maintained providers are implemented. Plus SL3 AES ordinary-memory profiles and ACR122/workflow adapters are implemented. Explicit SL0 personalization/commit with selected SL3 proofs and sector AES key replacement are implemented. Raw SL1 authentication, acknowledged SL1→SL2 and verified SL1→SL3 are implemented, together with signed value-block codecs and ordinary verified value writes. Verified SL2→SL3 and native Plus X-compatible increment/decrement/restore/transfer workflows are implemented. SL2 sector data sessions and trailer/configuration programming remain separate, alongside
