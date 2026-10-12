@@ -306,6 +306,30 @@ type
     property PendingChanges: Boolean read GetPendingChanges;
   end;
 
+  /// <summary>Explicit DESFire Light application management using native LRP messaging.</summary>
+  /// <remarks>Uses Light's fixed five-key layout; no unsupported GetKeySettings request is sent.
+  /// Immediate writes are not transactional. Call Close to release the exclusive session.</remarks>
+  IDesfireLrpLightManagement = interface(IDesfireSession)
+    ['{B3509598-54CF-4C9D-82E2-CFC059B62D53}']
+    /// <summary>Rotates one Light application key and proves it with fresh LRP authentication and GetKeyVersion.</summary>
+    /// <param name="AKeyNumber">Explicit existing application key number zero through four.</param>
+    /// <param name="ANewVersion">New stored version byte.</param>
+    /// <param name="ANewKey">Sixteen copied new secret bytes.</param>
+    /// <param name="AOldKey">Empty for master key zero; sixteen copied old bytes for keys one through four.</param>
+    /// <remarks>Requires active master key zero. Success leaves the session authenticated with the target key.
+    /// Failures after dispatch are uncertain; no automatic retry or rollback is performed.</remarks>
+    procedure ChangeLrpLightKey(const AKeyNumber, ANewVersion: Byte;
+      const ANewKey, AOldKey: TBytes);
+    /// <summary>Sends an explicitly validated Light SetConfiguration in LRP Full mode.</summary>
+    /// <param name="AOption">Documented Light option 00, 02, 03, 04, 05, 06, 08, 09, 0A or 0B.</param>
+    /// <param name="AData">Exact option-specific data, copied before dispatch.</param>
+    /// <param name="AAcknowledgePersistent">Must be true: these settings persist and options 06, 08 and 09 are one-time.</param>
+    /// <remarks>Requires master key zero. A protected acknowledgement proves command acceptance, not settings readback.
+    /// Option 05 cannot disable LRP. Renaming requires closing and opening a new explicitly selected context.</remarks>
+    procedure ConfigureLrpLightAcknowledged(const AOption: Byte; const AData: TBytes;
+      const AAcknowledgePersistent: Boolean);
+  end;
+
   /// <summary>Optional native administration view; existing IDesfireSession ABI remains unchanged.</summary>
   /// <remarks>Mutations require dsaManage and take immediate effect. Policy/access mutations support explicit authenticated profiles; ChangeAesKey remains AES-only. ChangeAesKey explicitly authenticates the new
   /// key after dispatch; no retry/default key is used. The creating component's credentials are not changed.</remarks>
@@ -801,6 +825,11 @@ type
     /// <param name="AAid">Explicit native AID, zero for PICC administration.</param>
     /// <returns>Owned management view with all ordinary session read/create/delete operations.</returns>
     function OpenManagementSession(const AAid: Cardinal): IDesfireManagement;
+    /// <summary>Opens explicit native LRP management for a DESFire Light application.</summary>
+    /// <param name="AAid">Exact nonzero native application identifier; Security must be dfsLrp and key number zero.</param>
+    /// <returns>Owned exclusive Light management session; component credentials remain unchanged.</returns>
+    /// <remarks>No card-family inference, PICC authentication, key-set management or default key is used.</remarks>
+    function OpenLrpLightManagementSession(const AAid: Cardinal): IDesfireLrpLightManagement;
     /// <summary>Opens explicit EV2 AES key-set/configuration/EV3 SDM management, independent of component lifetime.</summary>
     /// <param name="AAid">Explicit 24-bit context; zero selects PICC.</param>
     /// <returns>Retained exclusive management session; callers must Close.</returns>
@@ -919,7 +948,7 @@ type
   end;
 
   TDesfireSession = class(TInterfacedObject, IDesfireSession,
-    IDesfireManagement, IDesfireApplicationManagement, IDesfireDesManagement, IDesfireExtendedManagement, IDesfireFileManagement, IDesfireTransactionMacSession, IDesfireIsoKeySetManagement, IDesfireTransactionMacDataSession, IDesfireSdmAccessManagement, IDesfireRecordUpdateSession, IDesfireLrpTransactionMacSession)
+    IDesfireManagement, IDesfireApplicationManagement, IDesfireDesManagement, IDesfireExtendedManagement, IDesfireFileManagement, IDesfireTransactionMacSession, IDesfireIsoKeySetManagement, IDesfireTransactionMacDataSession, IDesfireSdmAccessManagement, IDesfireRecordUpdateSession, IDesfireLrpTransactionMacSession, IDesfireLrpLightManagement)
   private
     FEngine: TDesfireCardReader;
     FAid: Cardinal;
@@ -969,6 +998,7 @@ type
     function TmacMetadata(const AFile: Byte): TDesfireTmacSettings;
     procedure RequireAesManagement;
     procedure RequireNativeManagement;
+    procedure RequireLrpLightManagement;
     function KeyVersion(const AKeyNumber: Byte): Byte;
   public
     constructor Create(const AReader: TDesfireCardReader; const AAid: Cardinal;
@@ -1010,6 +1040,10 @@ type
       const AReadKey, AWriteKey, AReadWriteKey, AChangeKey: Byte);
     procedure ChangeDesKey(const AKeyNumber, ANewVersion, AOldVersion: Byte;
       const ANewKey, AOldKey: TBytes);
+    procedure ChangeLrpLightKey(const AKeyNumber, ANewVersion: Byte;
+      const ANewKey, AOldKey: TBytes);
+    procedure ConfigureLrpLightAcknowledged(const AOption: Byte; const AData: TBytes;
+      const AAcknowledgePersistent: Boolean);
     procedure ChangeAesKey(const AKeyNumber, ANewVersion: Byte;
       const ANewKey, AOldKey: TBytes);
     procedure CreateApplicationWithKeySets(const AAid: Cardinal;
@@ -4252,6 +4286,112 @@ begin
   if AAid = 0 then InvalidDesfire;
   Session := OpenFileManagementSession(AAid);
   Result := Session as IDesfireSdmAccessManagement;
+end;
+
+function TDesfireCardReader.OpenLrpLightManagementSession(const AAid: Cardinal): IDesfireLrpLightManagement;
+var
+  Session: IDesfireSession;
+begin
+  if (FSecurity <> dfsLrp) or (AAid = 0) or (AAid > $FFFFFF) or
+    (FKeyNumber <> 0) or (Length(FRekey) > 0) then InvalidDesfire;
+  Session := OpenSession(AAid, dsaManage);
+  Result := Session as IDesfireLrpLightManagement;
+end;
+
+procedure TDesfireSession.RequireLrpLightManagement;
+begin
+  if (FAccess <> dsaManage) or (FAid = 0) or not FEngine.FAuthenticated or
+    (FEngine.FSecurity <> dfsLrp) or (FEngine.FSessionKeyNumber <> 0) or
+    (Length(FEngine.FRekey) > 0) then InvalidDesfire;
+end;
+
+procedure TDesfireSession.ChangeLrpLightKey(const AKeyNumber, ANewVersion: Byte;
+  const ANewKey, AOldKey: TBytes);
+var
+  Before, I: Integer;
+  NewKey, OldKey, Body, Header, Packet, Reply, Verified, Crc: TBytes;
+begin
+  Before := Enter;
+  try
+    try
+      RequireLrpLightManagement;
+      if (AKeyNumber > 4) or (Length(ANewKey) <> 16) or
+        ((AKeyNumber = 0) and (Length(AOldKey) <> 0)) or
+        ((AKeyNumber <> 0) and (Length(AOldKey) <> 16)) then InvalidDesfire;
+      NewKey := CopyBytes(ANewKey);
+      OldKey := CopyBytes(AOldKey);
+      Body := CopyBytes(NewKey);
+      if AKeyNumber <> 0 then
+        for I := 0 to 15 do Body[I] := Body[I] xor OldKey[I];
+      Body := Joined(Body, OneByte(ANewVersion));
+      if AKeyNumber <> 0 then
+      begin
+        Crc := TDesfireEv1Codec.Crc32(NewKey);
+        Body := Joined(Body, Crc);
+      end;
+      Header := OneByte(AKeyNumber);
+      Packet := TDesfireLrpCodec.EncodeCommand(FEngine.FProvider,
+        FEngine.FLrpMaster, FEngine.FTi, FEngine.FCounter,
+        $C4, Header, Body, dfcFull, FEngine.FLrpEncryptionCounter);
+      Reply := FEngine.Exchange($C4, Packet, 8, True);
+      Inc(FEngine.FCounter);
+      if not ((AKeyNumber = 0) and (Length(Reply) = 0)) then
+      begin
+        Verified := TDesfireLrpCodec.DecodeResponse(FEngine.FProvider,
+          FEngine.FLrpMaster, FEngine.FTi, FEngine.FCounter,
+          Reply, dfcMac, 0, FEngine.FLrpEncryptionCounter);
+        if Length(Verified) <> 0 then InvalidDesfire;
+      end;
+      FEngine.FAuthenticated := False;
+      FEngine.FKeyNumber := AKeyNumber;
+      TCardCrypto.Clear(FEngine.FKey);
+      FEngine.FKey := CopyBytes(NewKey);
+      FEngine.Authenticate(False);
+      if KeyVersion(AKeyNumber) <> ANewVersion then InvalidDesfire;
+      FEngine.FWriteAttempt := False;
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    TCardCrypto.Clear(NewKey); TCardCrypto.Clear(OldKey);
+    TCardCrypto.Clear(Body); TCardCrypto.Clear(Header);
+    TCardCrypto.Clear(Packet); TCardCrypto.Clear(Reply);
+    TCardCrypto.Clear(Verified); TCardCrypto.Clear(Crc);
+    FInCall := False;
+  end;
+end;
+
+procedure TDesfireSession.ConfigureLrpLightAcknowledged(const AOption: Byte;
+  const AData: TBytes; const AAcknowledgePersistent: Boolean);
+var
+  Before: Integer;
+  Data, Reply: TBytes;
+begin
+  Before := Enter;
+  try
+    try
+      RequireLrpLightManagement;
+      if not AAcknowledgePersistent then InvalidDesfire;
+      Data := CopyBytes(AData);
+      TDesfireExtensionCodec.ValidateLrpLightConfiguration(AOption, Data);
+      Reply := FEngine.Send($5C, OneByte(AOption), Data, dfcFull, 0, True);
+      if Length(Reply) <> 0 then InvalidDesfire;
+      FEngine.FWriteAttempt := False;
+    except
+      on E: Exception do
+      begin
+        if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName);
+        raise;
+      end;
+    end;
+  finally
+    TCardCrypto.Clear(Data); TCardCrypto.Clear(Reply);
+    FInCall := False;
+  end;
 end;
 
 procedure TDesfireSession.RequireAesManagement;

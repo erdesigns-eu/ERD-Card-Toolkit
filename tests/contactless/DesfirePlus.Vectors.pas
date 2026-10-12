@@ -533,6 +533,48 @@ function LrpStoredTmacMac: TExtendedPairs;
 /// <summary>Returns independent synthetic LrpStoredTmacFull native protocol vector.</summary>
 /// <returns>Owned literal command/response pairs.</returns>
 function LrpStoredTmacFull: TExtendedPairs;
+/// <summary>Returns independent synthetic LrpLightKey0 native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function LrpLightKey0: TExtendedPairs;
+/// <summary>Returns independent synthetic LrpLightKey1 native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function LrpLightKey1: TExtendedPairs;
+/// <summary>Returns independent synthetic LrpLightWrongVersion native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function LrpLightWrongVersion: TExtendedPairs;
+/// <summary>Returns independent synthetic LrpLightKey4 native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function LrpLightKey4: TExtendedPairs;
+/// <summary>Returns independent synthetic LrpLightConfig0 native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function LrpLightConfig0: TExtendedPairs;
+/// <summary>Returns independent synthetic LrpLightConfig2 native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function LrpLightConfig2: TExtendedPairs;
+/// <summary>Returns independent synthetic LrpLightConfig3 native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function LrpLightConfig3: TExtendedPairs;
+/// <summary>Returns independent synthetic LrpLightConfig4 native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function LrpLightConfig4: TExtendedPairs;
+/// <summary>Returns independent synthetic LrpLightConfig5 native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function LrpLightConfig5: TExtendedPairs;
+/// <summary>Returns independent synthetic LrpLightConfig6 native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function LrpLightConfig6: TExtendedPairs;
+/// <summary>Returns independent synthetic LrpLightConfig8 native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function LrpLightConfig8: TExtendedPairs;
+/// <summary>Returns independent synthetic LrpLightConfig9 native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function LrpLightConfig9: TExtendedPairs;
+/// <summary>Returns independent synthetic LrpLightConfig10 native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function LrpLightConfig10: TExtendedPairs;
+/// <summary>Returns independent synthetic LrpLightConfig11 native protocol vector.</summary>
+/// <returns>Owned literal command/response pairs.</returns>
+function LrpLightConfig11: TExtendedPairs;
 implementation
 function DfInitialize: TExtendedPairs;
 begin
@@ -4761,5 +4803,197 @@ begin
   Result[4].Response := '32D06CD4C5A2E2EAFA896460E55115C20C4C1E1A125D2E719100';
   Result[5].Command := '90F5000009012FA0D5B2D029F26D00';
   Result[5].Response := '0503F0EF023406C5EEB75AAC9D119100';
+end;
+function LrpLightKey0: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,7);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000008000602000000000000';
+  Result[1].Response := '010102030405060708090A0B0C0D0E0F1091AF';
+  Result[2].Command := '90AF000020B04D0787C93EE0CC8CACC8E86F16C6FE3C29BBAED89DC54169734EE0DB0F7AB100';
+  Result[2].Response := 'EB5A4FEC8610C9038BDC14940D0EDB35ED8EE556B4CA938345A98841873FAB7A9100';
+  Result[3].Command := '90C4000029008529312C691AC2A20ED5A075E3522C40A71BD046115CB54DC0DBEF144F323DE6CF0A3883AA251F6100';
+  Result[3].Response := '9100';
+  Result[4].Command := '9071000008000602000000000000';
+  Result[4].Response := '010102030405060708090A0B0C0D0E0F1091AF';
+  Result[5].Command := '90AF000020B04D0787C93EE0CC8CACC8E86F16C6FE434E4FBC438D8E0240D791BD42D4714200';
+  Result[5].Response := 'A04A9CDF1BE3EDD0D113D25888FDA95A325792D22C0789075B1F4B8FD829FD7D9100';
+  Result[6].Command := '9064000009003323AF5A6D3FC2C800';
+  Result[6].Response := '346FFDDAEB052E586B9100';
+end;
+function LrpLightKey1: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,7);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000008000602000000000000';
+  Result[1].Response := '010102030405060708090A0B0C0D0E0F1091AF';
+  Result[2].Command := '90AF000020B04D0787C93EE0CC8CACC8E86F16C6FE3C29BBAED89DC54169734EE0DB0F7AB100';
+  Result[2].Response := 'EB5A4FEC8610C9038BDC14940D0EDB35ED8EE556B4CA938345A98841873FAB7A9100';
+  Result[3].Command := '90C4000029018529312C691AC2A20ED5A075E3522C40584A465F4BBE990712696077B90F6FA1C624AE4C7CFA423100';
+  Result[3].Response := '6DE82A0D9CFE09B09100';
+  Result[4].Command := '9071000008010602000000000000';
+  Result[4].Response := '010102030405060708090A0B0C0D0E0F1091AF';
+  Result[5].Command := '90AF000020B04D0787C93EE0CC8CACC8E86F16C6FE434E4FBC438D8E0240D791BD42D4714200';
+  Result[5].Response := 'A04A9CDF1BE3EDD0D113D25888FDA95A325792D22C0789075B1F4B8FD829FD7D9100';
+  Result[6].Command := '9064000009017B819773D3D786CD00';
+  Result[6].Response := '346FFDDAEB052E586B9100';
+end;
+function LrpLightWrongVersion: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,7);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000008000602000000000000';
+  Result[1].Response := '010102030405060708090A0B0C0D0E0F1091AF';
+  Result[2].Command := '90AF000020B04D0787C93EE0CC8CACC8E86F16C6FE3C29BBAED89DC54169734EE0DB0F7AB100';
+  Result[2].Response := 'EB5A4FEC8610C9038BDC14940D0EDB35ED8EE556B4CA938345A98841873FAB7A9100';
+  Result[3].Command := '90C4000029018529312C691AC2A20ED5A075E3522C40584A465F4BBE990712696077B90F6FA1C624AE4C7CFA423100';
+  Result[3].Response := '6DE82A0D9CFE09B09100';
+  Result[4].Command := '9071000008010602000000000000';
+  Result[4].Response := '010102030405060708090A0B0C0D0E0F1091AF';
+  Result[5].Command := '90AF000020B04D0787C93EE0CC8CACC8E86F16C6FE434E4FBC438D8E0240D791BD42D4714200';
+  Result[5].Response := 'A04A9CDF1BE3EDD0D113D25888FDA95A325792D22C0789075B1F4B8FD829FD7D9100';
+  Result[6].Command := '9064000009017B819773D3D786CD00';
+  Result[6].Response := '35DC4602BF8D6E18069100';
+end;
+function LrpLightKey4: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,7);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000008000602000000000000';
+  Result[1].Response := '010102030405060708090A0B0C0D0E0F1091AF';
+  Result[2].Command := '90AF000020B04D0787C93EE0CC8CACC8E86F16C6FE3C29BBAED89DC54169734EE0DB0F7AB100';
+  Result[2].Response := 'EB5A4FEC8610C9038BDC14940D0EDB35ED8EE556B4CA938345A98841873FAB7A9100';
+  Result[3].Command := '90C4000029048529312C691AC2A20ED5A075E3522C40584A465F4BBE990712696077B90F6FA1F77CC8BD3540EA1E00';
+  Result[3].Response := '6DE82A0D9CFE09B09100';
+  Result[4].Command := '9071000008040602000000000000';
+  Result[4].Response := '010102030405060708090A0B0C0D0E0F1091AF';
+  Result[5].Command := '90AF000020B04D0787C93EE0CC8CACC8E86F16C6FE434E4FBC438D8E0240D791BD42D4714200';
+  Result[5].Response := 'A04A9CDF1BE3EDD0D113D25888FDA95A325792D22C0789075B1F4B8FD829FD7D9100';
+  Result[6].Command := '906400000904EA8C459C51456CF100';
+  Result[6].Response := '346FFDDAEB052E586B9100';
+end;
+function LrpLightConfig0: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,4);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000008000602000000000000';
+  Result[1].Response := '010102030405060708090A0B0C0D0E0F1091AF';
+  Result[2].Command := '90AF000020B04D0787C93EE0CC8CACC8E86F16C6FE3C29BBAED89DC54169734EE0DB0F7AB100';
+  Result[2].Response := 'EB5A4FEC8610C9038BDC14940D0EDB35ED8EE556B4CA938345A98841873FAB7A9100';
+  Result[3].Command := '905C00001900805951B86FB256DD3EEC361B3E010964DB95B596CA0BF16400';
+  Result[3].Response := '6DE82A0D9CFE09B09100';
+end;
+function LrpLightConfig2: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,4);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000008000602000000000000';
+  Result[1].Response := '010102030405060708090A0B0C0D0E0F1091AF';
+  Result[2].Command := '90AF000020B04D0787C93EE0CC8CACC8E86F16C6FE3C29BBAED89DC54169734EE0DB0F7AB100';
+  Result[2].Response := 'EB5A4FEC8610C9038BDC14940D0EDB35ED8EE556B4CA938345A98841873FAB7A9100';
+  Result[3].Command := '905C00001902A3A1267B1955A50D1D94090823D7D0F620BCD3DE43AC360000';
+  Result[3].Response := '6DE82A0D9CFE09B09100';
+end;
+function LrpLightConfig3: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,4);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000008000602000000000000';
+  Result[1].Response := '010102030405060708090A0B0C0D0E0F1091AF';
+  Result[2].Command := '90AF000020B04D0787C93EE0CC8CACC8E86F16C6FE3C29BBAED89DC54169734EE0DB0F7AB100';
+  Result[2].Response := 'EB5A4FEC8610C9038BDC14940D0EDB35ED8EE556B4CA938345A98841873FAB7A9100';
+  Result[3].Command := '905C000019034942FD8A67933A44DB93EC8C7A59E1B7308AED124ED06B4700';
+  Result[3].Response := '6DE82A0D9CFE09B09100';
+end;
+function LrpLightConfig4: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,4);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000008000602000000000000';
+  Result[1].Response := '010102030405060708090A0B0C0D0E0F1091AF';
+  Result[2].Command := '90AF000020B04D0787C93EE0CC8CACC8E86F16C6FE3C29BBAED89DC54169734EE0DB0F7AB100';
+  Result[2].Response := 'EB5A4FEC8610C9038BDC14940D0EDB35ED8EE556B4CA938345A98841873FAB7A9100';
+  Result[3].Command := '905C00001904DB39EC43FB2E9E2A8455457F2C3A470537C4F056F70A937D00';
+  Result[3].Response := '6DE82A0D9CFE09B09100';
+end;
+function LrpLightConfig5: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,4);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000008000602000000000000';
+  Result[1].Response := '010102030405060708090A0B0C0D0E0F1091AF';
+  Result[2].Command := '90AF000020B04D0787C93EE0CC8CACC8E86F16C6FE3C29BBAED89DC54169734EE0DB0F7AB100';
+  Result[2].Response := 'EB5A4FEC8610C9038BDC14940D0EDB35ED8EE556B4CA938345A98841873FAB7A9100';
+  Result[3].Command := '905C00001905253B66B8BE78EEB6B04D222FE62682DF165E145381ABDC7100';
+  Result[3].Response := '6DE82A0D9CFE09B09100';
+end;
+function LrpLightConfig6: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,4);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000008000602000000000000';
+  Result[1].Response := '010102030405060708090A0B0C0D0E0F1091AF';
+  Result[2].Command := '90AF000020B04D0787C93EE0CC8CACC8E86F16C6FE3C29BBAED89DC54169734EE0DB0F7AB100';
+  Result[2].Response := 'EB5A4FEC8610C9038BDC14940D0EDB35ED8EE556B4CA938345A98841873FAB7A9100';
+  Result[3].Command := '905C000029069B59849922B5D79AAD2B7CECAF7AB5776E54E652E182F49975AC0FDBB679A95F3B5A06496342700D00';
+  Result[3].Response := '6DE82A0D9CFE09B09100';
+end;
+function LrpLightConfig8: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,4);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000008000602000000000000';
+  Result[1].Response := '010102030405060708090A0B0C0D0E0F1091AF';
+  Result[2].Command := '90AF000020B04D0787C93EE0CC8CACC8E86F16C6FE3C29BBAED89DC54169734EE0DB0F7AB100';
+  Result[2].Response := 'EB5A4FEC8610C9038BDC14940D0EDB35ED8EE556B4CA938345A98841873FAB7A9100';
+  Result[3].Command := '905C00001908EE0BCFEF93B38D7739C7E049C2B90AC85D024A58BA67EE6400';
+  Result[3].Response := '6DE82A0D9CFE09B09100';
+end;
+function LrpLightConfig9: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,4);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000008000602000000000000';
+  Result[1].Response := '010102030405060708090A0B0C0D0E0F1091AF';
+  Result[2].Command := '90AF000020B04D0787C93EE0CC8CACC8E86F16C6FE3C29BBAED89DC54169734EE0DB0F7AB100';
+  Result[2].Response := 'EB5A4FEC8610C9038BDC14940D0EDB35ED8EE556B4CA938345A98841873FAB7A9100';
+  Result[3].Command := '905C000019098AE38CECA35CEE49A006EDFDD9A14EAC69731390B446795100';
+  Result[3].Response := '6DE82A0D9CFE09B09100';
+end;
+function LrpLightConfig10: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,4);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000008000602000000000000';
+  Result[1].Response := '010102030405060708090A0B0C0D0E0F1091AF';
+  Result[2].Command := '90AF000020B04D0787C93EE0CC8CACC8E86F16C6FE3C29BBAED89DC54169734EE0DB0F7AB100';
+  Result[2].Response := 'EB5A4FEC8610C9038BDC14940D0EDB35ED8EE556B4CA938345A98841873FAB7A9100';
+  Result[3].Command := '905C0000190AE37216AE1CB356314A2CF4843831D69B2288AF1847F9D39300';
+  Result[3].Response := '6DE82A0D9CFE09B09100';
+end;
+function LrpLightConfig11: TExtendedPairs;
+begin
+  Result := nil; SetLength(Result,4);
+  Result[0].Command := '905A00000301000000';
+  Result[0].Response := '9100';
+  Result[1].Command := '9071000008000602000000000000';
+  Result[1].Response := '010102030405060708090A0B0C0D0E0F1091AF';
+  Result[2].Command := '90AF000020B04D0787C93EE0CC8CACC8E86F16C6FE3C29BBAED89DC54169734EE0DB0F7AB100';
+  Result[2].Response := 'EB5A4FEC8610C9038BDC14940D0EDB35ED8EE556B4CA938345A98841873FAB7A9100';
+  Result[3].Command := '905C0000190BE58D2B42A850BF0656858E0B40F3E6342AF6A05F3C99A65A00';
+  Result[3].Response := '6DE82A0D9CFE09B09100';
 end;
 end.

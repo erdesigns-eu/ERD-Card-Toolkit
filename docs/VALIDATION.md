@@ -1158,3 +1158,30 @@ After the final AES/LRP entry guard, an additional focused build of the latest
 sources passed **333 assertions**, covering the guard, allowed AES TMAC, known and
 acquired-counter LRP TMAC, and both UID/stored-record inspection paths. No new
 compiler hints/warnings were introduced in the changed units/tests.
+
+
+## 2026-10-12 — native DESFire Light LRP management
+
+Added an explicit optional Light application management interface without changing
+any of the **11 existing interface layouts/IIDs**. Light uses a fixed five-key
+application profile and does not issue unsupported GetKeySettings. Independent
+literal transcripts cover key 0, 1 and 4 rotation, XOR/CRC data, bare master-key
+acknowledgement, fresh LRP authentication, protected version proof and a
+valid-response-MAC wrong-version failure. Ten persistent configuration options use
+Light-specific lengths, RFU checks, LRP ATS timing, explicit ISO identifiers,
+signed value geometry and failed-authentication counter validation. Persistent
+acknowledgement is required; no generic configuration readback is claimed.
+
+Focused native management tests pass **126,905 assertions**, including every
+exchange boundary and response-data bit, caller-buffer mutation and exclusive
+release failures. Focused local-input tests pass **106 assertions**, including
+all truncated configuration inputs and no-dispatch profile/context/authority/
+acknowledgement guards; valid commands remain usable after local input errors.
+The separate generator reproduces **188 literal fixture sets**. Both **21 source
+checkers** over the library and the contactless tests pass. Distribution remains
+**62 projects, 2 groups, 48 DFM forms**, with zero findings. Source BOM/CRLF is
+retained; no demo, form, package or registered component has changed.
+
+The full native DESFire/Plus regression suite passes **3,459,299 assertions** with
+zero unfreed heap blocks. This includes the earlier AES/DES/3DES, ISO, multiple
+rights, SDM, TMAC and LRP profiles alongside the new Light administration paths.

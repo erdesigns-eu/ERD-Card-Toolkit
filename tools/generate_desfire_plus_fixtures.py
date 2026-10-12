@@ -579,6 +579,22 @@ f=DF();iv=enc(f.e,Z,bytes.fromhex('5AA5')+TI+le(f.ctr+1)+bytes(8));f.cmd(0x51,re
 for mode in range(3):
  f=LF();metadata=bytes([5,[0,1,3][mode]])+bytes.fromhex('F0EF0234');stored=le(23)+le(9)+bytes.fromhex('1122334455667788')
  f.cmd(0xF5,b'\x01',reply=metadata);f.read(stored,mode=mode,file=1);f.cmd(0xF5,b'\x01',reply=metadata);vectors['LrpStoredTmac'+['Plain','Mac','Full'][mode]]=f.p
+# DESFire Light: fixed five-key LRP layout; no nonexistent GetKeySettings command.
+for number in [0,1,4]:
+ f=LF();body=NEW+bytes([0x34])
+ if number:body+=le(zlib.crc32(NEW)^0xffffffff,4)
+ f.cmd(0xC4,bytes([number]),body,mode=2)
+ if number==0:f.p[-1]=(f.p[-1][0],bytes.fromhex('9100'))
+ f.authenticate(NEW,number);f.cmd(0x64,bytes([number]),reply=b'\x34')
+ vectors['LrpLightKey'+str(number)]=f.p
+ if number==1:
+  wrong=LF();wrong.p=list(f.p[:-1]);wrong.m=f.m;wrong.e=f.e;wrong.ctr=f.ctr-1;wrong.ec=f.ec
+  wrong.cmd(0x64,b'\x01',reply=b'\x35');vectors['LrpLightWrongVersion']=wrong.p
+light_configs={0:'22',2:'0577008102',3:'2000',4:'0004',5:'00000000020000001122',
+ 6:'84A00000010000000000000000000000000110',8:'030001011002030210',
+ 9:'0300000000E80300000000000001',10:'01E8030A00',11:'01'}
+for option,data in light_configs.items():
+ f=LF();f.cmd(0x5C,bytes([option]),bytes.fromhex(data),mode=2);vectors['LrpLightConfig'+str(option)]=f.p
 s='''unit DesfirePlus.Vectors;
 {$IFDEF FPC}{$MODE DELPHI}{$ENDIF}
 interface

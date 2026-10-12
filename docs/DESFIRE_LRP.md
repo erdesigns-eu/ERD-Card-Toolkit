@@ -102,12 +102,59 @@ receipt. `SessionProtected` follows the acquired communication mode and
 The stored session subpart describes the prior committed receipt, not the current
 hidden counter; backend trust/freshness policy remains explicit.
 
-PICC-level LRP originality authentication and LRP key/configuration/policy
-provisioning are separate profiles. Public unauthenticated GetVersion remains
+PICC-level LRP originality authentication and provisioning beyond the explicit
+Light application management below remain separate profiles. Public unauthenticated GetVersion remains
 available. The automatic profile does not infer a card generation or enable LRP
 permanently on an AES-only card. Low-level codec use with caller-managed transports
 remains supported. AES comes from the maintained backend; no certified side-channel
 claim is made for this implementation.
+
+## Native DESFire Light management
+
+`OpenLrpLightManagementSession(Aid)` selects an explicit **DESFire Light**
+application with `Security = dfsLrp`, a nonzero AID, key number zero and a supplied
+sixteen-byte master key. It does not autodetect the family or send
+`GetKeySettings`, which Light does not support. Existing AES administration and
+all previous interface layouts remain unchanged.
+
+`ChangeLrpLightKey(Number, Version, NewKey, OldKey)` supports Light application
+keys **0 through 4**. Master-key replacement requires an empty old-key argument;
+other keys require sixteen explicit old bytes. Native C4 uses LRP Full messaging,
+new-key XOR old-key and CRC32 for keys 1..4. A bare acknowledgement when replacing
+key zero is followed by fresh mutual LRP authentication with the supplied new key
+and a protected native GetKeyVersion. No success is returned on a version mismatch.
+The session then uses the new target key; the component's configured credentials
+are unchanged. Reopen with master key zero for subsequent administration after
+rotating another key. No key-set, key-type or original-card key is inferred.
+
+`ConfigureLrpLightAcknowledged(Option, Data, True)` requires explicit acknowledgement
+of persistent effects. Native 5C is protected in LRP Full mode; RFU bits, exact
+lengths, identifier geometry, signed limits and LRP ATS timing are validated before
+dispatch, independently of general EV2 configuration rules.
+
+| Option | Validated Light data |
+| --- | --- |
+| `00` | Random-ID configuration; legacy UID0 requires the enable bit |
+| `02` | Complete 5..20-byte ATS, T0 75/77, TB1 81 for LRP and TC1 02 |
+| `03` | Two explicit SAK bytes |
+| `04` | Two-byte secure messaging configuration, only the documented bit 2 |
+| `05` | Ten-byte capability configuration; RFU bytes/bits checked, LRP cannot be disabled |
+| `06` | One-time DF-name/ISO-ID rename: 19 bytes with name length 1..16, zero padding and explicit valid ISO ID |
+| `08` | One-time rename of one/two files, optionally with explicit valid ISO IDs |
+| `09` | One-time value-file limits/current value/options |
+| `0A` | Failed-authentication counter enable/limit/decrement; an enabled limit must be nonzero |
+| `0B` | Standard/strong back-modulation selector |
+
+Acceptance means a verified command acknowledgement, **not independent settings
+readback**: Light provides no generic GetConfiguration command. One-time settings
+may already be locked and their native errors propagate. After renaming, close the
+session and select the new identifiers explicitly. Any failure after dispatch is
+uncertain; no configuration replay, rollback or implicit commit/abort is attempted.
+These APIs operate on an **already enabled LRP application** and do not silently
+switch an AES card permanently to LRP.
+
+The native layouts follow [NXP MF2DLHX0, revision 3.3](https://www.nxp.com/docs/en/data-sheet/MF2DLHX0.pdf),
+sections 11.5.1 and 11.6.1. They are not advertised as generic EV2/EV3 provisioning.
 
 ## Owned LRP TMAC
 
@@ -179,4 +226,8 @@ NonFirst TI/command-counter retention and ordinary owned transaction proof.
 LRP TMAC tests add explicit/acquired counter modes, hidden counts 1/7/FFFF,
 ReaderID deferral, valid-session-MAC wrong receipts/counters/postimages, key/UID
 input freezing, every exchange boundary and cleanup/release faults.
+Light management adds literal key-zero/one/four exchanges, bare master-key reset,
+fresh authentication/version proof, valid-MAC wrong version, all ten configuration
+options, every response-data bit and exchange boundary, persistent-acknowledgement
+and exact local-input guards.
 See [VALIDATION.md](VALIDATION.md).

@@ -194,6 +194,13 @@ type
     /// <param name="AOption">Explicit PICC 00, ATS 02, SAK 03, secure-messaging 04 or value-file 09.</param>
     /// <param name="AData">Exact native option data; no implicit irreversible bit changes.</param>
     class procedure ValidateConfiguration(const AOption: Byte; const AData: TBytes); static;
+    /// <summary>Validates exact native DESFire Light configuration data for an already enabled LRP application.</summary>
+    /// <param name="AOption">Documented Light option 00, 02, 03, 04, 05, 06, 08, 09, 0A or 0B.</param>
+    /// <param name="AData">Exact option bytes, including little-endian ISO IDs, limits and counters.</param>
+    /// <remarks>Checks RFU bits, lengths, ATS LRP timing, renaming geometry and signed value limits.
+    /// Does not infer current identifiers, fuse state, authority or support by another card family.</remarks>
+    /// <exception cref="EDesfireExtensionError">Unsupported option or invalid data.</exception>
+    class procedure ValidateLrpLightConfiguration(const AOption: Byte; const AData: TBytes); static;
   end;
 
   /// <summary>AES transaction-MAC derivation, aligned command input and receipt verification; no I/O.</summary>
@@ -644,6 +651,67 @@ begin
     end;
   else Invalid; end;
 end;
+class procedure TDesfireExtensionCodec.ValidateLrpLightConfiguration(const AOption: Byte; const AData: TBytes);
+var
+  I, N, Step, Count, P: Integer;
+  function IsoId(const Offset: Integer): Word;
+  begin
+    Result := Word(AData[Offset]) or (Word(AData[Offset + 1]) shl 8);
+    if (Result = 0) or (Result = $3F00) or (Result = $3FFF) or
+      (Result = $FFFF) then Invalid;
+  end;
+begin
+  case AOption of
+    0: begin
+      if (Length(AData) <> 1) or ((AData[0] and $DD) <> 0) or
+        (((AData[0] and $20) <> 0) and ((AData[0] and 2) = 0)) then Invalid;
+    end;
+    2: begin
+      if (Length(AData) < 5) or (Length(AData) > 20) or
+        (AData[0] <> Length(AData)) or not (AData[1] in [$75, $77]) or
+        (AData[3] <> $81) or (AData[4] <> 2) then Invalid;
+    end;
+    3: if Length(AData) <> 2 then Invalid;
+    4: if (Length(AData) <> 2) or (AData[0] <> 0) or
+      not (AData[1] in [0, 4]) then Invalid;
+    5: begin
+      if (Length(AData) <> 10) or ((AData[4] and $FD) <> 0) then Invalid;
+      for I := 0 to 7 do if (I <> 4) and (AData[I] <> 0) then Invalid;
+    end;
+    6: begin
+      if Length(AData) <> 19 then Invalid;
+      N := AData[0] and 31;
+      if ((AData[0] and $E0) <> $80) or (N < 1) or (N > 16) then Invalid;
+      for I := N + 1 to 16 do if AData[I] <> 0 then Invalid;
+      IsoId(17);
+    end;
+    8: begin
+      if (Length(AData) < 3) or ((AData[0] and $FC) <> 0) then Invalid;
+      Count := 1; if (AData[0] and 2) <> 0 then Count := 2;
+      Step := 2; if (AData[0] and 1) <> 0 then Step := 4;
+      if Length(AData) <> 1 + Count * Step then Invalid;
+      for I := 0 to Count - 1 do
+      begin
+        P := 1 + I * Step;
+        if (AData[P] > 31) or (AData[P + 1] > 31) then Invalid;
+        if Step = 4 then IsoId(P + 2);
+      end;
+      if Count = 2 then
+      begin
+        if (AData[1] = AData[1 + Step]) or
+          (AData[2] = AData[2 + Step]) then Invalid;
+        if (Step = 4) and (IsoId(3) = IsoId(7)) then Invalid;
+      end;
+    end;
+    9: ValidateConfiguration(AOption, AData);
+    $0A: begin
+      if (Length(AData) <> 5) or (AData[0] > 1) then Invalid;
+      if (AData[0] = 1) and (AData[1] = 0) and (AData[2] = 0) then Invalid;
+    end;
+    $0B: if (Length(AData) <> 1) or (AData[0] > 1) then Invalid;
+  else Invalid; end;
+end;
+
 class function TDesfireSdmCrypto.DecodePicc(const AProvider: ICardAesProvider;
   const AKey, ACipher: TBytes): TDesfireSdmPiccData;
 var Plain, Zero: TBytes; P: Integer;

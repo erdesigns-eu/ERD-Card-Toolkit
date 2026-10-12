@@ -86,7 +86,7 @@ function TWire.Exchange(const B: TBytes): TBytes;
 begin
   Check(Active,'Exclusive exchange'); Inc(Calls); Check(Calls<=Length(Pairs),'No fallback or replay');
   Check(BytesEqual(B,HexToBytes(Pairs[Calls-1].Command)),'Independent native command '+IntToStr(Calls));
-  if (B[0] in [$A1,$A3,$B5,$B7,$B9]) or ((B[0]=$90) and (B[1] in [$CA,$CD,$CB,$C1,$C0,$CE,$DF,$8D,$8B,$EB,$C7,$C8,$A7,$BA,$0C,$DC,$1C,$56,$C6,$57,$55,$5C,$5F])) then Inc(Writes);
+  if (B[0] in [$A1,$A3,$B5,$B7,$B9]) or ((B[0]=$90) and (B[1] in [$CA,$CD,$CB,$C1,$C0,$CE,$DF,$8D,$8B,$EB,$C7,$C8,$A7,$BA,$0C,$DC,$1C,$56,$C6,$57,$55,$5C,$5F,$C4])) then Inc(Writes);
   if Calls=FailCall then raise ECardTransportError.Create('Synthetic response lost');
   if (Calls=MutateCall) and (Length(Borrowed)>0) then Borrowed[0]:=Borrowed[0] xor $FF;
   if (Calls=MutateCall) and (Length(BorrowedRights)>1) then BorrowedRights[1]:=$0202;
@@ -2712,6 +2712,178 @@ begin
       RunAcquiredLrpTmac(0,0,I,J div 8,J mod 8,False);
 end;
 
+function LrpLightPairs(const Kind: Integer): TExtendedPairs;
+begin
+  case Kind of
+    0: Result := LrpLightKey0;
+    1: Result := LrpLightKey1;
+    2: Result := LrpLightKey4;
+    3: Result := LrpLightWrongVersion;
+    4: Result := LrpLightConfig0;
+    5: Result := LrpLightConfig2;
+    6: Result := LrpLightConfig3;
+    7: Result := LrpLightConfig4;
+    8: Result := LrpLightConfig5;
+    9: Result := LrpLightConfig6;
+    10: Result := LrpLightConfig8;
+    11: Result := LrpLightConfig9;
+    12: Result := LrpLightConfig10;
+    13: Result := LrpLightConfig11;
+  else raise Exception.Create('Invalid Light fixture'); end;
+end;
+
+procedure RunLrpLightManagement(const Kind, Fail, Corrupt, BitIndex: Integer;
+  const Freeze, ReleaseFails: Boolean);
+const
+  Options: array[4..13] of Byte = (0,2,3,4,5,6,8,9,10,11);
+  Inputs: array[4..13] of string = ('22','0577008102','2000','0004',
+    '00000000020000001122','84A00000010000000000000000000000000110',
+    '030001011002030210','0300000000E80300000000000001','01E8030A00','01');
+var
+  Wire: TWire;
+  Hold: ICardTransport;
+  Reader: TDesfireCardReader;
+  Session: IDesfireLrpLightManagement;
+  Data, Old: TBytes;
+  Number: Byte;
+  Failed, Uncertain: Boolean;
+begin
+  Wire := TWire.Create; Hold := Wire; Wire.Pairs := LrpLightPairs(Kind);
+  Wire.FailCall := Fail; Wire.CorruptCall := Corrupt;
+  Wire.CorruptByte := BitIndex div 8; Wire.CorruptBit := BitIndex mod 8;
+  Wire.EndFails := ReleaseFails;
+  Data := HexToBytes('112233445566778899AABBCCDDEEFF00');
+  Old := nil; Number := 0;
+  if Kind in [1,2,3] then begin
+    Number := 1; if Kind=2 then Number := 4;
+    Old := HexToBytes('00000000000000000000000000000000');
+  end;
+  if Kind>=4 then Data := HexToBytes(Inputs[Kind]);
+  if Freeze then begin Wire.MutateCall := 4; Wire.Borrowed := Data; end;
+  Reader := TDesfireCardReader.Create(nil); Failed := False; Uncertain := False;
+  try
+    Reader.Transport := Hold; Reader.CryptoProvider := TFixed.Create;
+    Reader.Security := dfsLrp;
+    Reader.AuthenticationKey := HexToBytes('00000000000000000000000000000000');
+    try
+      Session := Reader.OpenLrpLightManagementSession(1);
+      if Kind<4 then Session.ChangeLrpLightKey(Number,$34,Data,Old)
+      else Session.ConfigureLrpLightAcknowledged(Options[Kind],Data,True);
+      Session.Close;
+    except on E: Exception do begin
+      Failed := True; Uncertain := E is EContactlessWriteUncertain;
+      if (Kind<>3) and (Fail=0) and (Corrupt=0) and not ReleaseFails then
+        Writeln('Light diagnostic: ',E.ClassName,': ',E.Message,' calls=',Wire.Calls);
+    end; end;
+    if (Kind<>3) and (Fail=0) and (Corrupt=0) and not ReleaseFails then begin
+      Check(not Failed,'Light management native transcript '+IntToStr(Kind));
+      Check(Wire.Calls=Length(Wire.Pairs),'Light exact command chain without GetKeySettings');
+    end else begin
+      Check(Failed,'Light injected fault observable');
+      // A confirmed write followed only by a release failure remains a release failure.
+      if not ReleaseFails then Check(Uncertain=(Wire.Writes>0),'Light dispatch uncertainty');
+    end;
+  finally
+    Session := nil; Reader.Free; TCardCrypto.Clear(Data); TCardCrypto.Clear(Old);
+    Check(not Wire.Active and (Wire.Begins=Wire.Ends),'Light management releases exclusive session');
+  end;
+end;
+
+procedure TestLrpLightManagement;
+var
+  Kind, I, Bit: Integer;
+  Pairs: TExtendedPairs;
+begin
+  for Kind := 0 to 13 do begin
+    RunLrpLightManagement(Kind,0,0,0,False,False);
+    if Kind=3 then Continue;
+    RunLrpLightManagement(Kind,0,0,0,True,False);
+    RunLrpLightManagement(Kind,0,0,0,False,True);
+    Pairs := LrpLightPairs(Kind);
+    for I := 1 to Length(Pairs) do RunLrpLightManagement(Kind,I,0,0,False,False);
+    for I := 2 to Length(Pairs) do
+      for Bit := 0 to (Length(Pairs[I-1].Response) div 2 - 2) * 8 - 1 do
+        RunLrpLightManagement(Kind,0,I,Bit,False,False);
+  end;
+end;
+
+procedure TestLrpLightGuards;
+const
+  Options: array[0..9] of Byte = (0,2,3,4,5,6,8,9,10,11);
+  Inputs: array[0..9] of string = ('22','0577008102','2000','0004',
+    '00000000020000001122','84A00000010000000000000000000000000110',
+    '030001011002030210','0300000000E80300000000000001','01E8030A00','01');
+  BadOptions: array[0..12] of Byte = (0,0,2,2,4,5,5,6,6,8,8,10,11);
+  BadInputs: array[0..12] of string = ('20','01','0577007102','0577008103',
+    '0001','00000000010000001122','01000000020000001122',
+    '84A00000010000000000000000000000000000',
+    '84A00000010100000000000000000000000110',
+    '030001011002030110','030001011000030210','0100000A00','02');
+var
+  Wire: TWire;
+  Hold: ICardTransport;
+  Reader: TDesfireCardReader;
+  Session: IDesfireLrpLightManagement;
+  Data: TBytes;
+  Failed: Boolean;
+  I, N, Calls: Integer;
+begin
+  for I := 0 to 9 do begin
+    Data := HexToBytes(Inputs[I]);
+    TDesfireExtensionCodec.ValidateLrpLightConfiguration(Options[I],Data);
+    for N := 0 to Length(Data)-1 do begin
+      Failed := False;
+      try TDesfireExtensionCodec.ValidateLrpLightConfiguration(Options[I],Copy(Data,0,N));
+      except on E: EDesfireExtensionError do Failed := True; end;
+      Check(Failed,'Light configuration rejects every truncated input');
+    end;
+  end;
+  for I := 0 to 12 do begin
+    Failed := False;
+    try TDesfireExtensionCodec.ValidateLrpLightConfiguration(BadOptions[I],HexToBytes(BadInputs[I]));
+    except on E: EDesfireExtensionError do Failed := True; end;
+    Check(Failed,'Light exact reserved-bit/ATS/identifier/counter checks');
+  end;
+  Wire := TWire.Create; Hold := Wire; Wire.Pairs := LrpLightConfig11;
+  Reader := TDesfireCardReader.Create(nil);
+  try
+    Reader.Transport := Hold; Reader.CryptoProvider := TFixed.Create;
+    Reader.Security := dfsEv2Aes;
+    Failed := False;
+    try Session := Reader.OpenLrpLightManagementSession(1);
+    except on E: EDesfireError do Failed := True; end;
+    Check(Failed and (Wire.Begins=0),'Light profile refuses AES before acquisition');
+    Reader.Security := dfsLrp;
+    Reader.AuthenticationKey := HexToBytes('00000000000000000000000000000000');
+    for I := 0 to 2 do begin
+      Reader.KeyNumber := 0;
+      if I=1 then Reader.KeyNumber := 1;
+      Failed := False;
+      try
+        if I=0 then Session := Reader.OpenLrpLightManagementSession(0)
+        else if I=1 then Session := Reader.OpenLrpLightManagementSession(1)
+        else Session := Reader.OpenLrpLightManagementSession($1000000);
+      except on E: EDesfireError do Failed := True; end;
+      Check(Failed and (Wire.Begins=0),'Light context/master-key guard precedes acquisition');
+    end;
+    Session := Reader.OpenLrpLightManagementSession(1); Calls := Wire.Calls;
+    for I := 0 to 4 do begin
+      Failed := False;
+      try case I of
+        0: Session.ChangeLrpLightKey(5,$34,Reader.AuthenticationKey,nil);
+        1: Session.ChangeLrpLightKey(0,$34,Reader.AuthenticationKey,Reader.AuthenticationKey);
+        2: Session.ChangeLrpLightKey(1,$34,Reader.AuthenticationKey,nil);
+        3: Session.ConfigureLrpLightAcknowledged(11,HexToBytes('01'),False);
+        4: Session.ConfigureLrpLightAcknowledged(11,HexToBytes('02'),True);
+      end;
+      except on E: Exception do Failed := True; end;
+      Check(Failed and (Wire.Calls=Calls) and (Wire.Writes=0),'Invalid Light local input leaves session active without dispatch');
+    end;
+    Session.ConfigureLrpLightAcknowledged(11,HexToBytes('01'),True); Session.Close;
+    Check(Wire.Calls=Length(Wire.Pairs),'Valid action succeeds after local validation failures');
+  finally Session := nil; Reader.Free; TCardCrypto.Clear(Data); end;
+end;
+
 procedure TestLrpNativeGuards;
 var
   Wire: TWire;
@@ -2943,7 +3115,7 @@ end;
 begin
   try
 {$IFDEF MSWINDOWS} Base:=TCardWindowsAesProvider.Create; {$ELSE} Base:=TCardOpenSslAesProvider.Create; {$ENDIF}
-    TestCodecs; TestDf; TestPlus; TestPlusWorkflow; TestAcr; TestPlus4K; TestFrozenInputs; TestPlusManagement; TestPlusLevels; TestPlusValues; TestNativeValues; TestFileManagement; TestTmacTransactions; TestIsoKeySetsAndStandardTmac; TestIsoAndRangeInputGuards; TestLrpPublishedVectors; TestLrpNativeCodec; TestLrpProviderFailures; TestCombinedSdmAndRecords; TestNativeLrpAndTmac; TestAcquiredLrpTmac; TestLrpNativeGuards; TestLrpInspection;
+    TestCodecs; TestDf; TestPlus; TestPlusWorkflow; TestAcr; TestPlus4K; TestFrozenInputs; TestPlusManagement; TestPlusLevels; TestPlusValues; TestNativeValues; TestFileManagement; TestTmacTransactions; TestIsoKeySetsAndStandardTmac; TestIsoAndRangeInputGuards; TestLrpPublishedVectors; TestLrpNativeCodec; TestLrpProviderFailures; TestCombinedSdmAndRecords; TestNativeLrpAndTmac; TestAcquiredLrpTmac; TestLrpNativeGuards; TestLrpInspection; TestLrpLightManagement; TestLrpLightGuards;
     Writeln('PASS: ',Checks,' DESFire extension/Plus assertions.');
   except on E: Exception do begin Writeln(E.ClassName,': ',E.Message); ExitCode:=1; end; end;
 end.
