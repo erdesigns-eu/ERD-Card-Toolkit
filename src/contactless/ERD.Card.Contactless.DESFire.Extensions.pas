@@ -102,7 +102,7 @@ type
   end;
   /// <summary>Owned transaction-MAC record; Plain acquisition requires separate offline authenticity verification.</summary>
   TDesfireTmacRecord = record
-    /// <summary>Acquired unsigned thirty-two-bit transaction counter.</summary>
+    /// <summary>Acquired unsigned four-byte wire counter; LRP uses low-word actTMC and high-word sesTMC.</summary>
     Counter: Cardinal;
     /// <summary>Independent eight-byte transaction MAC; offline verification requires the TMAC key and transaction input.</summary>
     Mac: TBytes;
@@ -147,6 +147,10 @@ type
     /// <param name="ABytes">Exact six-byte base or ten-byte AES counter-limit settings.</param>
     /// <returns>Owned validated metadata; no key-possession claim.</returns>
     class function TmacSettings(const ABytes: TBytes): TDesfireTmacSettings; static;
+    /// <summary>Decodes explicit LRP-profile TMAC settings with an optional sixteen-bit commit-counter limit.</summary>
+    /// <param name="ABytes">Exact six-byte base or eight-byte LRP-limit settings; key option is AES 02.</param>
+    /// <returns>Owned acquired metadata; CounterLimit applies only to the actual commit-counter subpart.</returns>
+    class function LrpTmacSettings(const ABytes: TBytes): TDesfireTmacSettings; static;
     /// <summary>Decodes one complete native transaction counter and MAC.</summary>
     /// <param name="ABytes">Exactly twelve bytes, counter little-endian then eight MAC bytes.</param>
     /// <returns>Owned acquired record; offline TMAC validation is separate.</returns>
@@ -414,6 +418,18 @@ begin
   Result.FileOption := ABytes[1];
   Result.AccessRights := Word(ABytes[2]) or (Word(ABytes[3]) shl 8);
   Result.KeyVersion := ABytes[5];
+end;
+
+class function TDesfireExtensionCodec.LrpTmacSettings(const ABytes: TBytes): TDesfireTmacSettings;
+var Converted: TBytes;
+begin
+  if not (Length(ABytes) in [6, 8]) then Invalid;
+  Converted := CopyBytes(ABytes);
+  try
+    if Length(Converted) = 8 then SetLength(Converted, 10);
+    Result := TmacSettings(Converted);
+    Result.RawBytes := CopyBytes(ABytes);
+  finally TCardCrypto.Clear(Converted); end;
 end;
 
 class function TDesfireExtensionCodec.TmacRecord(const ABytes: TBytes): TDesfireTmacRecord;

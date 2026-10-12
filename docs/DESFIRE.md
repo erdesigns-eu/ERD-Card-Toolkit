@@ -29,6 +29,7 @@ package. All exported declarations carry Delphi XML documentation.
 | EV1 3DES | Explicit `1A` authentication, 16/24-byte keys, nonce sizes 8/16, chained eight-byte CMAC and CRC32 encryption | Same-type rotation and ordinary native management; extended key sets remain separate |
 | D40 legacy | Explicit `0A` authentication, 8/16-byte keys, reset-IV legacy inverse send, four-byte CBC-MAC and CRC16 encryption | Plain legacy metadata/acks have no transmitted MAC; no security downgrade |
 | EV2 AES | `AuthenticateEV2First`, fresh CSPRNG nonce, mutual nonce/capability-echo verification, session ENC/MAC keys and TI | Explicit AES profile, no LRP negotiation |
+| LRP | Explicit First/NonFirst, native LRP MAC/LRICB, ordinary data/owned transactions, aligned-record TMAC with explicit/acquired counters and deferred ReaderID proof | Application profile; no fallback or persistent mode/key provisioning; see [LRP](DESFIRE_LRP.md) |
 | EV2 NonFirst | Optional `77` authentication with a second explicit key after verified settings; new session keys, retained TI/counter | One key switch within each acquired data/value/record operation; key-set management is separate |
 | Secure file access | Plain/MACed/Full data/value/record reads and standard-data range writes; authenticated settings | Physical EV1/EV2/EV3/Light, firmware and reader compatibility remain unvalidated |
 | Backup/value/record modification | Owned sessions stage backup ranges, credit/debit/limited credit, linear/cyclic append and record clearing; explicit commit/abort and complete post-commit verification | Transaction-MAC files/receipts, readers/cards with additional transaction features |
@@ -507,8 +508,8 @@ is redistributed or linked into this library:
   and [OpenSSL EVP](https://docs.openssl.org/3.5/man3/EVP_EncryptInit/).
 
 Next security/access additions are
-Automatic LRP retained sessions and further generation-specific/combined-data extensions, additional
-configuration, originality and hardware profiles. ISO/multi-access/AES TMAC and record updates are documented separately; native LRP codecs are available in [DESFIRE_LRP.md](DESFIRE_LRP.md). Basic AES key policy,
+LRP credential/configuration provisioning and further generation-specific/combined-data extensions, additional
+configuration, originality and hardware profiles. ISO/multi-access/AES TMAC and record updates are documented separately; native LRP sessions, TMAC and codecs are available in [DESFIRE_LRP.md](DESFIRE_LRP.md). Basic AES key policy,
 rotation and ordinary access administration are implemented. Broad support is built per implemented/tested operation, never inferred
 from one successful AES session or PC/SC connection.
 

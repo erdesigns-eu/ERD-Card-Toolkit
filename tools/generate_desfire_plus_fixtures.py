@@ -465,6 +465,120 @@ for mode in [0,1,2]:
 for name,plain in [('BadPadding',bytes(16)),('BadLength',OLD+DATA+b'\x80'+bytes(15))]:
  response=lecrypt.crypt(plain,(1).to_bytes(4,'big'),False)[0]
  vectors['Lrp'+name]=[(b'',response+lm.cmac(b'\0'+le(1)+TI+response)[1::2])]
+# Automatic native application LRP reader and retained-session transcripts.
+def lrp_master(key,rnda,rndb):
+ vector=bytes.fromhex('00010080')+rnda[:2]+bytes(x^y for x,y in zip(rnda[2:8],rndb[:6]))+rndb[6:]+rnda[8:]+bytes.fromhex('9669')
+ return LRP(key).cmac(vector)
+class LF:
+ def __init__(self):
+  self.p=[(apdu(0x5A,le(1,3)),bytes.fromhex('9100'))];self.ctr=0;self.ec=0;self.authenticate()
+ def authenticate(self,key=K,number=0,nonfirst=False):
+  nonce=bytes(range(32,48)) if nonfirst else B;master=lrp_master(key,A,nonce);self.m=LRP(master);self.e=LRP(master,1)
+  self.p.append((apdu(0x77 if nonfirst else 0x71,bytes([number]) if nonfirst else bytes([number,6])+cap),(nonce if nonfirst else b'\x01'+nonce)+bytes.fromhex('91AF')))
+  response=self.m.cmac(nonce+A)
+  if not nonfirst:
+   cipher,_=self.e.crypt(TI+bytes(6)+cap,bytes(4),False);response=cipher+self.m.cmac(nonce+A+cipher);self.ctr=0
+  self.p.append((apdu(0xAF,A+self.m.cmac(A+nonce)),response+bytes.fromhex('9100')));self.ec=0 if nonfirst else 1
+ def cmd(self,c,h=b'',body=b'',reply=b'',mode=1):
+  if mode==2 and body:body,self.ec=self.e.crypt(body,self.ec.to_bytes(4,'big'))
+  packet=h+body
+  if mode:packet+=self.m.cmac(bytes([c])+le(self.ctr)+TI+packet)[1::2]
+  self.ctr+=1
+  if mode==2 and reply:reply,self.ec=self.e.crypt(reply,self.ec.to_bytes(4,'big'))
+  response=reply+(self.m.cmac(b'\0'+le(self.ctr)+TI+reply)[1::2] if mode else b'')+bytes.fromhex('9100')
+  chunks=[packet[i:i+48] for i in range(0,len(packet),48)] or [b'']
+  for i,chunk in enumerate(chunks):self.p.append((apdu(c if i==0 else 0xAF,chunk),response if i==len(chunks)-1 else bytes.fromhex('91AF')))
+ def read(self,data,offset=0,mode=2,file=0):self.cmd(0xAD,bytes([file])+le(offset,3)+le(len(data),3),reply=data,mode=mode)
+for mode in range(3):
+ for writing in [False,True]:
+  f=LF();metadata=bytes([0,[0,1,3][mode]])+bytes.fromhex('0000040000');f.cmd(0xF5,b'\0',reply=metadata);f.read(bytes.fromhex('01020304'),mode=mode);f.cmd(0xF5,b'\0',reply=metadata)
+  if writing:
+   f.cmd(0x8D,bytes.fromhex('00000000040000'),bytes.fromhex('AABBCCDD'),mode=mode);f.read(bytes.fromhex('AABBCCDD'),mode=mode);f.cmd(0xF5,b'\0',reply=metadata)
+  vectors['LrpNative'+['Plain','Mac','Full'][mode]+('Write' if writing else 'Read')]=f.p
+f=LF();metadata=bytes.fromhex('00031111040000');f.cmd(0xF5,b'\0',reply=metadata);f.authenticate(NEW,1,True);f.read(bytes.fromhex('01020304'));f.cmd(0xF5,b'\0',reply=metadata);vectors['LrpNativeNonFirstRead']=f.p
+# Valid native LRP session MAC with wrong capability echo is rejected during first authentication.
+f=LF();wrongcipher=LRP(lrp_master(K,A,B),1).crypt(TI+bytes(12),bytes(4),False)[0];f.p[2]=(f.p[2][0],wrongcipher+LRP(lrp_master(K,A,B)).cmac(B+A+wrongcipher)+bytes.fromhex('9100'));vectors['LrpNativeBadCapability']=f.p
+f=LF();f.p[1]=(f.p[1][0],b'\x02'+B+bytes.fromhex('91AF'));vectors['LrpNativeBadMode']=f.p[:2]
+for kind in ['Backup','Value','Record','Abort']:
+ f=LF();record=kind=='Record';value=kind=='Value';metadata=bytes.fromhex('04030000100000040000020000') if record else bytes.fromhex('0203000000000000E80300000000000000') if value else bytes.fromhex('01030000040000')
+ f.cmd(0x6F,reply=b'\0');f.cmd(0xF5,b'\0',reply=metadata);f.cmd(0xF5,b'\0',reply=metadata)
+ if record:
+  h=b'\0'+le(0,3)+le(2,3);f.cmd(0xAB,h,reply=OLD+DATA,mode=2)
+ elif value:f.cmd(0x6C,b'\0',reply=le(42,4),mode=2)
+ else:f.read(bytes.fromhex('01020304'))
+ f.cmd(0xF5,b'\0',reply=metadata)
+ if record:f.cmd(0xBA,b'\0'+le(1,3)+le(0,3)+le(16,3),NEW,mode=2)
+ elif value:f.cmd(0x0C,b'\0',le(5,4),mode=2)
+ else:f.cmd(0x8D,bytes.fromhex('00000000040000'),bytes.fromhex('AABBCCDD'),mode=2)
+ f.cmd(0xA7 if kind=='Abort' else 0xC7,b'' if kind=='Abort' else b'\0')
+ if kind!='Abort':
+  f.cmd(0xF5,b'\0',reply=metadata)
+  if record:f.cmd(0xAB,h,reply=OLD+NEW,mode=2)
+  elif value:f.cmd(0x6C,b'\0',reply=le(47,4),mode=2)
+  else:f.read(bytes.fromhex('AABBCCDD'))
+  f.cmd(0xF5,b'\0',reply=metadata)
+ vectors['LrpOwned'+kind]=f.p
+# LRP TMAC: counter parts are actLE || sesLE. Only derivation is LRP; TMV/EncTMRI use ordinary AES.
+act=24;ses=3
+lrp_tm_mac=LRP(NEW).cmac(bytes.fromhex('00010080')+le(act)+le(ses)+UID+b'\x5A')
+lrp_tm_enc=LRP(NEW).cmac(bytes.fromhex('00010080')+le(act)+le(ses)+UID+b'\xA5')
+vectors['LrpTransactionCrypto']=[(bytes.fromhex('00010080')+le(act)+le(ses)+UID+b'\x5A',lrp_tm_mac),(bytes.fromhex('00010080')+le(act)+le(ses)+UID+b'\xA5',lrp_tm_enc),(tmi_data(0xAD,0,bytes.fromhex('01020304')),mac(lrp_tm_mac,tmi_data(0xAD,0,bytes.fromhex('01020304')))),(READER,enc(lrp_tm_enc,Z,READER))]
+for reader_id in [False,True]:
+ for action in ['Write','Read','Abort','Standard','Record','WrongReceipt','WrongAct','WrongSession','WrongPostimage','LimitReached']:
+  f=LF();standard=action=='Standard';record=action=='Record';metadata=bytes.fromhex('00030000080000') if standard else bytes.fromhex('04030000100000040000020000') if record else bytes.fromhex('01030000040000')
+  tmsettings=bytes.fromhex('052000EF02342000') if reader_id else bytes.fromhex('0520F0EF02342000')
+  f.cmd(0x6F,reply=bytes.fromhex('0001'));f.cmd(0xF5,b'\0',reply=metadata);f.cmd(0xF5,b'\x01',reply=tmsettings)
+  if action=='LimitReached':vectors['LrpTmac'+('Reader' if reader_id else '')+action]=f.p;continue
+  f.cmd(0x51,reply=UID,mode=2);tmi=b''
+  if reader_id:
+   previous=enc(lrp_tm_enc,Z,READER);f.cmd(0xC8,READER,reply=previous);tmi+=align(b'\xC8'+READER+previous)
+  f.cmd(0xF5,b'\0',reply=metadata)
+  if record:
+   h=b'\0'+le(0,3)+le(2,3);f.cmd(0xAB,h,reply=OLD+DATA,mode=2);tmi+=align(b'\xAB'+h)+OLD+DATA
+  else:
+   h=b'\0'+le(2 if standard else 0,3)+le(4,3);f.read(bytes.fromhex('01020304'),offset=2 if standard else 0);tmi+=align(b'\xAD'+h)+align(bytes.fromhex('01020304'))
+  f.cmd(0xF5,b'\0',reply=metadata)
+  if action not in ['Read','Abort']:
+   if record:
+    h=b'\0'+le(1,3)+le(0,3)+le(16,3);f.cmd(0xBA,h,NEW,mode=2);tmi+=align(b'\xBA'+h)+NEW
+   else:f.cmd(0x8D,h,bytes.fromhex('AABBCCDD'),mode=2);tmi+=align(b'\x8D'+h)+align(bytes.fromhex('AABBCCDD'))
+   if standard:
+    f.read(bytes.fromhex('AABBCCDD'),offset=2);tmi+=align(b'\xAD'+h)+align(bytes.fromhex('AABBCCDD'));f.cmd(0xF5,b'\0',reply=metadata)
+  if action=='Abort':f.cmd(0xA7)
+  else:
+   f.cmd(0xF5,b'\x01',reply=tmsettings);tag=mac(lrp_tm_mac,tmi)
+   if action=='WrongReceipt':tag=bytes([tag[0]^1])+tag[1:]
+   counter=le(act+1 if action=='WrongAct' else act)+le(ses+1 if action=='WrongSession' else ses)
+   f.cmd(0xC7,b'\x01',reply=counter+tag)
+   if action not in ['Read','WrongReceipt','WrongAct','WrongSession']:
+    f.cmd(0xF5,b'\0',reply=metadata)
+    if record:f.cmd(0xAB,b'\0'+le(0,3)+le(2,3),reply=OLD+NEW,mode=2)
+    else:f.read(bytes(4) if action=='WrongPostimage' else bytes.fromhex('AABBCCDD'),offset=2 if standard else 0)
+    if action!='WrongPostimage':f.cmd(0xF5,b'\0',reply=metadata)
+  vectors['LrpTmac'+('Reader' if reader_id else '')+action]=f.p
+# Deferred ReaderID profiles acquire the hidden counter from an authenticated, offline-verified receipt.
+for resulting_session in [1,7,65535]:
+ f=LF();metadata=bytes.fromhex('01030000040000');tmsettings=bytes.fromhex('050000EF0234')
+ f.cmd(0x6F,reply=bytes.fromhex('0001'));f.cmd(0xF5,b'\0',reply=metadata);f.cmd(0xF5,b'\x01',reply=tmsettings);f.cmd(0x51,reply=UID,mode=2)
+ ek=LRP(NEW).cmac(bytes.fromhex('00010080')+le(24)+le(resulting_session)+UID+b'\xA5')
+ mk=LRP(NEW).cmac(bytes.fromhex('00010080')+le(24)+le(resulting_session)+UID+b'\x5A')
+ previous=enc(ek,Z,READER);f.cmd(0xC8,READER,reply=previous);tmi=align(b'\xC8'+READER+previous)
+ f.cmd(0xF5,b'\0',reply=metadata);f.read(bytes.fromhex('01020304'));tmi+=tmi_data(0xAD,0,bytes.fromhex('01020304'));f.cmd(0xF5,b'\0',reply=metadata)
+ f.cmd(0x8D,bytes.fromhex('00000000040000'),bytes.fromhex('AABBCCDD'),mode=2);tmi+=tmi_data(0x8D,0,bytes.fromhex('AABBCCDD'))
+ f.cmd(0xF5,b'\x01',reply=tmsettings);f.cmd(0xC7,b'\x01',reply=le(24)+le(resulting_session)+mac(mk,tmi))
+ f.cmd(0xF5,b'\0',reply=metadata);f.read(bytes.fromhex('AABBCCDD'));f.cmd(0xF5,b'\0',reply=metadata)
+ vectors['LrpTmacAcquired'+str(resulting_session)]=f.p
+# A zero hidden-session component with a valid session response MAC is never accepted.
+f=LF();metadata=bytes.fromhex('01030000040000');tmsettings=bytes.fromhex('0500F0EF0234')
+f.cmd(0x6F,reply=bytes.fromhex('0001'));f.cmd(0xF5,b'\0',reply=metadata);f.cmd(0xF5,b'\x01',reply=tmsettings);f.cmd(0x51,reply=UID,mode=2)
+f.cmd(0xF5,b'\0',reply=metadata);f.read(bytes.fromhex('01020304'));f.cmd(0xF5,b'\0',reply=metadata);f.cmd(0xF5,b'\x01',reply=tmsettings)
+f.cmd(0xC7,b'\x01',reply=le(24)+le(0)+bytes(8));vectors['LrpTmacZeroSession']=f.p
+# Public reader helpers expose protected real UID and stored TMAC without receipt-key claims.
+f=LF();f.cmd(0x51,reply=UID,mode=2);vectors['LrpNativeUid']=f.p
+f=DF();iv=enc(f.e,Z,bytes.fromhex('5AA5')+TI+le(f.ctr+1)+bytes(8));f.cmd(0x51,reply=enc(f.e,iv,UID+b'\x80'+bytes(8)));vectors['DfNativeUid']=f.p
+for mode in range(3):
+ f=LF();metadata=bytes([5,[0,1,3][mode]])+bytes.fromhex('F0EF0234');stored=le(23)+le(9)+bytes.fromhex('1122334455667788')
+ f.cmd(0xF5,b'\x01',reply=metadata);f.read(stored,mode=mode,file=1);f.cmd(0xF5,b'\x01',reply=metadata);vectors['LrpStoredTmac'+['Plain','Mac','Full'][mode]]=f.p
 s='''unit DesfirePlus.Vectors;
 {$IFDEF FPC}{$MODE DELPHI}{$ENDIF}
 interface

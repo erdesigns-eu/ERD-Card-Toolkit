@@ -113,4 +113,4 @@ No external project source is compiled into the library.
 
 Failure tests include every exchange boundary, corrupted protected responses,
 cleanup uncertainty and caller-input mutation during I/O. See [VALIDATION.md](VALIDATION.md).
-ISO identifiers, multi-access settings/data and AES TMAC file/transaction/receipt APIs are supplied by the new optional interfaces in [DESFIRE_FILES_TMAC.md](DESFIRE_FILES_TMAC.md). Combined SDM/multi-access settings are implemented. Native LRP authentication/secure-message codecs are available in [DESFIRE_LRP.md](DESFIRE_LRP.md); automatic LRP sessions, originality and combined-layout data transactions remain separate profiles.
+ISO identifiers, multi-access settings/data and AES TMAC file/transaction/receipt APIs are supplied by the new optional interfaces in [DESFIRE_FILES_TMAC.md](DESFIRE_FILES_TMAC.md). Combined SDM/multi-access settings are implemented. Native LRP authentication/secure-message codecs are available in [DESFIRE_LRP.md](DESFIRE_LRP.md); automatic LRP sessions and LRP TMAC are implemented there. LRP provisioning, originality and combined-layout data transactions remain separate profiles.

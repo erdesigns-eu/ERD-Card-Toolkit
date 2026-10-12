@@ -1121,3 +1121,40 @@ cases**. Runtime/design packages include the new LRP unit with native BOM/CRLF;
 existing source formatting is preserved and no demos changed. Existing unrelated
 compiler notes/warnings remain unsuppressed. Automatic LRP card-reader sessions,
 LRP TMAC and partial/unaligned-record TMAC profiles are not claimed by these tests.
+
+## Automatic LRP sessions, owned TMAC and inspection (2026-10-12)
+
+The focused DESFire/Plus suite passes **3,332,287 assertions** with range/overflow
+checks and zero heap leaks. The independent generator now emits **174 literal
+fixture sets**, retaining all **150 published AN12304 vectors**. New fixtures
+exercise automatic native LRP Plain/MAC/Full reads and verified standard writes,
+NonFirst nonce proof with retained TI/command count and reset encryption count,
+owned backup/value/cyclic-record commit/abort, and BA outbound additional frames.
+
+Owned TMAC tests cover fixed expected and acquired hidden-session counters,
+unsigned sixteen-bit limits, actual-count wrap refusal, counters 1/7/FFFF, real UID
+proof, frozen keys/UIDs, reader commitment and deferred previous-ID release.
+Correct session MACs with wrong receipt MAC, actual/session counts or final data
+are refused. Deferred IDs remain unavailable before commit and after any failed
+receipt, read-back or ownership release. Returned ID copies do not share storage.
+Tests inject every native exchange boundary and protected response bit, plus
+CSPRNG/provider failure before authentication part two. The AES TMAC entry refuses
+LRP before acquisition; both allowed profiles remain separately exercised.
+
+Reader inspection adds protected real UID under EV2 AES/LRP and stored LRP TMAC
+under Plain/MAC/Full modes, with exact metadata and release checks. It does not
+mutate or invent static transaction-key proof; Plain requires explicit minimum.
+The stored session count is not used to guess the next hidden counter.
+
+The complete FPC/native regression runner, **21 source checkers**, fixture
+reproducibility and distribution checks pass. Distribution remains **62 projects,
+2 groups, 48 DFM forms**, no findings; **59 registered components**, **60 inactive
+streaming cases**. Existing security enum ordinals and interface layouts/IIDs are
+preserved; source encoding/CRLF is retained and no demos changed. Existing unrelated
+compiler notes/warnings remain unsuppressed. LRP provisioning, originality and
+combined/partial/unaligned transaction layouts remain separate profiles.
+
+After the final AES/LRP entry guard, an additional focused build of the latest
+sources passed **333 assertions**, covering the guard, allowed AES TMAC, known and
+acquired-counter LRP TMAC, and both UID/stored-record inspection paths. No new
+compiler hints/warnings were introduced in the changed units/tests.

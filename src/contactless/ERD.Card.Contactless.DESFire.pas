@@ -15,7 +15,8 @@ uses
   ERD.Card.Transport, ERD.Card.Crypto, ERD.Card.Contactless,
   ERD.Card.Contactless.DESFire.EV2, ERD.Card.Contactless.DESFire.EV1,
   ERD.Card.Crypto.DES, ERD.Card.Contactless.DESFire.DES,
-  ERD.Card.Contactless.Raw, ERD.Card.Contactless.DESFire.Extensions;
+  ERD.Card.Contactless.Raw, ERD.Card.Contactless.DESFire.Extensions,
+  ERD.Card.Contactless.DESFire.LRP;
 
 const
   /// <summary>Hard bound for an individual acquired/plain DESFire transfer; wire fields remain 24-bit.</summary>
@@ -54,7 +55,9 @@ type
     /// <summary>Legacy Authenticate 0A with an explicit eight-byte DES key; reset-IV CBC-MAC/CRC16.</summary>
     dfsD40Des,
     /// <summary>Legacy Authenticate 0A with an explicit sixteen-byte 2K3DES key; no ISO messaging.</summary>
-    dfsD40TwoKey3Des);
+    dfsD40TwoKey3Des,
+    /// <summary>Explicit application AuthenticateLRPFirst/NonFirst with native LRP Plain/MAC/Full messaging; no AES fallback.</summary>
+    dfsLrp);
   /// <summary>Explicit native application key-type bits, independent of the PICC authentication dialect.</summary>
   /// <remarks>Creation initializes card-default credentials. This selects storage type only and never supplies or changes keys.</remarks>
   TDesfireApplicationKeyType = (
@@ -603,6 +606,20 @@ type
       const AExpected, AData: TBytes);
   end;
 
+  /// <summary>Owned LRP TMAC profile with deferred ReaderID proof when the internal session counter is acquired at commit.</summary>
+  /// <remarks>Existing transaction interface IIDs/layouts remain unchanged. The owned TMAC key is cleared on completion.</remarks>
+  IDesfireLrpTransactionMacSession = interface(IDesfireTransactionMacDataSession)
+    ['{2698F859-D4CF-4A96-9CD2-C99546E14D7A}']
+    /// <summary>Commits ReaderID under the verified LRP session and retains EncTMRI for decryption after offline receipt proof.</summary>
+    /// <param name="AReaderId">Exactly sixteen supplied bytes, frozen before dispatch.</param>
+    /// <remarks>Only once; works with unknown or explicitly expected hidden-session counter. No unverified previous ID is returned.</remarks>
+    procedure CommitReaderIdDeferred(const AReaderId: TBytes);
+    /// <summary>Returns the previous ReaderID only after receipt, all journal proofs and ownership release succeeded.</summary>
+    /// <returns>Owned sixteen-byte personal-data buffer; caller clears its copy.</returns>
+    /// <exception cref="EDesfireError">No deferred commitment, unsuccessful commit or wrong calling thread.</exception>
+    function ReadVerifiedPreviousReaderId: TBytes;
+  end;
+
   /// <summary>Pure strict codecs for wrapped ordinary DESFire native commands and settings.</summary>
   TDesfireCodec = class
   public
@@ -664,6 +681,7 @@ type
     FProvider: ICardAesProvider;
     FTransaction: ICardTransaction;
     FKey, FRekey, FSessionIv: TBytes;
+    FLrpMaster, FLrpEncryptionCounter: TBytes;
     FRekeyNumber, FSessionKeyNumber: Byte;
     FReauthenticated: Boolean;
     FKeyNumber: Byte;
@@ -697,6 +715,8 @@ type
     procedure ValidateCredentials;
     procedure Authenticate(const AReauthenticate: Boolean = False);
     procedure AuthenticateDes;
+    procedure AuthenticateLrp(const AReauthenticate: Boolean);
+    function IsModern: Boolean;
     function DesProvider: ICardDesProvider;
     function IsDes: Boolean;
     function IsLegacyDes: Boolean;
@@ -785,11 +805,21 @@ type
     /// <param name="AAid">Explicit 24-bit context; zero selects PICC.</param>
     /// <returns>Retained exclusive management session; callers must Close.</returns>
     function OpenExtendedManagementSession(const AAid: Cardinal): IDesfireExtendedManagement;
+    /// <summary>Reads the authenticated real seven-byte UID through protected GetCardUID in EV2 AES or LRP.</summary>
+    /// <param name="AAid">Exact nonzero application identifier; supplied key/profile must permit native UID access.</param>
+    /// <returns>Owned seven-byte real UID after response verification and successful exclusive-session release.</returns>
+    function ReadCardUid(const AAid: Cardinal): TBytes;
+    /// <summary>Reads an existing LRP-profile stored TMAC record without requiring its static transaction key.</summary>
+    /// <param name="AAid">Nonzero native application identifier; Security must be dfsLrp.</param>
+    /// <param name="AFile">Exact existing type-five TMAC file number.</param>
+    /// <returns>Owned counter/tag; SessionProtected follows acquired file mode, KeyVerified remains false.</returns>
+    /// <remarks>Plain file data requires explicit Plain minimum. The stored session subpart does not predict the next hidden-session counter.</remarks>
+    function ReadLrpTransactionMacRecord(const AAid: Cardinal; const AFile: Byte): TDesfireTmacRecord;
     /// <summary>Opens an explicit EV2 AES management session for ISO/multi-access/TMAC file APIs.</summary>
     /// <param name="AAid">Exact PICC zero or native application AID.</param>
     /// <returns>Owned optional file-management interface; no transaction ownership is inferred.</returns>
     function OpenFileManagementSession(const AAid: Cardinal): IDesfireFileManagement;
-    /// <summary>Opens an owned fresh EV2 AES transaction with native sixteen-byte cyclic-record updates.</summary>
+    /// <summary>Opens an owned fresh EV2 AES or LRP transaction with native sixteen-byte cyclic-record updates.</summary>
     /// <param name="AAid">Explicit nonzero native application identifier.</param>
     /// <param name="AAcknowledgeFresh">Required assertion that no external transaction is pending.</param>
     /// <returns>Owned optional record-update interface; use explicit Commit or Abort.</returns>
@@ -813,6 +843,18 @@ type
     function OpenTransactionMacSession(const AAid: Cardinal; const ATmacFile: Byte;
       const AUid, ATmacKey: TBytes; const APreviousCounter: Cardinal;
       const AAcknowledgeFresh: Boolean): IDesfireTransactionMacSession;
+    /// <summary>Opens an explicit fresh LRP TMAC owner with trusted commit and expected hidden-session counters.</summary>
+    /// <param name="AAid">Nonzero native application identifier; Security must be dfsLrp.</param>
+    /// <param name="ATmacFile">Exact existing TMAC file number.</param>
+    /// <param name="AUid">Seven trusted real UID bytes, verified by protected GetCardUID.</param>
+    /// <param name="ATmacKey">Sixteen supplied static transaction key bytes, copied before I/O.</param>
+    /// <param name="APreviousActCounter">Trusted last accepted commit counter zero through 65534.</param>
+    /// <param name="AExpectedSessionCounter">Expected resulting hidden-session counter one through 65535, or explicit zero to acquire it from the independently verified receipt.</param>
+    /// <param name="AAcknowledgeFresh">Required assertion that no external transaction is pending.</param>
+    /// <returns>Owned optional LRP TMAC/data interface; verifies expected commit counter, acquired or expected session counter, offline AES TMAC and journaled state.</returns>
+    function OpenLrpTransactionMacSession(const AAid: Cardinal; const ATmacFile: Byte;
+      const AUid, ATmacKey: TBytes; const APreviousActCounter, AExpectedSessionCounter: Word;
+      const AAcknowledgeFresh: Boolean): IDesfireLrpTransactionMacSession;
     /// <summary>Opens a fresh AES TMAC session that also supports immediate standard-data range writes.</summary>
     /// <param name="AAid">Nonzero native application AID.</param>
     /// <param name="ATmacFile">Exact existing AES TMAC file number.</param>
@@ -842,11 +884,11 @@ type
     property AuthenticationKey: TBytes read GetKey write SetKey;
     /// <summary>Explicit application authentication key number 0..13; not automatically guessed.</summary>
     property KeyNumber: Byte read FKeyNumber write SetKeyNumber;
-    /// <summary>Optional owned EV2 NonFirst AES key; empty disables switching. Getter returns an independent copy.</summary>
+    /// <summary>Optional owned EV2 AES or LRP NonFirst key; empty disables switching. Getter returns an independent copy.</summary>
     /// <remarks>Data/value/record reads and standard writes first retrieve settings under AuthenticationKey, then switch
     /// once before checking data access. TI and command counter remain unchanged. ReadFiles uses the initial key.</remarks>
     property ReauthenticationKey: TBytes read GetRekey write SetRekey;
-    /// <summary>Explicit target application key number 0..13 for the optional EV2 NonFirst switch.</summary>
+    /// <summary>Explicit target application key number 0..13 for the optional EV2 AES or LRP NonFirst switch.</summary>
     property ReauthenticationKeyNumber: Byte read FRekeyNumber
       write SetRekeyNumber;
     /// <summary>Explicit public, EV1/EV2 AES, ISO 2K/3K3DES or D40 DES/2K3DES profile; no downgrade/fallback.</summary>
@@ -877,7 +919,7 @@ type
   end;
 
   TDesfireSession = class(TInterfacedObject, IDesfireSession,
-    IDesfireManagement, IDesfireApplicationManagement, IDesfireDesManagement, IDesfireExtendedManagement, IDesfireFileManagement, IDesfireTransactionMacSession, IDesfireIsoKeySetManagement, IDesfireTransactionMacDataSession, IDesfireSdmAccessManagement, IDesfireRecordUpdateSession)
+    IDesfireManagement, IDesfireApplicationManagement, IDesfireDesManagement, IDesfireExtendedManagement, IDesfireFileManagement, IDesfireTransactionMacSession, IDesfireIsoKeySetManagement, IDesfireTransactionMacDataSession, IDesfireSdmAccessManagement, IDesfireRecordUpdateSession, IDesfireLrpTransactionMacSession)
   private
     FEngine: TDesfireCardReader;
     FAid: Cardinal;
@@ -887,12 +929,14 @@ type
     FThread: NativeUInt;
     FJournal: array of TDesfireJournalEntry;
     FTmacFile: Integer;
-    FTmacPreviousCounter: Cardinal;
+    FTmacPreviousCounter, FTmacExpectedCounter: Cardinal;
     FTmacKey, FTmacUid: TBytes;
     FTmacSettings: TDesfireTmacSettings;
-    FReaderIdCommitted: Boolean;
+    FReaderIdCommitted, FReaderIdDeferred: Boolean;
+    FDeferredReaderCipher, FVerifiedPreviousReaderId: TBytes;
     FMutations: Integer;
     function CommitInternal(const ATmac: Boolean): TDesfireTmacRecord;
+    function CommitReaderIdInternal(const AReaderId: TBytes; const ADeferred: Boolean): TBytes;
     function Enter: Integer;
     function Poison(const ABefore: Integer): Boolean;
     procedure RequireOwner;
@@ -930,7 +974,7 @@ type
     constructor Create(const AReader: TDesfireCardReader; const AAid: Cardinal;
       const AAccess: TDesfireSessionAccess; const ATmacFile: Integer = -1;
       const ATmacUid: TBytes = nil; const ATmacKey: TBytes = nil;
-      const APreviousCounter: Cardinal = 0);
+      const APreviousCounter: Cardinal = 0; const AExpectedSessionCounter: Word = 0);
     destructor Destroy; override;
     function ReadApplicationIds: TDesfireApplicationIds;
     function ReadApplicationSettings: TDesfireApplicationSettings;
@@ -1006,6 +1050,8 @@ type
     procedure CreateIsoApplicationWithKeySetsVerified(const AAid: Cardinal;
       const APolicy, AKeyCount, ASetCount, ASetVersion, ARollKey: Byte;
       const AIsoFid: Word; const ADfName: TBytes);
+    procedure CommitReaderIdDeferred(const AReaderId: TBytes);
+    function ReadVerifiedPreviousReaderId: TBytes;
     procedure StageCyclicRecordUpdate(const AFile: Byte; const ARecord: Integer;
       const AExpected, AData: TBytes);
     function ReadSdmAccessSettings(const AFile: Byte): TDesfireSdmAccessSettings;
@@ -1200,6 +1246,8 @@ begin
   TCardCrypto.Clear(FKey);
   TCardCrypto.Clear(FRekey);
   TDesfireEv2Codec.ClearKeys(FKeys);
+  TCardCrypto.Clear(FLrpMaster);
+  TCardCrypto.Clear(FLrpEncryptionCounter);
   TCardCrypto.Clear(FTi);
   TCardCrypto.Clear(FSessionIv);
   inherited Destroy;
@@ -1278,7 +1326,7 @@ begin
     if IsDes then
       DesProvider;
   end;
-  if (Length(FRekey) > 0) and (FSecurity <> dfsEv2Aes) then
+  if (Length(FRekey) > 0) and not IsModern then
     InvalidDesfire;
 end;
 
@@ -1493,6 +1541,8 @@ begin
     if not TCardCrypto.EqualSecret(Rotated, Received) then
       InvalidDesfire;
     TDesfireEv2Codec.ClearKeys(FKeys);
+    TCardCrypto.Clear(FLrpMaster);
+    TCardCrypto.Clear(FLrpEncryptionCounter);
     FKeys.Encryption := TDesfireDesCodec.DeriveKey(A, B, Length(K));
     TCardCrypto.Clear(FSessionIv);
     SetLength(FSessionIv, 8);
@@ -1513,6 +1563,80 @@ begin
   end;
 end;
 
+function TDesfireCardReader.IsModern: Boolean;
+begin
+  Result := FSecurity in [dfsEv2Aes, dfsLrp];
+end;
+
+procedure TDesfireCardReader.AuthenticateLrp(const AReauthenticate: Boolean);
+var
+  Key, Header, Cap, Challenge, RndA, RndB, Master, Reply, Verified, Counter: TBytes;
+  Number, Status, Instruction: Byte;
+begin
+  if (FSecurity <> dfsLrp) or (AReauthenticate and (not FAuthenticated or
+    (Length(FRekey) <> 16) or FReauthenticated)) then InvalidDesfire;
+  Key := CopyBytes(FKey);
+  Number := FKeyNumber;
+  if AReauthenticate then
+  begin
+    TCardCrypto.Clear(Key);
+    Key := CopyBytes(FRekey);
+    Number := FRekeyNumber;
+  end;
+  FAuthenticated := False;
+  try
+    Instruction := $71;
+    Cap := HexToBytes('020000000000');
+    if AReauthenticate then
+    begin
+      Instruction := $77;
+      SetLength(Header, 1);
+      Header[0] := Number;
+    end
+    else Header := TDesfireLrpCodec.FirstCommand(Number, Cap);
+    Reply := Frame(Instruction, Header, Status, False);
+    if Status <> $AF then InvalidDesfire;
+    if AReauthenticate then
+    begin
+      if Length(Reply) <> 16 then InvalidDesfire;
+      RndB := CopyBytes(Reply);
+    end
+    else RndB := TDesfireLrpCodec.FirstChallenge(Reply);
+    RndA := FProvider.RandomBytes(16);
+    if Length(RndA) <> 16 then InvalidDesfire;
+    Master := TDesfireLrpCodec.DeriveSessionKey(FProvider, Key, RndA, RndB);
+    Challenge := TDesfireLrpCodec.ReaderResponse(FProvider, Master, RndA, RndB);
+    TCardCrypto.Clear(Reply);
+    Reply := Frame($AF, Challenge, Status, False);
+    if Status <> 0 then InvalidDesfire;
+    SetLength(Counter, 4);
+    if AReauthenticate then
+      TDesfireLrpCodec.VerifyNonFirstResponse(FProvider, Master, RndA, RndB, Reply)
+    else
+    begin
+      Verified := TDesfireLrpCodec.VerifyFirstResponse(FProvider, Master, RndA, RndB, Reply, Cap);
+      TCardCrypto.Clear(FTi);
+      FTi := Copy(Verified, 0, 4);
+      FCounter := 0;
+      Counter[3] := 1;
+    end;
+    TCardCrypto.Clear(FLrpMaster);
+    FLrpMaster := Master;
+    Master := nil;
+    TCardCrypto.Clear(FLrpEncryptionCounter);
+    FLrpEncryptionCounter := Counter;
+    Counter := nil;
+    FSessionKeyNumber := Number;
+    FReauthenticated := AReauthenticate;
+    FAuthenticated := True;
+  finally
+    TCardCrypto.Clear(Key); TCardCrypto.Clear(Header); TCardCrypto.Clear(Cap);
+    TCardCrypto.Clear(Challenge); TCardCrypto.Clear(RndA); TCardCrypto.Clear(RndB);
+    TCardCrypto.Clear(Master); TCardCrypto.Clear(Reply); TCardCrypto.Clear(Verified);
+    TCardCrypto.Clear(Counter);
+  end;
+end;
+
 procedure TDesfireCardReader.Authenticate(const AReauthenticate: Boolean);
 var
   Key, Initial, Header, Cipher, RndA, RndB, Plain, Challenge, Rotated,
@@ -1520,6 +1644,11 @@ var
   Status, Instruction, Number: Byte;
   I, Expected, Offset: Integer;
 begin
+  if FSecurity = dfsLrp then
+  begin
+    AuthenticateLrp(AReauthenticate);
+    Exit;
+  end;
   if IsDes then
   begin
     if AReauthenticate then
@@ -1610,6 +1739,8 @@ begin
     if not TCardCrypto.EqualSecret(Rotated, Received) then
       InvalidDesfire;
     TDesfireEv2Codec.ClearKeys(FKeys);
+    TCardCrypto.Clear(FLrpMaster);
+    TCardCrypto.Clear(FLrpEncryptionCounter);
     if FSecurity = dfsEv1Aes then
     begin
       FKeys.Encryption := TDesfireEv1Codec.DeriveKey(RndA, RndB);
@@ -1651,7 +1782,8 @@ var
   Data, Selected: TBytes;
   Owns: Boolean;
 begin
-  if FBusy or (FTransport = nil) or (AAid > $FFFFFF) then
+  if FBusy or (FTransport = nil) or (AAid > $FFFFFF) or
+    (AAuthenticate and (FSecurity = dfsLrp) and (AAid = 0)) then
     InvalidDesfire;
   if AAuthenticate then
     ValidateCredentials;
@@ -1682,6 +1814,8 @@ begin
         except
         end;
       TDesfireEv2Codec.ClearKeys(FKeys);
+      TCardCrypto.Clear(FLrpMaster);
+      TCardCrypto.Clear(FLrpEncryptionCounter);
       TCardCrypto.Clear(FTi);
       TCardCrypto.Clear(FSessionIv);
       FActiveTransport := nil;
@@ -1708,6 +1842,8 @@ begin
       end;
   finally
     TDesfireEv2Codec.ClearKeys(FKeys);
+    TCardCrypto.Clear(FLrpMaster);
+    TCardCrypto.Clear(FLrpEncryptionCounter);
     TCardCrypto.Clear(FTi);
     TCardCrypto.Clear(FTmacInput);
     FTmacCapture := False;
@@ -1786,8 +1922,12 @@ begin
     end
     else if FAuthenticated then
     begin
-      Packet := TDesfireEv2Codec.EncodeCommand(FProvider, FKeys, FTi, FCounter,
-        AInstruction, AHeader, AData, AMode);
+      if FSecurity = dfsLrp then
+        Packet := TDesfireLrpCodec.EncodeCommand(FProvider, FLrpMaster, FTi, FCounter,
+          AInstruction, AHeader, AData, AMode, FLrpEncryptionCounter)
+      else
+        Packet := TDesfireEv2Codec.EncodeCommand(FProvider, FKeys, FTi, FCounter,
+          AInstruction, AHeader, AData, AMode);
       Limit := AExpected;
       if AMode = dfcFull then
       begin
@@ -1798,8 +1938,12 @@ begin
         Inc(Limit, 8);
       Wire := Exchange(AInstruction, Packet, Limit, AWrite);
       Inc(FCounter);
-      Result := TDesfireEv2Codec.DecodeResponse(FProvider, FKeys, FTi, FCounter,
-        Wire, AMode, AExpected);
+      if FSecurity = dfsLrp then
+        Result := TDesfireLrpCodec.DecodeResponse(FProvider, FLrpMaster, FTi, FCounter,
+          Wire, AMode, AExpected, FLrpEncryptionCounter)
+      else
+        Result := TDesfireEv2Codec.DecodeResponse(FProvider, FKeys, FTi, FCounter,
+          Wire, AMode, AExpected);
     end
     else
     begin
@@ -1844,6 +1988,11 @@ begin
         Packet := TDesfireDesCodec.DecodeResponse(DesProvider, FKeys.Encryption,
           FSessionIv, Wire, dfcMac, Length(Wire) - 8, False);
       end;
+      Result := TDesfireCodec.FileSettings(AFile, Packet);
+    end
+    else if FAuthenticated and (FSecurity = dfsLrp) then
+    begin
+      Packet := Metadata($F5, H, 17, False);
       Result := TDesfireCodec.FileSettings(AFile, Packet);
     end
     else if FAuthenticated and (FSecurity = dfsEv1Aes) then
@@ -1933,7 +2082,7 @@ begin
     InvalidDesfire;
   CheckAccess(ASettings, False);
   Cmd := $BD;
-  if FAuthenticated and (FSecurity = dfsEv2Aes) then
+  if FAuthenticated and IsModern then
     Cmd := $AD;
   Result := Send(Cmd, TDesfireCodec.RangeHeader(ASettings.FileNumber, AOffset,
     ACount), nil, ASettings.Communication, ACount, False);
@@ -2099,7 +2248,7 @@ begin
       (ACount > FMaxTransfer div S.RecordBytes) then
       InvalidDesfire;
     Cmd := $BB;
-    if FAuthenticated and (FSecurity = dfsEv2Aes) then
+    if FAuthenticated and IsModern then
       Cmd := $AB;
     Data := Send(Cmd, TDesfireCodec.RangeHeader(AFile, AOffset, ACount), nil,
       S.Communication, ACount * S.RecordBytes, False);
@@ -2142,7 +2291,7 @@ begin
         begin
           Header := TDesfireCodec.RangeHeader(AFile, AOffset, Length(Data));
           Cmd := $3D;
-          if FAuthenticated and (FSecurity = dfsEv2Aes) then
+          if FAuthenticated and IsModern then
             Cmd := $8D;
           if FAuthenticated then
             Reply := Send(Cmd, Header, Data, S.Communication, 0, True)
@@ -2315,6 +2464,16 @@ begin
           FSessionIv, Wire, dfcMac, Length(Wire) - 8, False);
       end;
     end
+    else if FAuthenticated and (FSecurity = dfsLrp) then
+    begin
+      Packet := TDesfireLrpCodec.EncodeCommand(FProvider, FLrpMaster, FTi, FCounter,
+        AInstruction, AHeader, nil, dfcMac, FLrpEncryptionCounter);
+      Wire := Exchange(AInstruction, Packet, AMaxBytes + 8, AMutation);
+      Inc(FCounter);
+      if Length(Wire) < 8 then InvalidDesfire;
+      Result := TDesfireLrpCodec.DecodeResponse(FProvider, FLrpMaster, FTi, FCounter,
+        Wire, dfcMac, Length(Wire) - 8, FLrpEncryptionCounter);
+    end
     else if FAuthenticated and (FSecurity = dfsEv2Aes) then
     begin
       Packet := TDesfireEv2Codec.EncodeCommand(FProvider, FKeys, FTi, FCounter,
@@ -2388,7 +2547,7 @@ end;
 
 constructor TDesfireSession.Create(const AReader: TDesfireCardReader;
   const AAid: Cardinal; const AAccess: TDesfireSessionAccess; const ATmacFile: Integer;
-  const ATmacUid, ATmacKey: TBytes; const APreviousCounter: Cardinal);
+  const ATmacUid, ATmacKey: TBytes; const APreviousCounter: Cardinal; const AExpectedSessionCounter: Word);
 var
   Ids, Reply: TBytes;
   I: Integer;
@@ -2406,11 +2565,21 @@ begin
   if (ATmacFile < -1) or (ATmacFile > 31) then InvalidDesfire;
   if ATmacFile >= 0 then
   begin
-    if (AAccess <> dsaFreshTransaction) or (AAid = 0) or (AReader.FSecurity <> dfsEv2Aes) or
+    if (AAccess <> dsaFreshTransaction) or (AAid = 0) or not (AReader.FSecurity in [dfsEv2Aes, dfsLrp]) or
       (Length(ATmacUid) <> 7) or (Length(ATmacKey) <> 16) or (APreviousCounter = High(Cardinal)) then InvalidDesfire;
     FTmacUid := CopyBytes(ATmacUid);
     FTmacKey := CopyBytes(ATmacKey);
     FTmacPreviousCounter := APreviousCounter;
+    if AReader.FSecurity = dfsLrp then
+    begin
+      if APreviousCounter >= $FFFF then InvalidDesfire;
+      FTmacExpectedCounter := (Cardinal(AExpectedSessionCounter) shl 16) or (APreviousCounter + 1);
+    end
+    else
+    begin
+      if AExpectedSessionCounter <> 0 then InvalidDesfire;
+      FTmacExpectedCounter := APreviousCounter + 1;
+    end;
   end;
   FEngine := TDesfireCardReader.Create(nil);
   FThread := NativeUInt(TThread.CurrentThread.ThreadID);
@@ -2494,6 +2663,7 @@ begin
     FEngine.Free;
   end;
   ClearJournal;
+  TCardCrypto.Clear(FVerifiedPreviousReaderId);
   inherited Destroy;
 end;
 
@@ -2506,6 +2676,7 @@ begin
   FJournal := nil;
   TCardCrypto.Clear(FTmacKey);
   TCardCrypto.Clear(FTmacUid);
+  TCardCrypto.Clear(FDeferredReaderCipher);
 end;
 
 function TDesfireSession.Enter: Integer;
@@ -2651,7 +2822,7 @@ begin
     InvalidDesfire;
   FEngine.CheckAccess(S, False);
   Cmd := $BB;
-  if FEngine.FSecurity = dfsEv2Aes then
+  if FEngine.IsModern then
     Cmd := $AB;
   Result := FEngine.Send(Cmd, TDesfireCodec.RangeHeader(S.FileNumber, AOffset,
     ACount), nil, S.Communication, ACount * S.RecordBytes, False);
@@ -3027,7 +3198,7 @@ begin
         Data) then
       begin
         Cmd := $3D;
-        if FEngine.FSecurity = dfsEv2Aes then
+        if FEngine.IsModern then
           Cmd := $8D;
         if FEngine.FAuthenticated then
           Reply := FEngine.Send(Cmd, TDesfireCodec.RangeHeader(AFile, AOffset,
@@ -3139,7 +3310,7 @@ begin
   try
     try
       RequireOwner;
-      if (FEngine.FSecurity <> dfsEv2Aes) or (FMutations >= 256) or (AFile > 31) or
+      if not FEngine.IsModern or (FMutations >= 256) or (AFile > 31) or
         (ARecord < 0) or (Length(AExpected) <> 16) or (Length(AData) <> 16) then InvalidDesfire;
       Expected := CopyBytes(AExpected);
       Data := CopyBytes(AData);
@@ -3187,7 +3358,7 @@ function TDesfireCardReader.OpenRecordUpdateSession(const AAid: Cardinal;
 var
   Session: IDesfireSession;
 begin
-  if (FSecurity <> dfsEv2Aes) or not AAcknowledgeFresh or (AAid = 0) then InvalidDesfire;
+  if not IsModern or not AAcknowledgeFresh or (AAid = 0) then InvalidDesfire;
   Session := OpenSession(AAid, dsaFreshTransaction);
   Result := Session as IDesfireRecordUpdateSession;
 end;
@@ -3228,7 +3399,7 @@ begin
         InvalidDesfire;
       Expected := Joined(Data, Copy(FJournal[Index].Expected, 0, OldBytes));
       Cmd := $3B;
-      if FEngine.FSecurity = dfsEv2Aes then
+      if FEngine.IsModern then
         Cmd := $8B;
       if FEngine.FAuthenticated then
         Reply := FEngine.Send(Cmd, TDesfireCodec.RangeHeader(AFile, 0,
@@ -3317,7 +3488,7 @@ end;
 function TDesfireSession.CommitInternal(const ATmac: Boolean): TDesfireTmacRecord;
 var
   Before: Integer;
-  Reply, Header, Actual, Input, Mac: TBytes;
+  Reply, Header, Actual, Input, Mac, PreviousReader: TBytes;
   TmacNow: TDesfireTmacSettings;
   ResponseLength: Integer;
   I, Count: Integer;
@@ -3331,7 +3502,7 @@ begin
       if not GetPendingChanges then
         InvalidDesfire;
       Header := nil;
-      if FEngine.FSecurity = dfsEv2Aes then
+      if FEngine.IsModern then
         Header := OneByte(0);
       ResponseLength := 0;
       if ATmac then
@@ -3352,10 +3523,23 @@ begin
       begin
         Result := TDesfireExtensionCodec.TmacRecord(Reply);
         Result.SessionProtected := True;
-        if Result.Counter <> FTmacPreviousCounter + 1 then InvalidDesfire;
-        Mac := TDesfireTmacCrypto.Mac(FEngine.FProvider, FTmacKey, FTmacUid, Result.Counter, Input);
+        if (FEngine.FSecurity = dfsLrp) and (FTmacExpectedCounter shr 16 = 0) then
+        begin
+          if ((Result.Counter and $FFFF) <> (FTmacExpectedCounter and $FFFF)) or
+            (Result.Counter shr 16 = 0) then InvalidDesfire;
+        end
+        else if Result.Counter <> FTmacExpectedCounter then InvalidDesfire;
+        if FEngine.FSecurity = dfsLrp then
+          Mac := TDesfireLrpCodec.TransactionMac(FEngine.FProvider, FTmacKey, FTmacUid,
+            Word(Result.Counter and $FFFF), Word(Result.Counter shr 16), Input)
+        else
+          Mac := TDesfireTmacCrypto.Mac(FEngine.FProvider, FTmacKey, FTmacUid, Result.Counter, Input);
         if not TCardCrypto.EqualSecret(Mac, Result.Mac) then InvalidDesfire;
         Result.KeyVerified := True;
+        if FReaderIdDeferred then
+          PreviousReader := TDesfireLrpCodec.DecryptTransactionReaderId(FEngine.FProvider,
+            FTmacKey, FTmacUid, Word(Result.Counter and $FFFF), Word(Result.Counter shr 16),
+            FDeferredReaderCipher);
       end
       else if Length(Reply) <> 0 then InvalidDesfire;
       FOutcome := dsoCommitted;
@@ -3388,6 +3572,8 @@ begin
       end;
       FEngine.Finish(True);
       FVerified := True;
+      FVerifiedPreviousReaderId := PreviousReader;
+      PreviousReader := nil;
       ClearJournal;
     except
       on E: Exception do
@@ -3402,6 +3588,7 @@ begin
     TCardCrypto.Clear(Input);
     TCardCrypto.Clear(Mac);
     TCardCrypto.Clear(Reply);
+    TCardCrypto.Clear(PreviousReader);
     FInCall := False;
   end;
 end;
@@ -3649,7 +3836,7 @@ end;
 procedure TDesfireSession.RequireNativeManagement;
 begin
   if (FAccess <> dsaManage) or not FEngine.FAuthenticated or
-    (Length(FEngine.FRekey) > 0) then
+    (FEngine.FSecurity = dfsLrp) or (Length(FEngine.FRekey) > 0) then
     InvalidDesfire;
 end;
 
@@ -4657,7 +4844,10 @@ end;
 function TDesfireSession.TmacMetadata(const AFile: Byte): TDesfireTmacSettings;
 begin
   if (FAid = 0) or (AFile > 31) then InvalidDesfire;
-  Result := TDesfireExtensionCodec.TmacSettings(FEngine.Metadata($F5, OneByte(AFile), 10, False));
+  if FEngine.FSecurity = dfsLrp then
+    Result := TDesfireExtensionCodec.LrpTmacSettings(FEngine.Metadata($F5, OneByte(AFile), 8, False))
+  else
+    Result := TDesfireExtensionCodec.TmacSettings(FEngine.Metadata($F5, OneByte(AFile), 10, False));
 end;
 
 function TDesfireSession.ReadIsoApplications: TDesfireIsoApplications;
@@ -5105,7 +5295,11 @@ begin
   Before := Enter;
   try
     try
-      RequireFileManagement;
+      if FEngine.FSecurity = dfsLrp then
+      begin
+        if (FAccess <> dsaReadOnly) or not FEngine.FAuthenticated then InvalidDesfire;
+      end
+      else RequireFileManagement;
       S := TmacMetadata(AFile);
       if not Granted((S.AccessRights shr 12) and $F) then InvalidDesfire;
       Mode := dfcPlain;
@@ -5134,11 +5328,46 @@ begin
 end;
 
 
+function TDesfireCardReader.ReadCardUid(const AAid: Cardinal): TBytes;
+var
+  Data: TBytes;
+  Good: Boolean;
+begin
+  Result := nil;
+  if not IsModern or (AAid = 0) or (FMaxTransfer < 7) then InvalidDesfire;
+  Start(AAid, True);
+  Good := False;
+  try
+    Data := Send($51, nil, nil, dfcFull, 7, False);
+    Good := True;
+  finally
+    try Finish(Good); except TCardCrypto.Clear(Data); raise; end;
+  end;
+  Result := Data;
+end;
+
+function TDesfireCardReader.ReadLrpTransactionMacRecord(const AAid: Cardinal; const AFile: Byte): TDesfireTmacRecord;
+var
+  Session: IDesfireSession;
+  Inspection: IDesfireFileManagement;
+  RecordData: TDesfireTmacRecord;
+begin
+  if (FSecurity <> dfsLrp) or (AAid = 0) or (AFile > 31) then InvalidDesfire;
+  Session := OpenSession(AAid, dsaReadOnly);
+  Inspection := Session as IDesfireFileManagement;
+  try
+    RecordData := Inspection.ReadTransactionMacRecord(AFile);
+    Session.Close;
+    Result := RecordData;
+    RecordData.Mac := nil;
+  finally TCardCrypto.Clear(RecordData.Mac); end;
+end;
+
 function TDesfireCardReader.OpenTransactionMacSession(const AAid: Cardinal; const ATmacFile: Byte;
   const AUid, ATmacKey: TBytes; const APreviousCounter: Cardinal;
   const AAcknowledgeFresh: Boolean): IDesfireTransactionMacSession;
 begin
-  if FBusy or not AAcknowledgeFresh then InvalidDesfire;
+  if FBusy or (FSecurity <> dfsEv2Aes) or not AAcknowledgeFresh then InvalidDesfire;
   Result := TDesfireSession.Create(Self, AAid, dsaFreshTransaction, ATmacFile,
     AUid, ATmacKey, APreviousCounter);
 end;
@@ -5160,6 +5389,15 @@ begin
   Session := OpenTransactionMacSession(AAid, ATmacFile, AUid, ATmacKey,
     APreviousCounter, AAcknowledgeFresh);
   Result := Session as IDesfireTransactionMacDataSession;
+end;
+
+function TDesfireCardReader.OpenLrpTransactionMacSession(const AAid: Cardinal; const ATmacFile: Byte;
+  const AUid, ATmacKey: TBytes; const APreviousActCounter, AExpectedSessionCounter: Word;
+  const AAcknowledgeFresh: Boolean): IDesfireLrpTransactionMacSession;
+begin
+  if FBusy or (FSecurity <> dfsLrp) or not AAcknowledgeFresh then InvalidDesfire;
+  Result := TDesfireSession.Create(Self, AAid, dsaFreshTransaction, ATmacFile,
+    AUid, ATmacKey, APreviousActCounter, AExpectedSessionCounter);
 end;
 
 procedure TDesfireCardReader.ReserveTmac(const ACommand: Byte;
@@ -5209,25 +5447,57 @@ begin
 end;
 
 function TDesfireSession.CommitReaderId(const AReaderId: TBytes): TBytes;
+begin
+  Result := CommitReaderIdInternal(AReaderId, False);
+end;
+
+procedure TDesfireSession.CommitReaderIdDeferred(const AReaderId: TBytes);
+var Unused: TBytes;
+begin
+  Unused := CommitReaderIdInternal(AReaderId, True);
+  TCardCrypto.Clear(Unused);
+end;
+
+function TDesfireSession.ReadVerifiedPreviousReaderId: TBytes;
+begin
+  if not FVerified or (FOutcome <> dsoCommitted) or not FReaderIdDeferred or
+    (Length(FVerifiedPreviousReaderId) <> 16) or
+    (NativeUInt(TThread.CurrentThread.ThreadID) <> FThread) then InvalidDesfire;
+  Result := CopyBytes(FVerifiedPreviousReaderId);
+end;
+
+function TDesfireSession.CommitReaderIdInternal(const AReaderId: TBytes; const ADeferred: Boolean): TBytes;
 var
   Before: Integer;
   Id, Cipher: TBytes;
   Key: Byte;
 begin
+  Result := nil;
   Before := Enter;
   try
     Id := CopyBytes(AReaderId);
     try
       RequireOwner;
       if (FTmacFile < 0) or (Length(Id) <> 16) or FReaderIdCommitted then InvalidDesfire;
+      if ADeferred and (FEngine.FSecurity <> dfsLrp) then InvalidDesfire;
+      if not ADeferred and (FEngine.FSecurity = dfsLrp) and (FTmacExpectedCounter shr 16 = 0) then InvalidDesfire;
       Key := (FTmacSettings.AccessRights shr 4) and $F;
       if not Granted(Key) then InvalidDesfire;
       FEngine.ReserveTmac($C8, Id, 16);
       Cipher := FEngine.Metadata($C8, Id, 16, True);
       if Length(Cipher) <> 16 then InvalidDesfire;
       FEngine.TrackTmac($C8, Id, Cipher);
-      Result := TDesfireTmacCrypto.DecryptReaderId(FEngine.FProvider, FTmacKey, FTmacUid,
-        FTmacPreviousCounter + 1, Cipher);
+      if ADeferred then
+      begin
+        FDeferredReaderCipher := CopyBytes(Cipher);
+        FReaderIdDeferred := True;
+      end
+      else if FEngine.FSecurity = dfsLrp then
+        Result := TDesfireLrpCodec.DecryptTransactionReaderId(FEngine.FProvider, FTmacKey, FTmacUid,
+          Word(FTmacExpectedCounter and $FFFF), Word(FTmacExpectedCounter shr 16), Cipher)
+      else
+        Result := TDesfireTmacCrypto.DecryptReaderId(FEngine.FProvider, FTmacKey, FTmacUid,
+          FTmacExpectedCounter, Cipher);
       FReaderIdCommitted := True;
       FPending := True;
     except

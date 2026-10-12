@@ -25,11 +25,12 @@ hardware. Assign both a connected `ICardTransport` and an explicitly matching
 | Public Type 4 NDEF files | `TType4NdefCardReader`: explicit mapping 1.0/2.0 ISO 7816 applications, CC/file descriptors, MLe/MLc-bounded reads and verified NLEN-last updates |
 | Addressed ISO 15693 memory | `TIso15693CardReader`, explicit 8/16-bit geometry, single-block security and guarded writes, explicit native bulk reads, supplied-password SLIX2/original ST25DV user-memory sessions; ACR1552U-M/ACM1552U-Y/Z FF FB adapter |
 | Public Type 5 NDEF memory | `TType5NdefCardReader`: initialized E1/E2 CC/TLV mapping, lock preflight and verified length-last updates |
-| Native DESFire files | `TDesfireCardReader`: discovery, ordinary data/value/record reads and verified standard-data writes; explicit EV1/EV2 AES authentication, Plain/MACed/Full messaging and EV2 NonFirst; retained owned backup/value/record transactions, commit/abort, authenticated directories and ordinary application/file management |
+| Native DESFire files | `TDesfireCardReader`: discovery, ordinary data/value/record reads and verified standard-data writes; explicit EV1/EV2 AES and LRP authentication, Plain/MACed/Full messaging and EV2/LRP NonFirst; retained owned backup/value/record transactions, commit/abort, authenticated directories and ordinary application/file management |
 | Topaz 96/512 and initialized Type 1 NDEF | `TTopazCardReader`, `TType1NdefCardReader`; exact HR/UID, full memory/locks, verified user/NDEF writes via explicit ACR122U/PN532 Jewel/CIU adapter; [scope](TOPAZ_TYPE1.md) |
 | MIFARE Plus SL3 | Native supplied-key AES 2K/4K ordinary-block reads and verified writes, sector key replacement with fresh new-key proof, explicit SL0 personalization/direct-SL3 commit with selected key/data proofs, raw SL1 authentication, SL1→SL2 and SL1/SL2→SL3 transitions, signed value blocks and native Plus X-compatible increment/decrement/restore/transfer workflows, ACR122 ISO14443-4/raw adapters and protected-memory workflows; see [Plus](MIFARE_PLUS.md) |
 | DESFire extended management | EV2 AES key sets, explicit configuration subset, verified SDM settings/crypto, native ISO creation/directories including key sets, multi-access settings/data, combined SDM/right settings and AES TMAC file/transaction/receipt workflows including immediate standard-range writes and sixteen-byte cyclic-record updates; see [extensions](DESFIRE_EXTENDED.md) |
-| Automatic DESFire LRP sessions/combined data layouts and programmable UID families | Separate profiles still pending |
+| LRP retained sessions and TMAC | Explicit LRP First/NonFirst data/owned transaction access, verified split counters, offline AES TMAC and deferred ReaderID proof; see [LRP](DESFIRE_LRP.md) |
+| DESFire combined data layouts/provisioning and programmable UID families | Separate profiles still pending |
 
 The Mini model supplies the original memory layout, not a tested Mini/reader
 compatibility claim. This release has synthetic command tests and no physical reader
@@ -215,7 +216,7 @@ including already formatted public DESFire NDEF files. Native DESFire access is 
 separate [component and EV1/EV2 AES profiles](DESFIRE.md), with maintained crypto backends.
 Further families include other Type 2
 security variants, additional ISO 15693 authentication/provisioning dialects, further programmable UID profiles and native
-Automatic DESFire LRP sessions and combined data/migration layouts. The native [LRP codec](DESFIRE_LRP.md) is available for caller-managed transports. EV2 key sets, configuration/SDM and native ISO/multi-access/AES TMAC are available through the dedicated optional interfaces.
+Combined data/migration layouts and LRP credential/configuration provisioning. Native [LRP sessions, TMAC and codecs](DESFIRE_LRP.md) are implemented. EV2 key sets, configuration/SDM and native ISO/multi-access/AES TMAC are available through the dedicated optional interfaces.
 Basic EV1/EV2 AES and explicit DES/3DES key policy, rotation and ordinary-file access administration are
 implemented; see [DESFire](DESFIRE.md).
 Owned ordinary transactions and basic create/delete management are implemented; see [DESFIRE.md](DESFIRE.md).

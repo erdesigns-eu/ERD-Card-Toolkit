@@ -556,6 +556,8 @@ Record update cannot mix append/clear or a different record index in one file
 transaction. These APIs do not silently extend the ordinary archive format.
 
 The native [LRP codec](DESFIRE_LRP.md) includes published primitive, authentication
-and Plain/MAC/Full framing. It performs no I/O: transport acquisition, native
-chaining and fail-closed retained session integration remain explicit caller work
-until the automatic LRP reader profile is added.
+and Plain/MAC/Full framing. The codec itself performs no I/O. `TDesfireCardReader` now adds explicit LRP
+First/NonFirst retained sessions with native chaining and fail-closed cleanup.
+Owned LRP TMAC verifies split counters, offline receipt and journal content, with
+deferred previous ReaderID available only after complete success. LRP provisioning
+and combined-layout application archives remain separate profiles.

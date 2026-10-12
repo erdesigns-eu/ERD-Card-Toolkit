@@ -64,14 +64,106 @@ counter before transport dispatch; failed dispatch requires invalidation, not a
 counter rollback. Temporary owned key material is cleared. Plain communication
 carries no response MAC; returned Plain bytes do not establish channel authenticity.
 
-## Component integration boundary
+## Automatic reader sessions
 
-`TDesfireCardReader` does not yet select an automatic LRP transport session.
-The new codec is directly usable with a caller-managed `ICardTransport`, but it
-must not be advertised as automatic LRP card-reader, management, TMAC or
-originality support. Those retained-session profiles remain on the protocol plan.
-Existing EV1/EV2 profiles do not negotiate LRP implicitly. The implementation
-uses a maintained AES backend and makes no certified side-channel claim.
+Set `TDesfireCardReader.Security := dfsLrp`, supply an `ICardAesProvider`, exact
+application key/number and `ICardTransport`. The reader acquires/selects the
+nonzero application, runs explicit native LRP First authentication, verifies TI
+and capabilities, and owns both counters through data operations and release.
+No AES fallback or persistent card-mode configuration is performed. The card must
+support the explicitly requested LRP profile. Existing security enum ordinals are
+unchanged; the new value is appended.
+
+The profile supports ordinary standard/backup/value/record reads and verified
+standard writes in Plain/MAC/Full communication. `MinimumCommunication` retains
+its explicit policy; Plain file data requires selecting Plain as the minimum.
+Metadata remains LRP-MAC protected. Native AD/8D/AB/8B/BA commands are selected
+with ordinary owned transaction, journal, commit/abort and read-back semantics.
+`OpenRecordUpdateSession` supports the same sixteen-byte cyclic-record profile
+under LRP, including outbound additional frames.
+
+`ReauthenticationKey` and `ReauthenticationKeyNumber` enable one explicit LRP
+NonFirst transition before data access. It verifies fresh nonce MACs, retains TI
+and command counter, and resets only the encryption counter. Wrong modes,
+capabilities/nonces, provider/CSPRNG failures, counters, statuses, protected data
+or transport/release errors fail the acquired operation. A mutation dispatch
+retains `EContactlessWriteUncertain`; no failed session is reused or retried.
+Temporary session master/counter state is cleared on success, failure and closure.
+Configured component authentication credentials remain caller-controlled, as in
+the existing reader profiles.
+
+`ReadCardUid(Aid)` acquires the protected real seven-byte UID and releases the
+session before returning it; it supports EV2 AES and LRP. This can be used when
+an application's transport identity is a random RF ID rather than the real UID.
+`ReadLrpTransactionMacRecord(Aid, File)` acquires the stored counter/tag under
+unchanged metadata without requiring the static TMAC key or creating a new
+receipt. `SessionProtected` follows the acquired communication mode and
+`KeyVerified` stays false. Plain acquisition requires an explicitly Plain minimum.
+The stored session subpart describes the prior committed receipt, not the current
+hidden counter; backend trust/freshness policy remains explicit.
+
+PICC-level LRP originality authentication and LRP key/configuration/policy
+provisioning are separate profiles. Public unauthenticated GetVersion remains
+available. The automatic profile does not infer a card generation or enable LRP
+permanently on an AES-only card. Low-level codec use with caller-managed transports
+remains supported. AES comes from the maintained backend; no certified side-channel
+claim is made for this implementation.
+
+## Owned LRP TMAC
+
+`OpenLrpTransactionMacSession(Aid, File, Uid, Key, PreviousActCounter,
+ExpectedSessionCounter, True)` returns `IDesfireLrpTransactionMacSession`.
+Select `dfsLrp` first and explicitly attest fresh exclusive transaction state.
+The supplied static transaction key and real UID are copied before I/O; protected
+GetCardUID proves the acquired physical UID before data commands.
+
+LRP TMC consists of two unsigned sixteen-bit fields on the wire:
+`actTMC little-endian || sesTMC little-endian`. `TDesfireTmacRecord.Counter` retains
+those exact four bytes as a cardinal: low sixteen bits are the commit counter,
+high sixteen the internal-session counter. `PreviousActCounter` is the trusted
+last accepted commit count and must be below FFFF. The receipt must contain
+exactly that count plus one and a nonzero session count.
+
+The hidden session counter can increase after abandoned/aborted calculations;
+its previous stored value does not predict its current value. Choose explicitly:
+
+- Supply a nonzero `ExpectedSessionCounter` to require that exact value. The
+  inherited immediate `CommitReaderId` can decrypt with that expected value;
+  static-key proof still completes with the verified receipt.
+- Supply zero to acquire the session counter from the authenticated receipt and
+  verify it independently with the transaction key. Use `CommitReaderIdDeferred`
+  when ReaderID commitment is required. It sends one protected C8 and retains
+  EncTMRI, without releasing an unverified previous ID.
+
+`CommitTransactionMacVerified` checks the expected commit count, acquired or
+expected session count, unchanged TMAC settings, required ReaderID commitment,
+static-key receipt, all journaled file/range contents and ownership release.
+Only complete success returns `SessionProtected` and `KeyVerified` true.
+`ReadVerifiedPreviousReaderId` returns an independent previous-ID copy only after
+that complete success. Receipt/journal/release failure leaves it unavailable.
+Immediate ReaderID decryption with an unknown session count is refused before
+C8 dispatch; no counter is guessed.
+
+The key vector is `00010080 || nextActLE || resultingSesLE || UID7 || label`, with
+label 5A for TMAC and A5 for ReaderID. LRP-CMAC derives the keys, but **ordinary
+AES-CMAC** produces the transaction MAC and **ordinary AES-CBC with zero IV**
+encrypts/decrypts EncTMRI, as specified in section 10.3.2. The live session's LRP
+MAC independently protects C8/C7 responses. No extra session-encryption layer is
+removed from EncTMRI.
+
+Canonical TMI is shared with the existing aligned-record AES TMAC profile and
+includes successful reads, writes and one complete C8 independently of native
+chaining. Backup/value/record operations are staged; standard range writes are
+immediate and survive Abort. TMAC metadata accepts exactly six bytes or eight
+with an explicit unsigned sixteen-bit actTMC limit. A reached supplied prior count
+is refused before data mutation. Card-enforced terminal counter/limit restrictions
+may prevent post-commit read-back; this is reported as uncertain rather than
+returning a verified result.
+
+Owned TMAC key/UID/ciphertext inputs are cleared on completion/abort/failure.
+A successfully verified previous-ID buffer remains in the result owner until it
+is freed; returned copies belong to the caller. These native APIs do not change
+ordinary application archive formats or add automatic LRP provisioning workflows.
 
 ## Validation
 
@@ -82,4 +174,9 @@ LRICB encryption/decryption known answers, and explicitly reject counter overflo
 Independent native transcripts cover first/NonFirst authentication and all three
 communication modes, valid-MAC wrong capability/padding/length, every protected
 response bit, every AES-provider call boundary and unchanged counters on failure.
+Automatic reader tests add exclusive ownership, native command/chaining selection,
+NonFirst TI/command-counter retention and ordinary owned transaction proof.
+LRP TMAC tests add explicit/acquired counter modes, hidden counts 1/7/FFFF,
+ReaderID deferral, valid-session-MAC wrong receipts/counters/postimages, key/UID
+input freezing, every exchange boundary and cleanup/release faults.
 See [VALIDATION.md](VALIDATION.md).

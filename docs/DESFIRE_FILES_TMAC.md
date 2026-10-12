@@ -257,3 +257,15 @@ Protocol references:
 The shared AES framing does not imply DESFire Light supports general application
 creation. No external library code is included or required. See
 [VALIDATION.md](VALIDATION.md) for independent transcripts and failure coverage.
+
+## LRP transport and TMAC profile
+
+Explicit LRP First/NonFirst data and owned transaction sessions now use the same
+reader, ordinary journal, aligned-record TMI and verification contracts. Select
+`dfsLrp` and use `OpenLrpTransactionMacSession` for an existing TMAC file. The
+counter has two sixteen-bit subparts; LRP derives the transaction keys while
+ordinary AES computes the receipt and EncTMRI. Unknown internal-session counters
+are acquired from a verified receipt, with an optional deferred ReaderID result.
+Protected real-UID and stored LRP-TMAC inspection helpers are also available. See [DESFIRE_LRP.md](DESFIRE_LRP.md) for exact input, counter and release rules.
+LRP file/key/configuration provisioning and partial/unaligned record profiles
+remain separate; the AES management interfaces retain their existing profile.

@@ -47,6 +47,36 @@ type
     /// <returns>Owned complete output; invalid padding, overflow or provider errors preserve the supplied counter.</returns>
     class function Crypt(const AProvider: ICardAesProvider; const AKey, AData: TBytes;
       var ACounter: TBytes; const AUpdatedKey: Byte; const AEncrypt, APadding: Boolean): TBytes; static;
+    /// <summary>Derives a native LRP transaction key; the resulting key is used with ordinary AES for receipt/ReaderID operations.</summary>
+    /// <param name="AProvider">Maintained AES backend.</param>
+    /// <param name="AKey">Sixteen supplied static transaction key bytes.</param>
+    /// <param name="AUid">Seven trusted real UID bytes.</param>
+    /// <param name="ANextActCounter">Explicit resulting commit counter one through 65535.</param>
+    /// <param name="ANextSessionCounter">Explicit resulting internal-session counter one through 65535; never inferred after aborts.</param>
+    /// <param name="AEncryption">True selects ReaderID key label A5, false receipt label 5A.</param>
+    /// <returns>Owned sixteen-byte key derived with LRP-CMAC of the exact native counter/UID vector.</returns>
+    class function DeriveTransactionKey(const AProvider: ICardAesProvider; const AKey, AUid: TBytes;
+      const ANextActCounter, ANextSessionCounter: Word; const AEncryption: Boolean): TBytes; static;
+    /// <summary>Computes a native LRP-profile transaction MAC with ordinary AES-CMAC and odd-index truncation.</summary>
+    /// <param name="AProvider">Maintained AES backend.</param>
+    /// <param name="AKey">Sixteen supplied static transaction key bytes.</param>
+    /// <param name="AUid">Seven trusted real UID bytes.</param>
+    /// <param name="ANextActCounter">Explicit resulting commit counter.</param>
+    /// <param name="ANextSessionCounter">Explicit resulting hidden-session counter.</param>
+    /// <param name="AInput">Exact nonempty block-aligned canonical TMI, at most 1048560 bytes.</param>
+    /// <returns>Owned eight-byte offline receipt MAC; LRP is used only in key derivation.</returns>
+    class function TransactionMac(const AProvider: ICardAesProvider; const AKey, AUid: TBytes;
+      const ANextActCounter, ANextSessionCounter: Word; const AInput: TBytes): TBytes; static;
+    /// <summary>Decrypts native LRP-profile EncTMRI with its LRP-derived ordinary AES transaction key.</summary>
+    /// <param name="AProvider">Maintained AES backend.</param>
+    /// <param name="AKey">Sixteen supplied static transaction key bytes.</param>
+    /// <param name="AUid">Seven trusted real UID bytes.</param>
+    /// <param name="ANextActCounter">Explicit resulting commit counter.</param>
+    /// <param name="ANextSessionCounter">Explicit resulting hidden-session counter.</param>
+    /// <param name="AEncryptedReaderId">Sixteen acquired bytes, after secure-session MAC verification.</param>
+    /// <returns>Owned sixteen-byte previous ReaderID; static-key proof completes only with verified transaction receipt.</returns>
+    class function DecryptTransactionReaderId(const AProvider: ICardAesProvider; const AKey, AUid: TBytes;
+      const ANextActCounter, ANextSessionCounter: Word; const AEncryptedReaderId: TBytes): TBytes; static;
     /// <summary>Builds native AuthenticateLRPFirst parameters with an explicit six-byte LRP capability request.</summary>
     /// <param name="AKeyNumber">Explicit application key selector zero through thirteen.</param>
     /// <param name="APcdCapabilities">Six supplied bytes with first byte 02, never inferred from card response.</param>
@@ -577,6 +607,52 @@ begin
     TCardCrypto.Clear(Counter); TCardCrypto.Clear(Body); TCardCrypto.Clear(Input);
     TCardCrypto.Clear(Mac); TCardCrypto.Clear(Tag); TCardCrypto.Clear(Plain);
   end;
+end;
+
+class function TDesfireLrpCodec.DeriveTransactionKey(const AProvider: ICardAesProvider; const AKey, AUid: TBytes;
+  const ANextActCounter, ANextSessionCounter: Word; const AEncryption: Boolean): TBytes;
+var Vector: TBytes;
+begin
+  if (Length(AKey) <> 16) or (Length(AUid) <> 7) or (ANextActCounter = 0) or
+    (ANextSessionCounter = 0) then InvalidLrp;
+  Vector := nil;
+  SetLength(Vector, 16);
+  Vector[1] := 1; Vector[3] := $80;
+  Vector[4] := Byte(ANextActCounter and $FF); Vector[5] := Byte(ANextActCounter shr 8);
+  Vector[6] := Byte(ANextSessionCounter and $FF); Vector[7] := Byte(ANextSessionCounter shr 8);
+  Move(AUid[0], Vector[8], 7);
+  Vector[15] := $5A;
+  if AEncryption then Vector[15] := $A5;
+  try Result := Cmac(AProvider, AKey, Vector); finally TCardCrypto.Clear(Vector); end;
+end;
+
+class function TDesfireLrpCodec.TransactionMac(const AProvider: ICardAesProvider; const AKey, AUid: TBytes;
+  const ANextActCounter, ANextSessionCounter: Word; const AInput: TBytes): TBytes;
+var Key, Mac: TBytes;
+begin
+  if (Length(AInput) < 16) or (Length(AInput) mod 16 <> 0) or (Length(AInput) > 1048560) then InvalidLrp;
+  Key := DeriveTransactionKey(AProvider, AKey, AUid, ANextActCounter, ANextSessionCounter, False);
+  try
+    Mac := TCardCrypto.Cmac(AProvider, Key, AInput);
+    Result := TruncateLrp(Mac);
+  finally TCardCrypto.Clear(Key); TCardCrypto.Clear(Mac); end;
+end;
+
+class function TDesfireLrpCodec.DecryptTransactionReaderId(const AProvider: ICardAesProvider; const AKey, AUid: TBytes;
+  const ANextActCounter, ANextSessionCounter: Word; const AEncryptedReaderId: TBytes): TBytes;
+var Key, Zero: TBytes;
+begin
+  if Length(AEncryptedReaderId) <> 16 then InvalidLrp;
+  Key := DeriveTransactionKey(AProvider, AKey, AUid, ANextActCounter, ANextSessionCounter, True);
+  try
+    SetLength(Zero, 16);
+    Result := AProvider.DecryptCbc(Key, Zero, AEncryptedReaderId);
+    if Length(Result) <> 16 then
+    begin
+      TCardCrypto.Clear(Result);
+      InvalidLrp;
+    end;
+  finally TCardCrypto.Clear(Key); TCardCrypto.Clear(Zero); end;
 end;
 
 end.
