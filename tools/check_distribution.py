@@ -394,7 +394,7 @@ def check_registration(root):
     ancestry = {}
     abstract_names = set()
     for unit in (root / 'src').rglob('*.pas'):
-        for name, abstract, base in re.findall(r'\b(T\w+)\s*=\s*class\s*(abstract\s*)?\((T\w+)\)', unit.read_text(), re.I):
+        for name, abstract, base in re.findall(r'\b(T\w+)\s*=\s*class\s*(abstract\s*)?\((T\w+)(?:\s*,\s*[A-Za-z_]\w*)*\)', unit.read_text(), re.I):
             ancestry[name] = base.casefold()
             if abstract:
                 abstract_names.add(name)

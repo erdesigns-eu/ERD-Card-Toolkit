@@ -2,9 +2,9 @@
 {$IFDEF FPC}{$MODE DELPHI}{$ENDIF}
 uses
 {$IFDEF UNIX}cthreads,{$ENDIF}
-{$IFDEF FPC}SysUtils, Classes,{$ELSE}System.SysUtils, System.Classes,{$ENDIF}
+{$IFDEF FPC}SysUtils, Classes,{$ELSE}System.SysUtils, System.Classes, System.SyncObjs, Winapi.Windows,{$ENDIF}
   ERD.Card.Bytes, ERD.Card.Transport, ERD.Card.Session, ERD.Card.Operation,
-  ERD.Card.Project, ERD.Card.Workflow, ERD.Card.Operation.Workflow;
+  ERD.Card.Operation.Executor, ERD.Card.Project, ERD.Card.Project.Secure, ERD.Card.Project.DPAPI, ERD.Card.Workflow, ERD.Card.Operation.Workflow;
 
 type
   TWire = class(TInterfacedObject, ICardTransport, ICardTransaction)
@@ -47,16 +47,34 @@ type
   public
     function Exchange(const ACommand: TBytes): TBytes;
   end;
+  TConnection = class(TInterfacedObject, ICardSessionConnection)
+  public
+    Backend: ICardTransport;
+    Manager: TCardSessionManager;
+    Opens, Closes: Integer;
+    FailOpen, FailClose, ChangeOnOpen: Boolean;
+    function Open: ICardTransport;
+    procedure Close;
+  end;
+  TOracleProtection = class(TInterfacedObject, ICardProjectProtection)
+  public
+    Plain, Cipher: TBytes;
+    Fail: Boolean;
+    function Protect(const APlain: TBytes): TBytes;
+    function Unprotect(const AProtected: TBytes): TBytes;
+  end;
   TProbe = class(TThread)
   public
     Lease: ICardSessionLease;
     Refused: Boolean;
     procedure Execute; override;
   end;
+{$IFNDEF FPC}{$APPTYPE CONSOLE}{$ENDIF}
+
 var Assertions: Integer;
 procedure Check(const Value: Boolean; const Description: string);
 begin
-  Inc(Assertions); if not Value then raise Exception.Create(Description);
+  {$IFDEF FPC}InterlockedIncrement(Assertions);{$ELSE}TInterlocked.Increment(Assertions);{$ENDIF} if not Value then raise Exception.Create(Description);
 end;
 function TWire.Exchange(const ACommand: TBytes): TBytes;
 begin
@@ -146,6 +164,140 @@ begin
     Check(Q.ExecuteNext(M,R) and (R.State=cwsFailed) and (R.ErrorClass='ECardProjectError'),
       'Workflow exact failure evidence reaches queue result');
   finally Job := nil; W.Free; Observer.Free; Q.Free; M.Free; end;
+end;
+function TConnection.Open: ICardTransport;
+begin
+  Inc(Opens); if FailOpen then raise ECardSessionError.Create('Synthetic open failure');
+  if ChangeOnOpen then Manager.CardChanged('reader'); Result := Backend;
+end;
+procedure TConnection.Close;
+begin
+  Inc(Closes); if FailClose then raise ECardSessionError.Create('Synthetic close failure');
+end;
+procedure Connections;
+var M: TCardSessionManager; C: TConnection; Provider: ICardSessionConnection;
+  Backend: ICardTransport; Lease: ICardSessionLease; Failed: Boolean; Mode: Integer;
+begin
+  for Mode := 0 to 3 do begin
+    M := TCardSessionManager.Create(nil); C := TConnection.Create; Provider := C;
+    Backend := TPlain.Create; C.Backend := Backend; C.Manager := M;
+    C.FailOpen := Mode=1; C.FailClose := Mode=2; C.ChangeOnOpen := Mode=3;
+    try
+      M.BindConnection('reader',Provider); Check(C.Opens=0,'Provider binding has no hardware I/O');
+      Failed := False;
+      try Lease := M.Acquire('reader'); Lease.Close;
+      except on E: ECardSessionError do Failed := True; end;
+      Check(Failed=(Mode<>0),'Provider lifecycle failure visible');
+      Check(C.Opens=1,'Provider open is never retried');
+      if Mode<>1 then Check(C.Closes=1,'Opened provider closes exactly once');
+      if Mode<>0 then begin
+        Failed := False; try Lease := M.Acquire('reader'); except on E: ECardSessionError do Failed := True; end;
+        Check(Failed and (C.Opens=1),'Failed provider registration does not automatically reconnect');
+      end else begin
+        Lease := M.Acquire('reader'); Lease := nil;
+        Check(C.Closes=2,'Same-thread abandoned idle lease closes owned connection');
+      end;
+    finally Lease := nil; M.Free; Provider := nil; Backend := nil; end;
+  end;
+end;
+procedure Executors;
+var M: TCardSessionManager; Q: TCardOperationQueue; E: TCardOperationExecutor;
+  Backend: ICardTransport; J: TJob; Job: ICardOperation;
+  R: TCardOperationResult; Observer: TObserver; Deadline: UInt64; Mode: Integer;
+begin
+  for Mode := 0 to 2 do begin
+    M := TCardSessionManager.Create(nil); Q := TCardOperationQueue.Create(nil);
+    E := TCardOperationExecutor.Create(nil); Observer := TObserver.Create;
+    Backend := TPlain.Create; M.BindReader('plain',Backend);
+    try
+      E.Manager := M; E.Queue := Q; E.OnResult := Observer.Completed; Observer.Fail := Mode=0;
+      E.Start; J := TJob.Create; Job := J; Q.Enqueue('background','plain',Job);
+      Deadline := GetTickCount64+3000;
+      repeat
+        E.DispatchResults; R := E.LastResult;
+        if (R.Id='background') and (Observer.Seen=1) then Break;
+        Sleep(1);
+      until GetTickCount64>=Deadline;
+      Check((R.Id='background') and (R.State=cwsCompleted),'Signal wakes idle executor without polling queue');
+      if Mode=0 then Check((E.ErrorClass='Exception') or (E.ErrorClass=''),'Observer failure remains separate from terminal evidence')
+      else Check(E.ErrorClass='','No background executor failure');
+      E.DispatchResults; Check(Observer.Seen=1,'Creator-thread result dispatch exactly once');
+      if Mode=0 then Check((E.ErrorClass='Exception') and (E.LastResult.State=cwsCompleted),'Creator observer exception is isolated without replay');
+      if Mode=1 then begin Q.Free; Q := nil; Check(not E.Running and (E.Queue=nil),'Queue removal joins before state release'); end
+      else if Mode=2 then begin M.Free; M := nil; Check(not E.Running and (E.Manager=nil),'Manager removal joins before registry release'); end
+      else begin
+        E.Stop; Check(not E.Running,'Stop joins without Synchronize deadlock');
+        E.Start; E.RequestStop;
+        J := TJob.Create; Job := J; Q.Enqueue('not-admitted','plain',Job);
+        E.Stop; Check(E.ErrorClass='','Repeated start/stop is safe');
+        Check((Q.PendingCount=1) and (J.Calls=0),'RequestStop preserves jobs enqueued after its admission boundary'); Q.ClearPending;
+      end;
+    finally E.Free; Q.Free; M.Free; Job := nil; Observer.Free; Backend := nil; end;
+  end;
+end;
+function TOracleProtection.Protect(const APlain: TBytes): TBytes;
+var I: Integer;
+begin
+  if Fail then raise ECardProjectProtectionError.Create('Synthetic protection failure');
+  Plain := CopyBytes(APlain); Cipher := CopyBytes(APlain);
+  for I := 0 to High(Cipher) do Cipher[I] := Cipher[I] xor $A7;
+  Result := CopyBytes(Cipher);
+end;
+function TOracleProtection.Unprotect(const AProtected: TBytes): TBytes;
+begin
+  if not BytesEqual(AProtected,Cipher) then
+    raise ECardProjectProtectionError.Create('Synthetic oracle rejects nonfixture ciphertext');
+  Result := CopyBytes(Plain);
+end;
+procedure ProtectedProjects;
+var P, Target: TCardProject; Store: TCardProtectedProjectStore;
+  Stream: TMemoryStream; Oracle: TOracleProtection; Policy: ICardProjectProtection;
+  A: TCardProjectArtifact; Original, Cipher: TBytes; I: Integer; Failed: Boolean;
+  Before: string; ComponentPolicy: TCardWindowsUserProtection;
+begin
+  P := TCardProject.Create(nil); Target := TCardProject.Create(nil);
+  Store := TCardProtectedProjectStore.Create(nil); Stream := TMemoryStream.Create;
+  Oracle := TOracleProtection.Create; Policy := Oracle; Store.Protection := Policy;
+  try
+    P.NewProject('protected'); A.Id := 'card'; A.Profile := 'snapshot'; A.Data := HexToBytes('01020304'); P.Put(A);
+    Oracle.Fail := True; Failed := False;
+    try Store.Save(P,Stream); except on E: ECardProjectProtectionError do Failed := True; end;
+    Check(Failed and P.Dirty and (Stream.Size=0),'Protection failure never writes plaintext or marks saved');
+    Oracle.Fail := False; Store.Save(P,Stream); Check(not P.Dirty,'Protected successful stream save marks clean');
+    Stream.Position := 0; Store.Load(Target,Stream);
+    Check(Target.ExportText=P.ExportText,'Authenticated namespace/project roundtrip'); Before := Target.ExportText;
+    SetLength(Original,Integer(Stream.Size)); Stream.Position := 0; Stream.ReadBuffer(Original[0],Length(Original));
+    for I := 0 to High(Original) do begin
+      Cipher := CopyBytes(Original); Cipher[I] := Cipher[I] xor 1;
+      Stream.Clear; Stream.WriteBuffer(Cipher[0],Length(Cipher)); Stream.Position := 0;
+      Failed := False; try Store.Load(Target,Stream); except on E: ECardProjectProtectionError do Failed := True; end;
+      Check(Failed and (Target.ExportText=Before),'Every changed envelope/cipher byte preserves original project');
+    end;
+    for I := 0 to High(Original) do begin
+      Stream.Clear; if I>0 then Stream.WriteBuffer(Original[0],I); Stream.Position := 0;
+      Failed := False; try Store.Load(Target,Stream); except on E: ECardProjectProtectionError do Failed := True; end;
+      Check(Failed and (Target.ExportText=Before),'Every truncated protected stream is atomic');
+    end;
+    Store.Protection := nil; Failed := False;
+    try Store.Load(Target,Stream); except on E: ECardProjectProtectionError do Failed := True; end;
+    Check(Failed,'No implicit unprotected fallback');
+    ComponentPolicy := TCardWindowsUserProtection.Create(nil); Store.Provider := ComponentPolicy;
+    Check(Store.Protection<>nil,'Palette protection policy binds without native calls');
+    ComponentPolicy.Free;
+    Check((Store.Provider=nil) and (Store.Protection=nil),'Provider destruction clears stale interface');
+{$IFDEF MSWINDOWS}
+    Policy := CreateWindowsUserProjectProtection; Original := HexToBytes('001122334455');
+    Cipher := Policy.Protect(Original);
+    Check(BytesEqual(Policy.Unprotect(Cipher),Original),'Native current-user DPAPI roundtrip');
+    Cipher[High(Cipher)] := Cipher[High(Cipher)] xor 1; Failed := False;
+    try Policy.Unprotect(Cipher); except on E: ECardProjectProtectionError do Failed := True; end;
+    Check(Failed,'Native DPAPI rejects tampered data');
+{$ELSE}
+    Policy := CreateWindowsUserProjectProtection; Failed := False;
+    try Cipher := Policy.Protect(HexToBytes('00')); except on E: ECardProjectProtectionError do Failed := True; end;
+    Check(Failed,'Native DPAPI use explicitly refuses unsupported platforms');
+{$ENDIF}
+  finally Store.Free; Stream.Free; P.Free; Target.Free; Policy := nil; end;
 end;
 procedure Sessions;
 var M: TCardSessionManager; W: TWire; Backend, Guard: ICardTransport;
@@ -269,6 +421,6 @@ begin
   finally P.Free; Q.Free; end;
 end;
 begin
-  try Sessions; Operations; Projects; Bridges; Writeln('PASS: ',Assertions,' studio component assertions.');
+  try Sessions; Operations; Projects; Bridges; Connections; Executors; ProtectedProjects; Writeln('PASS: ',Assertions,' studio component assertions.');
   except on E: Exception do begin Writeln(E.ClassName,': ',E.Message); Halt(1); end; end;
 end.

@@ -1236,3 +1236,37 @@ changes passes **125** studio assertions with zero heap leaks and no new compile
 hints/warnings. Latest library source checks also pass. Registry/project/operation
 components are foundation profiles; background executors, automatic connection
 providers, typed non-APDU leases and protected storage remain separate work.
+
+
+## 2026-10-12 — background executor and lazy PC/SC session provider
+
+Added inactive TCardOperationExecutor and TCardPcscSessionProvider, with copied lazy
+connection registration. Native targeted studio tests pass **161 assertions**, zero
+heap leaks, including real background execution, finite creator-thread delivery,
+observer failure isolation, repeated start/stop, dependency removal/join, lazy
+open/close errors, invalidation during Open and idle lease cleanup. Ten repeated
+threaded lifecycle runs pass. Native PC/SC transport/provider tests pass **99
+assertions across eight groups**, including copied reader settings, exact one-shot
+Connect/Disconnect and Leave disposition. Source checks and distribution validation
+pass; new API XML documentation and source BOM/CRLF are preserved. There are now
+**64 palette components**; no demos or forms changed. Native backend teardown never
+implies authentication, reset, reconnect or transaction replay.
+
+
+Latest storage/executor build passes **303 studio assertions**, zero heap leaks.
+The protected-storage oracle validates every modified envelope byte and every
+truncated ciphertext fixture before project mutation, plus provider lifetime and
+failed-save dirty-state handling. Latest inactive registration/streaming passes
+**67 cases** for **66 palette components**. The Windows DPAPI code path and native
+roundtrip/tamper test are shipped; Linux runs the explicit unsupported-platform
+boundary and synthetic storage contract tests, not native DPAPI. The distribution
+reader now recognizes interface-implementing component ancestry, with a dedicated
+positive/missing-registration fixture; **39 Python tests** pass. Source/distribution
+checks remain clean. No demos/forms changed.
+
+The full regression run before the final secure-store addition passes, including
+**160 initial executor/studio assertions**, **3,962,935 DESFire/Plus assertions**,
+**99 PC/SC/provider assertions**, **65 then-current streaming cases**, **38 then-current
+Python tests** and all **21 source checkers**. Focused latest builds separately
+verify protected storage, RequestStop admission and the expanded palette described
+above. All new Pascal units retain UTF-8 BOM/CRLF and public API XML documentation.

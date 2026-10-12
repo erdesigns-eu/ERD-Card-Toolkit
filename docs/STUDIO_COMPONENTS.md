@@ -1,7 +1,7 @@
 # Sessieregie, bewerkingen en projecten
 
 Deze componentlaag staat tussen de kaartprotocollen/workflows en een toekomstige
-CardStudio-UI. Er zijn geen nieuwe schermen of demo's. De drie niet-visuele
+CardStudio-UI. Er zijn geen nieuwe schermen of demo's. De zeven niet-visuele
 componenten staan op de palette **ERD Studio** en worden geleverd in het bestaande
 core- en designpackage.
 
@@ -10,6 +10,9 @@ core- en designpackage.
 | `TCardSessionManager` | Registry van verbonden `ICardTransport`-readers, één applicatiereservering per reader, thread-eigenaarschap en ongeldig maken bij kaartwissel/loskoppeling |
 | `TCardOperationQueue` | Begrensde FIFO, één executor, eenmalige consumptie per queue-entry, annulering, terminale resultaten en `OnResult` |
 | `CreateCardWorkflowOperation` | Een bestaande voorbereide single-card workflow aansluiten op een lease; cancellation doorgeven via veilige voortgangsgrenzen en bestaande observers behouden |
+| `TCardOperationExecutor` | Signaalgestuurde worker, veilig stoppen/joinen en creator-thread-resultaten |
+| `TCardPcscSessionProvider` | Gekopieerde PC/SC-configuratie, openen/sluiten op de workerthread per lease |
+| `TCardProtectedProjectStore` / `TCardWindowsUserProtection` | Geauthenticeerde projectstreamopslag met Windows-user DPAPI en componentbinding |
 | `TCardProject` | Gekopieerde artifacts, schema-ID's, dirty state, versiebeheer van het archiefformaat, atomaire import en streamopslag |
 
 ## Reader- en kaartlevensduur
@@ -80,7 +83,7 @@ met `OwnsWorkflow=True` vernietigt de operation de overgenomen workflow.
 Deze bridge is gericht op één kaartgeneratie. Voor single-reader bron/doelwissels:
 maak eerst een acquisition/back-up job en daarna een expliciete restore job op de
 nieuwe lease. Een wissel binnen dezelfde lease wordt terecht ongeldig. Gecoördineerde
-multi-reader jobs, een eigen achtergrondexecutor en typed magstripe/HID-backendleases
+multi-reader jobs en typed magstripe/HID-backendleases
 zijn aanvullende infrastructuurprofielen; dit is geen generieke guard voor elk
 vendorprotocol dat geen `ICardTransport` implementeert.
 
@@ -108,14 +111,83 @@ heeft. Use op één ownerthread; projectbuffers zijn geen concurrent database.
 
 Artifacts kunnen persoonsgegevens bevatten. Het formaat is niet versleuteld of
 ondertekend en is geen sleutelkluis. Credentials worden niet automatisch opgeslagen;
-voeg ze ook niet zelf toe aan artifacts. Een versleutelde storage/key-provider,
-artifact-schema-adapters en migraties tussen toekomstige projectversies zijn
-volgende componentuitbreidingen.
+voeg ze ook niet zelf toe aan artifacts. Windows-user DPAPI streamopslag is beschikbaar via de aparte store/provider.
+Portable key-providers, artifact-schema-adapters en projectversiemigraties blijven
+verdere componentuitbreidingen.
 
 ## Componentgrens voor de UI
 
 De UI selecteert readers/projecten, preparet een bestaande workflow, bindt events
 en toont de teruggegeven evidence. Reservering, invalidatie, FIFO-consumptie,
-annulering en projectvalidatie horen bij deze componenten. Verdere achtergrond-
-executors, typed opslag en meer readeradapters horen ook in deze laag; ze worden
+annulering en projectvalidatie horen bij deze componenten. Typed opslag, multi-reader coordination en meer readeradapters horen ook in deze laag; ze worden
 niet in forms gebouwd.
+
+## Achtergrondexecutor en PC/SC-provider
+
+`TCardOperationExecutor` levert nu de eigen signal-driven worker. Configureer
+`Manager`, `Queue` en `OnResult` op de main/creator-thread en roep Start aan.
+Enqueue wekt de worker via een retained signaal; er is geen queue-polling of timer.
+De wake-admission check voorkomt dat pending jobs na de stopgrens worden opgenomen.
+Stop vraagt cooperative cancellation, joinet de lopende job inclusief verificatie,
+laat pending jobs staan en verwijdert pending resultaatnotificaties. LastResult
+blijft beschikbaar. Start na Stop maakt een nieuwe worker/signal-generatie.
+
+Executor OnResult wordt via TThread.Queue en de bounded eventdispatcher op de
+main/creator-thread geleverd. DispatchResults is beschikbaar voor consoles zonder
+GUI-message-loop. Queue/workflow-observers blijven op de worker; verbind UI-resultaten
+met de executor. Observerexceptions worden als classnaam gerapporteerd, zonder
+kaartuitkomsten te herschrijven of jobs opnieuw uit te voeren. Configureer handlers
+voordat Start wordt aangeroepen. Bij notification-overflow stopt de worker met een
+expliciete ErrorClass; LastResult bewaart de laatst afgeronde evidence. Er is geen
+onbegrensde historybuffer. Free-notifications stoppen/joinen vóór queue/managerstate
+wordt vrijgegeven. Vernietig deze afhankelijkheden op de main/creator-thread.
+
+`TCardPcscSessionProvider` configureert exact ReaderName, Protocols en ShareMode.
+RegisterReader(Manager, Id) kopieert de instellingen naar een lazy
+ICardSessionConnection, zonder native connectie. Iedere Acquire opent de reader
+op de lease/workerthread; Close sluit met pcdLeave op dezelfde thread. De provider
+kan na registratie worden gewijzigd of vernietigd zonder de geregistreerde
+instellingen te veranderen. Het bestaande maximale PC/SC-responsebudget blijft
+CardMaxResponseBytes. Native transactions blijven bij de kaartprotocollen.
+
+Open/Close wordt nooit automatisch herhaald. Bij een fout wordt de registratie
+ongeldig/verwijderd: registreer pas een nieuwe verbinding na expliciete recovery.
+Een kaartwissel tijdens Open leidt tot cleanup vóór jobuitvoering. Een actieve
+fysieke transactie moet door de protocolcomponent beëindigd worden voordat de
+lease sluit. Een verlaten idle lease sluit zijn provider op de eigen thread;
+verkeerde-thread/actieve-transaction abandonment maakt de registratie ongeldig.
+Dit is geen impliciete authenticatie, reset, reconnect, commit of abort.
+
+De huidige automatische provider is PC/SC. Typed non-APDU leases, multi-reader
+coordination, typed artifact adapters en portable/atomische file storage blijven
+verdere componentuitbreidingen. Er zijn geen schermen of demos toegevoegd.
+
+## Beveiligde projectopslag
+
+`TCardProtectedProjectStore` beschermt de volledige projectarchive voordat een byte
+naar de stream wordt geschreven. Koppel `Provider` aan
+`TCardWindowsUserProtection` via de componentproperties. Voor andere expliciete
+policies kan `Protection` een `ICardProjectProtection` krijgen. Het contract vereist
+confidentiality én authenticatie vóór plaintext wordt teruggegeven; er is geen
+onbeveiligde fallback. Een componentprovider vernietigen wist de koppeling veilig.
+
+De Windows-provider gebruikt DPAPI voor het huidige gebruikersprofiel met
+UI_FORBIDDEN. Openbare envelopeversie en een eveneens beschermde inner namespace
+worden gecontroleerd. Een verkeerde profielcontext, corruptie, unsupported versie
+of malformed archive wijzigt het bestaande project niet. Failed protection schrijft
+geen plaintext en failed opslag maakt het project niet clean. Owned bytebuffers
+worden gewist na gebruik; het geopende project blijft uiteraard plaintext in geheugen.
+Dit beschermt de opgeslagen bytes, niet de volledige procesheap of actieve sessies.
+
+DPAPI-opslag is gekoppeld aan Windows user/profile/recoverybeleid: het is geen
+portable password-format, gedeelde machinepolicy of credential vault. Buiten Windows
+faalt de native provider expliciet. De Linux-suite valideert storage via een
+synthetische ciphertext-oracle en de platformgrens; de Windows testbranch bevat een
+native DPAPI roundtrip/tamper-test. Die native branch is in deze omgeving niet
+uitgevoerd. Het bestaande onversleutelde projectformaat blijft afzonderlijk
+beschikbaar, en wordt nooit impliciet gebruikt bij een protectiefout.
+
+`RequestStop` op de executor vraagt stoppen zonder join/wacht op de UI-thread.
+De huidige job kan zijn verificatie afronden, nieuwe jobs worden niet meer
+geaccepteerd voor uitvoering. Roep Stop later aan om de workerresources vrij te
+geven; Stop/destructie joinet voordat afhankelijke componenten verdwijnen.

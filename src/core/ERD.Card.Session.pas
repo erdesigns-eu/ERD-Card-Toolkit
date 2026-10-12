@@ -11,6 +11,15 @@ uses
 type
   /// <summary>Reader reservation, thread ownership or invalidated-session failure.</summary>
   ECardSessionError = class(Exception);
+  /// <summary>Lazy reader connection, opened and closed on the lease owner thread.</summary>
+  ICardSessionConnection = interface
+    ['{A0E756A4-79A2-4E3E-9925-A7858CC18D56}']
+    /// <summary>Opens once without replay, card reset or implicit protocol transaction.</summary>
+    /// <returns>Non-nil retained connected transport.</returns>
+    function Open: ICardTransport;
+    /// <summary>Closes the owned connection once; failures propagate and invalidate its registration.</summary>
+    procedure Close;
+  end;
   /// <summary>Exclusive application reservation; protocol transactions remain separate.</summary>
   ICardSessionLease = interface
     ['{861E686D-8B63-4D4F-A722-50636750B8EC}']
@@ -38,6 +47,11 @@ type
     /// <param name="ATransport">Connected retained backend; nil is refused.</param>
     /// <remarks>Replacement while reserved is refused. The manager does not connect, reset or retry.</remarks>
     procedure BindReader(const AReaderId: string; const ATransport: ICardTransport);
+    /// <summary>Registers a lazy connection provider, copied/retained independently of its configuring component.</summary>
+    /// <param name="AReaderId">Exact stable physical reader identifier.</param>
+    /// <param name="AConnection">Non-nil provider; Open/Close execute on the acquiring worker.</param>
+    /// <remarks>Reserved entries cannot be replaced. Acquisition failure never executes or retries the job.</remarks>
+    procedure BindConnection(const AReaderId: string; const AConnection: ICardSessionConnection);
     /// <summary>Invalidates a reader and removes it from future reservations.</summary>
     /// <param name="AReaderId">Exact reader ID; absent IDs are harmless.</param>
     procedure DetachReader(const AReaderId: string);
@@ -66,12 +80,13 @@ type
   TBinding = record
     Id: string;
     Backend: ICardTransport;
+    Connection: ICardSessionConnection;
     Generation, Reservation: Int64;
     Busy: Boolean;
   end;
   IRegistry = interface
     ['{3B81A3F4-B8B2-4EEA-9991-F678FB54F807}']
-    procedure Bind(const Id: string; const Backend: ICardTransport);
+    procedure Bind(const Id: string; const Backend: ICardTransport; const Connection: ICardSessionConnection);
     procedure Invalidate(const Id: string; const Remove: Boolean);
     procedure Disable;
     function List: TStringList;
@@ -91,7 +106,7 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-    procedure Bind(const Id: string; const Backend: ICardTransport);
+    procedure Bind(const Id: string; const Backend: ICardTransport; const Connection: ICardSessionConnection);
     procedure Invalidate(const Id: string; const Remove: Boolean);
     procedure Disable;
     function List: TStringList;
@@ -103,6 +118,7 @@ type
   private
     FRegistry: IRegistry;
     FBackend: ICardTransport;
+    FConnection: ICardSessionConnection;
     FTransaction: ICardTransaction;
     FId: string;
     FGeneration: Int64;
@@ -112,7 +128,8 @@ type
     procedure Check;
   public
     constructor Create(const Registry: IRegistry; const Id: string;
-      const Generation: Int64; const Backend: ICardTransport);
+      const Generation: Int64; const Backend: ICardTransport;
+      const Connection: ICardSessionConnection);
     destructor Destroy; override;
     function Transport: ICardTransport;
     procedure Close;
@@ -158,23 +175,24 @@ begin
   Result := -1;
 end;
 
-procedure TRegistry.Bind(const Id: string; const Backend: ICardTransport);
+procedure TRegistry.Bind(const Id: string; const Backend: ICardTransport; const Connection: ICardSessionConnection);
 var I, J: Integer;
 begin
-  if (Length(Id)<1) or (Length(Id)>1024) or (Backend=nil) then Invalid;
+  if (Length(Id)<1) or (Length(Id)>1024) or ((Backend=nil) = (Connection=nil)) then Invalid;
   Enter;
   try
     if not FEnabled or (FGeneration=High(Int64)) then Invalid;
     I := Index(Id);
     if (I>=0) and FItems[I].Busy then Invalid;
     for J := 0 to High(FItems) do
-      if (J<>I) and (FItems[J].Backend=Backend) then Invalid;
+      if (J<>I) and (((Backend<>nil) and (FItems[J].Backend=Backend)) or
+        ((Connection<>nil) and (FItems[J].Connection=Connection))) then Invalid;
     if I<0 then begin
       if Length(FItems)>=256 then Invalid;
       I := Length(FItems); SetLength(FItems,I+1); FItems[I].Id := Id;
     end;
     Inc(FGeneration); FItems[I].Generation := FGeneration;
-    FItems[I].Backend := Backend; FItems[I].Busy := False;
+    FItems[I].Backend := Backend; FItems[I].Connection := Connection; FItems[I].Busy := False;
   finally Leave; end;
 end;
 
@@ -188,7 +206,7 @@ begin
     Inc(FGeneration); FItems[I].Generation := FGeneration;
     // Retain a live reservation until its lease releases; do not overlap old I/O.
     if Remove then begin
-      FItems[I].Backend := nil;
+      FItems[I].Backend := nil; FItems[I].Connection := nil;
       if not FItems[I].Busy then begin
         for J := I to High(FItems)-1 do FItems[J] := FItems[J+1];
         SetLength(FItems,Length(FItems)-1);
@@ -209,24 +227,41 @@ begin
   Result := TStringList.Create;
   Enter;
   try
-    for I := 0 to High(FItems) do if FItems[I].Backend<>nil then Result.Add(FItems[I].Id);
+    for I := 0 to High(FItems) do if (FItems[I].Backend<>nil) or (FItems[I].Connection<>nil) then Result.Add(FItems[I].Id);
   finally Leave; end;
 end;
 
 function TRegistry.Reserve(const Id: string): ICardSessionLease;
-var I: Integer; Tx: ICardTransaction;
+var I: Integer; Generation: Int64; Backend: ICardTransport;
+  Tx: ICardTransaction; Connection: ICardSessionConnection; Opened: Boolean;
 begin
-  Result := nil;
+  Result := nil; Opened := False;
   Enter;
   try
     I := Index(Id);
     if not FEnabled or (I<0) then Invalid;
-    if FItems[I].Busy or (FItems[I].Backend=nil) then Invalid;
-    if Supports(FItems[I].Backend,ICardTransaction,Tx) then
-      Result := TTransactionLease.Create(Self,Id,FItems[I].Generation,FItems[I].Backend)
-    else Result := TLease.Create(Self,Id,FItems[I].Generation,FItems[I].Backend);
-    FItems[I].Busy := True; FItems[I].Reservation := FItems[I].Generation;
+    if FItems[I].Busy or ((FItems[I].Backend=nil) and (FItems[I].Connection=nil)) then Invalid;
+    Backend := FItems[I].Backend; Connection := FItems[I].Connection;
+    Generation := FItems[I].Generation;
+    FItems[I].Busy := True; FItems[I].Reservation := Generation;
   finally Leave; end;
+  try
+    if Connection<>nil then begin
+      Backend := Connection.Open; Opened := True;
+      if Backend=nil then Invalid;
+    end;
+    Check(Id,Generation);
+    if Supports(Backend,ICardTransaction,Tx) then
+      Result := TTransactionLease.Create(Self,Id,Generation,Backend,Connection)
+    else Result := TLease.Create(Self,Id,Generation,Backend,Connection);
+  except
+    try
+      if Opened then Connection.Close;
+    finally
+      Invalidate(Id,True); Release(Id,Generation);
+    end;
+    raise;
+  end;
 end;
 
 procedure TRegistry.Check(const Id: string; const Generation: Int64);
@@ -248,7 +283,7 @@ begin
     I := Index(Id);
     if (I>=0) and (FItems[I].Reservation=Generation) then begin
       FItems[I].Busy := False;
-      if FItems[I].Backend=nil then begin
+      if (FItems[I].Backend=nil) and (FItems[I].Connection=nil) then begin
         for J := I to High(FItems)-1 do FItems[J] := FItems[J+1];
         SetLength(FItems,Length(FItems)-1);
       end;
@@ -257,16 +292,21 @@ begin
 end;
 
 constructor TLease.Create(const Registry: IRegistry; const Id: string;
-  const Generation: Int64; const Backend: ICardTransport);
+  const Generation: Int64; const Backend: ICardTransport;
+  const Connection: ICardSessionConnection);
 begin
   inherited Create;
-  FRegistry := Registry; FId := Id; FGeneration := Generation; FBackend := Backend;
+  FConnection := Connection; FRegistry := Registry; FId := Id; FGeneration := Generation; FBackend := Backend;
   FThread := NativeUInt(TThread.CurrentThread.ThreadID);
 end;
 
 destructor TLease.Destroy;
 begin
-  if not FClosed and not FInTransaction then FRegistry.Release(FId,FGeneration);
+  if not FClosed then begin
+    if not FInTransaction and (NativeUInt(TThread.CurrentThread.ThreadID)=FThread) then
+      try Close; except end
+    else FRegistry.Invalidate(FId,True);
+  end;
   inherited Destroy;
 end;
 
@@ -292,7 +332,14 @@ begin
   CheckThread;
   if FClosed then Exit;
   if FInCall or FInTransaction then Invalid;
-  FClosed := True; FRegistry.Release(FId,FGeneration); FBackend := nil;
+  FClosed := True;
+  try
+    if FConnection<>nil then
+      try FConnection.Close;
+      except FRegistry.Invalidate(FId,True); raise; end;
+  finally
+    FRegistry.Release(FId,FGeneration); FBackend := nil; FConnection := nil;
+  end;
 end;
 
 function TLease.Exchange(const ACommand: TBytes): TBytes;
@@ -338,12 +385,17 @@ end;
 
 destructor TCardSessionManager.Destroy;
 begin
-  (FRegistry as IRegistry).Disable; FRegistry := nil; inherited Destroy;
+  inherited Destroy; (FRegistry as IRegistry).Disable; FRegistry := nil;
 end;
 
 procedure TCardSessionManager.BindReader(const AReaderId: string; const ATransport: ICardTransport);
 begin
-  (FRegistry as IRegistry).Bind(AReaderId,ATransport);
+  (FRegistry as IRegistry).Bind(AReaderId,ATransport,nil);
+end;
+
+procedure TCardSessionManager.BindConnection(const AReaderId: string; const AConnection: ICardSessionConnection);
+begin
+  (FRegistry as IRegistry).Bind(AReaderId,nil,AConnection);
 end;
 
 procedure TCardSessionManager.DetachReader(const AReaderId: string);

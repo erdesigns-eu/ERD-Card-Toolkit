@@ -20,6 +20,15 @@ type
     /// <summary>Sets the irreversible cancellation flag.</summary>
     procedure Request;
   end;
+  /// <summary>Retained wake signal for a queue executor; callbacks never access component pointers.</summary>
+  ICardOperationWake = interface
+    ['{158312AE-D8D6-4425-9A60-ED675F610373}']
+    /// <summary>Wakes an executor without blocking; must not raise or execute queued operations.</summary>
+    procedure Signal;
+    /// <summary>Returns whether a queued job may be admitted; false preserves pending work during Stop.</summary>
+    /// <returns>Thread-safe acceptance flag; must not call back into the queue.</returns>
+    function AcceptingJobs: Boolean;
+  end;
   /// <summary>Prepared single-use operation with frozen owned inputs and explicitly retained evidence.</summary>
   ICardOperation = interface
     ['{A206F7DD-51B7-4517-AC5D-D9B64606F458}']
@@ -79,6 +88,10 @@ type
     /// <returns>True when one job was consumed; false for an empty queue.</returns>
     function ExecuteNext(const AManager: TCardSessionManager;
       out AResult: TCardOperationResult): Boolean;
+    /// <summary>Installs or clears a retained executor wake signal while no job is executing.</summary>
+    /// <param name="AWake">Signal implementation, or nil when stopping.</param>
+    /// <remarks>Only one wake owner may attach. An existing different owner is refused.</remarks>
+    procedure SetWake(const AWake: ICardOperationWake);
     /// <summary>Requests cooperative cancellation of the current operation from any thread.</summary>
     procedure CancelCurrent;
     /// <summary>Discards all pending jobs without affecting the current operation.</summary>
@@ -119,6 +132,7 @@ type
     Busy: Boolean;
     Current: TJob;
     Cancellation: ICardCancellation;
+    Wake: ICardOperationWake;
     constructor Create;
     destructor Destroy; override;
     procedure Enter;
@@ -164,7 +178,7 @@ end;
 
 destructor TCardOperationQueue.Destroy;
 begin
-  FState := nil; inherited Destroy;
+  inherited Destroy; FState := nil;
 end;
 
 function QueueState(const State: IInterface): TQueueState;
@@ -173,7 +187,7 @@ begin
 end;
 
 procedure TCardOperationQueue.Enqueue(const AId, AReaderId: string; const AOperation: ICardOperation);
-var S: TQueueState; I, N: Integer;
+var S: TQueueState; I, N: Integer; Wake: ICardOperationWake;
 begin
   if (Length(AId)<1) or (Length(AId)>128) or (Length(AReaderId)<1) or
     (Length(AReaderId)>1024) or (AOperation=nil) then raise ECardOperationError.Create('Invalid queued operation.');
@@ -187,8 +201,9 @@ begin
       if (S.Jobs[I].Id=AId) or (S.Jobs[I].Operation=AOperation) then
         raise ECardOperationError.Create('Duplicate queued operation.');
     SetLength(S.Jobs,N+1); S.Jobs[N].Id := AId;
-    S.Jobs[N].ReaderId := AReaderId; S.Jobs[N].Operation := AOperation;
+    S.Jobs[N].ReaderId := AReaderId; S.Jobs[N].Operation := AOperation; Wake := S.Wake;
   finally S.Leave; end;
+  if Wake<>nil then Wake.Signal;
 end;
 
 function TCardOperationQueue.ExecuteNext(const AManager: TCardSessionManager;
@@ -202,6 +217,7 @@ begin
   Retained := FState; S := QueueState(Retained); S.Enter;
   try
     if S.Busy then raise ECardOperationError.Create('An executor is already active.');
+    if (S.Wake<>nil) and not S.Wake.AcceptingJobs then Exit;
     if Length(S.Jobs)=0 then Exit;
     Job := S.Jobs[0];
     for I := 0 to High(S.Jobs)-1 do S.Jobs[I] := S.Jobs[I+1];
@@ -239,6 +255,17 @@ begin
   if Assigned(Observer) then
     try Observer(Self,AResult);
     except on E: Exception do AResult.ObserverErrorClass := E.ClassName; end;
+end;
+
+procedure TCardOperationQueue.SetWake(const AWake: ICardOperationWake);
+var S: TQueueState;
+begin
+  S := QueueState(FState); S.Enter;
+  try
+    if S.Busy or ((S.Wake<>nil) and (AWake<>nil) and (S.Wake<>AWake)) then
+      raise ECardOperationError.Create('Executor wake ownership is unavailable.');
+    S.Wake := AWake;
+  finally S.Leave; end;
 end;
 
 procedure TCardOperationQueue.CancelCurrent;

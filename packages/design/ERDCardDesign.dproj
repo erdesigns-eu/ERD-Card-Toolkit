@@ -138,8 +138,11 @@
         <DCCReference Include="..\..\src\memory\ERD.Card.Memory.Workflow.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Workflow.ISO15693.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Session.pas"/>
+        <DCCReference Include="..\..\src\core\ERD.Card.Operation.Executor.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Operation.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Operation.Workflow.pas"/>
+        <DCCReference Include="..\..\src\crypto\ERD.Card.Project.DPAPI.pas"/>
+        <DCCReference Include="..\..\src\core\ERD.Card.Project.Secure.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Project.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Workflow.Batch.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Workflow.pas"/>
@@ -243,6 +246,7 @@
         <DCCReference Include="..\..\src\memory\ERD.Card.Memory.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Ndef.pas"/>
         <DCCReference Include="..\..\src\pcsc\ERD.Card.PCSC.Api.pas"/>
+        <DCCReference Include="..\..\src\pcsc\ERD.Card.PCSC.Session.pas"/>
         <DCCReference Include="..\..\src\pcsc\ERD.Card.PCSC.Reader.pas"/>
         <DCCReference Include="..\..\src\pcsc\ERD.Card.PCSC.Windows.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.TLV.pas"/>

@@ -184,6 +184,7 @@
         <DCCReference Include="..\..\src\crypto\ERD.Card.Crypto.Hash.Windows.pas"/>
         <DCCReference Include="rtl.dcp"/>
         <DCCReference Include="ERDCardCore.dcp"/>
+        <DCCReference Include="..\..\src\crypto\ERD.Card.Project.DPAPI.pas"/>
         <DCCReference Include="..\..\src\crypto\ERD.Card.Crypto.Windows.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>

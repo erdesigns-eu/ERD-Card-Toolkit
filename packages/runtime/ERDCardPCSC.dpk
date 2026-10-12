@@ -14,6 +14,7 @@ contains
   ERD.Card.PCSC.Monitor in '..\..\src\pcsc\ERD.Card.PCSC.Monitor.pas',
   ERD.Card.PCSC.Api in '..\..\src\pcsc\ERD.Card.PCSC.Api.pas',
   ERD.Card.PCSC.Windows in '..\..\src\pcsc\ERD.Card.PCSC.Windows.pas',
+  ERD.Card.PCSC.Session in '..\..\src\pcsc\ERD.Card.PCSC.Session.pas',
   ERD.Card.PCSC.Reader in '..\..\src\pcsc\ERD.Card.PCSC.Reader.pas';
 
 end.
