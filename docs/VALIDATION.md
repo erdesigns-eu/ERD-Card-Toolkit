@@ -1227,3 +1227,12 @@ observer restoration and single-use refusal, copy-isolated project artifacts,
 duplicate/truncated atomic import, empty payloads, stream failure/roundtrip and
 payload budgets. Heap tracing reports zero unfreed blocks. New units retain
 UTF-8 BOM/CRLF and complete public API XML documentation. No demos/forms changed.
+
+The complete FPC regression runner passes, including the initial **123** studio
+assertions, **3,962,935** DESFire/Plus assertions, **63** inactive registration/
+streaming cases, **38** Python tests, distribution checks and all **21** source
+checkers. A separate build of the latest workflow-failure/cancellation evidence
+changes passes **125** studio assertions with zero heap leaks and no new compiler
+hints/warnings. Latest library source checks also pass. Registry/project/operation
+components are foundation profiles; background executors, automatic connection
+providers, typed non-APDU leases and protected storage remain separate work.
