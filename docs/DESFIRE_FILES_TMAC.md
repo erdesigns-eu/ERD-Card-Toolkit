@@ -269,3 +269,36 @@ are acquired from a verified receipt, with an optional deferred ReaderID result.
 Protected real-UID and stored LRP-TMAC inspection helpers are also available. See [DESFIRE_LRP.md](DESFIRE_LRP.md) for exact input, counter and release rules.
 LRP file/key/configuration provisioning and partial/unaligned record profiles
 remain separate; the AES management interfaces retain their existing profile.
+
+
+## Owned multiple-access transactions
+
+`OpenMultiAccessTransactionSession(Aid, True)` opens an explicit fresh EV2 AES
+owner for ordinary and multiple-access backup/value/linear/cyclic-record files.
+It retains the existing `IDesfireSession` ABI and operations: WriteBackup,
+Credit/Debit/LimitedCredit, AppendRecord/ClearRecords, Commit and Abort. Existing
+OpenSession remains strict ordinary access. The new entry requires a nonzero AID
+and explicit fresh-transaction acknowledgement before acquisition; SDM, TMAC and
+unknown/invalid settings are refused before pending-state mutation.
+
+All primary/additional tuples participate in command-specific authorization.
+Credit requires ReadWrite, LimitedCredit allows Write or ReadWrite, and Debit/
+GetValue retain their documented Read/Write/ReadWrite rules. Data/record writes
+require Write/ReadWrite; journal acquisition and final proof also require reading.
+An extra Write grant alone does not imply a readable backup or permit Credit.
+Minimum communication and explicit NonFirst reauthentication still apply.
+
+The decoded ordinary geometry remains available in TDesfireFileSettings; its
+RawBytes retain the **complete** combined settings. Use MultiAccessSettings for
+typed access to all tuples. Journal static comparison preserves every tuple and
+option while masking only the established mutable value/record-count fields.
+Commit verifies complete final content/count/settings and exclusive release;
+verified commit acknowledgement alone does not make VerificationSucceeded true.
+Abort does not claim final-content readback. Limits and mutation budgets remain
+those of the ordinary journal. No migration/archive-format extension is inferred.
+
+Plain, MACed and Full are supported with explicit minimum communication. Plain
+content is not cryptographically authenticated: an altered full-file preimage can
+remain unobservable when the entire file is replaced. Postimage equality remains
+checked; MACed/Full additionally verify protected responses. SDM mirrors and TMAC
+combination/partial-record canonical input require their own profiles.

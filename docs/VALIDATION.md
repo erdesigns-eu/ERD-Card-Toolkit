@@ -1185,3 +1185,32 @@ retained; no demo, form, package or registered component has changed.
 The full native DESFire/Plus regression suite passes **3,459,299 assertions** with
 zero unfreed heap blocks. This includes the earlier AES/DES/3DES, ISO, multiple
 rights, SDM, TMAC and LRP profiles alongside the new Light administration paths.
+
+
+## 2026-10-12 — owned multiple-access DESFire transactions
+
+Added explicit EV2 AES multiple-access transaction ownership without changing
+any of the **12 existing interface layouts/IIDs**. The new entry preserves every
+primary/additional access tuple through acquisition, journal static checks and
+post-commit proof; ordinary OpenSession keeps its strict profile. Backup writes,
+Credit/Debit/LimitedCredit, linear/cyclic record append and clearing reuse bounded
+journal/commit/abort behavior. Credit does not acquire authority from a Read grant.
+SDM, TMAC, malformed rights counts and unknown layouts reject before any mutation.
+
+Independent fixtures exercise Plain/MACed/Full, a denied primary tuple with an
+extra key-zero grant, maximum cyclic replacement order, abort, fresh-context/profile
+preflight, frozen write buffers, every exchange boundary and protected-response
+bit, valid-MAC wrong data and changed extra-right tuples after commit. Explicit
+Plain tests distinguish final content equality from unauthenticated preimage data;
+replacing a complete file cannot prove its original Plain bytes.
+
+Focused new suites pass **503,590 assertions**, zero heap leaks. The independent
+generator reproduces **205 fixture sets**. Library and contactless tests pass all
+**21 source checkers**; distribution remains **62 projects, 2 groups, 48 DFM forms**,
+zero findings. Existing source BOM/CRLF is preserved; no demos, forms or packages
+were changed. Component/studio readiness is documented in
+[STATUS_CARDSTUDIO.md](STATUS_CARDSTUDIO.md).
+
+The full native DESFire/Plus suite passes **3,962,935 assertions**, zero unfreed
+heap blocks, including an explicit test showing the unauthenticated Plain preimage
+case and the previously implemented Light/AES/LRP/ISO/SDM/TMAC behavior.

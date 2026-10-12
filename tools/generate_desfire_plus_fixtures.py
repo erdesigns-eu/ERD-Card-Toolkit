@@ -595,6 +595,54 @@ light_configs={0:'22',2:'0577008102',3:'2000',4:'0004',5:'00000000020000001122',
  9:'0300000000E80300000000000001',10:'01E8030A00',11:'01'}
 for option,data in light_configs.items():
  f=LF();f.cmd(0x5C,bytes([option]),bytes.fromhex(data),mode=2);vectors['LrpLightConfig'+str(option)]=f.p
+# Explicit owned EV2 multi-access transactions: primary denied; extra tuple grants key zero.
+for action in ['Backup','Abort','Credit','Debit','Limited','Linear','Cyclic','Clear','WrongData','WrongRights','CreditDenied']:
+ f=DF();record=action in ['Linear','Cyclic','Clear'];value=action in ['Credit','Debit','Limited','CreditDenied']
+ metadata=(bytes.fromhex('0283FFFF')+le(0,4)+le(100,4)+le(10,4)+b'\x01' if value else
+  bytes([4 if action=='Cyclic' else 3])+bytes.fromhex('83FFFF')+le(4,3)+le(2,3)+le(2 if action=='Cyclic' else 1,3) if record else bytes.fromhex('0183FFFF040000'))
+ metadata+=bytes.fromhex('01FF0F' if action=='CreditDenied' else '010000')
+ f.cmd(0x6F,reply=b'\0');f.cmd(0xF5,b'\0',reply=metadata);f.cmd(0xF5,b'\0',reply=metadata)
+ if action=='CreditDenied':vectors['DfMultiTx'+action]=f.p;continue
+ if value:
+  iv=enc(f.e,Z,bytes.fromhex('5AA5')+TI+le(f.ctr+1)+bytes(8));f.cmd(0x6C,b'\0',reply=enc(f.e,iv,le(10,4)+b'\x80'+bytes(11)))
+ elif record:
+  old=bytes.fromhex('0102030405060708' if action=='Cyclic' else '01020304');iv=enc(f.e,Z,bytes.fromhex('5AA5')+TI+le(f.ctr+1)+bytes(8))
+  f.cmd(0xAB,b'\0'+le(0,3)+le(len(old)//4,3),reply=enc(f.e,iv,old+b'\x80'+bytes(15-len(old))))
+ else:df_read_full(f,0,bytes.fromhex('01020304'))
+ f.cmd(0xF5,b'\0',reply=metadata)
+ if value:f.cmd({'Credit':0x0C,'Debit':0xDC,'Limited':0x1C}[action],b'\0',le(5,4),full=True)
+ elif action=='Clear':f.cmd(0xEB,b'\0')
+ else:f.cmd(0x8B if record else 0x8D,b'\0'+le(0,3)+le(4,3),bytes.fromhex('AABBCCDD'),full=True)
+ if action=='Abort':f.cmd(0xA7);vectors['DfMultiTx'+action]=f.p;continue
+ f.cmd(0xC7,b'\0');after=bytearray(metadata)
+ if record:after[10:13]=le(0 if action=='Clear' else 2,3)
+ if action=='WrongRights':after[-1]=1
+ f.cmd(0xF5,b'\0',reply=bytes(after))
+ if action=='WrongRights':vectors['DfMultiTx'+action]=f.p;continue
+ if value:
+  iv=enc(f.e,Z,bytes.fromhex('5AA5')+TI+le(f.ctr+1)+bytes(8));f.cmd(0x6C,b'\0',reply=enc(f.e,iv,le(5 if action=='Debit' else 15,4)+b'\x80'+bytes(11)))
+ elif record and action!='Clear':
+  expected=bytes.fromhex('AABBCCDD01020304');iv=enc(f.e,Z,bytes.fromhex('5AA5')+TI+le(f.ctr+1)+bytes(8))
+  f.cmd(0xAB,b'\0'+le(0,3)+le(2,3),reply=enc(f.e,iv,expected+b'\x80'+bytes(7)))
+ elif not record:df_read_full(f,0,bytes.fromhex('00000000' if action=='WrongData' else 'AABBCCDD'))
+ if action!='WrongData':f.cmd(0xF5,b'\0',reply=bytes(after))
+ vectors['DfMultiTx'+action]=f.p
+for mode in [0,1]:
+ f=DF();metadata=bytes([1,0x80|mode])+bytes.fromhex('FFFF040000010000')
+ f.cmd(0x6F,reply=b'\0');f.cmd(0xF5,b'\0',reply=metadata);f.cmd(0xF5,b'\0',reply=metadata)
+ h=bytes.fromhex('00000000040000')
+ if mode:f.cmd(0xAD,h,reply=bytes.fromhex('01020304'))
+ else:f.p.append((apdu(0xAD,h),bytes.fromhex('010203049100')));f.ctr+=1
+ f.cmd(0xF5,b'\0',reply=metadata)
+ if mode:f.cmd(0x8D,h,bytes.fromhex('AABBCCDD'))
+ else:f.p.append((apdu(0x8D,h+bytes.fromhex('AABBCCDD')),bytes.fromhex('9100')));f.ctr+=1
+ f.cmd(0xC7,b'\0');f.cmd(0xF5,b'\0',reply=metadata)
+ if mode:f.cmd(0xAD,h,reply=bytes.fromhex('AABBCCDD'))
+ else:f.p.append((apdu(0xAD,h),bytes.fromhex('AABBCCDD9100')));f.ctr+=1
+ f.cmd(0xF5,b'\0',reply=metadata);vectors['DfMultiTx'+['Plain','Mac'][mode]]=f.p
+for name,metadata in [('Sdm','004000E0000100C1F121200000430000430000'),
+ ('Tmac','0500F0EF0234'),('Malformed','0183FFFF040000020000'),('Unknown','06000000040000')]:
+ f=DF();f.cmd(0x6F,reply=b'\0');f.cmd(0xF5,b'\0',reply=bytes.fromhex(metadata));vectors['DfMultiTxReject'+name]=f.p
 s='''unit DesfirePlus.Vectors;
 {$IFDEF FPC}{$MODE DELPHI}{$ENDIF}
 interface

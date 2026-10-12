@@ -710,6 +710,7 @@ type
     FReauthenticated: Boolean;
     FKeyNumber: Byte;
     FSecurity: TDesfireSecurity;
+    FMultiAccessTransactions: Boolean;
     FMinimum: TDesfireCommunication;
     FMaxTransfer, FMaxFrameData: Integer;
     FBusy, FAuthenticated, FWriteAttempt: Boolean;
@@ -755,6 +756,7 @@ type
       const AMode: TDesfireCommunication; const AExpected: Integer;
       const AWrite: Boolean): TBytes;
     function Settings(const AFile: Byte): TDesfireFileSettings;
+    function HasFileRight(const ASettings: TDesfireFileSettings; const AShift: Integer): Boolean;
     procedure CheckAccess(const ASettings: TDesfireFileSettings;
       const AWrite: Boolean);
     function ReadSelected(const ASettings: TDesfireFileSettings;
@@ -821,6 +823,14 @@ type
     /// <exception cref="Exception">Arguments, acquisition, authentication or ordinary-file preflight fails.</exception>
     function OpenSession(const AAid: Cardinal;
       const AAccess: TDesfireSessionAccess): IDesfireSession;
+    /// <summary>Opens a fresh EV2 AES transaction supporting ordinary and multiple-access backup, value and record files.</summary>
+    /// <param name="AAid">Exact nonzero application identifier; Security must be dfsEv2Aes.</param>
+    /// <param name="AAcknowledgeFresh">Must be true: no externally owned transaction may be pending.</param>
+    /// <returns>Owned exclusive session with explicit Commit/Abort and complete post-commit data/settings verification.</returns>
+    /// <remarks>Every rights tuple participates in command-specific authorization and remains in acquired RawBytes.
+    /// SDM, TMAC and unknown layouts are refused before mutation. Existing OpenSession retains its strict ordinary profile.</remarks>
+    function OpenMultiAccessTransactionSession(const AAid: Cardinal;
+      const AAcknowledgeFresh: Boolean): IDesfireSession;
     /// <summary>Opens an immutable retained AES management session; construction opens no implicit default-key access.</summary>
     /// <param name="AAid">Explicit native AID, zero for PICC administration.</param>
     /// <returns>Owned management view with all ordinary session read/create/delete operations.</returns>
@@ -1004,7 +1014,8 @@ type
     constructor Create(const AReader: TDesfireCardReader; const AAid: Cardinal;
       const AAccess: TDesfireSessionAccess; const ATmacFile: Integer = -1;
       const ATmacUid: TBytes = nil; const ATmacKey: TBytes = nil;
-      const APreviousCounter: Cardinal = 0; const AExpectedSessionCounter: Word = 0);
+      const APreviousCounter: Cardinal = 0; const AExpectedSessionCounter: Word = 0;
+      const AMultiAccessTransactions: Boolean = False);
     destructor Destroy; override;
     function ReadApplicationIds: TDesfireApplicationIds;
     function ReadApplicationSettings: TDesfireApplicationSettings;
@@ -1995,12 +2006,31 @@ begin
   end;
 end;
 
+function TDesfireCardReader.OpenMultiAccessTransactionSession(const AAid: Cardinal;
+  const AAcknowledgeFresh: Boolean): IDesfireSession;
+begin
+  if not AAcknowledgeFresh or (AAid = 0) or (AAid > $FFFFFF) or
+    (FSecurity <> dfsEv2Aes) then InvalidDesfire;
+  Result := TDesfireSession.Create(Self, AAid, dsaFreshTransaction,
+    -1, nil, nil, 0, 0, True);
+end;
+
 function TDesfireCardReader.Settings(const AFile: Byte): TDesfireFileSettings;
 var
   H, Wire, Packet: TBytes;
+  Multi: TDesfireMultiAccessSettings;
 begin
   if AFile > 31 then
     InvalidDesfire;
+  if FMultiAccessTransactions then
+  begin
+    SetLength(H, 1);
+    H[0] := AFile;
+    Multi := TDesfireExtensionCodec.MultiAccessSettings(Metadata($F5, H, 32, False));
+    Result := TDesfireCodec.FileSettings(AFile, Multi.BaseBytes);
+    Result.RawBytes := CopyBytes(Multi.RawBytes);
+    Exit;
+  end;
   H := nil;
   Wire := nil;
   Packet := nil;
@@ -2064,15 +2094,41 @@ begin
   end;
 end;
 
+function TDesfireCardReader.HasFileRight(const ASettings: TDesfireFileSettings;
+  const AShift: Integer): Boolean;
+var
+  Multi: TDesfireMultiAccessSettings;
+  I, K: Integer;
+begin
+  Result := False;
+  if not (AShift in [0, 4, 8, 12]) then InvalidDesfire;
+  if FMultiAccessTransactions then
+  begin
+    Multi := TDesfireExtensionCodec.MultiAccessSettings(ASettings.RawBytes);
+    for I := 0 to High(Multi.Rights) do
+    begin
+      K := (Multi.Rights[I] shr AShift) and 15;
+      Result := Result or (K = 14) or (FAuthenticated and (K = FSessionKeyNumber));
+    end;
+  end
+  else
+  begin
+    K := 15;
+    case AShift of
+      0: K := ASettings.ChangeKey;
+      4: K := ASettings.ReadWriteKey;
+      8: K := ASettings.WriteKey;
+      12: K := ASettings.ReadKey;
+    end;
+    Result := (K = 14) or (FAuthenticated and (K = FSessionKeyNumber));
+  end;
+end;
+
 procedure TDesfireCardReader.CheckAccess(const ASettings: TDesfireFileSettings;
   const AWrite: Boolean);
 var
-  Key: Byte;
+  Shift: Integer;
   FreeValue: Boolean;
-  function Granted(const K: Byte): Boolean;
-  begin
-    Result := (K = $E) or (FAuthenticated and (K = FSessionKeyNumber));
-  end;
 
 begin
   if FAuthenticated then
@@ -2085,12 +2141,12 @@ begin
   if FAuthenticated and (Length(FRekey) > 0) and not FReauthenticated then
     Authenticate(True);
   if AWrite then
-    Key := ASettings.WriteKey
+    Shift := 8
   else
-    Key := ASettings.ReadKey;
+    Shift := 12;
   FreeValue := not AWrite and (ASettings.FileType = dftValue) and
     ((ASettings.ValueOptions and 2) <> 0);
-  if not(Granted(Key) or Granted(ASettings.ReadWriteKey) or FreeValue) then
+  if not(HasFileRight(ASettings, Shift) or HasFileRight(ASettings, 4) or FreeValue) then
     InvalidDesfire;
 end;
 
@@ -2581,7 +2637,8 @@ end;
 
 constructor TDesfireSession.Create(const AReader: TDesfireCardReader;
   const AAid: Cardinal; const AAccess: TDesfireSessionAccess; const ATmacFile: Integer;
-  const ATmacUid, ATmacKey: TBytes; const APreviousCounter: Cardinal; const AExpectedSessionCounter: Word);
+  const ATmacUid, ATmacKey: TBytes; const APreviousCounter: Cardinal; const AExpectedSessionCounter: Word;
+  const AMultiAccessTransactions: Boolean);
 var
   Ids, Reply: TBytes;
   I: Integer;
@@ -2595,6 +2652,8 @@ begin
     ((AAid = 0) and ((AReader.FKeyNumber <> 0) or (Length(AReader.FRekey) > 0)))
   then
     InvalidDesfire;
+  if AMultiAccessTransactions and ((AAccess <> dsaFreshTransaction) or
+    (AReader.FSecurity <> dfsEv2Aes) or (ATmacFile <> -1)) then InvalidDesfire;
   FTmacFile := ATmacFile;
   if (ATmacFile < -1) or (ATmacFile > 31) then InvalidDesfire;
   if ATmacFile >= 0 then
@@ -2626,6 +2685,7 @@ begin
   FEngine.FKeyNumber := AReader.FKeyNumber;
   FEngine.FRekeyNumber := AReader.FRekeyNumber;
   FEngine.FSecurity := AReader.FSecurity;
+  FEngine.FMultiAccessTransactions := AMultiAccessTransactions;
   FEngine.FMinimum := AReader.FMinimum;
   FEngine.FMaxTransfer := AReader.FMaxTransfer;
   FEngine.FMaxFrameData := AReader.FMaxFrameData;
@@ -2808,14 +2868,14 @@ begin
   end
   else if S.Communication <> dfcPlain then
     InvalidDesfire;
-  Allowed := Granted(S.ReadWriteKey);
+  Allowed := FEngine.HasFileRight(S, 4);
   case ACommand of
     $0C:
       ; // Credit specifically requires ReadWrite, not just Write.
     $1C:
-      Allowed := Allowed or Granted(S.WriteKey);
+      Allowed := Allowed or FEngine.HasFileRight(S, 8);
     $DC, $6C:
-      Allowed := Allowed or Granted(S.WriteKey) or Granted(S.ReadKey);
+      Allowed := Allowed or FEngine.HasFileRight(S, 8) or FEngine.HasFileRight(S, 12);
   else
     InvalidDesfire;
   end;
@@ -3350,7 +3410,7 @@ begin
       Data := CopyBytes(AData);
       S := FEngine.Settings(AFile);
       if (S.FileType <> dftCyclicRecords) or (S.RecordBytes <> 16) or
-        (ARecord >= S.CurrentRecords) or not Granted(S.ReadWriteKey) then InvalidDesfire;
+        (ARecord >= S.CurrentRecords) or not FEngine.HasFileRight(S, 4) then InvalidDesfire;
       FEngine.CheckAccess(S, True);
       Index := Journal(S);
       if not (FJournal[Index].RecordOperation in [0, 3]) or

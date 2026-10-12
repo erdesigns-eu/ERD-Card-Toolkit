@@ -2884,6 +2884,152 @@ begin
   finally Session := nil; Reader.Free; TCardCrypto.Clear(Data); end;
 end;
 
+function MultiTxPairs(const Kind: Integer): TExtendedPairs;
+begin
+  case Kind of
+    0: Result := DfMultiTxBackup;
+    1: Result := DfMultiTxAbort;
+    2: Result := DfMultiTxCredit;
+    3: Result := DfMultiTxDebit;
+    4: Result := DfMultiTxLimited;
+    5: Result := DfMultiTxLinear;
+    6: Result := DfMultiTxCyclic;
+    7: Result := DfMultiTxClear;
+    8: Result := DfMultiTxWrongData;
+    9: Result := DfMultiTxWrongRights;
+    10: Result := DfMultiTxCreditDenied;
+    11: Result := DfMultiTxPlain;
+    12: Result := DfMultiTxMac;
+  else raise Exception.Create('Invalid multi-access fixture'); end;
+end;
+
+procedure RunMultiTx(const Kind, Fail, Corrupt, BitIndex: Integer;
+  const Freeze, ReleaseFails: Boolean);
+var
+  Wire: TWire;
+  Hold: ICardTransport;
+  Reader: TDesfireCardReader;
+  Session: IDesfireSession;
+  Data: TBytes;
+  Failed, Uncertain: Boolean;
+begin
+  Wire := TWire.Create; Hold := Wire; Wire.Pairs := MultiTxPairs(Kind);
+  Wire.FailCall := Fail; Wire.CorruptCall := Corrupt;
+  Wire.CorruptByte := BitIndex div 8; Wire.CorruptBit := BitIndex mod 8;
+  Wire.EndFails := ReleaseFails; Data := HexToBytes('AABBCCDD');
+  Reader := TDesfireCardReader.Create(nil); Failed := False; Uncertain := False;
+  try
+    Reader.Transport := Hold; Reader.CryptoProvider := TFixed.Create;
+    Reader.Security := dfsEv2Aes;
+    Reader.AuthenticationKey := HexToBytes('00000000000000000000000000000000');
+    if Kind=11 then Reader.MinimumCommunication := dfcPlain;
+    if Kind=12 then Reader.MinimumCommunication := dfcMac;
+    try
+      Session := Reader.OpenMultiAccessTransactionSession(1,True);
+      if Freeze then begin Wire.MutateCall := Wire.Calls+1; Wire.Borrowed := Data; end;
+      case Kind of
+        2,10: Session.Credit(0,5);
+        3: Session.Debit(0,5);
+        4: Session.LimitedCredit(0,5);
+        5,6: Session.AppendRecord(0,Data);
+        7: Session.ClearRecords(0);
+      else Session.WriteBackup(0,0,Data); end;
+      if Kind=1 then Session.Abort else Session.Commit;
+    except on E: Exception do begin
+      Failed := True; Uncertain := E is EContactlessWriteUncertain;
+      if not (Kind in [8,9,10]) and (Fail=0) and ((Corrupt=0) or ((Kind=11) and (Corrupt=7))) and not ReleaseFails then
+        Writeln('Multi transaction diagnostic: ',E.ClassName,': ',E.Message,' calls=',Wire.Calls);
+    end; end;
+    if not (Kind in [8,9,10]) and (Fail=0) and ((Corrupt=0) or ((Kind=11) and (Corrupt=7))) and not ReleaseFails then begin
+      Check(not Failed,'Multiple-right native transaction '+IntToStr(Kind));
+      if Kind=1 then Check(Session.Outcome=dsoAborted,'Explicit multiple-right abort acknowledged')
+      else Check(Session.VerificationSucceeded,'Multiple-right data/settings and release verified');
+      Check(Wire.Calls=Length(Wire.Pairs),'Multiple-right exact native exchanges');
+    end else begin
+      Check(Failed,'Multi-access injected/semantic fault observable Kind='+IntToStr(Kind)+' Fail='+IntToStr(Fail)+' Corrupt='+IntToStr(Corrupt)+' Bit='+IntToStr(BitIndex));
+      Check(Uncertain=(Wire.Writes>0),'Multi-access dispatch uncertainty');
+      if Session<>nil then Check(not Session.VerificationSucceeded,'No verification claim after failed transaction');
+    end;
+  finally
+    Session := nil; Reader.Free; TCardCrypto.Clear(Data);
+    Check(not Wire.Active and (Wire.Begins=Wire.Ends),'Multi-access always releases exclusive ownership');
+  end;
+end;
+
+procedure TestMultiAccessTransactions;
+var
+  Kind, I, Bit: Integer;
+  Pairs: TExtendedPairs;
+begin
+  for Kind := 0 to 12 do begin
+    RunMultiTx(Kind,0,0,0,False,False);
+    if Kind in [8,9,10] then Continue;
+    if Kind in [0,1,5,6] then RunMultiTx(Kind,0,0,0,True,False);
+    RunMultiTx(Kind,0,0,0,False,True);
+    Pairs := MultiTxPairs(Kind);
+    for I := 1 to Length(Pairs) do RunMultiTx(Kind,I,0,0,False,False);
+    for I := 2 to Length(Pairs) do
+      // Plain preimage data has no MAC; replacing the full file cannot prove its original bytes.
+      if not ((Kind=11) and (I=7)) then
+      for Bit := 0 to (Length(Pairs[I-1].Response) div 2 - 2)*8-1 do
+        RunMultiTx(Kind,0,I,Bit,False,False);
+  end;
+  // Plain preimage alteration remains unauthenticated; the complete replacement and final proof still succeed.
+  RunMultiTx(11,0,7,0,False,False);
+end;
+
+procedure TestMultiAccessGuards;
+var
+  Wire: TWire;
+  Hold: ICardTransport;
+  Reader: TDesfireCardReader;
+  Session: IDesfireSession;
+  I: Integer;
+  Failed: Boolean;
+begin
+  Wire := TWire.Create; Hold := Wire; Reader := TDesfireCardReader.Create(nil);
+  try
+    Reader.Transport := Hold; Reader.CryptoProvider := TFixed.Create;
+    Reader.Security := dfsEv2Aes;
+    Reader.AuthenticationKey := HexToBytes('00000000000000000000000000000000');
+    for I := 0 to 3 do begin
+      Failed := False;
+      try case I of
+        0: Session := Reader.OpenMultiAccessTransactionSession(1,False);
+        1: Session := Reader.OpenMultiAccessTransactionSession(0,True);
+        2: Session := Reader.OpenMultiAccessTransactionSession($1000000,True);
+        3: begin Reader.Security := dfsLrp; Session := Reader.OpenMultiAccessTransactionSession(1,True); end;
+      end;
+      except on E: EDesfireError do Failed := True; end;
+      Check(Failed and (Wire.Begins=0) and (Session=nil),'Multi-access explicit profile/context/freshness before acquisition');
+    end;
+  finally Session := nil; Reader.Free; end;
+  for I := 0 to 4 do begin
+    Wire := TWire.Create; Hold := Wire; Reader := TDesfireCardReader.Create(nil);
+    try
+      case I of
+        0: Wire.Pairs := DfMultiTxRejectSdm;
+        1: Wire.Pairs := DfMultiTxRejectTmac;
+        2: Wire.Pairs := DfMultiTxRejectMalformed;
+        3: Wire.Pairs := DfMultiTxRejectUnknown;
+        4: Wire.Pairs := DfMultiTxBackup;
+      end;
+      Reader.Transport := Hold; Reader.CryptoProvider := TFixed.Create;
+      Reader.Security := dfsEv2Aes;
+      Reader.AuthenticationKey := HexToBytes('00000000000000000000000000000000');
+      Failed := False;
+      try
+        if I=4 then Session := Reader.OpenSession(1,dsaFreshTransaction)
+        else Session := Reader.OpenMultiAccessTransactionSession(1,True);
+      except on E: EDesfireError do Failed := True;
+        on E: EDesfireExtensionError do Failed := True; end;
+      Check(Failed and (Session=nil) and (Wire.Calls=5) and (Wire.Writes=0),
+        'Unsupported layouts and old ordinary entry reject before pending-state mutation');
+      Check(not Wire.Active and (Wire.Begins=Wire.Ends),'Rejected layout releases exclusive owner');
+    finally Session := nil; Reader.Free; end;
+  end;
+end;
+
 procedure TestLrpNativeGuards;
 var
   Wire: TWire;
@@ -3115,7 +3261,7 @@ end;
 begin
   try
 {$IFDEF MSWINDOWS} Base:=TCardWindowsAesProvider.Create; {$ELSE} Base:=TCardOpenSslAesProvider.Create; {$ENDIF}
-    TestCodecs; TestDf; TestPlus; TestPlusWorkflow; TestAcr; TestPlus4K; TestFrozenInputs; TestPlusManagement; TestPlusLevels; TestPlusValues; TestNativeValues; TestFileManagement; TestTmacTransactions; TestIsoKeySetsAndStandardTmac; TestIsoAndRangeInputGuards; TestLrpPublishedVectors; TestLrpNativeCodec; TestLrpProviderFailures; TestCombinedSdmAndRecords; TestNativeLrpAndTmac; TestAcquiredLrpTmac; TestLrpNativeGuards; TestLrpInspection; TestLrpLightManagement; TestLrpLightGuards;
+    TestCodecs; TestDf; TestPlus; TestPlusWorkflow; TestAcr; TestPlus4K; TestFrozenInputs; TestPlusManagement; TestPlusLevels; TestPlusValues; TestNativeValues; TestFileManagement; TestTmacTransactions; TestIsoKeySetsAndStandardTmac; TestIsoAndRangeInputGuards; TestLrpPublishedVectors; TestLrpNativeCodec; TestLrpProviderFailures; TestCombinedSdmAndRecords; TestNativeLrpAndTmac; TestAcquiredLrpTmac; TestLrpNativeGuards; TestLrpInspection; TestLrpLightManagement; TestLrpLightGuards; TestMultiAccessTransactions; TestMultiAccessGuards;
     Writeln('PASS: ',Checks,' DESFire extension/Plus assertions.');
   except on E: Exception do begin Writeln(E.ClassName,': ',E.Message); ExitCode:=1; end; end;
 end.
