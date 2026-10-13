@@ -1385,3 +1385,16 @@ assertions with range/overflow checks and no heap leaks. Existing tests exercise
 pending-job clearing, executor shutdown and resource/session failure cleanup.
 All **21 SDK source checkers** pass and `git diff --check` is clean. These are
 source compatibility fixes guided by the supplied Delphi compiler diagnostics.
+
+## Delphi Plus authentication cleanup hints (2026-10-13)
+
+Removed the redundant `Active` flag in `TMifarePlusLevelManager.AuthenticateRaw`,
+addressing both reported `H2077` hints. The inner try/finally already starts only
+after successful session acquisition. Release remains checked on success and
+best-effort on failure; the outer finally continues to wipe temporary secrets.
+
+The existing `TestPlusLevels` subgroup passed **50,042 assertions**, covering
+level-transition transcripts, exchange/response-bit faults, acquisition/release
+failures, UID/nonce checks and irreversible-write uncertainty. Range/overflow
+checks were enabled and no heap leaks were reported. All **21 SDK source checkers**
+pass and `git diff --check` is clean. Existing formatting, BOM and CRLF are retained.
