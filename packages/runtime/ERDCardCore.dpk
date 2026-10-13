@@ -10,7 +10,17 @@ requires
   rtl;
 
 contains
+  ERD.Card.Keys in '..\..\src\core\ERD.Card.Keys.pas',
+  ERD.Card.Project.Schema in '..\..\src\core\ERD.Card.Project.Schema.pas',
+  ERD.Card.Project.Artifacts in '..\..\src\core\ERD.Card.Project.Artifacts.pas',
+  ERD.Card.Project.Files in '..\..\src\core\ERD.Card.Project.Files.pas',
   ERD.Card.Inspection in '..\..\src\core\ERD.Card.Inspection.pas',
+  ERD.Card.Session in '..\..\src\core\ERD.Card.Session.pas',
+  ERD.Card.Operation.Executor in '..\..\src\core\ERD.Card.Operation.Executor.pas',
+  ERD.Card.Operation in '..\..\src\core\ERD.Card.Operation.pas',
+  ERD.Card.Operation.Workflow in '..\..\src\core\ERD.Card.Operation.Workflow.pas',
+  ERD.Card.Project.Secure in '..\..\src\core\ERD.Card.Project.Secure.pas',
+  ERD.Card.Project in '..\..\src\core\ERD.Card.Project.pas',
   ERD.Card.Workflow.Batch in '..\..\src\core\ERD.Card.Workflow.Batch.pas',
   ERD.Card.Workflow in '..\..\src\core\ERD.Card.Workflow.pas',
   ERD.Card.Workflow.Archive in '..\..\src\core\ERD.Card.Workflow.Archive.pas',

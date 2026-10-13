@@ -11,6 +11,8 @@ requires
   ERDCardCore;
 
 contains
+  ERD.Card.MagStripe.Session in '..\..\src\magstripe\ERD.Card.MagStripe.Session.pas',
+  ERD.Card.MagStripe.Project in '..\..\src\magstripe\ERD.Card.MagStripe.Project.pas',
   ERD.Card.MagStripe.Workflow in '..\..\src\magstripe\ERD.Card.MagStripe.Workflow.pas',
   ERD.Card.MagStripe.MSR2067HL in '..\..\src\magstripe\ERD.Card.MagStripe.MSR2067HL.pas',
   ERD.Card.MagStripe.Serial in '..\..\src\magstripe\ERD.Card.MagStripe.Serial.pas',

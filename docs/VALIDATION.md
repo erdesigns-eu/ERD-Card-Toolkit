@@ -1214,3 +1214,131 @@ were changed. Component/studio readiness is documented in
 The full native DESFire/Plus suite passes **3,962,935 assertions**, zero unfreed
 heap blocks, including an explicit test showing the unauthenticated Plain preimage
 case and the previously implemented Light/AES/LRP/ISO/SDM/TMAC behavior.
+
+
+## 2026-10-12 — studio session, operation and project components
+
+Introduced three inactive nonvisual palette components and a prepared-workflow
+operation bridge. Native focused tests pass **125 assertions**, including real
+wrong-thread execution, exclusive reservations, generation invalidation before/
+after I/O, physical transaction cleanup on card change, detached-reader rebind,
+FIFO single consumption, cooperative cancellation, observer isolation, workflow
+observer restoration and single-use refusal, copy-isolated project artifacts,
+duplicate/truncated atomic import, empty payloads, stream failure/roundtrip and
+payload budgets. Heap tracing reports zero unfreed blocks. New units retain
+UTF-8 BOM/CRLF and complete public API XML documentation. No demos/forms changed.
+
+The complete FPC regression runner passes, including the initial **123** studio
+assertions, **3,962,935** DESFire/Plus assertions, **63** inactive registration/
+streaming cases, **38** Python tests, distribution checks and all **21** source
+checkers. A separate build of the latest workflow-failure/cancellation evidence
+changes passes **125** studio assertions with zero heap leaks and no new compiler
+hints/warnings. Latest library source checks also pass. Registry/project/operation
+components are foundation profiles; background executors, automatic connection
+providers, typed non-APDU leases and protected storage remain separate work.
+
+
+## 2026-10-12 — background executor and lazy PC/SC session provider
+
+Added inactive TCardOperationExecutor and TCardPcscSessionProvider, with copied lazy
+connection registration. Native targeted studio tests pass **161 assertions**, zero
+heap leaks, including real background execution, finite creator-thread delivery,
+observer failure isolation, repeated start/stop, dependency removal/join, lazy
+open/close errors, invalidation during Open and idle lease cleanup. Ten repeated
+threaded lifecycle runs pass. Native PC/SC transport/provider tests pass **99
+assertions across eight groups**, including copied reader settings, exact one-shot
+Connect/Disconnect and Leave disposition. Source checks and distribution validation
+pass; new API XML documentation and source BOM/CRLF are preserved. There are now
+**64 palette components**; no demos or forms changed. Native backend teardown never
+implies authentication, reset, reconnect or transaction replay.
+
+
+Latest storage/executor build passes **303 studio assertions**, zero heap leaks.
+The protected-storage oracle validates every modified envelope byte and every
+truncated ciphertext fixture before project mutation, plus provider lifetime and
+failed-save dirty-state handling. Latest inactive registration/streaming passes
+**67 cases** for **66 palette components**. The Windows DPAPI code path and native
+roundtrip/tamper test are shipped; Linux runs the explicit unsupported-platform
+boundary and synthetic storage contract tests, not native DPAPI. The distribution
+reader now recognizes interface-implementing component ancestry, with a dedicated
+positive/missing-registration fixture; **39 Python tests** pass. Source/distribution
+checks remain clean. No demos/forms changed.
+
+The full regression run before the final secure-store addition passes, including
+**160 initial executor/studio assertions**, **3,962,935 DESFire/Plus assertions**,
+**99 PC/SC/provider assertions**, **65 then-current streaming cases**, **38 then-current
+Python tests** and all **21 source checkers**. Focused latest builds separately
+verify protected storage, RequestStop admission and the expanded palette described
+above. All new Pascal units retain UTF-8 BOM/CRLF and public API XML documentation.
+
+
+## 2026-10-12 — typed artifacts, atomic files and multi-reader coordination
+
+The latest focused native studio bundle passes **98 assertions**, with zero heap
+leaks; ten repeated runs pass. Coverage includes all-reader reservation before any
+Open, busy/missing/duplicate members, wrong-thread group access, generation changes
+during another member Open, partial-open rollback, continued cleanup after Close
+failure, one-shot queued/background execution and Failed versus Uncertain evidence.
+The concrete multi-workflow bridge preserves/restores observers, supports cooperative
+cancellation, retains precise failure classes and rejects a consumed operation.
+
+Typed selected-memory, ordinary DESFire, MOBIB and magstripe adapters round-trip
+independent buffers and reject cross-family/version, truncated and invalid artifacts
+without replacing valid project data. Native Linux filesystem tests exercise new
+files, replacement, rename refusal, failure before replacement, protection-provider
+failure, protected roundtrip/tamper rejection, temporary-file cleanup, destroyed
+provider binding and a reentrant source change during protection. The protection
+oracle checks the contract; it is not a cryptographic implementation.
+
+Existing studio tests pass **303 assertions**. Latest inactive palette/RTL streaming
+passes **68 cases** for **67 components**; distribution checks cover **62 projects,
+2 groups and 48 DFM forms** with no findings. All **21 source checkers** and **39
+Python tool tests** pass. Pascal/package CRLF and new-unit BOM are preserved. No
+forms or demos were changed. Native Windows CreateFile/FlushFileBuffers/MoveFileEx
+and DPAPI paths are delivered but were not executed on this Linux host.
+
+
+The complete regression runner finishes successfully, including **3,962,935
+DESFire/Plus assertions**, **99 PC/SC/provider assertions**, **303 studio assertions**,
+**68 registration/streaming cases**, **39 Python tests**, distribution validation
+and all **21 checkers** across sources/tests/examples. Its compiled bundle snapshot
+had **86 assertions**; the subsequent concrete multi-workflow bridge and checked
+native handle-close changes are covered by the latest **98-assertion** focused
+build and repeated runs above. Existing unrelated FPC compiler notes/warnings are
+unchanged; the new filesystem unit emits only an FPC inline-not-inlined note.
+
+
+## 2026-10-12 — inventory, typed device sessions, key providers and schemas
+
+Latest native infrastructure tests pass **54 assertions**, with zero heap leaks,
+including ten repeated runs. They exercise typed HID/magstripe acquisition on the
+common registry, backend alias rejection, truthful optional status-write support,
+logical versus native acquisition boundaries, wrong-thread refusal, revoked retained
+wrappers, native close failure quarantine, generation loss after receive/send/write,
+real background typed jobs and an existing magstripe workflow through the concrete
+resource bridge. No failed submission is replayed.
+
+Injected inventory tests exercise native HID notification callbacks, duplicate
+case-variant paths, removal/reappearance behind an old lease, deferred promotion,
+owned Stop/detach, PC/SC ATR invalidation and ignoring INUSE/power-only changes.
+Native Windows inventory/report I/O was not executed on this Linux host; the existing
+monitor/native adapter implementation remains reused and independently tested.
+
+Key tests verify input/output copy isolation, exact purpose refusal, immutable
+snapshot lifetime after component destruction, key-entry budgets and absence of
+key buffers from component streaming. Schema tests validate multi-step rollback,
+wrong identity refusal, explicit registered edges and the concrete legacy MOBIB
+v1-to-v2 archive upgrade without invented missing metadata. NDEF, SIM/USIM and
+contact-memory typed adapters round-trip through their existing validation codecs.
+
+Latest registration/RTL streaming passes **74 cases** for **73 palette components**.
+Existing studio suites pass **303** and **98** assertions with zero heap leaks.
+The complete regression runner passes **3,962,935 DESFire/Plus assertions**, **99
+PC/SC/provider assertions**, all protocol suites, **39 Python tests**, distribution
+checks (**62 projects, 2 groups, 48 forms**) and all **21 source checkers** across
+sources/tests/examples. Its compiled infrastructure snapshot had **51 assertions**;
+the final alias, MOBIB migration and HID-case changes are separately covered by the
+latest **54-assertion** build and repeated runs. New API XML documentation, UTF-8
+BOM and CRLF are preserved; no forms or demos changed. The existing unrelated FPC
+TLV constructor warning remains unchanged; the new infrastructure code adds no
+compiler warnings or hints.

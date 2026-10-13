@@ -133,6 +133,19 @@ class DistributionTests(unittest.TestCase):
             self.assertTrue(any('already belongs' in e for e in errors))
             self.assertTrue(any('runtime depends' in e for e in errors))
 
+    def test_palette_interface_component(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'src/design').mkdir(parents=True)
+            (root / 'src/Protection.pas').write_text(
+                'type TUserProtection = class(TComponent, ICardProjectProtection) end;')
+            registration = root / 'src/design/ERD.Card.Design.Register.pas'
+            registration.write_text("RegisterComponents('Cards', [TUserProtection]);")
+            self.assertEqual(distribution.check_registration(root), [])
+            registration.write_text("RegisterComponents('Cards', []);")
+            self.assertTrue(any('unregistered component TUserProtection' in error
+                                for error in distribution.check_registration(root)))
+
     def test_palette_component_descendants(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

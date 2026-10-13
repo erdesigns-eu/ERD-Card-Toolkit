@@ -180,11 +180,13 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="..\..\src\pcsc\ERD.Card.PCSC.Registry.pas"/>
         <DCCReference Include="..\..\src\pcsc\ERD.Card.PCSC.Monitor.pas"/>
         <DCCReference Include="rtl.dcp"/>
         <DCCReference Include="ERDCardCore.dcp"/>
         <DCCReference Include="..\..\src\pcsc\ERD.Card.PCSC.Api.pas"/>
         <DCCReference Include="..\..\src\pcsc\ERD.Card.PCSC.Windows.pas"/>
+        <DCCReference Include="..\..\src\pcsc\ERD.Card.PCSC.Session.pas"/>
         <DCCReference Include="..\..\src\pcsc\ERD.Card.PCSC.Reader.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>

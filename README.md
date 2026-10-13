@@ -37,6 +37,8 @@ out of scope (see [Not supported](#not-supported)).
 
 | Area | Components | What you can do |
 | --- | --- | --- |
+| **Studio infrastructure** | `TCardSessionManager`, `TCardOperationQueue`, `TCardOperationExecutor`, `TCardPcscSessionProvider`, `TCardProject`, `TCardProtectedProjectStore`, `TCardWindowsUserProtection`, `TCardProjectFileStore` | Reserved generation/thread-checked reader leases, cooperative operation queue/result events, signal-driven background execution with main-thread results, lazy worker-owned PC/SC connections, existing workflow bridge, bounded copy-isolated projects, atomic validated import/stream persistence and current-user Windows DPAPI protected project storage, atomic filesystem saves, typed memory/DESFire/MOBIB/magstripe artifacts and queued multi-reader operations. See [Studio components](docs/STUDIO_COMPONENTS.md). |
+| **Device sessions and project services** | `THidSessionProvider`, `TMagStripeSessionProvider`, `TCardPcscSessionRegistry`, `TCardHidSessionRegistry`, `TCardKeyProvider`, `TCardProjectSchemaRegistry` | Automatic PC/SC/HID inventory registration, guarded typed non-APDU leases and queued workflow execution, scoped immutable in-memory key providers and explicit atomic artifact-schema migrations. NDEF, SIM/USIM and contact-memory project adapters are available alongside memory/DESFire/MOBIB/magstripe. |
 | **Application workflows** | `TProtectedNdefWorkflow`, `TProtectedMemoryWorkflow`, `TCardSecurityWorkflow`, `TEidInspectionWorkflow`, `TEmvInspectionWorkflow`, `TMobibInspectionWorkflow`, `TSle4404Workflow`, `TSleCounterWorkflow`, `TDesfirePersonalizationWorkflow`, `TSimPhonebookWorkflow`, `TSimSmsWorkflow`, `TSimInspectionWorkflow`, `TContactMemoryWorkflow`, `TDesfireApplicationWorkflow`, `TDesfireProvisionWorkflow`, `TCardBatchWorkflow`, `TIso15693MemoryWorkflow`, `TMifareClassicCopyWorkflow`, `TType2MemoryWorkflow`, `TUidProgrammingWorkflow`, `TClassicCredentialWorkflow`, `TNdefTransferWorkflow`, `TMagStripeCopyWorkflow` | Data/UID/stripe copy, backup/restore/compare, ISO15693 selected-memory restore, contact-memory restore, SLE4404/counterchip reviewed program/erase plans, ordered DESFire creation/content/key/access-policy personalization with checked resume, DESFire application provisioning/migration, SIM/USIM contact/SMS import/restore plans and inspection, batch personalization, explicit credential migration and NDEF transfer; progress/card-request events, verified results and partial-write evidence. Also includes supplied-key Ultralight C and supplied-password Type 2/ISO15693 memory workflows, protected NDEF copy/compare/template/clear workflows, TWN4 Classic/Type 2 memory adapters and reviewed credential/protection changes, plus eID/EMV/MOBIB inspection with retained partial results and privacy-aware text/JSON export. See [Workflows](docs/WORKFLOWS.md), [Inspection reports](docs/INSPECTION_REPORTS.md) and [Protected workflows](docs/PROTECTED_WORKFLOWS.md) and [Workflow adapters](docs/CARD_WORKFLOW_ADAPTERS.md). |
 | **PC/SC readers** | `TSmartCardReader`, `TSmartCardMonitor` | List readers, connect (shared/exclusive, T=0/T=1), read the ATR, exchange APDUs through `ICardTransport` and use explicit PC/SC transactions. Event-driven reader hot-plug and card insertion/removal without polling. |
 | **Protocol toolkit** | Codecs (no component) | ISO 7816 APDU encode/decode (short and extended), ATR parsing with TCK validation, BER-TLV decode/encode with configurable limits, hex/byte helpers, a curated ATR hint catalog and EMV tag metadata. |
@@ -446,6 +448,19 @@ All public APIs carry Delphi XML documentation (`///`) for Help Insight; see
 | `ERD.Card.ATR.Legacy` | Valid original ATR inventory with issuer/country/scheme/category and source rows |
 | `ERD.Card.APDU.Catalog` | 35 instruction labels, 205 historical status explanations and dynamic standard statuses |
 | `ERD.Card.TLV` | Bounded BER-TLV tree decoder/encoder |
+| `ERD.Card.Keys` | Scoped immutable worker key-provider snapshots; no project/DFM credentials |
+| `ERD.Card.Project.Schema` | Explicit bounded offline schema paths and atomic final artifact replacement |
+| `ERD.Card.PCSC.Registry` | Native reader/card events connected to lazy session registration |
+| `ERD.Card.HID.Registry` | HID collection hotplug connected to typed lazy resource registration |
+| `ERD.Card.HID.Session` | Guarded typed HID device leases with explicit write access |
+| `ERD.Card.MagStripe.Session` | Guarded typed stripe leases, preserving real status/verification capabilities |
+| `ERD.Card.Ndef.Project` | Typed canonical NDEF artifacts |
+| `ERD.Card.SIM.Project` | Typed SIM/USIM record-family snapshots |
+| `ERD.Card.Memory.Project` | Typed contact-memory images and diagnostic security metadata |
+| `ERD.Card.Project.Artifacts` | Typed selected-memory artifacts and strict ASCII archive bridge |
+| `ERD.Card.Project.Files` | Atomic plain/protected filesystem storage with explicit replacement evidence |
+| `ERD.Card.Contactless.Project` | Typed DESFire and MOBIB archive adapters |
+| `ERD.Card.MagStripe.Project` | Typed selected-track templates/backups |
 | `ERD.Card.Transport` | `ICardTransport` and `ICardTransaction` contracts |
 | `ERD.Card.Contactless.Workflow.Password` | Supplied-password memory workflows and pre-authentication UID/geometry guards |
 | `ERD.Card.Contactless.Workflow.UltralightC` | Supplied-3DES-key Ultralight C user-memory backend with static/dynamic lock preflight |

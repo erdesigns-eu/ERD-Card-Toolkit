@@ -20,7 +20,7 @@ uses
   ERD.Card.Transport,
   ERD.Card.PCSC.Api,
   ERD.Card.PCSC.Windows,
-  ERD.Card.PCSC.Reader;
+  ERD.Card.PCSC.Reader, ERD.Card.Session, ERD.Card.PCSC.Session;
 
 type
 {$IFDEF FPC}
@@ -841,8 +841,37 @@ begin
   end;
 end;
 
+procedure TestSessionProvider;
+var Fake: TFakeApi; Api: IPcscApi; Provider: TCardPcscSessionProvider;
+  Manager: TCardSessionManager; Lease: ICardSessionLease; Data: TBytes;
+  Failed: Boolean; Mode: Integer;
+begin
+  for Mode := 0 to 2 do begin
+    Fake := TFakeApi.Create; Api := Fake;
+    Provider := TCardPcscSessionProvider.CreateWithApi(nil,Api);
+    Manager := TCardSessionManager.Create(nil);
+    try
+      Provider.ReaderName := 'Reader A'; Provider.Protocols := 3;
+      Provider.RegisterReader(Manager,'reader'); Provider.ReaderName := 'Changed';
+      Check(Fake.ConnectCount=0,'Lazy PC/SC registration has no connection');
+      if Mode=1 then Fake.ConnectResult := PcscInternalError;
+      if Mode=2 then Fake.DisconnectResult := PcscInternalError;
+      Failed := False;
+      try
+        Lease := Manager.Acquire('reader');
+        Data := Lease.Transport.Exchange(HexToBytes('0084000000'));
+        Check(Length(Data)>=2,'Lazy connected byte transport'); Lease.Close;
+      except on E: EPcscError do Failed := True; end;
+      Check(Failed=(Mode<>0),'Native connection/disconnection failure propagates');
+      Check((Fake.ConnectCount=1) and (Fake.LastName='Reader A'),'Copied exact name and no automatic reconnect');
+      if Mode<>1 then Check((Fake.DisconnectCount=1) and (Fake.LastDisposition=pcdLeave),'Provider disconnect leaves card unchanged');
+    finally Lease := nil; Provider.Free; Manager.Free; Api := nil; end;
+  end;
+end;
+
 begin
   try
+    TestSessionProvider;
     TestConnection;
     TestFailures;
     TestTransactionsAndThreads;
@@ -850,7 +879,7 @@ begin
     TestIsolationAndBounds;
     TestMonitorDestruction;
     TestPlatformBoundary;
-    Writeln('PASS: ', Checks, ' assertions across 7 transport test groups.');
+    Writeln('PASS: ', Checks, ' assertions across 8 transport test groups.');
   except
     on E: Exception do
     begin

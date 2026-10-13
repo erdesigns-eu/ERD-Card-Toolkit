@@ -10,6 +10,7 @@ requires
   ERDCardCore;
 
 contains
+  ERD.Card.SIM.Project in '..\..\src\sim\ERD.Card.SIM.Project.pas',
   ERD.Card.SIM.Workflow in '..\..\src\sim\ERD.Card.SIM.Workflow.pas',
   ERD.Card.SIM.Inspection in '..\..\src\sim\ERD.Card.SIM.Inspection.pas',
   ERD.Card.SIM.Data in '..\..\src\sim\ERD.Card.SIM.Data.pas',
