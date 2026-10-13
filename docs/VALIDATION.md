@@ -1371,3 +1371,17 @@ Registration/RTL streaming passes **76 assertions for 75 inactive components**.
 Modified Pascal/package files preserve CRLF and their original BOM choices; new
 Pascal sources use UTF-8 BOM and CRLF. Protocol execution evidence uses injected
 synthetic transports and native shims, without claiming physical card traces.
+
+## Delphi core package compatibility fix (2026-10-13)
+
+The reported `E2008` in `TCardOperationQueue.ClearPending` came from assigning
+between separately declared anonymous dynamic arrays. Queue storage and the
+local detached-job buffer now share one implementation-only `TJobs` type.
+`TRegistry.ReserveResource` explicitly initializes its guard pointer before the
+exception handler, addressing Delphi's `W1036` without changing cleanup ownership.
+
+The infrastructure, studio bundle and studio component suites passed **455**
+assertions with range/overflow checks and no heap leaks. Existing tests exercise
+pending-job clearing, executor shutdown and resource/session failure cleanup.
+All **21 SDK source checkers** pass and `git diff --check` is clean. These are
+source compatibility fixes guided by the supplied Delphi compiler diagnostics.

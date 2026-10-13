@@ -434,7 +434,7 @@ var I: Integer; Connection: ICardResourceConnection; Generation: Int64;
   Guard: TResourceGuard; KeepGuard: ICardResourceGuard; Lease: TResourceLease;
   KeepLease: ICardResourceLease; Device: IInterface; Opened: Boolean;
 begin
-  Result := nil; Opened := False;
+  Result := nil; Opened := False; Guard := nil;
   Enter;
   try
     I := Index(Id); if not FEnabled or (I<0) then Invalid;
