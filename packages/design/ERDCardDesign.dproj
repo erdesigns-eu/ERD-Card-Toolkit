@@ -123,6 +123,9 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
+        <DCCReference Include="rtl.dcp"/>
+        <DCCReference Include="vcl.dcp"/>
+        <DCCReference Include="designide.dcp"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Ndef.Project.pas"/>
         <DCCReference Include="..\..\src\memory\ERD.Card.Memory.Project.pas"/>
         <DCCReference Include="..\..\src\sim\ERD.Card.SIM.Project.pas"/>
@@ -136,6 +139,13 @@
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Project.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Project.Artifacts.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Project.Files.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.DESFire.Extensions.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Plus.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Plus.SL2.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Plus.Levels.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Plus.ACR122.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.ACR122.pas"/>
+        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Plus.Workflow.pas"/>
         <DCCReference Include="..\..\src\readers\ERD.Card.Reader.TWN4.Workflow.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Workflow.Ndef.Protected.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Workflow.UltralightC.pas"/>
@@ -167,9 +177,6 @@
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Workflow.Ndef.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Workflow.Credentials.pas"/>
         <DCCReference Include="..\..\src\magstripe\ERD.Card.MagStripe.Workflow.pas"/>
-        <DCCReference Include="rtl.dcp"/>
-        <DCCReference Include="vcl.dcp"/>
-        <DCCReference Include="designide.dcp"/>
         <DCCReference Include="..\..\src\globalplatform\ERD.Card.GlobalPlatform.Management.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Crypto.RSA.pas"/>
         <DCCReference Include="..\..\src\emv\ERD.Card.EMV.Semantics.pas"/>
@@ -219,13 +226,6 @@
         <DCCReference Include="..\..\src\core\ERD.Card.APDU.pas"/>
         <DCCReference Include="..\..\src\core\ERD.Card.Bytes.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.pas"/>
-        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.DESFire.Extensions.pas"/>
-        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Plus.pas"/>
-        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Plus.SL2.pas"/>
-        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Plus.Levels.pas"/>
-        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Plus.ACR122.pas"/>
-        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.ACR122.pas"/>
-        <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.Plus.Workflow.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.DESFire.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.DESFire.EV1.pas"/>
         <DCCReference Include="..\..\src\contactless\ERD.Card.Contactless.DESFire.EV2.pas"/>
