@@ -1,4 +1,4 @@
-# ERD Card Components
+# ERD-Card Toolkit
 
 A Delphi component library for **reading and writing smart cards, contactless tags,
 magnetic stripes and RFID input** on Windows. It covers PC/SC readers, identity
