@@ -70,14 +70,26 @@ end;
 
 class procedure TContactlessProjectArtifacts.PutDesfire(const AProject: TCardProject;
   const AId: string; const ASnapshot: TDesfireWorkflowSnapshot);
+var Text,Profile: string;
 begin
-  TCardProjectArtifacts.PutArchive(AProject,AId,'desfire.v1',TDesfireWorkflowArchive.Encode(ASnapshot));
+  Text := TDesfireWorkflowArchive.Encode(ASnapshot); Profile := 'desfire.v1';
+  if Copy(Text,1,Length('ERD-DESFIRE 2'))='ERD-DESFIRE 2' then Profile := 'desfire.v2';
+  TCardProjectArtifacts.PutArchive(AProject,AId,Profile,Text);
 end;
 
 class function TContactlessProjectArtifacts.GetDesfire(const AProject: TCardProject;
   const AId: string): TDesfireWorkflowSnapshot;
+var Item: TCardProjectArtifact; Text: string;
 begin
-  Result := TDesfireWorkflowArchive.Decode(TCardProjectArtifacts.GetArchive(AProject,AId,'desfire.v1'));
+  if AProject=nil then raise ECardProjectError.Create('A project is required.');
+  Item := AProject.Get(AId);
+  if not ((Item.Profile='desfire.v1') or (Item.Profile='desfire.v2')) then
+    raise ECardProjectError.Create('Unsupported DESFire artifact schema.');
+  Text := TCardProjectArtifacts.GetArchive(AProject,AId,Item.Profile);
+  if ((Item.Profile='desfire.v1') and (Copy(Text,1,Length('ERD-DESFIRE 1'))<>'ERD-DESFIRE 1')) or
+    ((Item.Profile='desfire.v2') and (Copy(Text,1,Length('ERD-DESFIRE 2'))<>'ERD-DESFIRE 2')) then
+    raise ECardProjectError.Create('DESFire artifact version mismatch.');
+  Result := TDesfireWorkflowArchive.Decode(Text);
 end;
 
 class procedure TContactlessProjectArtifacts.PutMobib(const AProject: TCardProject;

@@ -151,7 +151,7 @@ documentation. Use the same complete scope for upcoming batches:
 3. **DESFire expansion and additional chip families:** D40 and EV1 DES/2K3DES/3K3DES security are implemented. EV2 AES key sets, configuration subset and SDM settings/crypto are implemented. Native ISO creation/directories including key-set creation, multi-access settings/data and AES TMAC file/transactions/receipts including immediate standard-range writes are implemented. Native LRP codecs, combined SDM/right settings and cyclic-record updates are implemented. Automatic LRP sessions and LRP TMAC are implemented. Native DESFire Light LRP key/configuration management is implemented. Remaining extensions include broader LRP provisioning and combined SDM/TMAC data transactions, followed by
    originality and physical card profiles. Owned ordinary transactions and basic create/delete
    management and verified AES key/policy/access administration are implemented. EV1/EV2 AES secure
-   file access and EV2 NonFirst through maintained providers are implemented. Plus SL3 AES ordinary-memory profiles and ACR122/workflow adapters are implemented. Explicit SL0 personalization/commit with selected SL3 proofs and sector AES key replacement are implemented. Raw SL1 authentication, acknowledged SL1→SL2 and verified SL1→SL3 are implemented, together with signed value-block codecs and ordinary verified value writes. Verified SL2→SL3 and native Plus X-compatible increment/decrement/restore/transfer workflows are implemented. SL2 sector data sessions and trailer/configuration programming remain separate, alongside
+   file access and EV2 NonFirst through maintained providers are implemented. Plus SL3 AES ordinary-memory profiles and ACR122/workflow adapters are implemented. Explicit SL0 personalization/commit with selected SL3 proofs and sector AES key replacement are implemented. Raw SL1 authentication, acknowledged SL1→SL2 and verified SL1→SL3 are implemented, together with signed value-block codecs and ordinary verified value writes. Verified SL2→SL3 and native Plus X-compatible increment/decrement/restore/transfer workflows are implemented. SL2 sector/trailer/key programming and selected-memory workflows are implemented. SL3 trailer/global configuration remains separate, alongside
    additional ISO 15693 authentication/reader backends,
    then authenticated AT88SC/CryptoMemory and additional reader backends.
    SLE4404 code access/programming/explicit erases are implemented through ACS38 CCID;
@@ -224,3 +224,7 @@ components. Demo redesign is deferred until the component set is ready.
 ## Native Plus and DESFire extensions
 
 [Plus SL3](MIFARE_PLUS.md) now supports explicit 2K/4K ordinary-memory reading/writing and protected-memory workflows. [DESFire extended management](DESFIRE_EXTENDED.md) adds AES key-set lifecycle, configuration acknowledgement, SDM settings read-back and offline SDM crypto. This increment adds no demo changes.
+
+The latest [protocol/workflow bundle](PROTOCOL_COMPLETION.md) adds explicit Plus SL2
+AES/Crypto1 sector and trailer programming, multiple-right AES TMAC transactions,
+extended application archives/provisioning and stored SDM template workflows.

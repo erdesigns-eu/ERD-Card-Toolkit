@@ -1,4 +1,4 @@
-# MIFARE Plus SL3
+# MIFARE Plus SL2/SL3
 
 `TMifarePlusCardReaderWriter` implements native AES access to explicitly selected
 Plus 2K/4K cards already operating in Security Level 3. It is registered on the
@@ -251,8 +251,10 @@ no external reader-library source is included or compiled.
 
 ## Scope and validation
 
-SL2 sector data sessions, manufacturer/trailer/configuration programming and
-Plus EV2 LRP negotiation are not implemented by these profiles. Native value
+SL2 sector access and explicit trailer/sector-key programming are available through
+`TMifarePlusSl2ReaderWriter`, documented in [the combined protocol/workflow guide](PROTOCOL_COMPLETION.md).
+Manufacturer block programming, SL3 trailer/global-configuration programming and
+Plus EV2 LRP negotiation remain separate profiles. Native value
 workflows require the Plus X-compatible command set, supplied read/operation
 authority and an initialized value layout; they are not claimed for every Plus variant.
 SL0 personalization/commit applies only to an explicitly selected ISO14443-4

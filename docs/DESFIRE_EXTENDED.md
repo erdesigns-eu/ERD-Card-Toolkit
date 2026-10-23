@@ -114,3 +114,10 @@ No external project source is compiled into the library.
 Failure tests include every exchange boundary, corrupted protected responses,
 cleanup uncertainty and caller-input mutation during I/O. See [VALIDATION.md](VALIDATION.md).
 ISO identifiers, multi-access settings/data and AES TMAC file/transaction/receipt APIs are supplied by the new optional interfaces in [DESFIRE_FILES_TMAC.md](DESFIRE_FILES_TMAC.md). Combined SDM/multi-access settings are implemented. Native LRP authentication/secure-message codecs are available in [DESFIRE_LRP.md](DESFIRE_LRP.md); automatic LRP sessions and LRP TMAC are implemented there. LRP provisioning, originality and combined-layout data transactions remain separate profiles.
+
+## Combined workflow profiles
+
+Multiple-right AES TMAC owners, profile-aware application workflows and authenticated
+stored SDM template backup/compare/restore are described in
+[protocol/workflow profiles](PROTOCOL_COMPLETION.md). SDM/TMAC combined data operations
+remain separate; the template profile refuses an application containing a TMAC file.

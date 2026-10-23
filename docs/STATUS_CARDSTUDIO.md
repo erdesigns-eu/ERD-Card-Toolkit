@@ -21,7 +21,7 @@ profielen eerst verder uit, zonder nu nieuwe demo's of een applicatie te maken.
 
 ## Beschikbare basis
 
-De library telt **73 geregistreerde componenten** en **24 gedocumenteerde
+De library telt **75 geregistreerde componenten** en **25 gedocumenteerde
 workflowklassen**, inclusief de generieke geheugenworkflow. Dat is geen maat voor
 het aantal volledig ondersteunde kaarten: één klasse kan meerdere profielen bevatten.
 
@@ -43,8 +43,8 @@ het aantal volledig ondersteunde kaarten: één klasse kan meerdere profielen be
 | Programmeerbare UID | Expliciete Gen1/2/3/4, FUID/UFUID, USCUID/GDM en genoemde partial/Type 2-profielen | Normale productie-UID's zijn niet programmeerbaar; verificatie en readervereisten verschillen per variant |
 | Ultralight/NTAG | Gebruikersgeheugen, NTAG/EV1 wachtwoordprofielen, counters lezen, NDEF en beschermde workflows | Extra chipvarianten en onomkeerbare OTP/lock/counter-programmering |
 | Ultralight C | 2K3DES-authenticatie, geheugen, verificatie, security-instellingen en sleutelvervanging | OTP, lock- en counterprogrammering |
-| MIFARE Plus | SL3 2K/4K geheugen, supplied-key AES, sleutelvervanging, expliciete SL0/SL1/SL2→SL3-overgangen en native Plus X-valuebewerkingen | SL2-sectorgegevens, trailers/configuratie en extra kaartgebonden overgangsprofielen |
-| DESFire | Ordinary bestanden/transacties, AES/DES/3DES, administratie, ISO/keysets, SDM, multiple rights, AES/LRP TMAC en Light LRP-beheer | Combinaties van SDM/TMAC/multiple rights in data/migratie, bredere LRP-provisioning, originality en partial/unaligned TMAC |
+| MIFARE Plus | SL2/SL3 2K/4K geheugen, SL2-trailers met verse sleutelbewijzen, supplied-key AES, sleutelvervanging, expliciete SL0/SL1/SL2→SL3-overgangen en native Plus X-valuebewerkingen | SL3-trailers/globale configuratie, EV2 LRP en extra kaartgebonden overgangsprofielen |
+| DESFire | Ordinary bestanden/transacties, AES/DES/3DES, administratie, ISO/keysets, SDM, multiple rights, AES/LRP TMAC, multiple-right TMAC, opgeslagen SDM-templateworkflows en Light LRP-beheer | Gecombineerde SDM/TMAC-data, bredere LRP-provisioning, originality en partial/unaligned TMAC |
 | NDEF Type 1–5 | Berichten/records, lezen/vervangen/wissen op de ondersteunde geïnitialiseerde mappings; beschermde Type 2/5-workflows | Formatteren van lege/onbekende mappings en vendorafhankelijke locks |
 | Topaz/FeliCa | Topaz-geheugen en Type 1; ongeëncrypteerde FeliCa-services en Type 3 | Topaz-formatting/OTP en versleutelde FeliCa/keyprovisioning |
 | ISO 15693 | Gewoon/extended geheugen, NDEF Type 5, SLIX2/originele ST25DV wachtwoorden en beveiligingsbeheer | Extra vendors, onomkeerbare locks/privacy/destroy, ST25DV-mailbox/area resizing en ST25TV/KC |
@@ -77,22 +77,22 @@ geen cryptografische authenticiteit van de oorspronkelijke gegevens.
 
 Voorgestelde bundels, op volgorde van aansluiting bij het huidige werk:
 
-1. **DESFire-combinaties:** extended transacties koppelen aan expliciete TMAC-evidence;
-   daarna SDM-templategegevens/migratie met correct onderscheid tussen opgeslagen
-   bytes en dynamische mirrorvelden. Bredere LRP-administratie en originality zijn
-   aparte profielen, niet afleidbaar uit Light-authenticatie.
-2. **MIFARE Plus:** SL2-sectorgegevens, trailers/configuratie en verificatie van de
-   specifieke native overgangen. Dit maakt het Plus-beheer consistenter met Classic
-   en SL3.
+1. **DESFire:** gecombineerde SDM/TMAC-data, bredere LRP-administratie en
+   originality. Multiple-right TMAC en opgeslagen SDM-templateworkflows zijn nu
+   geïmplementeerd; template-restores wijzigen de bestaande doelpolicy niet.
+2. **MIFARE Plus:** SL3-trailers/globale configuratie, EV2 LRP en aanvullende
+   kaartgebonden overgangsprofielen. SL2-sectorgegevens en trailer/sleutelprogrammering
+   zijn beschikbaar met een expliciete native AES/Crypto1-readeradapter.
 3. **Europese eID-authenticiteit:** passive authentication (SOD/issuertrust), relevante
    chip-authentication/EAC- en extra PACE-profielen. Certificaten/SOD uitlezen alleen
    bewijst de echtheid van het document niet.
 4. **Extra chip/securityprofielen:** kies concrete AT88SC/CryptoMemory,
    ISO15693-vendor- of versleutelde FeliCa-profielen met een passende readeradapter.
    Een generiek transport maakt een onbekend kaartprotocol niet automatisch bruikbaar.
-5. **Workflowdekking:** nieuwe extended bestandsprofielen opnemen in back-up,
-   vergelijking, restore en provisioning; de bestaande DESFire-applicationarchieven
-   zijn nog gericht op gewone layouts. Daarna ontbrekende vendorprofielen aanvullen.
+5. **Workflowdekking:** gecombineerde SDM/TMAC- en aanvullende vendorprofielen.
+   DESFire-archief v2 bewaart nu extra rechtensets, provisioning valideert alle
+   tuples vooraf, en TMAC-workflows geven ontvangstbewijzen terug. SDM heeft een
+   eigen opgeslagen-templatearchief. Zie [de nieuwe profielen](PROTOCOL_COMPLETION.md).
 
 Dit zijn componentuitbreidingen. Betalingen, opname/replay en nieuwe VCL-demo's
 staan niet op deze route.

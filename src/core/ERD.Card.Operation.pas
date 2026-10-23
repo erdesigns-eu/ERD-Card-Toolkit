@@ -163,10 +163,11 @@ type
     Resource: ICardResourceOperation;
     ReaderIds: array of string;
   end;
+  TJobs = array of TJob;
   TQueueState = class(TInterfacedObject)
   public
     Lock: TOperationLock;
-    Jobs: array of TJob;
+    Jobs: TJobs;
     Busy: Boolean;
     Current: TJob;
     Cancellation: ICardCancellation;
@@ -362,7 +363,7 @@ begin
 end;
 
 procedure TCardOperationQueue.ClearPending;
-var S: TQueueState; Removed: array of TJob; I: Integer;
+var S: TQueueState; Removed: TJobs; I: Integer;
 begin
   S := QueueState(FState); S.Enter;
   try Removed := S.Jobs; S.Jobs := nil; finally S.Leave; end;

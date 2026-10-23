@@ -165,7 +165,7 @@ begin
     SyncDirectory(DirectoryName);
     if AProject.ExportText=Archive then AProject.MarkSaved;
   finally
-    if Created then DeleteFile(Temp);
+    if Created then DeleteFile(PChar(Temp));
     if Data.Size>0 then FillChar(Data.Memory^,NativeInt(Data.Size),0);
     Data.Free; Snapshot.Free;
   end;

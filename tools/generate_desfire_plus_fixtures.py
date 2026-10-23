@@ -643,6 +643,91 @@ for mode in [0,1]:
 for name,metadata in [('Sdm','004000E0000100C1F121200000430000430000'),
  ('Tmac','0500F0EF0234'),('Malformed','0183FFFF040000020000'),('Unknown','06000000040000')]:
  f=DF();f.cmd(0x6F,reply=b'\0');f.cmd(0xF5,b'\0',reply=bytes.fromhex(metadata));vectors['DfMultiTxReject'+name]=f.p
+# Combined multiple-access AES TMAC transactions: full extra tuples remain in the journal proof.
+for action in ['Write','BadRights','BadReceipt']:
+ f=DF();f.cmd(0x6F,reply=bytes.fromhex('0001'))
+ metadata=bytes.fromhex('0183FFFF040000010000');tmsettings=bytes.fromhex('0500F0EF0234')
+ f.cmd(0xF5,b'\0',reply=metadata);f.cmd(0xF5,b'\x01',reply=tmsettings)
+ iv=enc(f.e,Z,bytes.fromhex('5AA5')+TI+le(f.ctr+1)+bytes(8));f.cmd(0x51,reply=enc(f.e,iv,UID+b'\x80'+bytes(8)))
+ old=bytes.fromhex('01020304');new=bytes.fromhex('AABBCCDD');f.cmd(0xF5,b'\0',reply=metadata)
+ df_read_full(f,0,old);f.cmd(0xF5,b'\0',reply=metadata)
+ f.cmd(0x8D,b'\0'+le(0,3)+le(4,3),new,full=True)
+ f.cmd(0xF5,b'\x01',reply=tmsettings);tmi=tmi_data(0xAD,0,old)+tmi_data(0x8D,0,new)
+ receipt=le(1,4)+mac(TM_MAC,tmi)
+ if action=='BadReceipt':receipt=receipt[:-1]+bytes([receipt[-1]^1])
+ f.cmd(0xC7,b'\x01',reply=receipt)
+ if action!='BadReceipt':
+  after=metadata if action!='BadRights' else metadata[:-1]+b'\x01';f.cmd(0xF5,b'\0',reply=after)
+  if action!='BadRights':df_read_full(f,0,new);f.cmd(0xF5,b'\0',reply=metadata)
+ vectors['DfMultiTmac'+action]=f.p
+# Authenticated Plain stored-template commands: no SDM mirrors or invented data MAC.
+# Explicit TMAC read-owner close discards its calculation without incrementing the counter.
+f=DF();f.cmd(0x6F,reply=bytes.fromhex('0001'));f.cmd(0xF5,b'\0',reply=bytes.fromhex('0183FFFF040000010000'))
+f.cmd(0xF5,b'\x01',reply=bytes.fromhex('0500F0EF0234'))
+iv=enc(f.e,Z,bytes.fromhex('5AA5')+TI+le(f.ctr+1)+bytes(8));f.cmd(0x51,reply=enc(f.e,iv,UID+b'\x80'+bytes(8)))
+f.cmd(0xF5,b'\0',reply=bytes.fromhex('0183FFFF040000010000'));df_read_full(f,0,bytes.fromhex('01020304'));f.cmd(0xF5,b'\0',reply=bytes.fromhex('0183FFFF040000010000'))
+f.cmd(0xA7);vectors['DfMultiTmacCaptureClose']=f.p
+def plain(f,c,h=b'',body=b'',reply=b''):
+ packet=h+body;chunks=[packet[i:i+48] for i in range(0,len(packet),48)] or [b'']
+ for i,chunk in enumerate(chunks):f.p.append((apdu(c if i==0 else 0xAF,chunk),reply+b'\x91\0' if i==len(chunks)-1 else b'\x91\xAF'))
+ f.ctr+=1
+sdm=bytes.fromhex('00C0FFFF400000010000C1F1E1')+le(0,3)+le(14,3)+le(0,3)+le(20,3)
+for action in ['Read','Write','Noop','BadPreimage','BadSettings','BadData','TmacRejected']:
+ f=DF();f.settings();f.cmd(0x6F,reply=b'\0');f.cmd(0xF5,b'\0',reply=tmsettings if action=='TmacRejected' else sdm)
+ if action=='TmacRejected':vectors['DfSdmTemplate'+action]=f.p;continue
+ f.cmd(0xF5,b'\0',reply=sdm)
+ if action!='Read':f.cmd(0xF5,b'\0',reply=sdm)
+ iv=enc(f.e,Z,bytes.fromhex('5AA5')+TI+le(f.ctr+1)+bytes(8));f.cmd(0x51,reply=enc(f.e,iv,UID+b'\x80'+bytes(8)))
+ old=bytes(range(64));new=bytes(range(64,128));plain(f,0xAD,b'\0'+le(0,3)+le(64,3),reply=old if action!='BadPreimage' else bytes(64))
+ if action=='BadPreimage':vectors['DfSdmTemplate'+action]=f.p;continue
+ if action not in ['Read','Noop']:
+  plain(f,0x8D,b'\0'+le(0,3)+le(64,3),new)
+  plain(f,0xAD,b'\0'+le(0,3)+le(64,3),reply=new if action!='BadData' else old)
+  if action=='BadData':vectors['DfSdmTemplate'+action]=f.p;continue
+ f.cmd(0xF5,b'\0',reply=sdm if action!='BadSettings' else sdm[:-1]+b'\x01')
+ vectors['DfSdmTemplate'+action]=f.p
+# Native L3 first AES authentication + independent SL2 KMF equation + reader Crypto1 calls.
+classic=bytes.fromhex('A0A1A2A3A4A5');sv=A[11:]+B[11:]+bytes(x^y for x,y in zip(A[4:9],B[4:9]))+b'\x33'
+kmf=enc(K,Z,sv)[:6];modified=bytes(x^y for x,y in zip(classic,kmf))
+vectors['PlusSl2Modifier']=[(sv,kmf),(classic,modified)]
+trailer=bytes.fromhex('000000000000FF078069000000000000')
+for action in ['Read','Write','Noop','BadPreimage','BadReadback','Trailer']:
+ p=[];auth(p,plus=True);block=3 if action=='Trailer' else 2
+ p.append((bytes([0x60,block])+modified,b''));p.append((bytes([0x30,3]),trailer))
+ if action!='Trailer':
+  p.append((bytes([0x30,2]),OLD))
+  if action not in ['Read','Noop','BadPreimage']:
+   p.append((bytes([0xA0,2])+DATA,b''));p.append((bytes([0x30,2]),DATA if action!='BadReadback' else OLD))
+ vectors['PlusSl2'+action]=p
+# Complete SL2 trailer programming, then fresh key A and readable key B evidence.
+newclassic=bytes.fromhex('010203040506');newb=bytes.fromhex('101112131415');newtrailer=newclassic+bytes.fromhex('FF078069')+newb
+p=[];auth(p,plus=True);p.append((b'\x60\x03'+modified,b''));p.append((b'\x30\x03',trailer));p.append((b'\xA0\x03'+newtrailer,b''))
+auth(p,plus=True);p.append((b'\x60\x03'+bytes(x^y for x,y in zip(newclassic,kmf)),b''))
+p.append((b'\x30\x03',bytes(6)+bytes.fromhex('FF078069')+newb));vectors['PlusSl2TrailerWrite']=p
+# Trailer with non-readable B: fresh A and B Crypto1 proofs independently.
+newtrailer=newclassic+bytes.fromhex('7F078869')+newb;visible=bytes(6)+bytes.fromhex('7F078869')+bytes(6)
+p=[];auth(p,plus=True);p.append((b'\x60\x03'+modified,b''));p.append((b'\x30\x03',trailer));p.append((b'\xA0\x03'+newtrailer,b''))
+for kind,key in [(0x60,newclassic),(0x61,newb)]:
+ auth(p,plus=True);p.append((bytes([kind,3])+bytes(x^y for x,y in zip(key,kmf)),b''));p.append((b'\x30\x03',visible))
+vectors['PlusSl2TrailerBothKeys']=p
+# End-to-end ACR122/PN532 SL2 read: raw AES CRC frames then native hardware Crypto1.
+p=[]
+def pn(cmd,code,data=b''):
+ p.append((bytes.fromhex('FF000000')+bytes([len(cmd)])+cmd,bytes([0xD5,code])+data+bytes.fromhex('9000')))
+for c in ['D43202000B0D','D4320400','D43205000000']:pn(bytes.fromhex(c),0x33)
+pn(bytes.fromhex('D41224'),0x13)
+pn(bytes.fromhex('D4320100'),0x33);pn(bytes.fromhex('D4320101'),0x33)
+pn(bytes.fromhex('D44A0100'),0x4B,bytes.fromhex('010104002007')+UID)
+pn(bytes.fromhex('D40663026303633D'),0x07,bytes.fromhex('808000'))
+pn(bytes.fromhex('D408630200630300633D00'),0x09)
+for cmd,reply in vectors['PlusSl2Read'][:2]:
+ pn(bytes.fromhex('D408630200630300633D00'),0x09)
+ pn(b'\xD4\x42'+crc_a(cmd),0x43,b'\0'+crc_a(reply));pn(bytes.fromhex('D406633C'),0x07,b'\0')
+pn(bytes.fromhex('D408630280630380633D00'),0x09)
+pn(bytes.fromhex('D440016002')+modified+UID[-4:],0x41,b'\0')
+pn(bytes.fromhex('D440013003'),0x41,b'\0'+trailer);pn(bytes.fromhex('D440013002'),0x41,b'\0'+OLD)
+pn(bytes.fromhex('D408630280630380633D00'),0x09);pn(bytes.fromhex('D4320100'),0x33);pn(bytes.fromhex('D41234'),0x13)
+vectors['PlusSl2Acr122Read']=p
 s='''unit DesfirePlus.Vectors;
 {$IFDEF FPC}{$MODE DELPHI}{$ENDIF}
 interface

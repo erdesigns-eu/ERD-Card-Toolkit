@@ -191,7 +191,7 @@ procedure TMifarePlusLevelManager.AuthenticateRaw(const ASlot: Word;
 var
   Key, Uid, Zero, R, A, B, Rotated, Plain, Cipher, Packet: TBytes;
   I, ResponseLength, NonceOffset: Integer;
-  Active, Ok: Boolean;
+  Ok: Boolean;
 begin
   if (FRaw = nil) or (FProvider = nil) or (Length(FUid) = 0) or
     (Length(AKey) <> 16) then
@@ -199,11 +199,9 @@ begin
   Key := CopyBytes(AKey);
   Zero := nil;
   SetLength(Zero, 16);
-  Active := False;
   Ok := False;
   try
     FRaw.BeginSession;
-    Active := True;
     try
       Uid := FRaw.Activate;
       if not BytesEqual(Uid, FUid) then
@@ -258,14 +256,10 @@ begin
             Invalid;
       Ok := True;
     finally
-      if Active then
-      begin
-        Active := False;
-        if Ok then
-          FRaw.EndSession
-        else
-          try FRaw.EndSession; except end;
-      end;
+      if Ok then
+        FRaw.EndSession
+      else
+        try FRaw.EndSession; except end;
     end;
   finally
     TCardCrypto.Clear(Key);

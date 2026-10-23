@@ -614,6 +614,30 @@ type
     procedure ChangeSdmAccessSettingsVerified(const AFile: Byte; const AExpected: TBytes;
       const ADesired: TDesfireSdmAccessSettings);
   end;
+  /// <summary>Stored standard-file template with protected UID/settings evidence and Plain authenticated data.</summary>
+  TDesfireSdmStoredTemplate = record
+    /// <summary>Seven-byte real UID acquired with protected GetCardUID in the same session.</summary>
+    Uid: TBytes;
+    /// <summary>Complete independently decoded SDM/multiple-access settings.</summary>
+    Settings: TDesfireSdmAccessSettings;
+    /// <summary>Stored complete file bytes, without dynamic mirroring; Plain data has no response MAC.</summary>
+    Data: TBytes;
+  end;
+  /// <summary>Authenticated stored-template access; separate from unauthenticated dynamic SDM inspection.</summary>
+  IDesfireSdmTemplateManagement = interface(IDesfireSdmAccessManagement)
+    ['{2EC525B4-77D9-4E43-8D80-4F7A3520613A}']
+    /// <summary>Reads a complete stored template and rechecks exact static settings.</summary>
+    /// <param name="AFile">Existing standard file, with optional SDM and additional rights.</param>
+    /// <returns>Owned template; requires explicit Plain minimum, EV2 AES management and no TMAC file in the application.</returns>
+    function ReadStoredTemplate(const AFile: Byte): TDesfireSdmStoredTemplate;
+    /// <summary>Checks UID, settings and full preimage, writes once and verifies stored data and unchanged policy.</summary>
+    /// <param name="AFile">Exact standard-file number.</param>
+    /// <param name="AExpected">Captured same-card UID, complete settings and stored preimage.</param>
+    /// <param name="AData">Complete desired stored file bytes, copied before I/O.</param>
+    /// <remarks>Immediate standard writes are not atomic; dispatch/read-back/cleanup loss is uncertain, never replayed.</remarks>
+    procedure WriteStoredTemplateVerified(const AFile: Byte; const AExpected: TDesfireSdmStoredTemplate; const AData: TBytes);
+  end;
+
 
   /// <summary>Optional owned EV2 AES full-record updates for the native sixteen-byte cyclic-record profile.</summary>
   /// <remarks>Also available through Supports on an owned AES TMAC session. Existing interfaces and IIDs are unchanged.</remarks>
@@ -823,6 +847,11 @@ type
     /// <exception cref="Exception">Arguments, acquisition, authentication or ordinary-file preflight fails.</exception>
     function OpenSession(const AAid: Cardinal;
       const AAccess: TDesfireSessionAccess): IDesfireSession;
+    /// <summary>Opens an explicit EV2 AES multiple-right read, management or discard-pending session.</summary>
+    /// <param name="AAid">Nonzero exact native application.</param>
+    /// <param name="AAccess">Read/manage or explicit discard-pending authority; fresh owners use the acknowledged entry.</param>
+    /// <returns>Owned session preserving full multiple-right metadata; no TMAC ownership is inferred.</returns>
+    function OpenMultiAccessSession(const AAid: Cardinal; const AAccess: TDesfireSessionAccess): IDesfireSession;
     /// <summary>Opens a fresh EV2 AES transaction supporting ordinary and multiple-access backup, value and record files.</summary>
     /// <param name="AAid">Exact nonzero application identifier; Security must be dfsEv2Aes.</param>
     /// <param name="AAcknowledgeFresh">Must be true: no externally owned transaction may be pending.</param>
@@ -868,9 +897,25 @@ type
     /// <param name="AAid">Nonzero exact native application identifier.</param>
     /// <returns>Owned optional management interface; no data-template writes are inferred.</returns>
     function OpenSdmAccessManagementSession(const AAid: Cardinal): IDesfireSdmAccessManagement;
+    /// <summary>Opens an independent EV2 AES stored-template management session.</summary>
+    /// <param name="AAid">Exact nonzero application; use explicit Plain minimum for SDM file data.</param>
+    /// <returns>Owned optional template interface; Close after completing the operation.</returns>
+    function OpenSdmTemplateManagementSession(const AAid: Cardinal): IDesfireSdmTemplateManagement;
     /// <summary>Opens explicit PICC AES management including ISO creation with multiple key sets.</summary>
     /// <returns>Owned optional management interface, independent of component lifetime.</returns>
     function OpenIsoKeySetManagementSession: IDesfireIsoKeySetManagement;
+    /// <summary>Opens a fresh EV2 AES TMAC transaction supporting ordinary and multiple-right file layouts.</summary>
+    /// <param name="AAid">Exact nonzero application identifier.</param>
+    /// <param name="ATmacFile">Existing native TMAC file number.</param>
+    /// <param name="AUid">Seven trusted real UID bytes, checked by protected acquisition.</param>
+    /// <param name="ATmacKey">Sixteen explicit static TMAC key bytes, copied before I/O.</param>
+    /// <param name="APreviousCounter">Trusted last accepted counter, below FFFFFFFF.</param>
+    /// <param name="AAcknowledgeFresh">Required assertion that no external transaction is pending.</param>
+    /// <returns>Owned TMAC/data session verifying receipt, all rights tuples, final content and release.</returns>
+    /// <remarks>SDM and unknown layouts remain separate; record sizes must fit canonical TMAC input.</remarks>
+    function OpenMultiAccessTransactionMacSession(const AAid: Cardinal; const ATmacFile: Byte;
+      const AUid, ATmacKey: TBytes; const APreviousCounter: Cardinal;
+      const AAcknowledgeFresh: Boolean): IDesfireTransactionMacDataSession;
     /// <summary>Opens one explicit fresh AES TMAC transaction, verifies real card UID and captures canonical data operations.</summary>
     /// <param name="AAid">Nonzero native application AID.</param>
     /// <param name="ATmacFile">Exact existing type-05 AES TMAC file number.</param>
@@ -958,7 +1003,7 @@ type
   end;
 
   TDesfireSession = class(TInterfacedObject, IDesfireSession,
-    IDesfireManagement, IDesfireApplicationManagement, IDesfireDesManagement, IDesfireExtendedManagement, IDesfireFileManagement, IDesfireTransactionMacSession, IDesfireIsoKeySetManagement, IDesfireTransactionMacDataSession, IDesfireSdmAccessManagement, IDesfireRecordUpdateSession, IDesfireLrpTransactionMacSession, IDesfireLrpLightManagement)
+    IDesfireManagement, IDesfireApplicationManagement, IDesfireDesManagement, IDesfireExtendedManagement, IDesfireFileManagement, IDesfireTransactionMacSession, IDesfireIsoKeySetManagement, IDesfireTransactionMacDataSession, IDesfireSdmAccessManagement, IDesfireSdmTemplateManagement, IDesfireRecordUpdateSession, IDesfireLrpTransactionMacSession, IDesfireLrpLightManagement)
   private
     FEngine: TDesfireCardReader;
     FAid: Cardinal;
@@ -997,6 +1042,8 @@ type
     procedure RequireKeySet(const ASet, AKeyNumber: Byte);
     function KeySetVersion(const ASet, AKeyNumber: Byte): Byte;
     procedure RequireFileManagement(const ACreation: Boolean = False);
+    function TemplateSettings(const AFile: Byte; const AWrite: Boolean): TDesfireSdmAccessSettings;
+    procedure CheckTemplateApplication;
     procedure CreateIsoApplicationInternal(const AAid: Cardinal; const AIsoFid: Word;
       const ADfName, AHeader, AExpectedSettings: TBytes);
     function IsoDirectory: TDesfireIsoApplications;
@@ -1099,6 +1146,8 @@ type
     function ReadVerifiedPreviousReaderId: TBytes;
     procedure StageCyclicRecordUpdate(const AFile: Byte; const ARecord: Integer;
       const AExpected, AData: TBytes);
+    function ReadStoredTemplate(const AFile: Byte): TDesfireSdmStoredTemplate;
+    procedure WriteStoredTemplateVerified(const AFile: Byte; const AExpected: TDesfireSdmStoredTemplate; const AData: TBytes);
     function ReadSdmAccessSettings(const AFile: Byte): TDesfireSdmAccessSettings;
     procedure ChangeSdmAccessSettingsVerified(const AFile: Byte; const AExpected: TBytes;
       const ADesired: TDesfireSdmAccessSettings);
@@ -2006,6 +2055,14 @@ begin
   end;
 end;
 
+function TDesfireCardReader.OpenMultiAccessSession(const AAid: Cardinal;
+  const AAccess: TDesfireSessionAccess): IDesfireSession;
+begin
+  if (AAid=0) or (AAid>$FFFFFF) or not (AAccess in [dsaReadOnly,dsaManage,dsaDiscardPending]) or
+    (FSecurity<>dfsEv2Aes) then InvalidDesfire;
+  Result := TDesfireSession.Create(Self,AAid,AAccess,-1,nil,nil,0,0,True);
+end;
+
 function TDesfireCardReader.OpenMultiAccessTransactionSession(const AAid: Cardinal;
   const AAcknowledgeFresh: Boolean): IDesfireSession;
 begin
@@ -2652,8 +2709,8 @@ begin
     ((AAid = 0) and ((AReader.FKeyNumber <> 0) or (Length(AReader.FRekey) > 0)))
   then
     InvalidDesfire;
-  if AMultiAccessTransactions and ((AAccess <> dsaFreshTransaction) or
-    (AReader.FSecurity <> dfsEv2Aes) or (ATmacFile <> -1)) then InvalidDesfire;
+  if AMultiAccessTransactions and (not (AAccess in [dsaReadOnly,dsaManage,dsaFreshTransaction,dsaDiscardPending]) or
+    (AReader.FSecurity <> dfsEv2Aes)) then InvalidDesfire;
   FTmacFile := ATmacFile;
   if (ATmacFile < -1) or (ATmacFile > 31) then InvalidDesfire;
   if ATmacFile >= 0 then
@@ -3089,16 +3146,18 @@ function TDesfireSession.ReadFiles: TDesfireFiles;
 var
   Before: Integer;
   Ids: TBytes;
-  I: Integer;
+  I,N: Integer;
 begin
   Before := Enter;
   try
     try
       Result := nil;
       Ids := FileIds;
-      SetLength(Result, Length(Ids));
-      for I := 0 to High(Ids) do
-        Result[I] := FEngine.Settings(Ids[I]);
+      Result := nil;
+      for I := 0 to High(Ids) do begin
+        if Ids[I]=FTmacFile then Continue;
+        N := Length(Result); SetLength(Result,N+1); Result[N] := FEngine.Settings(Ids[I]);
+      end;
     except
       on E: Exception do
       begin
@@ -4337,6 +4396,97 @@ begin
     TCardCrypto.Clear(Reply);
     FInCall := False;
   end;
+end;
+
+procedure TDesfireSession.CheckTemplateApplication;
+var Ids, Raw: TBytes; I: Integer;
+begin
+  RequireFileManagement;
+  if (FAid=0) or (FEngine.FMinimum<>dfcPlain) then InvalidDesfire;
+  try
+    Ids := FEngine.Metadata($6F,nil,32,False);
+    for I := 0 to High(Ids) do begin
+      if Ids[I]>31 then InvalidDesfire;
+      Raw := FEngine.Metadata($F5,OneByte(Ids[I]),64,False);
+      if (Length(Raw)<1) or (Raw[0]=5) then InvalidDesfire;
+    end;
+  finally TCardCrypto.Clear(Ids); TCardCrypto.Clear(Raw); end;
+end;
+function TDesfireSession.TemplateSettings(const AFile: Byte; const AWrite: Boolean): TDesfireSdmAccessSettings;
+var Raw: TBytes; I,Shift: Integer; Allowed: Boolean;
+begin
+  if AFile>31 then InvalidDesfire;
+  if (Length(FEngine.FRekey)>0) and not FEngine.FReauthenticated then FEngine.Authenticate(True);
+  Raw := FEngine.Metadata($F5,OneByte(AFile),64,False);
+  Result := TDesfireExtensionCodec.DecodeSdmAccessSettings(Raw);
+  if (Result.Sdm.FileOption and 3)<>0 then InvalidDesfire;
+  if (Result.Sdm.FileBytes<1) or (Result.Sdm.FileBytes>FEngine.FMaxTransfer) then InvalidDesfire;
+  Shift := 12; if AWrite then Shift := 8;
+  Allowed := False;
+  for I := 0 to High(Result.Rights) do
+    Allowed := Allowed or Granted((Result.Rights[I] shr Shift) and $F) or Granted((Result.Rights[I] shr 4) and $F);
+  if not Allowed then InvalidDesfire;
+end;
+function TDesfireSession.ReadStoredTemplate(const AFile: Byte): TDesfireSdmStoredTemplate;
+var Before: Integer; Current: TDesfireSdmAccessSettings;
+begin
+  Before := Enter; Result := Default(TDesfireSdmStoredTemplate);
+  try
+    try
+      CheckTemplateApplication;
+      Result.Settings := TemplateSettings(AFile,False);
+      Result.Uid := FEngine.Send($51,nil,nil,dfcFull,7,False);
+      Result.Data := FEngine.Send($AD,TDesfireCodec.RangeHeader(AFile,0,Result.Settings.Sdm.FileBytes),nil,
+        dfcPlain,Result.Settings.Sdm.FileBytes,False);
+      Current := TemplateSettings(AFile,False);
+      if not BytesEqual(Current.RawBytes,Result.Settings.RawBytes) then InvalidDesfire;
+    except on E: Exception do begin
+      TCardCrypto.Clear(Result.Data); TCardCrypto.Clear(Result.Uid);
+      if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName); raise;
+    end; end;
+  finally FInCall := False; end;
+end;
+procedure TDesfireSession.WriteStoredTemplateVerified(const AFile: Byte;
+  const AExpected: TDesfireSdmStoredTemplate; const AData: TBytes);
+var Before: Integer; Expected,Desired,Actual,Uid,Reply,Settings: TBytes;
+  Current,Validated: TDesfireSdmAccessSettings;
+begin
+  Before := Enter;
+  try
+    try
+      Expected := CopyBytes(AExpected.Data); Desired := CopyBytes(AData); Uid := CopyBytes(AExpected.Uid);
+      Settings := CopyBytes(AExpected.Settings.RawBytes);
+      Validated := TDesfireExtensionCodec.DecodeSdmAccessSettings(Settings);
+      if (Length(Uid)<>7) or (Length(Expected)<>Validated.Sdm.FileBytes) or
+        (Length(Desired)<>Length(Expected)) then InvalidDesfire;
+      CheckTemplateApplication;
+      Current := TemplateSettings(AFile,False); TemplateSettings(AFile,True);
+      if not BytesEqual(Current.RawBytes,Settings) then InvalidDesfire;
+      Actual := FEngine.Send($51,nil,nil,dfcFull,7,False);
+      if not BytesEqual(Actual,Uid) then InvalidDesfire;
+      Actual := FEngine.Send($AD,TDesfireCodec.RangeHeader(AFile,0,Length(Expected)),nil,dfcPlain,Length(Expected),False);
+      if not BytesEqual(Actual,Expected) then InvalidDesfire;
+      if not BytesEqual(Expected,Desired) then begin
+        Reply := FEngine.Send($8D,TDesfireCodec.RangeHeader(AFile,0,Length(Desired)),Desired,dfcPlain,0,True);
+        if Length(Reply)<>0 then InvalidDesfire;
+        Actual := FEngine.Send($AD,TDesfireCodec.RangeHeader(AFile,0,Length(Desired)),nil,dfcPlain,Length(Desired),False);
+        if not BytesEqual(Actual,Desired) then InvalidDesfire;
+      end;
+      Current := TemplateSettings(AFile,False);
+      if not BytesEqual(Current.RawBytes,Settings) then InvalidDesfire;
+      FEngine.FWriteAttempt := False;
+    except on E: Exception do begin
+      if Poison(Before) then raise EContactlessWriteUncertain.Create(E.ClassName); raise;
+    end; end;
+  finally
+    TCardCrypto.Clear(Expected); TCardCrypto.Clear(Desired); TCardCrypto.Clear(Actual);
+    TCardCrypto.Clear(Uid); TCardCrypto.Clear(Reply); TCardCrypto.Clear(Settings); FInCall := False;
+  end;
+end;
+function TDesfireCardReader.OpenSdmTemplateManagementSession(const AAid: Cardinal): IDesfireSdmTemplateManagement;
+var Session: IDesfireSdmAccessManagement;
+begin
+  Session := OpenSdmAccessManagementSession(AAid); Result := Session as IDesfireSdmTemplateManagement;
 end;
 
 function TDesfireCardReader.OpenSdmAccessManagementSession(const AAid: Cardinal): IDesfireSdmAccessManagement;
@@ -5578,6 +5728,15 @@ var
 begin
   Session := OpenFileManagementSession(0);
   Result := Session as IDesfireIsoKeySetManagement;
+end;
+
+function TDesfireCardReader.OpenMultiAccessTransactionMacSession(const AAid: Cardinal; const ATmacFile: Byte;
+  const AUid, ATmacKey: TBytes; const APreviousCounter: Cardinal;
+  const AAcknowledgeFresh: Boolean): IDesfireTransactionMacDataSession;
+begin
+  if FBusy or (FSecurity <> dfsEv2Aes) or not AAcknowledgeFresh then InvalidDesfire;
+  Result := TDesfireSession.Create(Self, AAid, dsaFreshTransaction, ATmacFile,
+    AUid, ATmacKey, APreviousCounter, 0, True);
 end;
 
 function TDesfireCardReader.OpenTransactionMacDataSession(const AAid: Cardinal; const ATmacFile: Byte;
