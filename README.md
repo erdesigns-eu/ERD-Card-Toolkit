@@ -6,9 +6,8 @@ documents (Belgian eID, ICAO eMRTD), EMV application data, MIFARE/NTAG/DESFire,
 ISO 15693, Topaz, Calypso/MOBIB, SIM/USIM, SLE/I²C contact-memory chips, magnetic-stripe
 readers/writers, USB-HID and ELATEC TWN4 readers.
 
-The library replaces the former CardStudio application with standalone,
-non-visual components, codecs, console tools and VCL demos. Payment processing is
-out of scope (see [Not supported](#not-supported)).
+The library contains non-visual components, codecs, console tools and VCL demos.
+Payment processing is out of scope (see [Not supported](#not-supported)).
 
 - **Target platform:** Delphi 10.4 or later, Windows Win32 and Win64.
 - **Runtime dependencies:** the Delphi RTL only. No VCL, vendor DLLs or middleware are
